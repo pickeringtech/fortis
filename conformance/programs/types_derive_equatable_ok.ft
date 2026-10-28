@@ -1,0 +1,11 @@
+// accept
+// derive Equatable: every field implements Equatable (6.10).
+export class Tag derive Equatable {
+  export name: String
+  export weight: Int
+}
+
+export enum Level derive Equatable {
+  Low
+  High(threshold: Int)
+}

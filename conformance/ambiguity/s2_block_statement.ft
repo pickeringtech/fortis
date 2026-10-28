@@ -1,0 +1,9 @@
+// accept — S2: a brace at statement level is a block
+pure func inner(n: Int) Int {
+  let mut total = n
+  {
+    let t = 1
+    total = t
+  }
+  return total
+}

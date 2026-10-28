@@ -1,0 +1,4 @@
+// reject: E-SYN-001 (at the marked line)
+export model Widget {
+  view() { ; }                            // reject: E-SYN-001 — parentheses only follow a name
+}

@@ -1,0 +1,6 @@
+// accept
+import ver.lib { Invoice }
+
+export interface Printer {
+  pure func print(self, invoice: Invoice) String
+}

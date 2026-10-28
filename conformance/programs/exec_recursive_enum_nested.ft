@@ -1,0 +1,35 @@
+// execute: nested 1
+// requires: runtime
+// covers: LANG-09-05
+// Two layers of the same generic wrapper still reach the enum (D-55). The field is boxed, so the
+// enum has a size and a consuming match reads the inner value.
+import fortis.host { Host }
+
+export class Hold[T] {
+  export value: T
+}
+
+export enum Tree {
+  Leaf
+  Node(child: Hold[Hold[Tree]])
+}
+
+func depth(t: owned Tree) Int {
+  return match move t {
+    Leaf => 0
+    Node(child: outer) => match move outer {
+      Hold(value: inner) => match move inner {
+        Hold(value: leaf) => match leaf {
+          Leaf => 1
+          Node(child: _) => 2
+        }
+      }
+    }
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let t = Tree.Node(child: Hold(value: Hold(value: Tree.Leaf)))
+  caps.console.print("nested ${depth(move t)}")
+}

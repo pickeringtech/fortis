@@ -1,0 +1,6 @@
+// reject: E-SYN-001 (at the marked line)
+// covers: LANG-03-02
+export model Widget {
+  x =
+  view { ; }                              // reject: E-SYN-001 — a continued line is not a statement start, so this is not a template
+}

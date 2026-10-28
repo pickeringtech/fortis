@@ -1,0 +1,17 @@
+// reject: E-DI-003 (at the marked line)
+// Pinned for the corrections check: the correction declares `replaces` on the child's binding, which overrides a
+// more specific parent binding (Platform 3.3).
+export class Gateway {
+  name: String
+}
+export class Checkout {
+  inject gateway: Gateway
+}
+context Production {
+  provide Gateway using instance Gateway(name: "live") to Checkout
+  provide Checkout
+}
+context Staging {
+  parent Production
+  provide Gateway using instance Gateway(name: "test")                // reject: E-DI-003
+}

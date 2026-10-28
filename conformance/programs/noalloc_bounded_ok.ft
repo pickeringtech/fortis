@@ -1,0 +1,25 @@
+// accept
+// covers: LANG-10-04
+// 10.4: a noalloc try function uses the bounded failure representation: an error with no payload or a
+// payload of up to two integers allocates nothing on the success or the failure path.
+export error TooBig {
+  code: "demo.too_big"
+  payload { value: Int, limit: Int }
+}
+export error Empty {
+  code: "demo.empty"
+}
+export noalloc try func clamp(n: Int, limit: Int) Int {
+  if n > limit {
+    fail TooBig(value: n, limit: limit)
+  }
+  if n == 0 {
+    fail Empty()
+  }
+  return n
+}
+export noalloc try recovers func total(a: Int, b: Int) Int {
+  let x = clamp(a, 100) or fail
+  let y = clamp(b, 100) or recover 1
+  return Int.saturatingAdd(x, y)
+}

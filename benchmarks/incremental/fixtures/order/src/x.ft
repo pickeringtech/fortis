@@ -1,0 +1,4 @@
+import ord.app.y { fb }
+import ord.app.z { Cee }
+
+func both() Int => fb().n

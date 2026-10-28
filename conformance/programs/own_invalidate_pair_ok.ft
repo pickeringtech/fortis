@@ -1,0 +1,18 @@
+// accept
+// covers: LANG-06-02, LANG-07-05
+// A read loan keeps the interval facts of the place; only an exclusive loan discards them (6.3).
+export class Cell {
+  export value: Int
+}
+
+pure func peek(c: Cell) Int => c.value
+
+func narrowed(c: editable Cell) Int<0..100> {
+  if c.value >= 0 && c.value <= 100 {
+    discard peek(c)
+    let seen = alias c
+    discard seen.value
+    return c.value
+  }
+  return 0
+}

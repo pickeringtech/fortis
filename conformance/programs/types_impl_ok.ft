@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-09-03
+export interface Scorer {
+  pure func score(self, value: Int<0..100>) Int<0..100>
+}
+
+export class Doubler implements Scorer {
+  export pure func score(self, value: Int<0..100>) Int<0..50> => 0    // narrower result: a stronger guarantee
+}

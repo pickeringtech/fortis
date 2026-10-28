@@ -1,0 +1,160 @@
+// The codec-eligible built-ins: each value is written as <name>.json and <name>.bin into the development
+// FileSystem and decoded back from both; every printed line must end "true true".
+import fortis.host { Host, Console, FileSystem, Path }
+import fortis.money { Money, Currency }
+try func save(fs: FileSystem, name: String, text: String, bytes: Bytes) Void {
+  let tp = Path.parse("${name}.json") or fail
+  fs.writeAll(tp, text) or fail
+  let bp = Path.parse("${name}.bin") or fail
+  let mut f = fs.create(bp) or fail
+  defer { editable f.close() }
+  editable f.writeAll(bytes) or fail
+}
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  roundTrips(caps.fileSystem, caps.console) or fail
+}
+try func roundTrips(fs: FileSystem, out: Console) Void {
+  let b: Bool = true
+  save(fs, "bool", b.toText(), b.toBytes()) or fail
+  let b1 = Bool.fromText(b.toText()) or fail
+  let b2 = Bool.fromBytes(b.toBytes()) or fail
+  out.print("bool ${b1 == b} ${b2 == b}")
+  let i: Int = -9223372036854775807 - 1
+  save(fs, "int", i.toText(), i.toBytes()) or fail
+  let i1 = Int.fromText(i.toText()) or fail
+  let i2 = Int.fromBytes(i.toBytes()) or fail
+  out.print("int ${i1 == i} ${i2 == i}")
+  let i8: Int8 = -100
+  save(fs, "int8", i8.toText(), i8.toBytes()) or fail
+  let i81 = Int8.fromText(i8.toText()) or fail
+  let i82 = Int8.fromBytes(i8.toBytes()) or fail
+  out.print("int8 ${i81 == i8} ${i82 == i8}")
+  let i16: Int16 = 30000
+  save(fs, "int16", i16.toText(), i16.toBytes()) or fail
+  let i161 = Int16.fromText(i16.toText()) or fail
+  let i162 = Int16.fromBytes(i16.toBytes()) or fail
+  out.print("int16 ${i161 == i16} ${i162 == i16}")
+  let i32: Int32 = -2000000000
+  save(fs, "int32", i32.toText(), i32.toBytes()) or fail
+  let i321 = Int32.fromText(i32.toText()) or fail
+  let i322 = Int32.fromBytes(i32.toBytes()) or fail
+  out.print("int32 ${i321 == i32} ${i322 == i32}")
+  let i64: Int64 = 9223372036854775807
+  save(fs, "int64", i64.toText(), i64.toBytes()) or fail
+  let i641 = Int64.fromText(i64.toText()) or fail
+  let i642 = Int64.fromBytes(i64.toBytes()) or fail
+  out.print("int64 ${i641 == i64} ${i642 == i64}")
+  let u: UInt = 12345
+  save(fs, "uint", u.toText(), u.toBytes()) or fail
+  let u1 = UInt.fromText(u.toText()) or fail
+  let u2 = UInt.fromBytes(u.toBytes()) or fail
+  out.print("uint ${u1 == u} ${u2 == u}")
+  let u8: UInt8 = 255
+  save(fs, "uint8", u8.toText(), u8.toBytes()) or fail
+  let u81 = UInt8.fromText(u8.toText()) or fail
+  let u82 = UInt8.fromBytes(u8.toBytes()) or fail
+  out.print("uint8 ${u81 == u8} ${u82 == u8}")
+  let u16: UInt16 = 65535
+  save(fs, "uint16", u16.toText(), u16.toBytes()) or fail
+  let u161 = UInt16.fromText(u16.toText()) or fail
+  let u162 = UInt16.fromBytes(u16.toBytes()) or fail
+  out.print("uint16 ${u161 == u16} ${u162 == u16}")
+  let u32: UInt32 = 4000000000
+  save(fs, "uint32", u32.toText(), u32.toBytes()) or fail
+  let u321 = UInt32.fromText(u32.toText()) or fail
+  let u322 = UInt32.fromBytes(u32.toBytes()) or fail
+  out.print("uint32 ${u321 == u32} ${u322 == u32}")
+  let u64: UInt64 = 9000000000000000000
+  save(fs, "uint64", u64.toText(), u64.toBytes()) or fail
+  let u641 = UInt64.fromText(u64.toText()) or fail
+  let u642 = UInt64.fromBytes(u64.toBytes()) or fail
+  out.print("uint64 ${u641 == u64} ${u642 == u64}")
+  let by: Byte = 7
+  save(fs, "byte", by.toText(), by.toBytes()) or fail
+  let by1 = Byte.fromText(by.toText()) or fail
+  let by2 = Byte.fromBytes(by.toBytes()) or fail
+  out.print("byte ${by1 == by} ${by2 == by}")
+  let f: Float = 0.1
+  save(fs, "float", f.toText(), f.toBytes()) or fail
+  let f1 = Float.fromText(f.toText()) or fail
+  let f2 = Float.fromBytes(f.toBytes()) or fail
+  out.print("float ${Float.bitsEqual(f1, f)} ${Float.bitsEqual(f2, f)}")
+  let nan: Float = 0.0 / 0.0
+  save(fs, "float_nan", nan.toText(), nan.toBytes()) or fail
+  let n1 = Float.fromText(nan.toText()) or fail
+  let n2 = Float.fromBytes(nan.toBytes()) or fail
+  out.print("float_nan ${Float.isNaN(n1)} ${Float.isNaN(n2)}")
+  let f32: Float32 = 1.5f32
+  save(fs, "float32", f32.toText(), f32.toBytes()) or fail
+  let f321 = Float32.fromText(f32.toText()) or fail
+  let f322 = Float32.fromBytes(f32.toBytes()) or fail
+  out.print("float32 ${f321 == f32} ${f322 == f32}")
+  let d: Decimal = -12.50d
+  save(fs, "decimal", d.toText(), d.toBytes()) or fail
+  let d1 = Decimal.fromText(d.toText()) or fail
+  let d2 = Decimal.fromBytes(d.toBytes()) or fail
+  out.print("decimal ${d1 == d && d1.scale() == 2} ${d2 == d && d2.scale() == 2}")
+  let s: String = "héllo \"q\"\n\ttab \\ end"
+  save(fs, "string", s.toText(), s.toBytes()) or fail
+  let s1 = String.fromText(s.toText()) or fail
+  let s2 = String.fromBytes(s.toBytes()) or fail
+  out.print("string ${s1 == s} ${s2 == s}")
+  let sc = Scalar.of("é")
+  save(fs, "scalar", sc.toText(), sc.toBytes()) or fail
+  let sc1 = Scalar.fromText(sc.toText()) or fail
+  let sc2 = Scalar.fromBytes(sc.toBytes()) or fail
+  out.print("scalar ${sc1 == sc} ${sc2 == sc}")
+  let rp = Path.parse("raw.txt") or fail
+  fs.writeAll(rp, "bytes!") or fail
+  let raw = fs.readAll(rp) or fail
+  save(fs, "bytes", raw.toText(), raw.toBytes()) or fail
+  let r1 = Bytes.fromText(raw.toText()) or fail
+  let r2 = Bytes.fromBytes(raw.toBytes()) or fail
+  out.print("bytes ${r1.byteCount() == raw.byteCount()} ${r2.byteCount() == raw.byteCount()}")
+  let du = Duration.milliseconds(1500)
+  save(fs, "duration", du.toText(), du.toBytes()) or fail
+  let du1 = Duration.fromText(du.toText()) or fail
+  let du2 = Duration.fromBytes(du.toBytes()) or fail
+  out.print("duration ${du1 == du} ${du2 == du}")
+  let ts = Timestamp.add(Timestamp.epoch(), Duration.milliseconds(1500)) or fail
+  save(fs, "timestamp", ts.toText(), ts.toBytes()) or fail
+  let ts1 = Timestamp.fromText(ts.toText()) or fail
+  let ts2 = Timestamp.fromBytes(ts.toBytes()) or fail
+  out.print("timestamp ${ts1 == ts} ${ts2 == ts}")
+  let cur = Currency.EUR
+  save(fs, "currency", cur.toText(), cur.toBytes()) or fail
+  let c1 = Currency.fromText(cur.toText()) or fail
+  let c2 = Currency.fromBytes(cur.toBytes()) or fail
+  out.print("currency ${c1 == cur} ${c2 == cur}")
+  let m = Money.of(Currency.GBP, 19.99d)
+  save(fs, "money", m.toText(), m.toBytes()) or fail
+  let m1 = Money.fromText(m.toText()) or fail
+  let m2 = Money.fromBytes(m.toBytes()) or fail
+  out.print("money ${m1.currency == m.currency && m1.amount == m.amount} ${m2.currency == m.currency && m2.amount == m.amount}")
+  let l = List.of(3, 1, 2)
+  save(fs, "list", l.toText(), l.toBytes()) or fail
+  let l1 = List[Int].fromText(l.toText()) or fail
+  let l2 = List[Int].fromBytes(l.toBytes()) or fail
+  out.print("list ${l1 == l} ${l2 == l}")
+  let a = Array[Int, 3].filled(9)
+  save(fs, "array", a.toText(), a.toBytes()) or fail
+  let a1 = Array[Int, 3].fromText(a.toText()) or fail
+  let a2 = Array[Int, 3].fromBytes(a.toBytes()) or fail
+  out.print("array ${a1.count() == 3} ${a2.count() == 3}")
+  let mut mp: Map[String, Int] = Map.default()
+  editable mp.set("b", 2)
+  editable mp.set("a", 1)
+  save(fs, "map", mp.toText(), mp.toBytes()) or fail
+  let mp1 = Map[String, Int].fromText(mp.toText()) or fail
+  let mp2 = Map[String, Int].fromBytes(mp.toBytes()) or fail
+  out.print("map ${mp1.toText() == mp.toText()} ${mp2.toText() == mp.toText()}")
+  let mut st: Set[Int] = Set.default()
+  discard editable st.add(30)
+  discard editable st.add(10)
+  discard editable st.add(20)
+  save(fs, "set", st.toText(), st.toBytes()) or fail
+  let st1 = Set[Int].fromText(st.toText()) or fail
+  let st2 = Set[Int].fromBytes(st.toBytes()) or fail
+  out.print("set ${st1.toText() == st.toText()} ${st2.toText() == st.toText()}")
+}

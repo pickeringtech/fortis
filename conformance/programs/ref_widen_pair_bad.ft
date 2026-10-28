@@ -1,0 +1,10 @@
+// reject: E-REF-001 (at the marked line)
+// covers: LANG-06-02
+// At the loop header a place assigned in the body has its declared interval (6.3).
+pure func sumTo(n: Int<0..1000>) Int<0..500500> {
+  let mut total: Int<0..500500> = 0
+  for i in 0..n {
+    total = total + i                        // reject: E-REF-001 — [0, 501500] is not within the declared range
+  }
+  return total
+}

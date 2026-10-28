@@ -1,0 +1,13 @@
+// DEL-45 fixture for C1.mixin (conflicts, required methods): a class receiving a mixin's method once.
+export mixin Summarised {
+  requires pure func title(self) String
+  export pure func summary(self) String => self.title()
+}
+export class Report with Summarised {
+  export name: String
+  export pure func title(self) String => copy self.name
+}
+export func main(args: List[String]) Void {
+  let r = Report(name: "q3")
+  discard r.summary().scalarCount()
+}

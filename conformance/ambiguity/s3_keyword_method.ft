@@ -1,0 +1,7 @@
+// accept — S3: keyword-named methods and associated functions
+export class Point {
+  export x: Int
+  export pure func to(self) Int => self.x
+  export pure func from(value: Int) Point => Point(x: value)
+}
+pure func use(p: Point) Int => p.to()

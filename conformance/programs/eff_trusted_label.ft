@@ -1,0 +1,6 @@
+// accept
+// covers: LANG-11-04
+// The summary of `read` imports `io` from the trusted FileSystem signature: labelled trusted, never proved.
+import fortis.host { FileSystem, Path }
+try func read(fs: FileSystem, p: Path) String => fs.readText(p) or fail
+pure func size(text: String) Int => text.scalarCount()

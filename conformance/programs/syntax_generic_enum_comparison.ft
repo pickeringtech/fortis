@@ -1,0 +1,8 @@
+// accept
+// covers: LANG-03-03
+export enum Level[T] derive Equatable, Comparable {
+  Low
+  High
+}
+
+export pure func ordered() Bool => Level[Int].Low < Level[Int].High

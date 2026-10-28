@@ -1,0 +1,9 @@
+// reject: E-DEF-001 (at the marked line)
+// covers: LANG-12-01
+async func flush() Int => 1
+async func run(n: Int) Int {
+  defer {
+    discard await flush()                  // reject: E-DEF-001 — defer await is not in v1
+  }
+  return n
+}

@@ -1,0 +1,6 @@
+schema: fortis.project/v1
+name: bad.import.thrice
+version: 0.1.0
+exports: []
+dependencies:
+  fortis: "1.0"

@@ -1,0 +1,6 @@
+// accept
+import ver.greet { hello, Badge }
+
+export pure func welcome(name: StringView) String => hello(name)
+
+export pure func badge() String => Badge(id: 7).show()

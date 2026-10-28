@@ -1,0 +1,5 @@
+// reject: E-SYN-004 (at the marked line)
+// covers: LANG-05-06
+pure func mixed(a: Bool, b: Int?, c: Int) Bool {
+  return a || b ?? c                        // reject: E-SYN-004 — `||` and `??` mixed without parentheses
+}

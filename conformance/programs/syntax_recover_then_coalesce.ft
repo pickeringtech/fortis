@@ -1,0 +1,4 @@
+// reject: E-SYN-004 (at the marked line)
+export recovers func f(a: Int?, b: Int) Int {
+  return g() or recover a ?? b           // reject: E-SYN-004 — `or recover` mixed with `??`
+}

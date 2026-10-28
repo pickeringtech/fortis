@@ -1,0 +1,44 @@
+// execute: made 1|consume 1|cleanup 1|after consume|made 2|ping 2|cleanup 2|after read
+// execute-trace: drop Handle
+// requires: runtime
+// covers: LANG-07-07
+// 7.9: moving a field out of a temporary (an owned method on that field) transfers the field. The temporary
+// is still destroyed at the end of the statement, and it does not destroy the field a second time. A read of
+// the same field leaves it in the temporary, so the field's cleanup runs once, at the end of the statement.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  export func consume(owned self) Void {
+    self.console.print("consume ${self.id}")
+  }
+  export func ping(self) Void {
+    self.console.print("ping ${self.id}")
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export class Box {
+  export h: Handle
+}
+
+func run(console: Shared[Console]) Void {
+  Box(h: Handle.make(1, alias console)).h.consume()
+  console.print("after consume")
+  Box(h: Handle.make(2, alias console)).h.ping()
+  console.print("after read")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

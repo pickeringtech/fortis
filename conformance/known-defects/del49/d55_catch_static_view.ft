@@ -1,0 +1,21 @@
+import fortis.host { Host }
+
+export error NotFound {
+  code: "users.not_found"
+}
+
+pure try func lookup(id: Int) String {
+  if id == 1 {
+    return "ada"
+  }
+  fail NotFound()
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let first = lookup(2) catch e {
+    report e
+    recover "nobody"
+  }
+  caps.console.print(first)
+}

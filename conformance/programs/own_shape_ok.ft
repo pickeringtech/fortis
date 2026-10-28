@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-07-09
+// A loan returned from a receiver and held by a local binding is a supported shape (Appendix C).
+export class Store {
+  export name: String
+  export pure func label(self) StringView from self => alias self.name
+}
+
+func use(store: Store) Int {
+  let l = store.label()
+  return l.scalarCount()
+}

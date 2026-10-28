@@ -1,0 +1,11 @@
+// API fixture: the previous version.
+export contract Lean {
+  noalloc
+}
+
+export pure func scaled(value: Int, factor: Int) Int => Int.wrappingMul(value, factor)
+
+export class Meter {
+  export reading: Int
+  export Lean func doubled(self) Int => Int.wrappingMul(self.reading, 2)
+}

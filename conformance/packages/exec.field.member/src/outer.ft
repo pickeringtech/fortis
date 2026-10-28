@@ -1,0 +1,8 @@
+// accept
+import exec.field.member.inner { Counter }
+
+export class Holder {
+  export counter: Counter
+}
+
+export pure func make() Holder => Holder(counter: Counter(n: 3))

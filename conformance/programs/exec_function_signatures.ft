@@ -1,0 +1,26 @@
+// execute: 5|square 9|done
+// requires: runtime
+// covers: LANG-08-01, LANG-11-08
+// Every function states its parameter types and success type; modifiers and contracts stand in their position
+// (8.1, 11.5).
+import fortis.host { Host }
+
+export contract Calculation {
+  pure
+  noalloc
+}
+
+export Calculation func add(a: Int<0..100>, b: Int<0..100>) Int => a + b
+
+pure func label(n: Int) String => "square ${n}"
+
+func finish() Void {
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${add(2, 3)}")
+  caps.console.print(label(9))
+  finish()
+  caps.console.print("done")
+}

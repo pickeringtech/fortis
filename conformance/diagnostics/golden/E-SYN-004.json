@@ -1,0 +1,38 @@
+{
+  "class": "Syntax",
+  "code": "E-SYN-004",
+  "column": 17,
+  "correction": {
+    "edits": [
+      {
+        "column": 10,
+        "end_column": 10,
+        "end_line": 4,
+        "file": "conformance/programs/syntax_logical_then_coalesce.ft",
+        "line": 4,
+        "replacement": "("
+      },
+      {
+        "column": 17,
+        "end_column": 17,
+        "end_line": 4,
+        "file": "conformance/programs/syntax_logical_then_coalesce.ft",
+        "line": 4,
+        "replacement": ") "
+      }
+    ],
+    "kind": "parenthesise the left operand"
+  },
+  "fields": {
+    "expected_tokens": [
+      "parentheses around one operand"
+    ],
+    "found_token": "??"
+  },
+  "file": "conformance/programs/syntax_logical_then_coalesce.ft",
+  "line": 4,
+  "message": "operator '??' mixes operator families in one unparenthesised expression",
+  "rule": "LANG-05-06",
+  "severity": "error",
+  "status": "violated"
+}

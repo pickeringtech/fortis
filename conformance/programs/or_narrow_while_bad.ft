@@ -1,0 +1,15 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// D-51.6: `||` does not narrow (LR 6.3, 6.8), and a `while` condition is no exception: the body and the
+// rest of the block get no fact from the loop's `||`.
+export class Limit {
+  export most: Int
+  export pure func holds(self, n: Int) Bool => n <= self.most
+}
+
+export pure func inWhile(p: Limit?, n: Int) Int {
+  while p == null || p.holds(n) {           // reject: E-TYP-040 — `||` did not narrow `p`
+    return 1
+  }
+  return 0
+}

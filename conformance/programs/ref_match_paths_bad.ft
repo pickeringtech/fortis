@@ -1,0 +1,14 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-76, `match` form: only the `false` arm sets `d = 1`, but its effect is kept after the `match` expression.
+export func bad(take: Bool) Int {
+  let mut d: Int<0..1> = 0
+  let n = match take {
+    true => 0
+    false => {
+      d = 1
+      give 0
+    }
+  }
+  return 1 / d                               // reject: E-REF-002 — `d` is 0 when `take` is true
+}

@@ -1,0 +1,373 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fortis-lang.org/schemas/ir.schema.json",
+  "title": "Fortis function IR",
+  "description": "One function body as the production frontend types it (Delivery Programme 5.2, PROG-CMP-02): its control-flow graph and the facts of the typed walk. `fortisc ir FILE` writes one object per line; conformance/tools/ir_check.py validates them.",
+  "type": "object",
+  "required": [
+    "function",
+    "line",
+    "cfg",
+    "loans",
+    "obligations",
+    "effects",
+    "observation",
+    "cleanup"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "function": {
+      "type": "string",
+      "pattern": "^(function|method|cleanup|test) .+$",
+      "description": "the checker's label of the body"
+    },
+    "line": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "cfg": {
+      "description": "null for an expression body",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entry",
+            "exit",
+            "blocks"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "entry": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "exit": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "blocks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "stmts",
+                  "places",
+                  "edges"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "stmts": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "places": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "edges": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "label",
+                        "to"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "loans": {
+      "description": "every loan the walk takes: the owner place, alias or editable, the binding holding it (null for a call's temporary loan) and the block depth at which a held loan ends (7.3)",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "origin",
+          "owner",
+          "mode",
+          "holder",
+          "region_depth",
+          "line"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "origin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^(before hook|after hook|failure handler) of @.+$",
+            "description": "null in the function's own text; else the woven aspect block the fact arose in, whose lines are the aspect declaration's file's"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "alias",
+              "editable"
+            ]
+          },
+          "holder": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "region_depth": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "obligations": {
+      "description": "every linear place the walk owes (10.1): where it was opened and each event that closed it on some path, in walk order: consumed by a move, an `or` handler, `await`, `fail`, `return` or `report`; discharged by a catch binding left by return, fail or Never; ended by a rebinding or a block exit; or `unconsumed`, reported as E-OBL-001 at that line. No events: still owed when the walk ended.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "origin",
+          "place",
+          "opened",
+          "closes"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "origin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^(before hook|after hook|failure handler) of @.+$",
+            "description": "null in the function's own text; else the woven aspect block the fact arose in, whose lines are the aspect declaration's file's"
+          },
+          "place": {
+            "type": "string"
+          },
+          "opened": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "closes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "line",
+                "how"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "line": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "how": {
+                  "enum": [
+                    "move",
+                    "handled",
+                    "awaited",
+                    "failed",
+                    "returned",
+                    "report",
+                    "overwritten",
+                    "discharged",
+                    "rebound",
+                    "catch block",
+                    "block exit",
+                    "unconsumed"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "effects": {
+      "description": "the function's effect summary (11.1): the closed effect set with provenance, the write footprint and the authorities it requires",
+      "type": "object",
+      "required": [
+        "effects",
+        "footprint",
+        "authorities",
+        "needs_auth"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "effect",
+              "provenance"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "effect": {
+                "enum": [
+                  "alloc",
+                  "io",
+                  "mutate",
+                  "nondet",
+                  "suspend",
+                  "block",
+                  "fail",
+                  "recovers"
+                ]
+              },
+              "provenance": {
+                "enum": [
+                  "proved",
+                  "trusted"
+                ]
+              }
+            }
+          }
+        },
+        "footprint": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "authorities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "needs_auth": {
+          "type": "boolean"
+        }
+      }
+    },
+    "observation": {
+      "description": "the observation operations (13): captures, records, and each exit with the frame fields required on it",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "origin",
+          "op",
+          "name",
+          "line",
+          "required"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "origin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^(before hook|after hook|failure handler) of @.+$",
+            "description": "null in the function's own text; else the woven aspect block the fact arose in, whose lines are the aspect declaration's file's"
+          },
+          "op": {
+            "enum": [
+              "capture",
+              "record",
+              "exit success",
+              "exit failure",
+              "exit cancellation"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "required": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "cleanup": {
+      "description": "cleanup edges (12.1, 9.4): deferred blocks, the exits of the function with the deferred blocks each runs innermost first, block ends that run their deferred blocks, and bindings whose destruction runs a cleanup",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "origin",
+          "op",
+          "name",
+          "line",
+          "runs"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "origin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^(before hook|after hook|failure handler) of @.+$",
+            "description": "null in the function's own text; else the woven aspect block the fact arose in, whose lines are the aspect declaration's file's"
+          },
+          "op": {
+            "enum": [
+              "defer",
+              "exit",
+              "block end",
+              "drop"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

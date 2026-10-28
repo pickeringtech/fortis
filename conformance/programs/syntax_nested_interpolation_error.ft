@@ -1,0 +1,4 @@
+// reject: E-SYN-000 (at the marked line)
+export pure func f() String {
+  return "${"${1 +}"}"                   // reject: E-SYN-000 — the inner interpolation is not an expression
+}

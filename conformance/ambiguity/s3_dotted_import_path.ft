@@ -1,0 +1,5 @@
+// accept — S3: dotted paths with keyword segments
+import fortis.http.server as http
+import fortis.data { Db }
+pure func nothing() Void {
+}

@@ -1,0 +1,17 @@
+[package]
+name = "fortis-query-db"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The semantic query database (DEL-46): the frontend's analyses as incremental queries over stable unit IDs"
+
+[dependencies]
+fortis-syntax = { path = "../crates/fortis-syntax" }
+fortis-diag = { path = "../crates/fortis-diag" }
+fortis-di = { path = "../crates/fortis-di" }
+fortis-names = { path = "../crates/fortis-names" }
+fortis-types = { path = "../crates/fortis-types" }
+
+[features]
+# SP-12's apparatus check: the package database's fault switches (FORTIS_QDB_FAULT); never in a default build
+faults = []

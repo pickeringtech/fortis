@@ -1,0 +1,14 @@
+// execute: true|true|false|true|true
+// requires: runtime
+// covers: LANG-06-04
+// 15: comparison operators on Duration compare the nanosecond counts.
+import fortis.host { Host }
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let minute = Duration.seconds(60)
+  caps.console.print("${minute == Duration.minutes(1)}")
+  caps.console.print("${Duration.milliseconds(999) < Duration.seconds(1)}")
+  caps.console.print("${Duration.hours(1) < Duration.minutes(59)}")
+  caps.console.print("${Duration.days(1) >= Duration.hours(24)}")
+  caps.console.print("${minute.nanoseconds() == 60000000000}")
+}

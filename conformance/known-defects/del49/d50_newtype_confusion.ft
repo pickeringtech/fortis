@@ -1,0 +1,16 @@
+import fortis.host { Host }
+
+type UserId = Int<1..>
+type OrderId = Int<1..>
+type Small = Int<0..10>
+
+pure func describe(id: UserId) Int => 1
+pure func small(id: Small) Int => 2
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let order = OrderId(7)
+  let n: Int = 5
+  caps.console.print("${describe(order)} ${describe(OrderId(3))} ${small(n)}")
+  let u: UserId = order
+}

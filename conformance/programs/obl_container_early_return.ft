@@ -1,0 +1,28 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-01, LANG-10-02
+// Programme 16, interaction linear outcome in a linear container + early return (its diagnostic): returning while a
+// container of outcomes is live drops outcomes no one handled.
+export error Odd {
+  code: "demo.odd"
+}
+
+try func even(n: Int) Int {
+  if n % 2 == 1 {
+    fail Odd()
+  }
+  return n
+}
+
+func early(xs: List[Int]) Int {
+  let mut results: List[Outcome[Int]] = List.default()   // reject: E-OBL-001 — its outcomes are dropped unhandled by the early return
+  for x in xs {
+    editable results.push(even(x))
+  }
+  if xs.count() > 2 {
+    return 0
+  }
+  move results.consumeEach(fn(r: owned Outcome[Int]) Void {
+    discard r or recover 0
+  })
+  return 1
+}

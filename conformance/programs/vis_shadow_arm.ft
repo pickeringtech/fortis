@@ -1,0 +1,8 @@
+// reject: E-NAM-003 (at the marked line)
+// covers: LANG-04-05
+pure func describe(value: Int?, fallback: Int) Int {
+  return match value {
+    present(fallback) => fallback          // reject: E-NAM-003 — the pattern binding shadows the parameter
+    null => fallback
+  }
+}

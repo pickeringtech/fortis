@@ -1,0 +1,11 @@
+// accept
+export interface Audited {}
+
+export mixin Logged {
+  requires Audited
+  export pure func tag(self) String => "audited"
+}
+
+export class Ledger implements Audited with Logged {
+  export name: String
+}

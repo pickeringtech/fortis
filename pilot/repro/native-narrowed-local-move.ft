@@ -1,0 +1,39 @@
+// FRICTION 49, minimised after the pilot (DEL-49 review round 3): a local optional narrowed by `!= null` and then
+// moved into a field of the non-optional type is lowered without unwrapping it.
+//
+//   fortisc check --format json pilot/repro/native-narrowed-local-move.ft      (no records)
+//   bin/fortis run pilot/repro/native-narrowed-local-move.ft                   (prints 7)
+//   fortisc build --format json --out build/narrowed pilot/repro/native-narrowed-local-move.ft
+//     E-INT-002: the Rust generated for main::function keep does not compile
+//     (rustc: error[E0308]: mismatched types: expected `Amount`, found `Option<Amount>`)
+//
+// In the pilot it is `validate::balance` (`let amount = copy p.amount`, then `amount: move amount`); rustc reports
+// it together with FRICTION 43 to 45, so it is visible without the pilot's workarounds by running the record's
+// rustc command with `--error-format=short`.
+import fortis.host { Host }
+
+class Amount {
+  export units: Int
+}
+
+class Posting {
+  export amount: Amount?
+}
+
+class Kept {
+  export amount: Amount
+}
+
+pure func keep(p: Posting) Int {
+  let amount = copy p.amount
+  if amount != null {
+    let k = Kept(amount: move amount)
+    return k.amount.units
+  }
+  return 0
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${keep(Posting(amount: Amount(units: 7)))}")
+}

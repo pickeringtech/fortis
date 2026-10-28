@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: bad.imported.const
+version: 0.1.0
+entry: braced
+exports: []
+dependencies:
+  fortis: "1.0"

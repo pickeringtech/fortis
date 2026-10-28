@@ -1,0 +1,14 @@
+// reject: E-OBS-012 (at the marked lines)
+// covers: LANG-13-01
+observation Trace {
+  tier: Int                          required: none
+  txn: Int                           required: none
+}
+try func half(n: Int) Int => n
+async func fetch(n: Int) Int => n
+@observe(Trace)
+async try func process(n: Int) Int {
+  capture tier = half(n) or fail           // reject: E-OBS-012 — a fallible capture expression
+  capture txn = await fetch(n)             // reject: E-OBS-012 — a suspending capture expression
+  return n
+}

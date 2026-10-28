@@ -1,0 +1,45 @@
+// Ownership: values have one owner; `alias` and `editable` are loans visible at the call;
+// `move` transfers; `cleanup` runs when an owner is destroyed, in reverse declaration order.
+// A loan never lives in a field, so values that all need the console share it through an
+// explicit `Shared` handle: each `retain()` is visible where it happens.
+// Run: bin/fortis run examples/03_ownership.ft
+import fortis.host { Host, Console, Capabilities }
+
+export class Counter {
+  export value: Int
+  export func bump(editable self, by: Int) Void {
+    self.value = Int.wrappingAdd(self.value, by)
+  }
+}
+
+export class Resource {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("release ${self.id}")
+  }
+}
+
+func total(a: Counter, b: Counter) Int => Int.wrappingAdd(a.value, b.value)
+
+func consume(c: owned Counter) Int => c.value
+
+func run(console: Shared[Console]) Void {
+  let first = Resource(id: 1, console: console.retain())
+  let second = Resource(id: 2, console: console.retain())
+  console.print("resources live")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  let mut a = Counter(value: 1)
+  let mut b = Counter(value: 10)
+  editable a.bump(2)
+  editable b.bump(5)
+  console.print("total ${total(a, b)}")
+  console.print("consumed ${consume(move a)}")
+  run(console)
+  console.print("done")
+}

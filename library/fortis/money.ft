@@ -1,0 +1,39 @@
+// `fortis.money` implementation (DEL-27; Language Reference 15, Platform 12). Signatures equal
+// `reference/library/money.ft`. A `Money` is a `Decimal` amount with a run-time `Currency`; arithmetic between
+// different currencies fails with `money.currency_mismatch`.
+export enum Currency derive Equatable {
+  GBP
+  EUR
+  USD
+}
+export error CurrencyMismatch {
+  code: "money.currency_mismatch"
+  payload { left: Currency, right: Currency }
+  message: "cannot combine ${left} with ${right}"
+}
+export class Money {
+  export currency: Currency
+  export amount: Decimal
+  export pure func of(currency: Currency, amount: Decimal) Money => Money(currency: currency, amount: amount)
+  export pure func zero(currency: Currency) Money => Money(currency: currency, amount: 0d)
+  export pure try func add(a: Money, b: Money) Money {
+    if a.currency != b.currency {
+      fail CurrencyMismatch(left: a.currency, right: b.currency)
+    }
+    let sum = Decimal.add(a.amount, b.amount) or fail
+    return Money(currency: a.currency, amount: sum)
+  }
+  export pure try func subtract(a: Money, b: Money) Money {
+    if a.currency != b.currency {
+      fail CurrencyMismatch(left: a.currency, right: b.currency)
+    }
+    let difference = Decimal.sub(a.amount, b.amount) or fail
+    return Money(currency: a.currency, amount: difference)
+  }
+  // intrinsic: the amount times factor at the amount's scale (an Int has scale 0), rounded half to even when it needs more than 96 coefficient bits; fails `numeric.overflow` (6.4); O(digits^2)
+  export trusted pure try func multiply(money: Money, factor: Int) Money
+  // intrinsic: the amount divided by divisor at the largest scale that fits, rounded half to even; fails `numeric.overflow` (6.4); O(digits^2)
+  export trusted pure try func divide(money: Money, divisor: Int<1..>) Money
+  // Ordered within one currency; amounts in different currencies are incomparable, so greaterThan is false.
+  export pure func greaterThan(a: Money, b: Money) Bool => a.currency == b.currency && a.amount > b.amount
+}

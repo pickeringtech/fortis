@@ -1,0 +1,8 @@
+schema: fortis.project/v1
+name: bad.prefix
+version: 0.1.0
+exports: [m]
+dependencies:
+  fortis: "1.0"
+  acme.util: "1.0.0"
+  acme.util.strings: "1.0.0"

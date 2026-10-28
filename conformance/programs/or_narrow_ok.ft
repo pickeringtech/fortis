@@ -1,0 +1,38 @@
+// accept
+// covers: LANG-06-08
+// D-51.6's valid neighbours (LR 6.8): narrowing happens in the true branch of a null test, by both conjuncts
+// of `&&`, and after a guard clause whose block ends in `return`; `||` narrows nothing, and a `||` whose
+// operands never use the place as `T` needs no narrowing.
+export class Limit {
+  export most: Int
+  export pure func holds(self, n: Int) Bool => n <= self.most
+}
+
+export pure func viaAnd(p: Limit?, n: Int) Bool => p != null && p.holds(n)
+
+export pure func viaIf(p: Limit?, n: Int) Bool {
+  if p != null {
+    return p.holds(n)
+  }
+  return false
+}
+
+export pure func viaGuard(p: Limit?, n: Int) Bool {
+  if p == null {
+    return false
+  }
+  return p.holds(n)
+}
+
+export pure func orWithoutUse(p: Limit?, n: Int) Bool => p == null || n > 0
+
+export pure func orInsideAnd(p: Limit?, n: Int, flag: Bool) Bool => p != null && (flag || p.holds(n))
+
+export pure func whileOk(p: Limit?, n: Int) Int {
+  while p != null && p.holds(n) {
+    return 1
+  }
+  return 0
+}
+
+export pure func notOfAnd(p: Limit?, n: Int) Bool => !(p != null && !p.holds(n))

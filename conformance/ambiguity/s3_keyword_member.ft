@@ -1,0 +1,9 @@
+// accept — S3: keywords after a dot are member names (fields keep ordinary names; keyword-named methods)
+import fortis.http.server { HttpMethod }
+export class Range {
+  export start: Int
+  export finish: Int
+  export pure func to(self) Int => self.finish
+  export pure func from(self) Int => self.start
+  export pure func span(self) Int => Int.saturatingSub(self.to(), self.from())
+}

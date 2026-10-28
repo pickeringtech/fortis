@@ -1,0 +1,9 @@
+// accept
+import acme.orders { CustomerTier, Region, TransactionId }
+observation OrderProcessing {
+  version: 1                         // optional; 1 when omitted
+  customerTier: CustomerTier         required: all
+  region: Region                     required: all
+  transactionId: TransactionId?      required: success
+  encoding: bounded(512)
+}

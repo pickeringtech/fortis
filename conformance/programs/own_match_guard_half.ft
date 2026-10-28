@@ -1,0 +1,73 @@
+// reject: E-OBL-001 (at the marked lines)
+// covers: LANG-10-01
+// A `when` guard that consumes a linear value does so only when the guard runs. The pattern-fail
+// path does not, so the obligation is half-consumed and must be reported (D-159 review). Copying
+// the residual into the next arm used to drop that half.
+try func make() Int => 1
+
+recovers func consume(o: owned Outcome[Int]) Bool {
+  discard o or recover 0
+  return false
+}
+
+recovers func guardMiss(n: Int) Void {
+  let o = make()                          // reject: E-OBL-001 — consumed only when the guard runs
+  match n {
+    0 when consume(move o) => {
+    }
+    1 => {
+    }
+    _ => {
+    }
+  }
+}
+
+recovers func guardThenIf(n: Int) Void {
+  let o = make()                          // reject: E-OBL-001 — an inner join must not drop the half
+  match n {
+    0 when consume(move o) => {
+    }
+    _ => {
+      if n > 1 {
+      }
+    }
+  }
+}
+
+recovers func twoGuards(n: Int) Void {
+  let o = make()                          // reject: E-OBL-001 — o is consumed on one path only
+  let p = make()                          // reject: E-OBL-001 — p is consumed on one path only
+  match n {
+    0 when consume(move o) => {
+    }
+    1 when consume(move p) => {
+    }
+    _ => {
+    }
+  }
+}
+
+recovers func replaced(n: Int) Void {
+  let o = make()                          // reject: E-OBL-001 — an irrefutable guard must not clear the earlier half
+  match n {
+    0 when consume(move o) => {
+    }
+    _ when true => {
+    }
+    _ => {
+    }
+  }
+}
+
+recovers func oneArm(n: Int) Void {
+  let o = make()                          // reject: E-OBL-001 — consumed in one arm only
+  match n {
+    0 => {
+      discard o or recover 0
+    }
+    1 => {
+    }
+    _ => {
+    }
+  }
+}

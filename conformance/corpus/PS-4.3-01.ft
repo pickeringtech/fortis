@@ -1,0 +1,16 @@
+// illustrative, generated
+export enum CustomerTierWire {
+  Standard
+  Business
+  Enterprise
+  Unknown(raw: String<scalars: 0..64>)
+
+  export try func toDomain(owned self) CustomerTier {
+    return match move self {
+      Standard => CustomerTier.Standard
+      Business => CustomerTier.Business
+      Enterprise => CustomerTier.Enterprise
+      Unknown(raw: value) => fail UnknownWireValue(field: "CustomerTier", raw: move value)
+    }
+  }
+}

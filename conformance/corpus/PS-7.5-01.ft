@@ -1,0 +1,2 @@
+// illustrative
+try func resolveDraft(local: Draft, remote: Draft) Resolved

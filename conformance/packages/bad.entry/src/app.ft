@@ -1,0 +1,2 @@
+// reject: E-NAM-001
+export pure func start() Int => 1

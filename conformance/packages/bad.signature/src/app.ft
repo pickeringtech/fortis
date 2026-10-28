@@ -1,0 +1,2 @@
+// reject: E-NAM-001
+export pure func main(args: List[String]) Int => 0

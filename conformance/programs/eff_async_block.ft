@@ -1,0 +1,6 @@
+// reject: E-EFF-020 (at the marked line)
+// covers: LANG-11-01
+async try func wait(m: Mutex[Int]) Int {
+  let g = m.lockBlocking() or fail         // reject: E-EFF-020 — block inside an async function
+  return 0
+}

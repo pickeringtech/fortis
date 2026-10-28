@@ -1,0 +1,17 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-08-04
+// A field of a list of closures, or of an optional closure, holds one lambda.
+// A second lambda in that element or present value needs `dynamic fn(...)`.
+class Step {
+  export runs: List[fn(Int) Int]
+  export hook: (fn(Int) Int)?
+}
+
+func run() Int {
+  let mut s = Step(runs: List.of(pure noalloc fn(x: Int) Int => x), hook: present(pure noalloc fn(x: Int) Int => x))
+  s.runs = List.of(pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1))   // reject: E-TYP-040 — the list field already holds one lambda
+  let other = Step(runs: List.of(pure noalloc fn(x: Int) Int => Int.saturatingMul(x, 2)), hook: present(pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1)))   // reject: E-TYP-040 — a second construction of the wrapped fields
+  discard s
+  discard other
+  return 0
+}

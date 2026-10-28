@@ -1,0 +1,11 @@
+// reject: E-REF-001 (at the marked line)
+// covers: LANG-06-02
+// `||` and calls do not narrow (6.3).
+pure func check(n: Int) Bool => n >= 0
+
+pure func noNarrow(n: Int) Int<0..100> {
+  if n == 1 || n == 2 {
+    return n                                 // reject: E-REF-001 — `||` establishes no fact
+  }
+  return 0
+}

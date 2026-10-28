@@ -1,0 +1,6 @@
+import cyc.app.a { ayOf, take }
+import cyc.app.b { Bee }
+
+func use() Int => ayOf(Bee(n: 1)).n
+
+func huge() Int => take(70)

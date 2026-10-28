@@ -1,0 +1,30 @@
+// execute: run 1|run 2|total 3|counted 2
+// requires: runtime
+// covers: LANG-08-03, LANG-12-03
+// An async callback (SP-02-async): a lambda of type `async fn(Int) Int` capturing a loan of the console is awaited
+// by the callee twice; a `fn mut` callback edits a captured counter between the awaits.
+import fortis.host { Host, Console }
+async func twice(step: async fn(Int) Int, note: editable fn mut() Void) Int {
+  let a = await step(1)
+  editable note()
+  let b = await step(2)
+  editable note()
+  return Int.wrappingAdd(a, b)
+}
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let console = alias caps.console
+  let mut count = 0
+  let mut total = 0
+  {
+    let mut note = fn mut[editable count]() Void {
+      count = Int.wrappingAdd(count, 1)
+    }
+    total = await twice(async fn[alias console](n: Int) Int {
+      console.print("run ${n}")
+      return n
+    }, editable note)
+  }
+  caps.console.print("total ${total}")
+  caps.console.print("counted ${count}")
+}

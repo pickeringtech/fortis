@@ -1,0 +1,11 @@
+// reject: E-OWN-090 (at the marked line)
+// covers: LANG-07-09
+// C.2: a fn mut closure escaping into Shared has no safe lowering; use a Mutex around the state and a fn closure.
+func run() Int {
+  let mut n = 0
+  let mut bump = fn mut[editable n]() Void {
+    n = Int.wrappingAdd(n, 1)
+  }
+  let shared = Shared.create(move bump)    // reject: E-OWN-090 — a fn mut closure escapes into Shared
+  return 0
+}

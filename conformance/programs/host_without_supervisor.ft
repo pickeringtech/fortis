@@ -1,0 +1,14 @@
+// reject: E-EFF-010 (at the marked line)
+// covers: LANG-11-07
+// Without a Supervisor in its signature a function can only obtain one from Host.capabilities(), which only main may call.
+import fortis.host { Host, Supervisor }
+async func work() Int => 1
+async func spawn() Void {
+  let caps = Host.capabilities()                  // reject: E-EFF-010 — Host.capabilities() outside main
+  scope tasks {
+    let t = tasks.launch(work())
+    tasks.detach(move t, caps.supervisor)
+  }
+}
+export func main(args: List[String]) Void {
+}

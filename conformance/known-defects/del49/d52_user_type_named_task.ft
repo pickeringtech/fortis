@@ -1,0 +1,13 @@
+export class Task {
+  export id: Int
+  name: String
+
+  export pure try func create(id: Int, name: owned String) Task {
+    return Task(id: id, name: move name)
+  }
+}
+
+test "a new task" {
+  let t = Task.create(id: 9, name: "x") or fail
+  expect t.id == 9
+}

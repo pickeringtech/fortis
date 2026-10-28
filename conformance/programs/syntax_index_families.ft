@@ -1,0 +1,3 @@
+// accept
+export pure func f(a: Bool, xs: Array[Bool, 1], i: Int<0..0>?) Bool =>
+  a || xs[i ?? 0]                         // the index is its own expression: not E-SYN-004

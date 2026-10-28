@@ -1,0 +1,96 @@
+// execute: length 3|first 4|next 6|second 2|one|big 9|small 2|pair 1 2|climbs to 5|stays at 7|end
+// requires: runtime
+// covers: LANG-09-06
+// D-3: a class that contains itself is destructured under move like any class (9.8): with `let Class(...) = move x`,
+// with a `match move` class arm, inside another match's arm, with a literal and `null` inside it, and with guards
+// that read its fields and a binding nested inside it. Natively such a class is boxed, and the destructuring moves the box's contents out.
+import fortis.host { Host }
+
+export class Node {
+  export value: Int
+  export next: Node?
+}
+
+export enum Shape {
+  Leaf
+  Chain(node: Node)
+}
+
+func length(n: owned Node) Int {
+  let Node(value: v, next: rest) = move n
+  return match move rest {
+    present(r) => Int.wrappingAdd(1, length(move r))
+    null => 1
+  }
+}
+
+func firstValue(n: owned Node) Int {
+  return match move n {
+    Node(value: v, next: _) => v
+  }
+}
+
+func takeNext(n: owned Node) Node? {
+  let Node(value: _, next: rest) = move n
+  return move rest
+}
+
+func second(s: owned Shape) Int {
+  return match move s {
+    Chain(node: n) => match move n {
+      Node(value: _, next: rest) => match move rest {
+        present(r) => firstValue(move r)
+        null => 0
+      }
+    }
+    Leaf => -1
+  }
+}
+
+func describe(n: owned Node) String {
+  return match move n {
+    Node(value: 1, next: null) => "one"
+    Node(value: v, next: _) when v > 5 => "big ${v}"
+    Node(value: v, next: _) => "small ${v}"
+  }
+}
+
+func climbs(n: owned Node) String {
+  return match move n {
+    Node(value: v, next: present(r)) when r.value > v => "climbs to ${r.value}"
+    Node(value: v, next: _) => "stays at ${v}"
+  }
+}
+
+func pair(n: owned Node) String {
+  let Node(value: a, next: rest) = move n
+  return match move rest {
+    present(r) => match move r {
+      Node(value: b, next: _) => "pair ${a} ${b}"
+    }
+    null => "single ${a}"
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let list = Node(value: 1, next: Node(value: 2, next: Node(value: 3, next: null)))
+  caps.console.print("length ${length(move list)}")
+  let one = Node(value: 4, next: null)
+  caps.console.print("first ${firstValue(move one)}")
+  let other = Node(value: 5, next: Node(value: 6, next: null))
+  let rest = takeNext(move other)
+  let shown = match rest {
+    present(r) => r.value
+    null => 0
+  }
+  caps.console.print("next ${shown}")
+  caps.console.print("second ${second(Chain(node: Node(value: 1, next: Node(value: 2, next: null))))}")
+  caps.console.print(describe(Node(value: 1, next: null)))
+  caps.console.print(describe(Node(value: 9, next: null)))
+  caps.console.print(describe(Node(value: 2, next: Node(value: 3, next: null))))
+  caps.console.print(pair(Node(value: 1, next: Node(value: 2, next: null))))
+  caps.console.print(climbs(Node(value: 1, next: Node(value: 5, next: null))))
+  caps.console.print(climbs(Node(value: 7, next: Node(value: 5, next: null))))
+  caps.console.print("end")
+}

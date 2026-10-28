@@ -1,0 +1,59 @@
+// accept
+// covers: LANG-08-04
+// No pending lambda: two declared functions share one empty identity. One lambda still fills
+// a declared `fn` parameter and a one-element list. A lambda passed to a concrete `fn` parameter
+// leaves another type parameter free for a declared function to fix. Parentheses around a lambda
+// are still that lambda. A function value is not copyable, so each function item is moved once.
+pure func id(n: Int) Int => n
+
+pure func other(n: Int) Int => Int.saturatingAdd(n, 1)
+
+pure func id2(n: Int) Int => n
+
+func apply(f: fn(Int) Int) Int => f(1)
+
+func declaredPair() Int {
+  let both: List[fn(Int) Int] = List.of(move id, move other)
+  discard both
+  return 0
+}
+
+func oneLambda() Int {
+  let one: List[fn(Int) Int] = List.of(pure noalloc fn(x: Int) Int => x)
+  discard one
+  return 0
+}
+
+func passLambda() Int => apply(pure noalloc fn(x: Int) Int => x)
+
+func passDeclared() Int => apply(move id2)
+
+func foo[T](a: T, f: fn(Int) Int) T {
+  discard f
+  return copy a
+}
+
+pure func id3(n: Int) Int => n
+
+pure func id4(n: Int) Int => n
+
+func besideConcrete() Int {
+  let g = foo(move id3, pure noalloc fn(n: Int) Int => n)
+  return g(1)
+}
+
+func besideParenthesized() Int {
+  let g = foo(move id4, (pure noalloc fn(n: Int) Int => n))
+  return g(1)
+}
+
+func oneParenLambda() Int {
+  let one: List[fn(Int) Int] = List.of((pure noalloc fn(x: Int) Int => x))
+  discard one
+  return 0
+}
+
+func appliedGroup() Int {
+  let xs: List[Int] = List.of((pure noalloc fn(x: Int) Int => x) (1))
+  return xs.count()
+}

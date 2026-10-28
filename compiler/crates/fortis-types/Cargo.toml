@@ -1,0 +1,11 @@
+[package]
+name = "fortis-types"
+version.workspace = true
+edition.workspace = true
+description = "Declarations, types, refinements (the interval domain), and the typed walk of each body"
+
+[dependencies]
+fortis-syntax = { path = "../fortis-syntax" }
+fortis-diag = { path = "../fortis-diag" }
+fortis-di = { path = "../fortis-di" }
+fortis-names = { path = "../fortis-names" }

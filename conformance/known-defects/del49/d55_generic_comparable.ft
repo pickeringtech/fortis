@@ -1,0 +1,15 @@
+// native: E-INT-002 (error[E0369]: `>` cannot be applied to `&T`): a generic `T implements Comparable` gets no
+// ordering bound in the generated Rust. The interpreter and the VM print `8`.
+import fortis.host { Host }
+
+pure func pick[T](a: T, b: T) T where T implements Comparable, T implements Copyable {
+  if a > b {
+    return copy a
+  }
+  return copy b
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${pick(3, 8)}")
+}

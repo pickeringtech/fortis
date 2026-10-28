@@ -1,0 +1,26 @@
+// Repro (FRICTION entry 12): docs/guide/06-types.md, "The built-in interfaces and derive", lines 591-609, copied
+// verbatim. The guide shows the output "Point(x: 1, y: 2), equal to itself: true" / "Medium; small before large:
+// true" and says every example runs on all backends. Both checkers accept it; at run time:
+//   bin/fortis run      -> "dynamic check failed: `<` on non-comparable values", exit 2, nothing printed
+//   fortisc vm          -> "observed: dynamic:`<` on non-comparable values", exit 0
+// The same happens for `<` on a class with `derive Comparable` (the VM also has no `compare` method for it:
+// "unbuilt:line N: no method `compare` on Pair").
+import fortis.host { Host }
+
+class Point derive Equatable, Displayable {
+  export x: Int
+  export y: Int
+}
+
+enum Size derive Equatable, Comparable, Displayable {
+  Small
+  Medium
+  Large
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let p = Point(x: 1, y: 2)
+  caps.console.print("${p}, equal to itself: ${p == Point(x: 1, y: 2)}")
+  caps.console.print("${Size.Medium}; small before large: ${Size.Small < Size.Large}")
+}

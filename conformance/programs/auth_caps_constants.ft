@@ -1,0 +1,58 @@
+// reject: E-EFF-010, E-TYP-040, E-TYP-150 (at the marked lines)
+// covers: LANG-11-07, LANG-05-09, LANG-04-02
+// D-149: a constant, a class constant, a field default and a parameter default are constant expressions (4.2, 5.8),
+// typed where they are declared and outside every body. A call other than a constructor, a variant, a `fortis`
+// `Type.of` or a derived `Type.default()` is not one, so none of them may create the capabilities (11.6); nor may one
+// name the entry `main`. Parameter defaults were not typed at all (`n: Int = "text"` was accepted), only a constant's
+// first term was, and the interpreter ran `sneak()`, creating a second set of capabilities.
+import fortis.host { Host, Capabilities }
+
+const extra: Capabilities = Host.capabilities()          // reject: E-TYP-040 — a constant
+const unannotated = Host.capabilities()                  // reject: E-TYP-040 — a constant without a type
+const later: Int = 1 + Host.capabilities()               // reject: E-TYP-040 — a later term
+const sum: Int = 1 + "text"                              // reject: E-TYP-040 — every term is typed
+const product: Int<7..7> = 1 + 2 * 3
+
+class Holder {
+  export made: Capabilities = Host.capabilities()        // reject: E-TYP-040 — a field default
+  const inner: Capabilities = Host.capabilities()        // reject: E-TYP-040 — a class constant
+}
+
+func sneak(made: Capabilities = Host.capabilities()) Void {     // reject: E-TYP-040 — a parameter default
+}
+
+func wrong(n: Int = "text") Int => n                     // reject: E-TYP-040 — a default of the wrong type
+
+func again(entry: fn(List[String]) Void = main) Void {   // reject: E-EFF-010 — a default naming the entry main
+}
+
+const entryAgain: fn(List[String]) Void = main           // reject: E-EFF-010 — a constant naming it
+
+func fine(n: Int = 3, label: String = "x") Int => n
+
+export interface Sized {
+  func size(self, n: Int = 1) Int
+}
+
+implement Sized for Holder {
+  func size(self, n: Int = Host.capabilities()) Int => 1   // reject: E-TYP-040 — an implement block's default
+}
+
+aspect stamped(made: Capabilities = Host.capabilities()) { // reject: E-TYP-040 — an aspect's default
+}
+
+aspect tagged(n: Int) {
+}
+
+@tagged(Host.capabilities())                             // reject: E-TYP-150 — an aspect argument makes no call
+func tagged_fn() Void {
+}
+
+noalloc func clean() Int => 1
+const xs: List[Int] = List.of(1, 2)
+noalloc func caller() Int => clean()                     // a constant's effects are no function's
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let k = fine()
+}

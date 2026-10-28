@@ -1,0 +1,22 @@
+// execute: 3|4
+// requires: runtime
+// covers: LANG-07-05
+import fortis.host { Host }
+
+export class Counter {
+  export count: Int
+  export func bump(editable self) Void {
+    self.count = Int.wrappingAdd(self.count, 1)
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut counter = Counter(count: 3)
+  {
+    let seen = alias counter
+    caps.console.print("${seen.count}")
+  }
+  editable counter.bump()
+  caps.console.print("${counter.count}")
+}

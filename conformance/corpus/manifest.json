@@ -1,0 +1,951 @@
+{
+  "fixtures": [
+    {
+      "id": "LR-2-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "2",
+      "doc_line": 105,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-2-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-2-02",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "2",
+      "doc_line": 256,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "src/app.ft in package acme.invoicing-cli; project.yaml has `entry: app`",
+      "path": "conformance/corpus/LR-2-02.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-4.3-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "4.3",
+      "doc_line": 370,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-4.3-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-4.6-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "4.6",
+      "doc_line": 400,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-4.6-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-5.1-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "5.1",
+      "doc_line": 433,
+      "verdict": "reject",
+      "codes": [
+        "E-NAM-001",
+        "E-NAM-002"
+      ],
+      "marked_lines": [
+        {
+          "line": 6,
+          "code": "E-NAM-001"
+        },
+        {
+          "line": 8,
+          "code": "E-NAM-002"
+        }
+      ],
+      "note": "E-NAM-001, E-NAM-002 (at the marked lines)",
+      "path": "conformance/corpus/LR-5.1-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-5.2-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "5.2",
+      "doc_line": 448,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-5.2-01.ft",
+      "elided": true
+    },
+    {
+      "id": "LR-5.2-02",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "5.2",
+      "doc_line": 461,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-5.2-02.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-5.3-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "5.3",
+      "doc_line": 470,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-5.3-01.ft",
+      "elided": true
+    },
+    {
+      "id": "LR-5.3-02",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "5.3",
+      "doc_line": 486,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-5.3-02.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-5.7-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "5.7",
+      "doc_line": 552,
+      "verdict": "reject",
+      "codes": [
+        "E-OWN-012"
+      ],
+      "marked_lines": [
+        {
+          "line": 4,
+          "code": "E-OWN-012"
+        }
+      ],
+      "note": "E-OWN-012 (at the marked lines) \u2014 the read loan for buffer.length() ends in step 1; the editable loan activates in step 2",
+      "path": "conformance/corpus/LR-5.7-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-6.3-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "6.3",
+      "doc_line": 634,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-6.3-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-6.3-02",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "6.3",
+      "doc_line": 647,
+      "verdict": "reject",
+      "codes": [
+        "E-REF-001"
+      ],
+      "marked_lines": [
+        {
+          "line": 5,
+          "code": "E-REF-001"
+        }
+      ],
+      "note": "E-REF-001 (at the marked line)",
+      "path": "conformance/corpus/LR-6.3-02.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-6.3-03",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "6.3",
+      "doc_line": 660,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-6.3-03.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-6.10-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "6.10",
+      "doc_line": 723,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-6.10-01.ft",
+      "elided": true
+    },
+    {
+      "id": "LR-7.3-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "7.3",
+      "doc_line": 836,
+      "verdict": "reject",
+      "codes": [
+        "E-OWN-011"
+      ],
+      "marked_lines": [
+        {
+          "line": 11,
+          "code": "E-OWN-011"
+        }
+      ],
+      "note": "E-OWN-011 (at the marked line)",
+      "path": "conformance/corpus/LR-7.3-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-7.3-02",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "7.3",
+      "doc_line": 853,
+      "verdict": "reject",
+      "codes": [
+        "E-OWN-010"
+      ],
+      "marked_lines": [
+        {
+          "line": 5,
+          "code": "E-OWN-010"
+        }
+      ],
+      "note": "E-OWN-010 (at the marked line)",
+      "path": "conformance/corpus/LR-7.3-02.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-7.3-03",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "7.3",
+      "doc_line": 861,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-7.3-03.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-7.5-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "7.5",
+      "doc_line": 906,
+      "verdict": "reject",
+      "codes": [
+        "E-OWN-001",
+        "E-OWN-020"
+      ],
+      "marked_lines": [
+        {
+          "line": 8,
+          "code": "E-OWN-001"
+        },
+        {
+          "line": 10,
+          "code": "E-OWN-020"
+        }
+      ],
+      "note": "E-OWN-001, E-OWN-020 (at the marked lines)",
+      "path": "conformance/corpus/LR-7.5-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-7.6-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "7.6",
+      "doc_line": 932,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-7.6-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-7.6-02",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "7.6",
+      "doc_line": 942,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-7.6-02.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-7.7-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "7.7",
+      "doc_line": 963,
+      "verdict": "reject",
+      "codes": [
+        "E-OWN-053"
+      ],
+      "marked_lines": [
+        {
+          "line": 2,
+          "code": "E-OWN-053"
+        }
+      ],
+      "note": "E-OWN-053",
+      "path": "conformance/corpus/LR-7.7-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-8.1-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "8.1",
+      "doc_line": 1022,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-8.1-01.ft",
+      "elided": true
+    },
+    {
+      "id": "LR-8.2-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "8.2",
+      "doc_line": 1037,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-8.2-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-8.3-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "8.3",
+      "doc_line": 1065,
+      "verdict": "reject",
+      "codes": [
+        "E-OWN-011"
+      ],
+      "marked_lines": [
+        {
+          "line": 12,
+          "code": "E-OWN-011"
+        }
+      ],
+      "note": "E-OWN-011 (at the marked lines)",
+      "path": "conformance/corpus/LR-8.3-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-8.4-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "8.4",
+      "doc_line": 1084,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-8.4-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-9.1-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "9.1",
+      "doc_line": 1108,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-9.1-01.ft",
+      "elided": true
+    },
+    {
+      "id": "LR-9.2-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "9.2",
+      "doc_line": 1132,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-9.2-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-9.5-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "9.5",
+      "doc_line": 1150,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-9.5-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-9.6-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "9.6",
+      "doc_line": 1174,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-9.6-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-9.7-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "9.7",
+      "doc_line": 1187,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-9.7-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-9.8-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "9.8",
+      "doc_line": 1202,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-9.8-01.ft",
+      "elided": true
+    },
+    {
+      "id": "LR-10.1-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "10.1",
+      "doc_line": 1247,
+      "verdict": "reject",
+      "codes": [
+        "E-OBL-001",
+        "E-TYP-040"
+      ],
+      "marked_lines": [
+        {
+          "line": 4,
+          "code": "E-OBL-001"
+        },
+        {
+          "line": 8,
+          "code": "E-TYP-040"
+        }
+      ],
+      "note": "E-OBL-001, E-TYP-040 (at the marked lines)",
+      "path": "conformance/corpus/LR-10.1-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-10.3-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "10.3",
+      "doc_line": 1283,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-10.3-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-10.4-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "10.4",
+      "doc_line": 1297,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-10.4-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-10.5-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "10.5",
+      "doc_line": 1309,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-10.5-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-10.6-01",
+      "stage": "kit",
+      "packages": [
+        "http"
+      ],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "10.6",
+      "doc_line": 1337,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-10.6-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-11.3-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "11.3",
+      "doc_line": 1423,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-11.3-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-11.5-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "11.5",
+      "doc_line": 1453,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-11.5-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-11.8-01",
+      "stage": "kit",
+      "packages": [
+        "http",
+        "security"
+      ],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "11.8",
+      "doc_line": 1479,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-11.8-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-12.1-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "12.1",
+      "doc_line": 1553,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-12.1-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-12.1-02",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "12.1",
+      "doc_line": 1569,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-12.1-02.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-12.5-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "12.5",
+      "doc_line": 1602,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-12.5-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-12.6-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "12.6",
+      "doc_line": 1633,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-12.6-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-13-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "13",
+      "doc_line": 1674,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-13-01.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-13-02",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "13",
+      "doc_line": 1688,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-13-02.ft",
+      "elided": false
+    },
+    {
+      "id": "LR-14-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Language_Reference.md",
+      "section": "14",
+      "doc_line": 1724,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/LR-14-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-1.4-01",
+      "stage": "kit",
+      "packages": [
+        "data",
+        "http",
+        "runtime"
+      ],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "1.4",
+      "doc_line": 77,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-1.4-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-2.2-01",
+      "stage": "kit",
+      "packages": [],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "2.2",
+      "doc_line": 139,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-2.2-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-2.3-01",
+      "stage": "kit",
+      "packages": [],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "2.3",
+      "doc_line": 149,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-2.3-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-3.1-01",
+      "stage": "kit",
+      "packages": [],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "3.1",
+      "doc_line": 187,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-3.1-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-4.1-01",
+      "stage": "kit",
+      "packages": [
+        "data",
+        "http",
+        "security"
+      ],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "4.1",
+      "doc_line": 280,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-4.1-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-4.1-02",
+      "stage": "kit",
+      "packages": [],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "4.1",
+      "doc_line": 355,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "src/routes.ft",
+      "path": "conformance/corpus/PS-4.1-02.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-4.3-01",
+      "stage": "kit",
+      "packages": [],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "4.3",
+      "doc_line": 376,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": ", generated",
+      "path": "conformance/corpus/PS-4.3-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-5.1-01",
+      "stage": "kit",
+      "packages": [],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "5.1",
+      "doc_line": 445,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-5.1-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-6.1-01",
+      "stage": "kit",
+      "packages": [],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "6.1",
+      "doc_line": 550,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-6.1-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-7.3-01",
+      "stage": "kit",
+      "packages": [
+        "web"
+      ],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "7.3",
+      "doc_line": 731,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-7.3-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-7.5-01",
+      "stage": "kit",
+      "packages": [],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "7.5",
+      "doc_line": 763,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-7.5-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-10.1-01",
+      "stage": "kit",
+      "packages": [],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "10.1",
+      "doc_line": 929,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-10.1-01.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-10.1-02",
+      "stage": "kit",
+      "packages": [],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "10.1",
+      "doc_line": 954,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-10.1-02.ft",
+      "elided": false
+    },
+    {
+      "id": "PS-12-01",
+      "stage": "kit",
+      "packages": [],
+      "doc": "docs/Fortis_Platform_Specification.md",
+      "section": "12",
+      "doc_line": 1078,
+      "verdict": "illustrative",
+      "codes": [],
+      "marked_lines": [],
+      "note": "",
+      "path": "conformance/corpus/PS-12-01.ft",
+      "elided": false
+    },
+    {
+      "id": "OV-2-01",
+      "stage": "core",
+      "packages": [],
+      "doc": "docs/Fortis_Specification.md",
+      "section": "2",
+      "doc_line": 38,
+      "verdict": "accept",
+      "codes": [],
+      "marked_lines": [],
+      "note": "src/report.ft in package acme.reporting",
+      "path": "conformance/corpus/OV-2-01.ft",
+      "elided": false
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+// execute: done|supervised
+// reports: task-completion:outcome=Completed
+// requires: runtime
+// covers: LANG-11-07
+// A Supervisor passed in the signature takes over a detached task's join obligation (12.5).
+import fortis.host { Host, Console, Supervisor }
+async func work(console: Console) Int {
+  console.print("supervised")
+  return 1
+}
+async func spawn(console: Console, supervisor: Supervisor) Void {
+  scope tasks {
+    let t = tasks.launch(work(console))
+    tasks.detach(move t, supervisor)
+  }
+}
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  await spawn(caps.console, caps.supervisor)
+  caps.console.print("done")
+}

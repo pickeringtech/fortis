@@ -1,0 +1,17 @@
+// accept
+// covers: LANG-08-02
+export class Box {
+  export label: String
+}
+func keep(b: owned Box) Void {
+}
+func run(box: owned Box, flag: Bool) Void {
+  let finish = fn once[move box]() Void {
+    keep(move box)
+  }
+  if flag {
+    move finish()
+  } else {
+    move finish()
+  }
+}

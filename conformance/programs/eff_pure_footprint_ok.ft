@@ -1,0 +1,23 @@
+// accept
+// covers: LANG-11-02
+export class Cell {
+  export value: Int
+  export pure func set(editable self, value: Int) Void {
+    self.value = value
+  }
+}
+pure func fill(c: editable Cell, v: Int) Void {
+  c.value = v
+  editable c.set(v)
+}
+pure func build() Cell {
+  let mut cell = Cell(value: 0)
+  editable cell.set(1)
+  cell.value = 2
+  return move cell
+}
+pure func collect(n: Int) List[Int] {
+  let mut out: List[Int] = List.default()
+  editable out.push(n)
+  return move out
+}

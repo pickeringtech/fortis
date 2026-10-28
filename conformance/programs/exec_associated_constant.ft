@@ -1,0 +1,22 @@
+// execute: 8|64|4|32
+// requires: runtime
+// covers: LANG-09-03
+// An associated constant `const size = 8` of a class is read as `Name.size`, and its value is the expression after
+// its `=` (9.3). The interpreter once gave a bound member instead of the value (D-53).
+import fortis.host { Host }
+
+class Grid {
+  const size = 8
+  const limit: Int<1..10> = 4
+  export cells: Int
+
+  export pure func area(self) Int => Grid.size * Grid.size
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${Grid.size}")
+  caps.console.print("${Grid(cells: 0).area()}")
+  caps.console.print("${Grid.limit}")
+  caps.console.print("${Grid.limit * Grid.size}")
+}

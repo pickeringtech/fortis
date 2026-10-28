@@ -1,0 +1,8 @@
+[package]
+name = "fortis-syntax"
+version.workspace = true
+edition.workspace = true
+description = "Fortis lexer and the generated LL(3) parser (DEL-02 generator, Rust backend)"
+
+[dependencies]
+fortis-diag = { path = "../fortis-diag" }

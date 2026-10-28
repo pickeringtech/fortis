@@ -1,0 +1,10 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// D-51.6: `||` does not narrow (LR 6.3, 6.8). A positive test on the left of `||` narrows nothing either:
+// the right operand runs only when `p != null` is false, so `p` is `Limit?` (in fact null) where `p.holds` needs `Limit`.
+export class Limit {
+  export most: Int
+  export pure func holds(self, n: Int) Bool => n <= self.most
+}
+
+export pure func positiveLeft(p: Limit?, n: Int) Bool => p != null || p.holds(n)   // reject: E-TYP-040 — `||` did not narrow `p`

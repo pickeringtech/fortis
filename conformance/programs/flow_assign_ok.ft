@@ -1,0 +1,21 @@
+// accept
+// covers: LANG-05-01
+export class Counter {
+  count: Int
+  export func bump(editable self) Void {
+    self.count = Int.wrappingAdd(self.count, 1)
+  }
+}
+
+func fill(target: editable Counter, items: List[Int]) Int {
+  let mut total = 0
+  for item in items {
+    total = Int.wrappingAdd(total, item)
+  }
+  target.count = total
+  let mut label = "none"
+  if total > 0 {
+    label = "some"
+  }
+  return total
+}

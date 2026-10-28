@@ -1,0 +1,9 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-11-01
+// 6.7/11.3: the eager transformations take a `pure fn` callback, so no caller can smuggle I/O through one. (The caller
+// was `pure` until D-145: a pure function may not take a capability parameter at all, 11.5.)
+import fortis.host { Console }
+func count(items: List[Int], c: Console) Int => items.countWhere(fn[alias c](x: Int) Bool {   // reject: E-TYP-040 — the callback performs io
+  c.print("inside a pure function")
+  return x > 0
+})

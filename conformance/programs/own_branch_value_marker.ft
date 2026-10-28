@@ -1,0 +1,29 @@
+// reject: E-OWN-001 (at the marked lines)
+// covers: LANG-07-01
+// `give` and `recover` hand a value to the enclosing binding: an existing ownership-bearing place needs `move`
+// or `copy` there, as in `return` (7.1; X-120). `give move` moves the place on that path.
+export class Entry {
+  export sku: Int
+  export name: String
+}
+
+try func parse(s: StringView) Entry {
+  fail Failure(code: "entry.malformed")
+}
+
+try recovers func pick(flag: Bool) Entry {
+  let good = Entry(sku: 1, name: String.from("a"))
+  let other = Entry(sku: 2, name: String.from("b"))
+  let chosen = if flag {
+    give good                                             // reject: E-OWN-001
+  } else {
+    give move other
+  }
+  let parsed = parse("1") catch e {
+    recover good                                          // reject: E-OWN-001
+  }
+  let fallback = parse("2") catch e {
+    recover copy good
+  }
+  return move chosen
+}

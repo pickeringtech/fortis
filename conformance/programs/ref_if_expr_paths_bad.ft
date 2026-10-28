@@ -1,0 +1,14 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-76 (found in SP-18's design review): an `if` expression's state afterwards carries the effects of a branch
+// that may not run. Only the `else` branch sets `d = 1`, but both checkers take `d = 1` after the expression, and
+// `bad(true)` divides by zero. `ref_match_paths_bad.ft` and `ref_catch_paths_bad.ft` show the `match` and `catch` forms;
+// `??` and `or recover` are joined the same way: their right operand runs only on one path.
+export func bad(take: Bool) Int {
+  let mut d: Int<0..1> = 0
+  let n = if take { give 0 } else {
+    d = 1
+    give 0
+  }
+  return 1 / d                               // reject: E-REF-002 — `d` is 0 when `take` is true
+}

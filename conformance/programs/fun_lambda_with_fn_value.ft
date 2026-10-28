@@ -1,0 +1,42 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-08-04
+// A declared function has an empty closure identity. It must not pin a type parameter while
+// a lambda argument is still pending, or two lambdas would share that one function type.
+// Parentheses around a lambda do not make it a different argument. Either order is the same:
+// lambdas are typed after the other arguments. Each function item is moved once; a function
+// value is not copyable.
+pure func id(n: Int) Int => n
+
+pure func idB(n: Int) Int => n
+
+pure func idC(n: Int) Int => n
+
+pure func idD(n: Int) Int => n
+
+func pick[T](a: T, b: T, c: T) List[T] {
+  return List.of(a, b, c)
+}
+
+func twoThenDeclared() Int {
+  let xs: List[fn(Int) Int] = List.of(pure noalloc fn(x: Int) Int => x, pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1), move id) // reject: E-TYP-040 — a declared function beside two lambdas
+  discard xs
+  return 0
+}
+
+func throughGeneric() Int {
+  let ys = pick(move idB, pure noalloc fn(x: Int) Int => x, pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1)) // reject: E-TYP-040 — the same shape through a user generic
+  discard ys
+  return 0
+}
+
+func declaredFirst() Int {
+  let zs: List[fn(Int) Int] = List.of(move idC, pure noalloc fn(x: Int) Int => x, pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1)) // reject: E-TYP-040 — the declared function written first
+  discard zs
+  return 0
+}
+
+func parenthesized() Int {
+  let xs: List[fn(Int) Int] = List.of(move idD, (pure noalloc fn(x: Int) Int => x), (pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1))) // reject: E-TYP-040 — parentheses around a lambda
+  discard xs
+  return 0
+}

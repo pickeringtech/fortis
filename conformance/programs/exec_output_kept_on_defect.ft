@@ -1,0 +1,19 @@
+// execute: one|two|three|defect:contract_violation
+// requires: runtime
+// covers: LANG-10-06
+// A defect ends the program (10.8), and the console lines printed before it stay printed: `fortis run` once
+// buffered them and lost them when the run ended in a defect (D-53).
+import fortis.host { Console, Host }
+
+func say(console: Console, line: String) Void {
+  console.print(line)
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("one")
+  say(caps.console, "two")
+  caps.console.print("three")
+  injectDefect("contract_violation")
+  caps.console.print("never")
+}

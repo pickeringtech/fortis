@@ -1,0 +1,11 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-11-09
+// The failure handler owns the failure's obligation: it must consume it (fail move f, report) before returning (11.8).
+export aspect swallow() {
+  on failure(f: Failure) Int {           // reject: E-OBL-001 — f is owed here and dropped at the return
+    return 0
+  }
+}
+try func half(n: Int) Int => n
+@swallow()
+try func work(n: Int) Int => half(n) or fail

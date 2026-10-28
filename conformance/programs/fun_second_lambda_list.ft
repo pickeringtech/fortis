@@ -1,0 +1,10 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-08-04
+// Two different lambdas are two closure types. One list holds them only as `dynamic fn(...)`.
+func run() Int {
+  let xs = List.of(fn(x: Int) Int => x, fn(x: Int) Int => Int.saturatingAdd(x, 1))   // reject: E-TYP-040 — two lambdas in one list
+  let ys: List[fn(Int) Int] = List.of(fn(x: Int) Int => x, fn(x: Int) Int => Int.saturatingMul(x, 2))   // reject: E-TYP-040 — an annotated list of fn is still one closure type
+  discard xs
+  discard ys
+  return 0
+}

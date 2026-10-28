@@ -1,0 +1,33 @@
+// Repro (FRICTION entry 53): a lambda that discharges a failure (`or recover`) is accepted without `recovers`,
+// and so is every function that passes it on, so the `recovers` effect disappears.
+//   bin/fortis check pilot/repro/recovers-through-lambda.ft       -> no findings
+//   compiler/target/release/fortisc check pilot/repro/recovers-through-lambda.ft   -> no findings
+// The same discard written directly (`direct`, commented out) is E-EFF-001 "discharges a failure without
+// reporting it but is not declared `recovers`".
+// Docs: agent/08-functions.md, "Facts": "`try`, `async`, `recovers` must be written when the summary has them
+// (functions and lambdas)"; agent/11-effects.md, "Summary transfer rules": "Callback parameter: contributes what
+// its function type permits" (`pure fn(Int) Int` permits no `recovers`); guide/10-outcomes.md: "a signature
+// therefore shows who swallowed a failure". Here no signature shows it.
+// (It is also a way around entry 39, which is why it matters: `main` could swallow failures this way.)
+
+export error Odd {
+  code: "repro.odd"
+}
+
+pure try func half(n: Int) Int {
+  if n % 2 != 0 {
+    fail Odd()
+  }
+  return n / 2
+}
+
+pure func apply(f: pure fn(Int) Int, x: Int) Int => f(x)
+
+pure func viaLambda(x: Int) Int => apply(fn(n: Int) Int => half(n) or recover 0, x)
+
+// pure func direct(x: Int) Int => half(x) or recover 0     // E-EFF-001 when uncommented
+
+test "the odd number is swallowed silently" {
+  expect viaLambda(4) == 2
+  expect viaLambda(3) == 0
+}

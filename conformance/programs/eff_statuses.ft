@@ -1,0 +1,17 @@
+// reject: E-EFF-001 (at the marked lines)
+// covers: LANG-11-01, LANG-11-04
+// The three statuses of an E-EFF record (PROG-DIA-02, X-132): violated, unproved, unknown.
+import fortis.host { Console }
+
+trusted func externalHash(x: Int) Int        // reject: E-EFF-001 — violated: only the standard packages may write `trusted` (D-146)
+
+pure func viaConsole(console: Console, x: Int) Int {                 // reject: E-EFF-001 — violated: a pure function takes a capability (11.5, D-145)
+  console.print("x")                                    // reject: E-EFF-001 — violated: Console.print performs I/O
+  return x
+}
+
+pure func viaCallback(f: fn(Int) Int, x: Int) Int => f(x)          // reject: E-EFF-001 — unproved: the callback's type permits I/O
+
+pure func viaForeign(x: Int) Int => externalHash(x)                // reject: E-EFF-001 — unknown: a foreign function behind a trust boundary
+
+pure func viaPureCallback(f: pure fn(Int) Int, x: Int) Int => f(x)

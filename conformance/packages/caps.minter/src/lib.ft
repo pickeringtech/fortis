@@ -1,0 +1,7 @@
+import fortis.host { Host }
+
+// a library's own `main` is not the program's entry, whatever its manifest says
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()             // reject: E-EFF-010 — outside the program's entry main
+  caps.console.print("minted")               // reject: E-EFF-010 — I/O without an Authority parameter
+}

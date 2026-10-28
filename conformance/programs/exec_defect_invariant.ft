@@ -1,0 +1,9 @@
+// execute: before|defect:runtime_invariant
+// requires: runtime
+// covers: LANG-10-06
+import fortis.host { Host }
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("before")
+  injectDefect("runtime_invariant")
+}

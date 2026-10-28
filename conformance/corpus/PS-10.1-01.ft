@@ -1,0 +1,20 @@
+// illustrative
+export class ListenConfig derive Default {
+  export host: String = "127.0.0.1"
+  export port: Int<1..65535> = 8080
+}
+export class DatabaseConfig {
+  export url: Secret[Url]
+  export poolSize: Int<1..64> = 10
+}
+export class HttpConfig derive Default {
+  export requestTimeout: Duration = 30s
+  export corsOrigins: List[Url] = List.of()
+}
+export class AppConfig {
+  export stage: Stage = Stage.Development
+  export debug: Bool = false
+  export listen: ListenConfig = ListenConfig.default()
+  export database: DatabaseConfig
+  export http: HttpConfig = HttpConfig.default()
+}

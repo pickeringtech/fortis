@@ -1,0 +1,23 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-73, false path: when `c.v == 1 && reset(editable c)` is false because `reset` returned false, `reset` has already
+// set `c.v` to 0. The state after the `if` must keep that effect; both checkers restored the state before the
+// condition and kept `c.v == 1`. A bare call as the condition (`ref_cond_call_bad.ft`) is the same defect.
+export class Cell {
+  export v: Int<0..1>
+}
+
+func reset(c: editable Cell) Bool {
+  c.v = 0
+  return false
+}
+
+export func f(c: editable Cell) Int {
+  if c.v != 1 {
+    return 0
+  }
+  if c.v == 1 && reset(editable c) {
+    return 0
+  }
+  return 10 / c.v                            // reject: E-REF-002 — `reset` ran in the condition and set `c.v` to 0
+}

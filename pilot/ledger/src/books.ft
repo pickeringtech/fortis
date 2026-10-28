@@ -1,0 +1,207 @@
+// Account balances over the transactions of a journal: per account, and rolled up the account tree so that
+// every parent account holds the sum of everything below it.
+import pilot.ledger.scan { LineNo }
+import pilot.ledger.date { Date }
+// AccountClass is imported so that AccountName counts as Copyable here (pilot/repro/copy-imported-optional).
+import pilot.ledger.account { AccountClass, AccountName, sortedAccountNames }
+import pilot.ledger.amount { CommodityCode, Holdings }
+import pilot.ledger.journal { Journal, Period, Posting, Transaction }
+// Loaded and Diagnostics are imported because the VM cannot otherwise call methods on the fields of a loaded
+// journal in the tests (pilot/repro/unimported-member-type).
+import pilot.ledger.validate { Loaded, loadedForTest }
+import pilot.ledger.diagnostic { Diagnostics }
+
+// The balance of each account that has postings.
+export class Balances {
+  byAccount: Map[String, Holdings]
+  names: List[AccountName]
+
+  export pure func empty() Balances => Balances(byAccount: Map.default(), names: List.default())
+
+  // Adds a quantity of one commodity to an account.
+  export pure try func credit(editable self, account: AccountName, code: CommodityCode, minor: Int) Void {
+    let key = account.text()
+    let mut updated = Holdings.empty()
+    {
+      // The loan of the map ends with this block, before the map is changed.
+      let existing = self.byAccount.get(copy key)
+      if existing != null {
+        editable updated.addAll(existing) or fail
+      }
+    }
+    if self.byAccount.get(copy key) == null {
+      editable self.names.push(copy account)
+    }
+    editable updated.add(code, minor) or fail
+    editable self.byAccount.set(move key, move updated)
+  }
+
+  // Adds one posting.
+  export pure try func post(editable self, posting: Posting) Void {
+    editable self.credit(posting.account, posting.amount.code, posting.amount.minor) or fail
+  }
+
+  // The balance of an account; empty when it has no postings.
+  export pure func of(self, account: StringView) Holdings {
+    return match self.byAccount.get(String.from(account)) {
+      present(existing) => copy existing
+      null => Holdings.empty()
+    }
+  }
+
+  // The accounts with postings, in report order.
+  export pure func accounts(self) List[AccountName] => sortedAccountNames(self.names)
+
+  // The number of accounts with postings.
+  export pure func count(self) Int => self.names.count()
+
+  // The sum over every account; zero in every commodity for a balanced journal.
+  export pure try func total(self) Holdings {
+    let mut sum = Holdings.empty()
+    for name in self.names {
+      let h = self.of(name.text())
+      editable sum.addAll(h) or fail
+    }
+    return move sum
+  }
+
+  // The balances rolled up the account tree: every account and every account above it, each holding the sum of
+  // its own postings and those of every account below it.
+  export pure try func rolledUp(self) Balances {
+    let mut tree = Balances.empty()
+    for name in self.names {
+      let own = self.of(name.text())
+      for ancestor in name.lineage() {
+        let node = AccountName.parse(ancestor) or fail
+        for amount in own.asAmounts() {
+          editable tree.credit(node, amount.code, amount.minor) or fail
+        }
+      }
+    }
+    return move tree
+  }
+}
+
+// The balances of every transaction of a journal whose date lies in the period (every transaction when the
+// period is null).
+export pure try func balancesOf(journal: Journal, period: Period?) Balances {
+  let mut balances = Balances.empty()
+  for t in journal.transactions {
+    // `period == null || period.holds(…)` passes the checkers but the VM cannot build it
+    // (pilot/repro/narrowing-in-or.ft), so the documented `x != null && e` form is used.
+    let excluded = period != null && !period.holds(t.date)
+    if !excluded {
+      for p in t.postings {
+        editable balances.post(p) or fail
+      }
+    }
+  }
+  return move balances
+}
+
+const journalText = """commodity GBP 2
+commodity USD 2
+account assets:bank:current
+account assets:bank:savings
+account assets:cash
+account expenses:food
+account expenses:travel
+account income:salary
+account equity:opening
+
+2026-01-01 Opening
+  assets:bank:current  500.00 GBP
+  equity:opening
+
+2026-01-05 Salary
+  assets:bank:current  2,000.00 GBP
+  income:salary
+
+2026-01-06 Save
+  assets:bank:savings  300.00 GBP
+  assets:bank:current
+
+2026-02-01 Lunch
+  expenses:food  12.50 GBP
+  assets:cash
+
+2026-02-03 Trip
+  expenses:travel  40.00 USD
+  assets:cash
+"""
+
+// The balance of one account in one commodity, in minor units, as the tests read it.
+pure try func minorOf(balances: Balances, account: StringView, code: StringView) Int {
+  let c = CommodityCode.validate(String.from(code)) or fail
+  return balances.of(account).amountOf(c)
+}
+
+test "balances per account" {
+  let loaded = loadedForTest(journalText) or fail
+  expect loaded.diagnostics.count() == 0
+  let balances = balancesOf(loaded.journal, null) or fail
+  expect balances.count() == 7
+  expect (minorOf(balances, "assets:bank:current", "GBP") or fail) == 220000
+  expect (minorOf(balances, "assets:bank:savings", "GBP") or fail) == 30000
+  expect (minorOf(balances, "assets:cash", "GBP") or fail) == -1250
+  expect (minorOf(balances, "assets:cash", "USD") or fail) == -4000
+  expect (minorOf(balances, "income:salary", "GBP") or fail) == -200000
+  expect (minorOf(balances, "assets:nowhere", "GBP") or fail) == 0
+  let total = balances.total() or fail
+  expect total.isZero()
+}
+
+test "accounts come out in report order" {
+  let loaded = loadedForTest(journalText) or fail
+  let balances = balancesOf(loaded.journal, null) or fail
+  let names = balances.accounts().map(fn(n: AccountName) String => n.text())
+  expect (names.at(0) or fail) == "assets:bank:current"
+  expect (names.at(1) or fail) == "assets:bank:savings"
+  expect (names.at(2) or fail) == "assets:cash"
+  expect (names.at(3) or fail) == "equity:opening"
+  expect (names.at(4) or fail) == "income:salary"
+  expect (names.at(5) or fail) == "expenses:food"
+  expect (names.at(6) or fail) == "expenses:travel"
+}
+
+test "balances roll up the tree" {
+  let loaded = loadedForTest(journalText) or fail
+  let balances = balancesOf(loaded.journal, null) or fail
+  let tree = balances.rolledUp() or fail
+  expect (minorOf(tree, "assets", "GBP") or fail) == 248750
+  expect (minorOf(tree, "assets:bank", "GBP") or fail) == 250000
+  expect (minorOf(tree, "assets", "USD") or fail) == -4000
+  expect (minorOf(tree, "expenses", "GBP") or fail) == 1250
+  expect tree.count() == 12
+  let names = tree.accounts().map(fn(n: AccountName) String => n.text())
+  expect (names.at(0) or fail) == "assets"
+  expect (names.at(1) or fail) == "assets:bank"
+  expect (names.at(2) or fail) == "assets:bank:current"
+}
+
+test "a period selects transactions by date" {
+  let loaded = loadedForTest(journalText) or fail
+  let february = Period(first: Date.of(2026, 2, 1) or fail, last: Date.of(2026, 2, 28) or fail)
+  let balances = balancesOf(loaded.journal, february) or fail
+  expect (minorOf(balances, "income:salary", "GBP") or fail) == 0
+  expect (minorOf(balances, "expenses:food", "GBP") or fail) == 1250
+  expect balances.count() == 3
+}
+
+property "every roll-up keeps the grand total" forall (a: Int<1..1000000>, b: Int<1..1000000>) {
+  let first = Date.of(2026, 1, 1) or fail
+  let mut balances = Balances.empty()
+  let gbp = CommodityCode.validate(String.from("GBP")) or fail
+  let food = AccountName.parse("expenses:food:lunch") or fail
+  let cash = AccountName.parse("assets:cash") or fail
+  editable balances.credit(food, copy gbp, a) or fail
+  editable balances.credit(cash, copy gbp, 0 - a) or fail
+  editable balances.credit(food, copy gbp, b) or fail
+  editable balances.credit(cash, copy gbp, 0 - b) or fail
+  let tree = balances.rolledUp() or fail
+  expect (minorOf(tree, "expenses", "GBP") or fail) == a + b
+  expect (minorOf(tree, "expenses:food", "GBP") or fail) == a + b
+  expect (minorOf(tree, "assets", "GBP") or fail) == 0 - (a + b)
+  let total = balances.total() or fail
+  expect total.isZero()
+}

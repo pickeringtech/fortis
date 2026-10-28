@@ -1,0 +1,42 @@
+// execute: 6|3|fallback|ok|11
+// requires: runtime
+// covers: LANG-03-02
+// A statement continues onto the next line after a trailing operator, comma or opening bracket, or before a leading
+// continuation token (`.`, `or`, `??`, `)`, `]`); otherwise a newline ends it (3.2).
+import fortis.host { Host }
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func find(n: Int) Int {
+  if n < 0 {
+    fail Missing()
+  }
+  return n
+}
+
+recovers func lookup(n: Int) Int {
+  let v = find(n)
+    or recover 3
+  return v
+}
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let total = Int.wrappingAdd(
+    1,
+    5
+  )
+  caps.console.print("${total}")
+  caps.console.print("${lookup(-1)}")
+  let name: String? = null
+  caps.console.print(name
+    ?? "fallback")
+  let words = List.of("ok", "no")
+  caps.console.print(words
+    .get(0) ?? "")
+  let sum = 1 +
+    10
+  caps.console.print("${sum}")
+}

@@ -1,0 +1,12 @@
+// DEL-45 fixture for C3.dynamic-create: an owned dynamic value allocates (here, outside noalloc).
+export interface Shape {
+  pure func area(self) Int
+}
+export class Square implements Shape {
+  export side: Int
+  export pure func area(self) Int => self.side
+}
+func build() dynamic Shape => Square(side: 2)
+export func main(args: List[String]) Void {
+  discard build().area()
+}

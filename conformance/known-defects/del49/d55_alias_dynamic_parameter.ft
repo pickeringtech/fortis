@@ -1,0 +1,20 @@
+import fortis.host { Host }
+
+interface Shape {
+  pure func area(self) Int
+}
+
+class Square implements Shape {
+  export side: Int<0..1000>
+  export pure func area(self) Int => self.side * self.side
+}
+
+func describe(shape: alias dynamic Shape) Int => shape.area()
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let sq = Square(side: 3)
+  caps.console.print("${describe(sq)}")
+
+
+}

@@ -1,0 +1,8 @@
+// accept
+// covers: LANG-11-06
+// Platform 12: FastCalculation expands to `pure noalloc`.
+contract FastCalculation {
+  pure
+  noalloc
+}
+FastCalculation func square(value: Int<-1000000..1000000>) Int => value * value

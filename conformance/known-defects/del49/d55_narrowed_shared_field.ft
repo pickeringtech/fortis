@@ -1,0 +1,18 @@
+// native: E-INT-002 (error[E0609]: no field `name` on type `&Shared<Settings>`): reading a field through a
+// `Shared[T]?` narrowed to `Shared[T]` by `!= null` (LR 6.8, 7.8) is lowered without unwrapping the optional.
+// The interpreter and the VM print `still alive: production`.
+import fortis.host { Host }
+
+class Settings {
+  export name: String
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let s = Shared.create(Settings(name: "production"))
+  let weak = s.downgrade()
+  let again = weak.upgrade()
+  if again != null {
+    caps.console.print("still alive: ${again.name}")
+  }
+}

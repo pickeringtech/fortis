@@ -1,0 +1,2 @@
+// accept
+export pure func clamp(value: Int) Int => value

@@ -1,0 +1,294 @@
+// Checking parsed transactions: every account declared, at most one amount left out, every commodity summing
+// to zero, and dates in order. A transaction that fails a check is reported once and left out of the reports.
+import pilot.ledger.scan { LineNo }
+import pilot.ledger.date { Date }
+// AccountClass is imported so that AccountName counts as Copyable here (pilot/repro/copy-imported-optional).
+import pilot.ledger.account { AccountClass, AccountName }
+import pilot.ledger.amount { Amount, Commodities, CommodityCode, Holdings, formatAmount, parseCommodityCode }
+import pilot.ledger.journal { Flag, Journal, Posting, PostingDraft, Transaction, TransactionDraft }
+import pilot.ledger.diagnostic { Diagnostic, Diagnostics, Problem, settle }
+import pilot.ledger.parser { ParsedJournal, parseJournal }
+
+// A journal of the transactions that passed every check, and every problem found on the way.
+export class Loaded {
+  export journal: Journal
+  export diagnostics: Diagnostics
+}
+
+// The result of checking one transaction.
+export enum Verdict {
+  Valid(transaction: Transaction)
+  Invalid(line: LineNo, problem: Problem, detail: String)
+}
+
+// Parses and checks a journal text. The failures behind its diagnostics go to the sink (see parser.ft).
+export pure try func loadJournal(text: StringView, sink: editable List[Failure]) Loaded {
+  let parsed = parseJournal(text, editable sink) or fail
+  return check(move parsed, editable sink) or fail
+}
+
+// Loads a journal for a test: the sink is settled before anything else can fail.
+export pure try recovers func loadedForTest(text: StringView) Loaded {
+  let mut sink: List[Failure] = List.default()
+  let loaded = loadJournal(text, editable sink)
+  discard settle(move sink)
+  return move loaded or fail
+}
+
+// Checks every draft of a parsed journal, in order.
+export pure try func check(parsed: owned ParsedJournal, sink: editable List[Failure]) Loaded {
+  let ParsedJournal(commodities: commodities, accounts: accounts, drafts: drafts, diagnostics: found) = move parsed
+  let mut diagnostics = move found
+  let mut declared: Set[String] = Set.default()
+  for a in accounts {
+    discard editable declared.add(a.text())
+  }
+  let mut transactions: List[Transaction] = List.default()
+  let mut latest: Date? = null
+  let mut latestLine = LineNo(1)
+  for draft in drafts {
+    let verdict = balance(draft, declared, commodities, editable sink) or fail
+    match move verdict {
+      Valid(transaction: t) => {
+        let previous = latest
+        if previous != null && t.date.isBefore(previous) {
+          discard editable diagnostics.note(t.line, Problem.DateOutOfOrder, "${t.date.iso()} is earlier than ${previous.iso()} on line ${latestLine}")
+        } else {
+          latest = t.date
+          latestLine = t.line
+        }
+        editable transactions.push(move t)
+      }
+      Invalid(line: at, problem: p, detail: d) => {
+        discard editable diagnostics.note(at, p, move d)
+      }
+    }
+  }
+  let journal = Journal(commodities: move commodities, accounts: move accounts, transactions: move transactions)
+  return Loaded(journal: move journal, diagnostics: move diagnostics)
+}
+
+// Balances one transaction: fills in a left-out amount, or checks that the written amounts sum to zero in
+// every commodity.
+export pure try func balance(draft: TransactionDraft, declared: Set[String], commodities: Commodities, sink: editable List[Failure]) Verdict {
+  if draft.postings.count() < 2 {
+    return Verdict.Invalid(line: draft.line, problem: Problem.TooFewPostings, detail: "a transaction needs at least two postings")
+  }
+  for p in draft.postings {
+    if !declared.contains(p.account.text()) {
+      return Verdict.Invalid(line: p.line, problem: Problem.UndeclaredAccount, detail: "account ${p.account.text()} is not declared")
+    }
+  }
+  let mut elidedLine: LineNo? = null
+  let mut elidedIndex = -1
+  let mut index = 0
+  for p in draft.postings {
+    if p.amount == null {
+      if elidedLine != null {
+        return Verdict.Invalid(line: p.line, problem: Problem.TwoElidedPostings, detail: "only one posting of a transaction may leave its amount out")
+      }
+      elidedLine = p.line
+      elidedIndex = index
+    }
+    index = Int.add(index, 1) or fail
+  }
+  // The sum is computed by a separate function: a `catch` that returns from inside a `for` loop is accepted
+  // by the checkers but refused by the VM (pilot/repro/catch-in-loop.ft).
+  let sum = writtenSum(draft) catch e {
+    return overflowVerdict(move e, draft.line, editable sink)
+  }
+  let mut postings: List[Posting] = List.default()
+  if elidedLine == null {
+    if !sum.isZero() {
+      let off = describeHoldings(sum, commodities)
+      return Verdict.Invalid(line: draft.line, problem: Problem.Unbalanced, detail: "the postings sum to ${off}, not zero")
+    }
+    for p in draft.postings {
+      let amount = copy p.amount
+      if amount != null {
+        editable postings.push(Posting(line: p.line, account: copy p.account, amount: move amount, inferred: false))
+      }
+    }
+  } else {
+    let residual = sum.negated() catch e {
+      return overflowVerdict(move e, draft.line, editable sink)
+    }
+    if residual.isZero() {
+      return Verdict.Invalid(line: elidedLine, problem: Problem.NothingToInfer, detail: "the other postings already balance; give this posting an amount or remove it")
+    }
+    let mut position = 0
+    for p in draft.postings {
+      let amount = copy p.amount
+      if amount != null {
+        editable postings.push(Posting(line: p.line, account: copy p.account, amount: move amount, inferred: false))
+      }
+      if position == elidedIndex {
+        for filled in residual.asAmounts() {
+          editable postings.push(Posting(line: p.line, account: copy p.account, amount: copy filled, inferred: true))
+        }
+      }
+      position = Int.add(position, 1) or fail
+    }
+  }
+  let transaction = Transaction(
+    line: draft.line,
+    date: draft.date,
+    flag: draft.flag,
+    description: copy draft.description,
+    tags: copy draft.tags,
+    postings: move postings,
+  )
+  return Verdict.Valid(transaction: move transaction)
+}
+
+// The sum of the written amounts of a transaction, per commodity; fails on overflow.
+pure try func writtenSum(draft: TransactionDraft) Holdings {
+  let mut sum = Holdings.empty()
+  for p in draft.postings {
+    let amount = copy p.amount
+    if amount != null {
+      editable sum.add(copy amount.code, amount.minor) or fail
+    }
+  }
+  return move sum
+}
+
+// The verdict for a failure while summing a transaction (an overflow: the sums are checked additions). The
+// failure, annotated with the transaction's line, goes to the sink.
+pure func overflowVerdict(f: owned Failure, line: LineNo, sink: editable List[Failure]) Verdict {
+  let detail: String = if f.code == "numeric.overflow" { give "the amounts of this transaction are too large to add up" } else { give "the amounts could not be added (${f.code})" }
+  editable sink.push(annotate(move f, "journal line ${line}"))
+  return Verdict.Invalid(line: line, problem: Problem.Overflow, detail: move detail)
+}
+
+// The non-zero quantities of a holding, each at its commodity's scale: `10.00 GBP, -5 JPY`.
+export pure func describeHoldings(holdings: Holdings, commodities: Commodities) String {
+  let mut out = Builder.create()
+  let mut first = true
+  for amount in holdings.asAmounts() {
+    if !first {
+      editable out.append(", ")
+    }
+    let scale = commodities.scaleOf(copy amount.code) ?? 0
+    editable out.append(amount.text(scale))
+    first = false
+  }
+  if first {
+    editable out.append("nothing")
+  }
+  return out.finish()
+}
+
+// The header and postings shared by the tests below.
+const declarations = """commodity GBP 2
+commodity USD 2
+account assets:bank
+account assets:cash
+account expenses:food
+account expenses:travel
+account income:salary
+"""
+
+// Loads a journal made of the shared declarations followed by `body`.
+pure try recovers func loadWith(body: StringView) Loaded {
+  let text: String = "${declarations}${body}"
+  return loadedForTest(text) or fail
+}
+
+// The rendered problems of a load, in line order.
+pure func problemsOf(loaded: Loaded) List[String] {
+  return loaded.diagnostics.inLineOrder().map(fn(d: Diagnostic) String => d.render())
+}
+
+test "written amounts that balance" {
+  let loaded = loadWith("2026-01-01 Pay\n  assets:bank  100.00 GBP\n  income:salary  -100.00 GBP\n") or fail
+  expect loaded.diagnostics.count() == 0
+  expect loaded.journal.transactions.count() == 1
+  let t = loaded.journal.transactions.at(0) or fail
+  expect t.postings.count() == 2
+}
+
+test "a left-out amount is inferred" {
+  let loaded = loadWith("2026-01-01 Lunch\n  expenses:food  12.50 GBP\n  assets:cash\n") or fail
+  expect loaded.diagnostics.count() == 0
+  let t = loaded.journal.transactions.at(0) or fail
+  let inferred = t.postings.at(1) or fail
+  expect inferred.inferred
+  expect inferred.amount.minor == -1250
+  expect inferred.account.text() == "assets:cash"
+}
+
+test "a left-out amount covers every commodity" {
+  let loaded = loadWith("2026-01-01 Trip\n  expenses:travel  10.00 USD\n  expenses:food  5.00 GBP\n  assets:cash\n") or fail
+  expect loaded.diagnostics.count() == 0
+  let t = loaded.journal.transactions.at(0) or fail
+  expect t.postings.count() == 4
+  let gbp = t.postings.at(2) or fail
+  let usd = t.postings.at(3) or fail
+  expect gbp.amount.text(2) == "-5.00 GBP"
+  expect usd.amount.text(2) == "-10.00 USD"
+}
+
+test "transaction problems" cases {
+  "unbalanced":    { body: "2026-01-01 Odd\n  expenses:food  1.00 GBP\n  assets:cash  -0.50 GBP\n", expected: "line 8: error transaction.unbalanced: the postings sum to 0.50 GBP, not zero" }
+  "two commodities": { body: "2026-01-01 Odd\n  expenses:food  1.00 GBP\n  assets:cash  -1.00 USD\n", expected: "line 8: error transaction.unbalanced: the postings sum to 1.00 GBP, -1.00 USD, not zero" }
+  "two left out":  { body: "2026-01-01 Odd\n  expenses:food  1.00 GBP\n  assets:cash\n  assets:bank\n", expected: "line 11: error transaction.two_elided: only one posting of a transaction may leave its amount out" }
+  "undeclared":    { body: "2026-01-01 Odd\n  expenses:fun  1.00 GBP\n  assets:cash\n", expected: "line 9: error account.undeclared: account expenses:fun is not declared" }
+  "one posting":   { body: "2026-01-01 Odd\n  expenses:food  1.00 GBP\n", expected: "line 8: error transaction.too_few_postings: a transaction needs at least two postings" }
+  "nothing left":  { body: "2026-01-01 Odd\n  expenses:food  1.00 GBP\n  assets:cash  -1.00 GBP\n  assets:bank\n", expected: "line 11: error transaction.nothing_to_infer: the other postings already balance; give this posting an amount or remove it" }
+} as row {
+  let loaded = loadWith(row.body) or fail
+  let problems = problemsOf(loaded)
+  expect problems.count() == 1
+  expect (problems.at(0) or fail) == row.expected
+  expect loaded.journal.transactions.count() == 0
+}
+
+test "dates out of order are a warning and the transaction is kept" {
+  let body = "2026-01-05 Later\n  expenses:food  1.00 GBP\n  assets:cash\n\n2026-01-02 Earlier\n  expenses:food  2.00 GBP\n  assets:cash\n\n2026-01-06 Last\n  expenses:food  3.00 GBP\n  assets:cash\n"
+  let loaded = loadWith(body) or fail
+  let problems = problemsOf(loaded)
+  expect problems.count() == 1
+  expect (problems.at(0) or fail) == "line 12: warning date.out_of_order: 2026-01-02 is earlier than 2026-01-05 on line 8"
+  expect loaded.journal.transactions.count() == 3
+  expect loaded.diagnostics.errorCount() == 0
+}
+
+test "an overflowing sum is reported, not a crash" {
+  let body = "2026-01-01 Huge\n  expenses:food  90,000,000,000,000,000.00 GBP\n  expenses:travel  90,000,000,000,000,000.00 GBP\n  assets:cash\n"
+  let loaded = loadWith(body) or fail
+  let problems = problemsOf(loaded)
+  expect problems.count() == 1
+  let only = problems.at(0) or fail
+  expect only == "line 8: error amount.overflow: the amounts of this transaction are too large to add up"
+}
+
+test "describing holdings" {
+  let mut known = Commodities.empty()
+  let gbp = parseCommodityCode("GBP") or fail
+  let jpy = parseCommodityCode("JPY") or fail
+  discard editable known.declare(copy gbp, 2)
+  discard editable known.declare(copy jpy, 0)
+  let mut h = Holdings.single(copy jpy, -5)
+  editable h.add(copy gbp, 1000) or fail
+  expect describeHoldings(h, known) == "10.00 GBP, -5 JPY"
+  expect describeHoldings(Holdings.empty(), known) == "nothing"
+}
+
+property "an inferred amount always balances the transaction" forall (a: Int<-100000000..100000000>, b: Int<-100000000..100000000>) {
+  let first = formatAmount(a, 2)
+  let second = formatAmount(b, 2)
+  let body: String = "2026-01-01 Mixed\n  expenses:food  ${first} GBP\n  expenses:travel  ${second} GBP\n  assets:cash\n"
+  let loaded = loadWith(body) or fail
+  if a + b == 0 {
+    expect loaded.journal.transactions.count() == 0
+  } else {
+    expect loaded.diagnostics.count() == 0
+    let t = loaded.journal.transactions.at(0) or fail
+    let mut total = 0
+    for p in t.postings {
+      total = Int.add(total, p.amount.minor) or fail
+    }
+    expect total == 0
+  }
+}

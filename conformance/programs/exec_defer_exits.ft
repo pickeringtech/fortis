@@ -1,0 +1,37 @@
+// execute: return path|deferred|fail path|deferred|loop 1|deferred|loop 2|deferred|loop 3|deferred|done
+// requires: runtime
+// covers: LANG-05-02, LANG-12-01
+// A deferred block runs on every exit kind: return, fail, break and continue.
+import fortis.host { Host, Console }
+export error Stop {
+  code: "demo.stop"
+}
+func early(console: Console) Int {
+  defer { console.print("deferred") }
+  console.print("return path")
+  return 1
+}
+try func failing(console: Console) Int {
+  defer { console.print("deferred") }
+  console.print("fail path")
+  fail Stop()
+}
+func looping(console: Console) Void {
+  for i in 1..5 {
+    defer { console.print("deferred") }
+    console.print("loop ${i}")
+    if i == 2 {
+      continue
+    }
+    if i == 3 {
+      break
+    }
+  }
+}
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  discard early(caps.console)
+  discard failing(caps.console) or recover 0
+  looping(caps.console)
+  caps.console.print("done")
+}

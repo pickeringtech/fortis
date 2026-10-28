@@ -1,0 +1,35 @@
+// execute: sum 60|capped 100|overflow numeric.overflow
+// requires: runtime
+// covers: LANG-06-02, LANG-06-03, LANG-05-03
+// Programme 16, interaction ranged loop + refinement + checked arithmetic: the index of `0..<xs.count()` indexes
+// the list without a check (X-93), a refined total is validated, and a sum the domain cannot prove uses `Int.add`.
+import fortis.host { Host }
+
+try func total(xs: List[Int<0..50>]) Int {
+  let mut sum = 0
+  for i in 0..<xs.count() {
+    sum = Int.add(sum, xs[i]) or fail
+  }
+  return sum
+}
+
+try func capped(xs: List[Int<0..50>]) Int<0..100> {
+  let t = total(xs) or fail
+  if t > 100 {
+    return 100
+  }
+  return Int<0..100>.validate(t) or fail
+}
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let s = total(List.of(10, 20, 30)) or recover -1
+  caps.console.print("sum ${s}")
+  let c = capped(List.of(50, 50, 50)) or recover 0
+  caps.console.print("capped ${c}")
+  let big = Int.add(9223372036854775807, 1) catch e {
+    caps.console.print("overflow ${e.code}")
+    recover 0
+  }
+  discard big
+}

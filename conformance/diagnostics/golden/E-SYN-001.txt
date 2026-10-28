@@ -1,0 +1,5 @@
+conformance/programs/syntax_semicolon.ft:4:19: error E-SYN-001 [LANG-03-01] (Syntax, violated): ';' is not a token
+    expected_tokens: []
+    found_token: ";"
+    correction: delete the semicolon
+      conformance/programs/syntax_semicolon.ft:4:19-4:20 -> ""

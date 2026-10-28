@@ -1,0 +1,14 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-10-04
+// A failure whose payload is an unbounded String allocates; the function cannot claim noalloc.
+export error Named {
+  code: "demo.named"
+  payload { name: String }
+}
+
+export noalloc try func check(n: Int) Int {
+  if n > 10 {
+    fail Named(name: "big ${n}")            // reject: E-EFF-001
+  }
+  return n
+}

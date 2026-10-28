@@ -1,0 +1,17 @@
+// reject: E-REF-001 (at the marked line)
+// covers: LANG-06-02, LANG-07-05
+export class Cell {
+  export value: Int
+}
+
+func reset(c: editable Cell) Void {
+  c.value = 500
+}
+
+func narrowed(c: editable Cell) Int<0..100> {
+  if c.value >= 0 && c.value <= 100 {
+    reset(editable c)
+    return c.value                         // reject: E-REF-001 — the exclusive loan discarded the fact
+  }
+  return 0
+}

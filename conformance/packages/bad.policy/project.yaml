@@ -1,0 +1,8 @@
+schema: fortis.project/v1
+name: bad.policy
+version: 0.1.0
+exports: [m]
+dependencies:
+  fortis: "1.0"
+policy:
+  disable: [ownership, obligations]

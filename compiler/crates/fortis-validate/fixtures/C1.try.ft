@@ -1,0 +1,17 @@
+// DEL-45 fixture for C1.try (linearity): every outcome is consumed.
+export error Bad {
+  code: "fixture.bad"
+}
+try func check(n: Int) Int {
+  if n > 9 {
+    fail Bad()
+  }
+  return n
+}
+try func run() Int {
+  let v = check(3) or fail
+  return v
+}
+export recovers func main(args: List[String]) Void {
+  discard run() or recover 0
+}

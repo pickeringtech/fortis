@@ -1,0 +1,9 @@
+import cycle.newtype.pq.p { take }
+
+export type Small = Int<0..10>
+
+export class Bee {
+  export n: Int
+}
+
+export func five() Small => take(Small(5))

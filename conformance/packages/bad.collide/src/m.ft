@@ -1,0 +1,5 @@
+// reject: E-NAM-001
+import acme.util { Helper }
+export class Helper {
+  export x: Int
+}

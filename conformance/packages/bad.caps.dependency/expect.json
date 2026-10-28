@@ -1,0 +1,1 @@
+{"verdict": "reject", "code": "E-EFF-010", "covers": ["LANG-11-07"], "at": ["caps.minter/src/lib.ft:5", "caps.minter/src/lib.ft:6"]}

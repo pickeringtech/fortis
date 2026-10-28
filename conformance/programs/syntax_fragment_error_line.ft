@@ -1,0 +1,3 @@
+// reject: E-SYN-000 (at the marked line)
+let x = 1
+let y = )                                // reject: E-SYN-000

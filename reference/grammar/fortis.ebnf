@@ -1,0 +1,279 @@
+(* Fortis core grammar — FSPEC-0.2, 22 October 2026.
+   Normative for Fortis Language 1.0. Notation: ISO 14977 EBNF with these conventions:
+     "x"      literal token        [x]      optional        {x}      zero or more
+     x | y    alternative          (* *)    comment
+   Terminals come from the lexer described at the end. NL is emitted for every newline that the
+   continuation rules (Language Reference 3.2) do not suppress; the grammar absorbs the NLs that may
+   follow "{" or precede "}" with { NL }, so `{ statement }` on one line and the usual multi-line body
+   are both sentences. Two items of a body must be separated by at least one NL.
+   Platform declaration heads are reserved words; their bodies are opaque here and are validated by
+   the owning kit (Language Reference 16). *)
+
+(* ---------- Module ---------- *)
+
+module          = { NL } { import NL { NL } } { declaration NL { NL } } ;   (* a file ends with an implicit NL *)
+
+import          = "import" dottedPath [ "as" lowerIdent | "{" identList "}" ] ;
+dottedPath      = lowerIdent { "." memberName } ;        (* package segments then module segments; a segment after "." may be a keyword: fortis.http.server *)
+identList       = ident { "," ident } [ "," ] ;
+
+declaration     = { aspectUse NL } [ "export" ]
+                  ( constDecl | typeDecl | classDecl | enumDecl | errorDecl | interfaceDecl
+                  | implementDecl | mixinDecl | contractDecl | aspectDecl | observationDecl | funcDecl
+                  | testDecl | propertyDecl | headBlock ) ;
+aspectUse       = "@" lowerIdent "(" [ argList ] ")" ;             (* the only use of "@" *)
+
+constDecl       = "const" lowerIdent [ ":" type ] "=" constExpr ;
+typeDecl        = "type" upperIdent "=" type ;                     (* always nominal *)
+
+(* ---------- Classes, enums, errors ---------- *)
+
+classDecl       = [ "trivial" ] "class" upperIdent [ typeParams ] [ lifetimeParam ]
+                  [ "derive" upperIdentList ] [ "implements" typeList ] [ "with" typeList ]
+                  "{" { NL } [ classMember { NL { NL } classMember } { NL } ] "}" ;
+typeParams      = "[" upperIdent { "," upperIdent } "]" ;
+lifetimeParam   = "[" "lifetime" lowerIdent "]" ;                  (* parsed so that the checker can name it: stored loans are not in v1, E-OWN-053 (X-137) *)
+upperIdentList  = upperIdent [ typeArgs ] { "," upperIdent [ typeArgs ] } ;   (* derive From[Customer] *)
+typeList        = type { "," type } ;
+classMember     = { aspectUse NL } [ "export" ] ( fieldDecl | constDecl | methodHead [ funcBody ] ) | [ "export" ] injectDecl | cleanupDecl ;
+                                                                   (* a method body is absent exactly when the head is trusted (LR 8.1): signature modules *)
+fieldDecl       = lowerIdent ":" type [ "=" constExpr ] ;
+injectDecl      = "inject" [ "lazy" ] lowerIdent ":" type ;        (* DI kit; slot 2; `export inject` exports the field it becomes (X-138) *)
+cleanupDecl     = "cleanup" "(" "editable" "self" ")" "Void" block ;
+
+enumDecl        = "enum" upperIdent [ typeParams ] [ "derive" upperIdentList ] [ "implements" typeList ]
+                  "{" { NL } [ enumMember { NL { NL } enumMember } { NL } ] "}" ;
+enumMember      = variant | classMember ;                          (* variants first, then members *)
+variant         = upperIdent [ "(" fieldList ")" ] ;
+fieldList       = lowerIdent ":" type { "," lowerIdent ":" type } [ "," ] ;
+
+errorDecl       = "error" upperIdent "{" { NL } "code" ":" STRING NL { NL }
+                  [ "payload" "{" fieldList "}" NL { NL } ] [ "message" ":" TEMPLATE NL { NL } ] "}" ;
+
+(* ---------- Interfaces, implementations, mixins, contracts, observations ---------- *)
+
+interfaceDecl   = "interface" upperIdent [ typeParams ] [ "requires" typeList ] [ whereClause ] "{" { NL } [ interfaceMember { NL { NL } interfaceMember } { NL } ] "}" ;
+interfaceMember = methodHead
+                | "const" lowerIdent ":" type ;                   (* no associated types in v1 *)
+
+implementDecl   = "implement" type "for" type [ whereClause ] "{" { NL } [ implementMember { NL { NL } implementMember } { NL } ] "}" ;
+implementMember = [ "export" ] methodHead funcBody
+                | "const" lowerIdent "=" constExpr ;
+
+mixinDecl       = "mixin" upperIdent "{" { NL } [ mixinMember { NL { NL } mixinMember } { NL } ] "}" ;
+mixinMember     = "requires" ( methodHead | typeList ) | [ "export" ] methodHead funcBody ;
+
+contractDecl    = "contract" upperIdent "{" { NL } [ contractItem { NL { NL } contractItem } { NL } ] "}" ;
+contractItem    = "pure" | "noalloc" | "async" | "try" | "recovers"
+                | "forbids" effectName
+                | "requires" "capability" upperIdent
+                | "excludes" "capability" upperIdent ;
+
+aspectDecl      = "aspect" lowerIdent [ typeParams ] "(" [ aspectParams ] ")"
+                  ( "{" { NL } [ aspectPart { NL { NL } aspectPart } { NL } ] "}"
+                  | "=" lowerIdent [ typeArgs ] "(" [ argList ] ")" ) ;        (* "...rest" is an arg form *)
+aspectParams    = param { "," param } [ "," ] ;                     (* "...rest" is the restParam form of param *)
+aspectPart      = "needs" lowerIdent ":" paramType
+                | "needs" upperIdent
+                | "before" block
+                | "after" "(" lowerIdent ":" type ")" block
+                | "on" "failure" "(" lowerIdent ":" "Failure" ")" type block
+                | "metadata" ;
+effectName      = "alloc" | "io" | "mutate" | "nondet" | "suspend" | "block" | "fail" | "recovers" ;
+
+observationDecl = "observation" upperIdent "{" { NL } [ observationItem { NL { NL } observationItem } { NL } ] "}" ;
+observationItem = "version" ":" INTEGER
+                | "encoding" ":" lowerIdent [ "(" INTEGER ")" ]
+                | lowerIdent ":" type "required" ":" ( "all" | "success" | "failure" | "none" ) ;
+
+(* ---------- Functions ---------- *)
+
+funcDecl        = funcHead [ funcBody ] ;                           (* the body is absent exactly when the head is trusted *)
+modifiers       = { upperIdent } [ "trusted" ] [ "pure" ] [ "noalloc" ] [ "async" ] [ "try" ] [ "recovers" ] ;
+                                                                   (* leading upperIdents are named contracts *)
+funcHead        = modifiers "func" lowerIdent funcSignature ;              (* a free function: its name is never a keyword *)
+methodHead      = modifiers "func" memberName funcSignature ;              (* a method or associated function: LR 3.4 admits a keyword *)
+funcSignature   = [ typeParams ] "(" [ paramList ] ")" returnType [ whereClause ] ;
+returnType      = type ;                                          (* a loan result is written as a loan type: editable Cell from c *)
+paramList       = param { "," param } [ "," ] ;
+param           = selfParam | restParam | [ "..." ] lowerIdent ":" paramType [ "=" constExpr ] ;   (* "...": variadic last parameter of a trusted signature (6.7, X-90) *)
+restParam       = "..." lowerIdent ;                               (* the rest of an aspect's arguments (11.8); only in aspect parameter lists *)
+selfParam       = [ "editable" | "owned" ] "self" ;
+paramType       = [ "editable" | "owned" ] type ;
+whereClause     = "where" constraint { "," constraint } ;
+constraint      = upperIdent "implements" type | upperIdent ":" "linear" ;
+funcBody        = block | "=>" expr ;
+
+(* ---------- Tests ---------- *)
+
+testDecl        = "test" STRING [ "cases" "{" { NL } [ caseRow { NL { NL } caseRow } { NL } ] "}" "as" lowerIdent ] block ;
+caseRow         = STRING ":" recordLit ;
+propertyDecl    = "property" STRING "forall" "(" paramList ")" block ;
+
+(* ---------- Platform heads (slot 1; bodies are kit-validated) ---------- *)
+
+headBlock       = [ "server" | "client" | "hybrid" ] headWord ( upperIdent | lowerIdent )
+                  [ "(" [ paramList ] ")" ] "{" headBody "}" ;
+headWord        = "application" | "context" | "model" | "component" | "view" | "explore" ;
+headBody        = ? balanced token sequence validated by the owning kit's schema; a raw template region
+                    (LR 16: a statement of the lexical shape [ "export" ] [ prefix ] "view" [ name [ "(" balanced ")" ] ]
+                    "{" ... "}") is one TEMPLATE token inside it ? ;
+
+(* ---------- Statements ---------- *)
+
+block           = "{" { NL } [ statement { NL { NL } statement } { NL } ] "}" ;
+statement       = letStmt | assignStmt | ifStmt | whileStmt | forStmt | loopStmt | block
+                | "break" [ lowerIdent ] | "continue" [ lowerIdent ]
+                | "return" [ expr ] | "give" expr | "recover" expr
+                | "report" expr [ "as" lowerIdent ]
+                | "discard" expr | deferStmt | scopeStmt | captureStmt | recordStmt
+                | expectStmt | exprStmt ;
+
+letStmt         = "let" [ "mut" ] lowerIdent [ ":" type ] "=" expr
+                | "let" pattern "=" "move" place ;                  (* consuming destructure *)
+assignStmt      = place ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ) expr ;
+ifStmt          = "if" expr block { "else" "if" expr block } [ "else" block ] ;
+whileStmt       = [ label ] "while" expr block ;
+forStmt         = [ label ] "for" lowerIdent "in" ( "move" place | rangeExpr | expr ) block ;
+loopStmt        = [ label ] "loop" block ;
+label           = lowerIdent ":" ;
+deferStmt       = "defer" block ;
+scopeStmt       = "scope" lowerIdent block ;
+captureStmt     = "capture" lowerIdent "=" expr ;
+recordStmt      = "record" upperIdent "(" [ argList ] ")" ;
+expectStmt      = "expect" expr ;
+exprStmt        = expr ;
+
+(* ---------- Expressions, lowest to highest precedence ---------- *)
+
+expr            = outcomeExpr ;
+outcomeExpr     = coalesceExpr [ "or" "fail"
+                               | "or" "recover" outcomeExpr          (* right-associative *)
+                               | "catch" lowerIdent block ] ;
+coalesceExpr    = orExpr [ "??" coalesceExpr ] ;
+                  (* mixing outcome operators, "??" and "||"/"&&" in one unparenthesised expression is
+                     rejected on the parse tree: E-SYN-004 *)
+orExpr          = andExpr { "||" andExpr } ;
+andExpr         = bitOrExpr { "&&" bitOrExpr } ;
+bitOrExpr       = bitXorExpr { "|" bitXorExpr } ;
+bitXorExpr      = bitAndExpr { "^" bitAndExpr } ;
+bitAndExpr      = equalityExpr { "&" equalityExpr } ;
+equalityExpr    = relationalExpr [ ( "==" | "!=" ) relationalExpr ] ;
+relationalExpr  = shiftExpr [ ( "<" | "<=" | ">" | ">=" ) shiftExpr ] ;
+shiftExpr       = additiveExpr { ( "<<" | ">>" ) additiveExpr } ;
+additiveExpr    = multiplicativeExpr { ( "+" | "-" ) multiplicativeExpr } ;
+multiplicativeExpr = unaryExpr { ( "*" | "/" | "%" ) unaryExpr } ;
+unaryExpr       = ( "-" | "!" | "await" ) unaryExpr | markerExpr | postfixExpr ;
+markerExpr      = marker place [ ( methodCall | "(" [ argList ] ")" ) { postfix } ] ;
+                                                                   (* marker on a place, on a receiver, or on a closure being called;
+                                                                      `await editable db.insert(x)` is await applied to the marked call *)
+marker          = "copy" | "alias" | "editable" | "move" ;
+methodCall      = "." memberName "(" [ argList ] ")" ;
+postfixExpr     = primaryExpr { postfix } ;
+postfix         = methodCall | "." memberName | "." INTEGER | "?." memberName      (* P3: `.name(` is a method call (LR 3.2) *)
+                | "(" [ argList ] ")"
+                | "[" expr "]" ;                                  (* indexing: only after a lowercase-rooted primary *)
+argList         = arg { "," arg } [ "," ] ;
+arg             = [ lowerIdent ":" ] expr
+                | "..." ( "copy" | "move" ) place                     (* constructor spread, LR 9.2 *)
+                | "..." lowerIdent ;                                (* "...rest" only in aspect specialisations *)
+
+primaryExpr     = literal | lowerIdent | "self"
+                | typeRef [ "." ( upperIdent | memberName ) ] [ "(" [ argList ] ")" ]
+                                                                   (* Type.assoc(...), Enum.Variant(...), Name(fields), Int<0..9>.validate(x), String.from(v) *)
+                | "(" expr ")" | tupleLit | recordLit | lambda | matchExpr | ifExpr
+                | "present" "(" expr ")" | "null"
+                | "fail" expr ;                                    (* type Never; usable as a match arm *)
+typeRef         = [ lowerIdent "." ] upperIdent [ typeArgs ] [ refinement ] ;
+rangeExpr       = additiveExpr ( ".." | "..<" ) additiveExpr ;
+tupleLit        = "(" expr "," [ expr { "," expr } ] ")" ;
+recordLit       = "{" { NL } ident ":" expr { "," ident ":" expr } [ "," ] { NL } "}" ;   (* uppercase keys: a variant map *)
+
+lambda          = modifiers "fn" [ "mut" | "once" ] [ "[" captureList "]" ] "(" [ lambdaParams ] ")" type funcBody ;
+captureList     = capture { "," capture } ;
+capture         = marker place | lowerIdent ;                      (* bare name: trivial value, copied *)
+lambdaParams    = lambdaParam { "," lambdaParam } ;
+lambdaParam     = lowerIdent [ ":" paramType ] ;
+
+matchExpr       = "match" [ "move" ] expr "{" { NL } [ matchArm { NL { NL } matchArm } { NL } ] "}" ;
+matchArm        = pattern [ "when" expr ] "=>" ( expr | block ) ;  (* block arms end in give *)
+ifExpr          = "if" expr block "else" ( ifExpr | block ) ;      (* every block ends in give *)
+
+pattern         = "_" | lowerIdent | literal
+                | upperIdent [ "(" patternFields ")" ]              (* enum variant, or class destructure under move *)
+                | "present" "(" pattern ")" | "null"
+                | "success" "(" pattern ")" | "failure" "(" pattern ")"
+                | "is" upperIdent [ "(" patternFields ")" ] [ "as" lowerIdent ]
+                | "(" pattern { "," pattern } ")"
+                | "{" lowerIdent ":" pattern { "," lowerIdent ":" pattern } "}"
+                | "otherwise" [ "(" lowerIdent ")" ] ;
+patternFields   = patternField { "," patternField } ;
+patternField    = [ lowerIdent ":" ] pattern ;
+
+place           = ( lowerIdent | "self" ) { "." memberName | "[" INTEGER "]" } ;
+
+(* ---------- Types ---------- *)
+
+type            = fnType | loanType | namedType [ "?" ] ;
+namedType       = typeRef | "(" type ")" | "(" type { "," type } ")" | "{" { NL } fieldList { NL } "}" | "Self" ;
+                                                                   (* record braces tolerate newlines after "{" and before "}" whichever brace kind the lexer assigned (LR 3.2) *)
+                                                                   (* "(" type ")" groups: (fn(Int) Bool)? *)
+loanType        = [ "alias" | "editable" ] namedType [ "?" ] "from" origin    (* a loan or view with its origin; alias is the default *)
+                | [ "alias" ] "dynamic" typeRef [ "?" ] ;                     (* dynamic I (owned, boxed) or alias dynamic I *)
+origin          = lowerIdent | "self" | "static" ;                 (* a parameter, a lifetime parameter, the receiver, or static storage *)
+typeArgs        = "[" typeArg { "," typeArg } "]" ;
+typeArg         = type | INTEGER ;
+refinement      = "<" refineBody ">" ;
+refineBody      = range | lowerIdent ":" range ;                   (* Int<0..100>, String<scalars: 1..120> *)
+range           = constExpr ( ".." | "..<" ) [ constExpr ] | ".." constExpr ;
+fnType          = [ "dynamic" ] modifiers "fn" [ "mut" | "once" ]
+                  "(" [ paramType { "," paramType } ] ")" type [ "from" lowerIdent ] ;
+                  (* "from" on a callable type names a parameter of the enclosing function head whose
+                     loans the closure may hold *)
+
+constExpr       = constTerm { ( "+" | "-" | "*" | "/" | "%" ) constTerm } ;
+constTerm       = literal | "null" | "-" constTerm | "(" constExpr ")" | lowerIdent { "." memberName }   (* a const or declaration name, possibly module-qualified *)
+                | typeRef [ "." ( upperIdent | memberName ) ] [ "(" [ constArgList ] ")" ]
+                                                                   (* Enum.Variant, Name(fields), Type.of(...), Type.default() *)
+                | "{" { NL } ident ":" constExpr { "," ident ":" constExpr } [ "," ] { NL } "}" ;   (* record or variant-map literal *)
+constArgList    = constArg { "," constArg } [ "," ] ;
+constArg        = [ lowerIdent ":" ] constExpr ;
+                  (* which names are consts, which calls are the Type.of intrinsic or a derived default, and
+                     whether a value is constant are semantic checks (LR 4.2, 8.1) *)
+
+(* ---------- Lexical terminals ---------- *)
+
+literal         = INTEGER | FLOAT | DECIMAL | DURATION | STRING | RAWSTRING | BYTESTRING | "true" | "false" ;
+ident           = lowerIdent | upperIdent ;
+memberName      = lowerIdent | keywordName ;                       (* member position, LR 3.4 *)
+keywordName     = ? a keyword of Language Reference Appendix A, admitted as a name only where memberName appears ? ;
+lowerIdent      = ? ( "a".."z" | "_" ) { "a".."z" | "A".."Z" | "0".."9" | "_" } , not a keyword ? ;
+upperIdent      = ? "A".."Z" { "a".."z" | "A".."Z" | "0".."9" | "_" } , not a keyword ? ;
+INTEGER         = ? decimal digits with optional "_" separators | "0x" hex | "0b" binary | "0o" octal ? ;
+FLOAT           = ? digits "." digits [exponent] | digits exponent , optional suffix "f32" ? ;
+DECIMAL         = ? digits [ "." digits ] "d" ? ;
+DURATION        = ? digits ( "ns" | "us" | "ms" | "s" | "min" | "h" ) ? ;
+STRING          = ? '"' chars with escapes and "${" expr "}" interpolation '"' ? ;
+TEMPLATE        = ? '"' chars where "${" lowerIdent "}" names a payload field '"' ? ;
+RAWSTRING       = ? '"""' chars '"""' ? ;
+BYTESTRING      = ? 'b"' ascii chars with escapes '"' ? ;
+NL              = ? newline not suppressed by the continuation rules ? ;
+
+(* Lexer notes.
+   1. The longest match applies to ".." vs "..<" vs "." and to "?." vs "?" ; ".." is consumed before ".".
+   2. "<" after an upperIdent in type position opens a refinement; in expression position "<" is always
+      the comparison operator. Type position is decided by the grammar, never by a symbol table. The one
+      expression-position exception is typeRef in primaryExpr, where "<" directly after "Name" or "Name[...]"
+      opens a refinement (Int<0..9>.validate(x)); it is closed before "." or "(". The refinement "<" and its
+      closing ">" are distinct tokens (REF_OPEN, REF_CLOSE) from the comparison operators and are not
+      continuation tokens, so a refined type at the end of a line does not join it to the next.
+   3. "[" after an upperIdent is a type-argument list; after a lowercase-rooted postfix expression it is an
+      index; after "fn", "fn mut" or "fn once" it is a capture list.
+   4. A ";" token anywhere outside strings, comments and raw template regions (LR 16) is E-SYN-001.
+   5. Comments: "//" to end of line is the only comment form; a run of "//" lines directly above a
+      declaration is its documentation.
+   6. Keywords are listed in Language Reference Appendix A; "once" and "mut" are among them. The lexer always
+      emits a keyword as a keyword token; the grammar admits one as a name only through memberName (after "."
+      or "?.", and as the declared name of a method or associated function: String.from). A keyword in any
+      other identifier position is E-SYN-002.
+   7. Blank lines and comment-only lines produce no NL; a file ends with an implicit NL. *)

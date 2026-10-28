@@ -1,0 +1,15 @@
+// accept
+// covers: LANG-13-02
+async func pause() Void {
+}
+observation Trace {
+  tier: Int                          required: all
+  txn: Int                           required: success
+}
+@observe(Trace)
+async func process(n: Int) Int {
+  capture tier = n
+  await pause()
+  capture txn = n
+  return n
+}

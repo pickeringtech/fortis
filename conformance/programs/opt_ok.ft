@@ -1,0 +1,19 @@
+// accept
+// covers: LANG-06-08
+export class Account {
+  export name: String
+  export age: Int?
+}
+
+pure func describe(p: Account?, fallback: Int) Int {
+  let age = p?.age
+  let n = age ?? fallback
+  if p != null {
+    return n
+  }
+  let maybe: Int? = 7
+  return match maybe {
+    present(v) => Int.saturatingAdd(v, n)
+    null => n
+  }
+}

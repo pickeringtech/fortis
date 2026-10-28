@@ -1,0 +1,11 @@
+// reject: E-DEF-001 (at the marked line)
+// covers: LANG-12-01
+export error Late {
+  code: "demo.late"
+}
+try func run(n: Int) Int {
+  defer {
+    fail Late()                            // reject: E-DEF-001
+  }
+  return n
+}

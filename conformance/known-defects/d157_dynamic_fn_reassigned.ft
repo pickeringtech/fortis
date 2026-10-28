@@ -1,0 +1,30 @@
+// Different lambdas stay accepted where the declared type is `dynamic fn` (LANG-08-04).
+// Native does not build this program (D-55): a dynamic fn in a list or field is boxed.
+func applyAll(steps: List[dynamic fn(Int) Int], start: Int) Int {
+  let mut value = start
+  for step in steps {
+    value = step(value)
+  }
+  return value
+}
+
+class Step {
+  export run: dynamic fn(Int) Int
+}
+
+func run(b: Bool) Int {
+  let mut f: dynamic fn(Int) Int = fn(x: Int) Int => x
+  f = fn(x: Int) Int => Int.saturatingAdd(x, 1)
+  let double: dynamic fn(Int) Int = fn(n: Int) Int => Int.saturatingMul(n, 2)
+  let add: dynamic fn(Int) Int = fn(n: Int) Int => Int.saturatingAdd(n, 1)
+  let steps = List.of(move double, move add)
+  let listed: List[dynamic fn(Int) Int] = List.of(fn(x: Int) Int => x, fn(x: Int) Int => Int.saturatingAdd(x, 1))
+  let chosen: dynamic fn(Int) Int = if b { give fn(x: Int) Int => x } else { give fn(x: Int) Int => Int.saturatingMul(x, 2) }
+  let a = Step(run: fn(x: Int) Int => x)
+  let c = Step(run: fn(x: Int) Int => Int.saturatingMul(x, 2))
+  discard f
+  discard chosen
+  discard a
+  discard c
+  return applyAll(steps, applyAll(listed, 1))
+}

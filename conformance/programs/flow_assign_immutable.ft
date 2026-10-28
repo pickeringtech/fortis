@@ -1,0 +1,17 @@
+// reject: E-NAM-002 (at the marked lines)
+// covers: LANG-05-01, LANG-07-02
+export class Counter {
+  count: Int
+  export pure func peek(self) Int {
+    self.count = 0                          // reject: E-NAM-002 — read self
+    return self.count
+  }
+}
+
+func rebind(limit: Int, c: Counter) Int {
+  let total = 1
+  total = 2                                 // reject: E-NAM-002 — immutable binding
+  limit = 3                                 // reject: E-NAM-002 — a parameter cannot be reassigned
+  c.count = 4                               // reject: E-NAM-002 — c is a read loan
+  return total + limit
+}

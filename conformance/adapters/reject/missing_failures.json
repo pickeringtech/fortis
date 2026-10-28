@@ -1,0 +1,36 @@
+{
+  "why": "PROG-ARC-02: a boundary that does not declare its failures is refused",
+  "expect": "missing facet: failures",
+  "manifest": {
+    "capability": "Network",
+    "rule": "PROG-ARC-02",
+    "normative": "Language Reference 11.6, 15",
+    "adapter": "compiler/crates/fortis-native/src/host.rs",
+    "handle": {
+      "representation": "a zero-sized Copy struct with a private constructor (Appendix C.1)",
+      "ownership": "carries no state, so a copy is the capability itself; a future that holds one owns it and may be detached",
+      "created_by": "Host.capabilities(), called once by main (11.6); every other handle of this type is derived from that one"
+    },
+    "operations": {
+      "resolve": {
+        "ownership": {
+          "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+          "host": "a read loan for the call, not retained",
+          "result": "an owned String"
+        },
+        "effects": [
+          "fail",
+          "io"
+        ],
+        "allocation": "the result text; the failure value with its `host` field when the host is not localhost",
+        "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+      }
+    },
+    "violation": {
+      "fixture": "conformance/programs/exec_host_violations.ft",
+      "refused_by": "native",
+      "expect": "network.unreachable",
+      "clause": "offline: only localhost resolves"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "class": "Observation",
+  "code": "E-OBS-001",
+  "column": 1,
+  "fields": {
+    "exit_path": "<exit_path>"
+  },
+  "file": "x.ft",
+  "line": 1,
+  "message": "negative record",
+  "rule": "-",
+  "severity": "error",
+  "status": "violated"
+}

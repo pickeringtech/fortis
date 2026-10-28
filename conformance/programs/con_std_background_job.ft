@@ -1,0 +1,10 @@
+// accept
+// covers: LANG-11-06
+// Platform 12: BackgroundJob's contract part is `requires capability TaskContext`, `forbids recovers`.
+export class TaskContext implements Authority {}
+contract BackgroundJob {
+  requires capability TaskContext
+  forbids recovers
+}
+BackgroundJob func run(ctx: TaskContext, n: Int) Void {
+}

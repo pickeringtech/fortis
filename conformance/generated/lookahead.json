@@ -1,0 +1,2285 @@
+{
+ "grammar_sha256": "c383b8df6bb6969b485a2e57bc97bd208aecd7960bfb91211a7a54e7df7bee8a",
+ "kmax": 3,
+ "runs": [
+  {
+   "k": 1,
+   "decisions": 287,
+   "conflicts": 84,
+   "undocumented": 10,
+   "conflict_list": [
+    {
+     "rule": "identList",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ","
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "classDecl",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "["
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "classDecl",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:NL"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "classMember",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "export"
+     ],
+     "policy": null
+    },
+    {
+     "rule": "enumDecl",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:NL"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "enumMember",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:UPPER"
+     ],
+     "policy": null
+    },
+    {
+     "rule": "fieldList",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ","
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "interfaceDecl",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:NL"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "implementDecl",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:NL"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "mixinDecl",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:NL"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "mixinMember",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:UPPER",
+      "async",
+      "noalloc",
+      "pure",
+      "recovers",
+      "trusted"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "contractDecl",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:NL"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "aspectDecl",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:NL"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "aspectParams",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ","
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "aspectPart",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "needs"
+     ],
+     "policy": null
+    },
+    {
+     "rule": "observationDecl",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:NL"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "paramList",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ","
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "param",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "..."
+     ],
+     "policy": null
+    },
+    {
+     "rule": "paramType",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "editable"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "constraint",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:UPPER"
+     ],
+     "policy": null
+    },
+    {
+     "rule": "testDecl",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:NL"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "block",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:NL"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      1,
+      3
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      1,
+      4
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      1,
+      5
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      1,
+      19
+     ],
+     "shared": [
+      "KIND:LOWER",
+      "self"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      2,
+      19
+     ],
+     "shared": [
+      "if"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      3,
+      4
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      3,
+      5
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      3,
+      19
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      4,
+      5
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      4,
+      19
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      5,
+      19
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      6,
+      19
+     ],
+     "shared": [
+      "{"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "letStmt",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "let"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "ifStmt",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "else"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "forStmt",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "move"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "forStmt",
+     "where": "alternative",
+     "branches": [
+      0,
+      2
+     ],
+     "shared": [
+      "move"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "forStmt",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "!",
+      "(",
+      "-",
+      "KIND:BYTES",
+      "KIND:DEC",
+      "KIND:DUR"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "outcomeExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "catch",
+      "or"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "outcomeExpr",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "or"
+     ],
+     "policy": null
+    },
+    {
+     "rule": "coalesceExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "??"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "orExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "||"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "andExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "&&"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "bitOrExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "|"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "bitXorExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "^"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "bitAndExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "&"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "equalityExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "!=",
+      "=="
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "relationalExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "<",
+      "<=",
+      ">",
+      ">="
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "shiftExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "<<",
+      ">>"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "additiveExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "+",
+      "-"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "multiplicativeExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "%",
+      "*",
+      "/"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "markerExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "(",
+      "."
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "markerExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "(",
+      ".",
+      "?.",
+      "["
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "postfixExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "(",
+      ".",
+      "?.",
+      "["
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "postfix",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "."
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "postfix",
+     "where": "alternative",
+     "branches": [
+      0,
+      2
+     ],
+     "shared": [
+      "."
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "postfix",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "."
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "argList",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ","
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "arg",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "..."
+     ],
+     "policy": null
+    },
+    {
+     "rule": "arg",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "alternative",
+     "branches": [
+      1,
+      3
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "alternative",
+     "branches": [
+      3,
+      7
+     ],
+     "shared": [
+      "KIND:UPPER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "alternative",
+     "branches": [
+      4,
+      5
+     ],
+     "shared": [
+      "("
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "."
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "("
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "typeRef",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "["
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "recordLit",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ","
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "matchExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "move"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "matchExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:NL"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "matchArm",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "{"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "patternField",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "place",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ".",
+      "["
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "type",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:UPPER",
+      "dynamic"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "type",
+     "where": "alternative",
+     "branches": [
+      0,
+      2
+     ],
+     "shared": [
+      "KIND:UPPER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "type",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "(",
+      "KIND:LOWER",
+      "KIND:UPPER",
+      "Self",
+      "{"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "namedType",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "("
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "loanType",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "alias"
+     ],
+     "policy": null
+    },
+    {
+     "rule": "refineBody",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": null
+    },
+    {
+     "rule": "fnType",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "from"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "constTerm",
+     "where": "alternative",
+     "branches": [
+      4,
+      5
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": null
+    },
+    {
+     "rule": "constTerm",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ","
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "constArgList",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ","
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "constArg",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P2"
+    }
+   ]
+  },
+  {
+   "k": 2,
+   "decisions": 287,
+   "conflicts": 42,
+   "undocumented": 2,
+   "conflict_list": [
+    {
+     "rule": "mixinMember",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:UPPER KIND:UPPER",
+      "KIND:UPPER async",
+      "KIND:UPPER noalloc",
+      "KIND:UPPER pure",
+      "KIND:UPPER recovers",
+      "KIND:UPPER trusted"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "param",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "... KIND:LOWER"
+     ],
+     "policy": null
+    },
+    {
+     "rule": "paramType",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "editable (",
+      "editable KIND:LOWER",
+      "editable KIND:UPPER",
+      "editable Self",
+      "editable {"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      1,
+      19
+     ],
+     "shared": [
+      "KIND:LOWER .",
+      "KIND:LOWER [",
+      "self .",
+      "self ["
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      2,
+      19
+     ],
+     "shared": [
+      "if !",
+      "if (",
+      "if -",
+      "if KIND:BYTES",
+      "if KIND:DEC",
+      "if KIND:DUR"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      3,
+      4
+     ],
+     "shared": [
+      "KIND:LOWER :"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      3,
+      5
+     ],
+     "shared": [
+      "KIND:LOWER :"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      4,
+      5
+     ],
+     "shared": [
+      "KIND:LOWER :"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      6,
+      19
+     ],
+     "shared": [
+      "{ KIND:LOWER",
+      "{ KIND:NL",
+      "{ KIND:UPPER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "letStmt",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "let KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "forStmt",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "move KIND:LOWER",
+      "move self"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "forStmt",
+     "where": "alternative",
+     "branches": [
+      0,
+      2
+     ],
+     "shared": [
+      "move KIND:LOWER",
+      "move self"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "forStmt",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "! !",
+      "! (",
+      "! -",
+      "! KIND:BYTES",
+      "! KIND:DEC",
+      "! KIND:DUR"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "outcomeExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "catch KIND:LOWER",
+      "or fail",
+      "or recover"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "coalesceExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "?? !",
+      "?? (",
+      "?? -",
+      "?? KIND:BYTES",
+      "?? KIND:DEC",
+      "?? KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "orExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "|| !",
+      "|| (",
+      "|| -",
+      "|| KIND:BYTES",
+      "|| KIND:DEC",
+      "|| KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "andExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "&& !",
+      "&& (",
+      "&& -",
+      "&& KIND:BYTES",
+      "&& KIND:DEC",
+      "&& KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "bitOrExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "| !",
+      "| (",
+      "| -",
+      "| KIND:BYTES",
+      "| KIND:DEC",
+      "| KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "bitXorExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "^ !",
+      "^ (",
+      "^ -",
+      "^ KIND:BYTES",
+      "^ KIND:DEC",
+      "^ KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "bitAndExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "& !",
+      "& (",
+      "& -",
+      "& KIND:BYTES",
+      "& KIND:DEC",
+      "& KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "equalityExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "!= !",
+      "!= (",
+      "!= -",
+      "!= KIND:BYTES",
+      "!= KIND:DEC",
+      "!= KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "relationalExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "< !",
+      "< (",
+      "< -",
+      "< KIND:BYTES",
+      "< KIND:DEC",
+      "< KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "shiftExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "<< !",
+      "<< (",
+      "<< -",
+      "<< KIND:BYTES",
+      "<< KIND:DEC",
+      "<< KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "additiveExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "+ !",
+      "+ (",
+      "+ -",
+      "+ KIND:BYTES",
+      "+ KIND:DEC",
+      "+ KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "multiplicativeExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "% !",
+      "% (",
+      "% -",
+      "% KIND:BYTES",
+      "% KIND:DEC",
+      "% KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "markerExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "( !",
+      "( (",
+      "( )",
+      "( -",
+      "( ...",
+      "( KIND:BYTES"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "markerExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "( !",
+      "( (",
+      "( )",
+      "( -",
+      "( ...",
+      "( KIND:BYTES"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "postfixExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "( !",
+      "( (",
+      "( )",
+      "( -",
+      "( ...",
+      "( KIND:BYTES"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "postfix",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ". KIND:KW",
+      ". KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "alternative",
+     "branches": [
+      1,
+      3
+     ],
+     "shared": [
+      "KIND:LOWER ."
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "alternative",
+     "branches": [
+      4,
+      5
+     ],
+     "shared": [
+      "( !",
+      "( (",
+      "( -",
+      "( KIND:BYTES",
+      "( KIND:DEC",
+      "( KIND:DUR"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ". KIND:KW",
+      ". KIND:LOWER"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "( !",
+      "( (",
+      "( )",
+      "( -",
+      "( ...",
+      "( KIND:BYTES"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "typeRef",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "[ (",
+      "[ KIND:INT",
+      "[ KIND:LOWER",
+      "[ KIND:UPPER",
+      "[ alias",
+      "[ async"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "matchExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "move KIND:LOWER",
+      "move self"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "matchArm",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "{ KIND:LOWER",
+      "{ KIND:NL",
+      "{ KIND:UPPER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "place",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ". KIND:KW",
+      ". KIND:LOWER",
+      "[ KIND:INT"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "type",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "dynamic KIND:UPPER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "type",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "( (",
+      "( KIND:LOWER",
+      "( KIND:UPPER",
+      "( Self",
+      "( alias",
+      "( async"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "namedType",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "( (",
+      "( KIND:LOWER",
+      "( KIND:UPPER",
+      "( Self",
+      "( alias",
+      "( async"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "fnType",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "from KIND:LOWER"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "constTerm",
+     "where": "alternative",
+     "branches": [
+      4,
+      5
+     ],
+     "shared": [
+      "KIND:LOWER ."
+     ],
+     "policy": null
+    }
+   ]
+  },
+  {
+   "k": 3,
+   "decisions": 287,
+   "conflicts": 35,
+   "undocumented": 0,
+   "conflict_list": [
+    {
+     "rule": "mixinMember",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "KIND:UPPER KIND:UPPER KIND:UPPER",
+      "KIND:UPPER KIND:UPPER async",
+      "KIND:UPPER KIND:UPPER noalloc",
+      "KIND:UPPER KIND:UPPER pure",
+      "KIND:UPPER KIND:UPPER recovers",
+      "KIND:UPPER KIND:UPPER trusted"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "paramType",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "editable ( (",
+      "editable ( KIND:LOWER",
+      "editable ( KIND:UPPER",
+      "editable ( Self",
+      "editable ( alias",
+      "editable ( async"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      1,
+      19
+     ],
+     "shared": [
+      "KIND:LOWER . KIND:KW",
+      "KIND:LOWER . KIND:LOWER",
+      "KIND:LOWER [ KIND:INT",
+      "self . KIND:KW",
+      "self . KIND:LOWER",
+      "self [ KIND:INT"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      2,
+      19
+     ],
+     "shared": [
+      "if ! !",
+      "if ! (",
+      "if ! -",
+      "if ! KIND:BYTES",
+      "if ! KIND:DEC",
+      "if ! KIND:DUR"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "statement",
+     "where": "alternative",
+     "branches": [
+      6,
+      19
+     ],
+     "shared": [
+      "{ KIND:LOWER :",
+      "{ KIND:NL KIND:LOWER",
+      "{ KIND:NL KIND:UPPER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "letStmt",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "let KIND:LOWER ="
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "forStmt",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "move KIND:LOWER .",
+      "move KIND:LOWER [",
+      "move self .",
+      "move self ["
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "forStmt",
+     "where": "alternative",
+     "branches": [
+      0,
+      2
+     ],
+     "shared": [
+      "move KIND:LOWER .",
+      "move KIND:LOWER [",
+      "move KIND:LOWER {",
+      "move self .",
+      "move self [",
+      "move self {"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "forStmt",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "! ! !",
+      "! ! (",
+      "! ! -",
+      "! ! KIND:BYTES",
+      "! ! KIND:DEC",
+      "! ! KIND:DUR"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "outcomeExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "catch KIND:LOWER {",
+      "or fail !=",
+      "or fail %",
+      "or fail &",
+      "or fail &&",
+      "or fail ("
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "coalesceExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "?? ! !",
+      "?? ! (",
+      "?? ! -",
+      "?? ! KIND:BYTES",
+      "?? ! KIND:DEC",
+      "?? ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "orExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "|| ! !",
+      "|| ! (",
+      "|| ! -",
+      "|| ! KIND:BYTES",
+      "|| ! KIND:DEC",
+      "|| ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "andExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "&& ! !",
+      "&& ! (",
+      "&& ! -",
+      "&& ! KIND:BYTES",
+      "&& ! KIND:DEC",
+      "&& ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "bitOrExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "| ! !",
+      "| ! (",
+      "| ! -",
+      "| ! KIND:BYTES",
+      "| ! KIND:DEC",
+      "| ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "bitXorExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "^ ! !",
+      "^ ! (",
+      "^ ! -",
+      "^ ! KIND:BYTES",
+      "^ ! KIND:DEC",
+      "^ ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "bitAndExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "& ! !",
+      "& ! (",
+      "& ! -",
+      "& ! KIND:BYTES",
+      "& ! KIND:DEC",
+      "& ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "equalityExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "!= ! !",
+      "!= ! (",
+      "!= ! -",
+      "!= ! KIND:BYTES",
+      "!= ! KIND:DEC",
+      "!= ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "relationalExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "< ! !",
+      "< ! (",
+      "< ! -",
+      "< ! KIND:BYTES",
+      "< ! KIND:DEC",
+      "< ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "shiftExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "<< ! !",
+      "<< ! (",
+      "<< ! -",
+      "<< ! KIND:BYTES",
+      "<< ! KIND:DEC",
+      "<< ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "additiveExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "+ ! !",
+      "+ ! (",
+      "+ ! -",
+      "+ ! KIND:BYTES",
+      "+ ! KIND:DEC",
+      "+ ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "multiplicativeExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "% ! !",
+      "% ! (",
+      "% ! -",
+      "% ! KIND:BYTES",
+      "% ! KIND:DEC",
+      "% ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "markerExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "( ! !",
+      "( ! (",
+      "( ! -",
+      "( ! KIND:BYTES",
+      "( ! KIND:DEC",
+      "( ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "markerExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "( ! !",
+      "( ! (",
+      "( ! -",
+      "( ! KIND:BYTES",
+      "( ! KIND:DEC",
+      "( ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "postfixExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "( ! !",
+      "( ! (",
+      "( ! -",
+      "( ! KIND:BYTES",
+      "( ! KIND:DEC",
+      "( ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "postfix",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ". KIND:KW (",
+      ". KIND:LOWER ("
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "alternative",
+     "branches": [
+      4,
+      5
+     ],
+     "shared": [
+      "( ! !",
+      "( ! (",
+      "( ! -",
+      "( ! KIND:BYTES",
+      "( ! KIND:DEC",
+      "( ! KIND:DUR"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ". KIND:KW !=",
+      ". KIND:KW %",
+      ". KIND:KW &",
+      ". KIND:KW &&",
+      ". KIND:KW (",
+      ". KIND:KW )"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "primaryExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "( ! !",
+      "( ! (",
+      "( ! -",
+      "( ! KIND:BYTES",
+      "( ! KIND:DEC",
+      "( ! KIND:DUR"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "typeRef",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "[ ( (",
+      "[ ( KIND:LOWER",
+      "[ ( KIND:UPPER",
+      "[ ( alias",
+      "[ ( async",
+      "[ ( editable"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "matchExpr",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "move KIND:LOWER !=",
+      "move KIND:LOWER %",
+      "move KIND:LOWER &",
+      "move KIND:LOWER &&",
+      "move KIND:LOWER (",
+      "move KIND:LOWER *"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "matchArm",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "{ KIND:LOWER :",
+      "{ KIND:NL KIND:LOWER",
+      "{ KIND:NL KIND:UPPER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "place",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      ". KIND:KW !=",
+      ". KIND:KW %",
+      ". KIND:KW &",
+      ". KIND:KW &&",
+      ". KIND:KW (",
+      ". KIND:KW )"
+     ],
+     "policy": "P2"
+    },
+    {
+     "rule": "type",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "( ( (",
+      "( ( KIND:LOWER",
+      "( ( KIND:UPPER",
+      "( ( Self",
+      "( ( alias",
+      "( ( async"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "namedType",
+     "where": "alternative",
+     "branches": [
+      1,
+      2
+     ],
+     "shared": [
+      "( ( (",
+      "( ( KIND:LOWER",
+      "( ( KIND:UPPER",
+      "( ( Self",
+      "( ( alias",
+      "( ( async"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "fnType",
+     "where": "option",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "from KIND:LOWER )",
+      "from KIND:LOWER ,",
+      "from KIND:LOWER =",
+      "from KIND:LOWER =>",
+      "from KIND:LOWER KIND:NL",
+      "from KIND:LOWER ]"
+     ],
+     "policy": "P2"
+    }
+   ]
+  }
+ ],
+ "lookahead": 3,
+ "confirmed": true
+}

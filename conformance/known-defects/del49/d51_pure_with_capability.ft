@@ -1,0 +1,14 @@
+import fortis.host { Host, Clock }
+
+pure func stamp(clock: Clock) Int => 1
+
+contract Timed {
+  requires capability Clock
+}
+
+Timed pure func both(clock: Clock) Int => 2
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  discard stamp(caps.clock)
+}

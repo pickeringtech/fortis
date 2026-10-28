@@ -1,0 +1,7 @@
+// accept
+// covers: LANG-11-06
+// Platform 12: BrowserAction expands to `forbids recovers`.
+contract BrowserAction {
+  forbids recovers
+}
+BrowserAction try func click(n: Int) Int => n

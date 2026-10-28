@@ -1,0 +1,13 @@
+// accept
+import acme.customers { CustomerId, CustomerRepo, GetCustomerResponse }
+import fortis.http.server { PublicProblem }
+export func show(id: CustomerId, repo: CustomerRepo) GetCustomerResponse {
+  return match repo.find(id) {
+    success(present(customer)) => GetCustomerResponse.Found(customer: customer.to())
+    success(null) => GetCustomerResponse.NotFound
+    failure(f) => {
+      report annotate(move f, "GetCustomer") as receipt
+      give GetCustomerResponse.Unavailable(problem: PublicProblem.from(receipt))
+    }
+  }
+}

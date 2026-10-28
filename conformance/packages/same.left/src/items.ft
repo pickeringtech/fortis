@@ -1,0 +1,18 @@
+// accept
+export error Missing {
+  code: "left.missing"
+}
+
+export class Item {
+  export label: String
+  export pure func show(self) String => "left ${self.label}"
+}
+
+export pure func describe(item: Item) String => "a left item: ${item.label}"
+
+export try func find(label: StringView) Item {
+  if label == "" {
+    fail Missing()
+  }
+  return Item(label: String.from(label))
+}

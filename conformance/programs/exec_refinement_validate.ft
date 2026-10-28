@@ -1,0 +1,17 @@
+// execute: 42|refinement.out_of_range
+// requires: runtime
+// covers: LANG-06-03
+import fortis.host { Host }
+
+export type Percent = Int<0..100>
+
+export try recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let fine = Int<0..100>.validate(42) or fail
+  caps.console.print("${fine}")
+  let bad = Int<0..100>.validate(300) catch e {
+    caps.console.print(e.code)
+    recover 0
+  }
+  discard bad
+}

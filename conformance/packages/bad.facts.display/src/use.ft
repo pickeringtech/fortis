@@ -1,0 +1,11 @@
+// reject: E-TYP-040 (at the marked line)
+// A local Displayable Cee must not make the imported value Displayable (D-130).
+import bad.facts.display.bridge { fb }
+
+export class Cee derive Displayable {
+  export n: Int
+  export pure func make() Cee => Cee(n: 2)
+}
+
+export pure func local() String => "${Cee.make()}"
+export pure func foreign() String => "${fb()}"    // reject: E-TYP-040 — model's Cee is not Displayable

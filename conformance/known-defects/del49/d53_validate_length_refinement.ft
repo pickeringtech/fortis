@@ -1,0 +1,18 @@
+// interpreter: `validate` of a length-refined collection type or a scalar-refined text type stops the test with
+// "validate of a non-integer" (a test error); the VM and native pass. LR 6.3: `validate` is the explicit
+// conversion into any refinement, and E-REF-003's fix is "mutate an unrefined collection and validate the result".
+pure try func fill() List[Int]<length: 0..3> {
+  let mut items: List[Int] = List.default()
+  editable items.push(1)
+  return List[Int]<length: 0..3>.validate(move items) or fail
+}
+
+test "validate a length refinement" {
+  let b = fill() or fail
+  expect b.count() == 1
+}
+
+test "validate a scalar refinement" {
+  let name = String<scalars: 1..5>.validate("abc") or fail
+  expect name.scalarCount() == 3
+}

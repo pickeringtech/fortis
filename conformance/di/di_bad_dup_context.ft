@@ -1,0 +1,11 @@
+// reject: E-DI-010 (at the marked line)
+// covers: PLAT-03-01
+export class Gateway {
+  name: String
+}
+context Production {
+  provide Gateway using instance Gateway(name: "a")
+}
+context Production {                                                  // reject: E-DI-010 — declared twice
+  provide Gateway using instance Gateway(name: "b")
+}

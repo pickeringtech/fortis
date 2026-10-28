@@ -1,0 +1,299 @@
+// Signature module for `fortis.prelude` (Language Reference 4.3: imported implicitly into every module).
+// Every function is `trusted` and bodiless: these are the names and signatures the checker knows;
+// bodies are intrinsics (DEL-26) or Fortis written later. This file is parsed by the syntax runner.
+
+// ---- unit, boolean, integers (6.2, 6.4) ----
+export class Void {}
+export class Never {}
+export class Bool {}
+
+export class Int {
+  export trusted pure try func add(a: Int, b: Int) Int
+  export trusted pure try func sub(a: Int, b: Int) Int
+  export trusted pure try func mul(a: Int, b: Int) Int
+  export trusted pure try func div(a: Int, b: Int) Int
+  export trusted pure try func rem(a: Int, b: Int) Int
+  export trusted pure try func shiftLeft(a: Int, bits: Int) Int
+  export trusted pure func wrappingAdd(a: Int, b: Int) Int
+  export trusted pure func wrappingSub(a: Int, b: Int) Int
+  export trusted pure func wrappingMul(a: Int, b: Int) Int
+  export trusted pure func saturatingAdd(a: Int, b: Int) Int
+  export trusted pure func saturatingSub(a: Int, b: Int) Int
+  export trusted pure func saturatingMul(a: Int, b: Int) Int
+  export trusted pure try func validate(value: Int) Int
+}
+export class Int8 {}
+export class Int16 {}
+export class Int32 {}
+export class Int64 {}
+export class UInt8 {}
+export class UInt16 {}
+export class UInt32 {}
+export class UInt64 {}
+export class UInt {}
+export class Byte {}
+export class Float {
+  export trusted pure func sqrt(x: Float) Float
+  export trusted pure func totalOrder(x: Float) Int64
+  export trusted pure func bitsEqual(a: Float, b: Float) Bool
+  export trusted pure func isNaN(x: Float) Bool
+}
+export class Float32 {
+  export trusted pure func sqrt(x: Float32) Float32
+  export trusted pure func isNaN(x: Float32) Bool
+}
+export enum RoundingMode {
+  HalfEven
+  HalfAwayFromZero
+  TowardZero
+  AwayFromZero
+}
+export class Decimal {
+  export trusted pure try func add(a: Decimal, b: Decimal) Decimal
+  export trusted pure try func sub(a: Decimal, b: Decimal) Decimal
+  export trusted pure try func mul(a: Decimal, b: Decimal) Decimal
+  export trusted pure try func div(a: Decimal, b: Decimal) Decimal
+  export trusted pure try func rem(a: Decimal, b: Decimal) Decimal
+  export trusted pure func round(value: Decimal, scale: Int<0..28>, mode: RoundingMode) Decimal
+  export trusted pure try func fromFloat(x: Float, scale: Int<0..28>, mode: RoundingMode) Decimal
+  export trusted pure func scale(self) Int<0..28>
+}
+export class BigInt {}
+
+// ---- text (6.6) ----
+export class String {
+  export trusted pure func from(text: StringView) String
+  export trusted pure func empty() String
+  export trusted pure func scalarCount(self) Int
+  export trusted pure func byteCount(self) Int
+}
+export class StringView {
+  export trusted pure func scalarCount(self) Int
+  export trusted pure func byteCount(self) Int
+  export trusted pure try func slice(self, start: Int, end: Int) StringView
+  export trusted pure try func scalarAt(self, index: Int) Scalar
+}
+export class Bytes {
+  export trusted pure func byteCount(self) Int
+  export trusted pure func get(self, index: Int) Byte?
+}
+export class BytesView {
+  export trusted pure func byteCount(self) Int
+  export trusted pure func count(self) Int
+  export trusted pure func get(self, index: Int) Byte?
+}
+export class Scalar {
+  export trusted pure func of(text: StringView) Scalar
+  export trusted pure func digitValue(s: Scalar) Int<0..9>?
+  export trusted pure func hexValue(s: Scalar) Int<0..15>?
+}
+
+// ---- time (6.2; operations in fortis.time, which declares the same nominal types) ----
+export class Duration {
+  export trusted pure func days(n: Int<0..>) Duration
+  export trusted pure func hours(n: Int<0..>) Duration
+  export trusted pure func minutes(n: Int<0..>) Duration
+  export trusted pure func seconds(n: Int<0..>) Duration
+  export trusted pure func milliseconds(n: Int<0..>) Duration
+  export trusted pure try func add(a: Duration, b: Duration) Duration
+  export trusted pure try func sub(a: Duration, b: Duration) Duration
+  export trusted pure try func multiply(d: Duration, factor: Int) Duration
+  export trusted pure func nanoseconds(self) Int
+}
+export class Instant {}
+export class Timestamp {
+  export trusted pure func epoch() Timestamp
+  export trusted pure try func add(t: Timestamp, d: Duration) Timestamp
+  export trusted pure func after(a: Timestamp, b: Timestamp) Bool
+  export trusted pure func before(a: Timestamp, b: Timestamp) Bool
+}
+
+// ---- collections (6.7) ----
+export class List[T] {
+  export trusted pure func default() List[T]
+  export trusted pure func of(...items: owned T) List[T]
+  export trusted pure func count(self) Int
+  export trusted func push(editable self, item: owned T) Void
+  export trusted func pop(editable self) T?
+  export trusted pure func get(self, index: Int) (alias T from self)?
+  export trusted pure try func at(self, index: Int) T
+  export trusted try func set(editable self, index: Int, value: owned T) Void
+  export trusted pure func isEmpty(self) Bool
+  export trusted pure func first(self) (alias T from self)?
+  export trusted pure func reversed(self) List[T] where T implements Copyable
+  export trusted pure func concat(self, other: ListView[T]) List[T] where T implements Copyable
+  export trusted pure func countWhere(self, keep: pure fn(T) Bool) Int
+  export trusted pure func map[U](self, f: pure fn(T) U) List[U]
+  export trusted pure func filter(self, keep: pure fn(T) Bool) List[T] where T implements Copyable
+  export trusted pure func iterate(self) ListCursor[T] from self
+  export trusted func consumeEach(owned self, visit: fn mut(owned T) Void) Void
+}
+export class ListCursor[T] implements Iterator[T] {
+  export trusted pure func next(editable self) (alias T from self)?
+}
+export class ListView[T] {
+  export trusted pure func count(self) Int
+  export trusted pure func get(self, index: Int) (alias T from self)?
+  export trusted pure func isEmpty(self) Bool
+  export trusted pure func reversed(self) List[T] where T implements Copyable
+}
+export class Array[T, N] {
+  export trusted pure func filled(value: T) Array[T, N]
+  export trusted pure func count(self) Int
+  export trusted func set(editable self, index: Int, value: owned T) Void
+}
+export class Map[K, V] {
+  export trusted pure func default() Map[K, V]
+  export trusted pure func get(self, key: K) (alias V from self)?
+  export trusted func set(editable self, key: owned K, value: owned V) Void
+  export trusted pure func count(self) Int
+}
+export class OrderedMap[K, V] {}
+export class Set[T] {
+  export trusted pure func default() Set[T]
+  export trusted func add(editable self, item: owned T) Bool
+  export trusted pure func contains(self, item: T) Bool
+  export trusted pure func count(self) Int
+}
+export class FixedList[T, N] {}
+export class FixedMap[K, V, N] {}
+export class VariantMap[E, V] {}
+
+// ---- outcomes and failures (10) ----
+export class Must {
+  export trusted pure func create() Must
+  export trusted pure func discharge(m: owned Must) Void
+}
+export class Outcome[T] {
+  export trusted pure func success(value: owned T) Outcome[T]
+  export trusted pure func failure(f: owned Failure) Outcome[T]
+  export trusted pure try func collect(list: owned List[Outcome[T]]) List[T]
+}
+export class Failure {
+  export code: StringView from static
+}
+export class Report {}
+export class Failures {
+  export trusted pure func aggregate(list: owned List[Failure]) Failure
+}
+export trusted pure func annotate(f: owned Failure, note: StringView) Failure
+
+// ---- concurrency (12) ----
+export class Future[T] {}
+export class Task[T] implements Abandonable {
+  export trusted func abandon(owned self) Void
+}
+export class Cancellation {}
+export class TaskDefect {}
+export enum TaskCompletion[T] {
+  Completed(value: T)
+  Cancelled(reason: Cancellation)
+  Defect(info: TaskDefect)
+}
+export class Shared[T] {
+  export trusted pure func create(value: owned T) Shared[T]
+  export trusted pure func retain(self) Shared[T]
+  export trusted pure func downgrade(self) Weak[T]
+}
+export class Weak[T] {
+  export trusted func upgrade(self) Shared[T]?
+  export trusted pure func retain(self) Weak[T]
+}
+export class Mutex[T] {
+  export trusted pure func create(value: owned T) Mutex[T]
+  export trusted async try func lock(self) MutexGuard[T] from self
+  export trusted try func lockBlocking(self) MutexGuard[T] from self
+}
+export class MutexGuard[T] {
+  export trusted pure func get(self) T where T implements Copyable
+  export trusted func set(self, value: owned T) Void
+  export trusted func replace(self, value: owned T) T
+}
+export class AtomicInt {
+  export trusted pure func create(value: Int) AtomicInt
+  export trusted pure func load(self) Int
+  export trusted func store(self, value: Int) Void
+  export trusted func fetchAdd(self, delta: Int) Int
+}
+export class AtomicBool {
+  export trusted pure func create(value: Bool) AtomicBool
+  export trusted pure func load(self) Bool
+  export trusted func store(self, value: Bool) Void
+}
+export class Scope {
+  export trusted func launch[T](self, work: owned Future[T]) Task[T]
+  export trusted func launchParallel[T](self, work: owned Future[T]) Task[T]
+  export trusted func launchBlocking[T](self, work: owned fn once() T) Task[T]
+  export trusted func detach[T](self, task: owned Task[T], supervisor: Supervisor) Void
+}
+export trusted async func join[A, B](a: owned Future[A], b: owned Future[B]) (A, B)
+export trusted func checkpoint() Void
+// Fault injection for the conformance corpus (10.8): a defect of the named class terminates the task at once.
+// Not a language feature: the reference toolchain's one hook for the defect taxonomy tests.
+export trusted func injectDefect(kind: StringView) Never
+
+// ---- observation (13): the core aspect that attaches a schema to a function ----
+export class ObservationSchema {}
+export aspect observe(schema: ObservationSchema) {
+  metadata
+}
+
+// ---- built-in interfaces (6.10) ----
+export class Hasher {}
+export enum Ordering derive Equatable {
+  Less
+  Equal
+  Greater
+}
+export class Encoder {}
+export class Decoder {}
+export interface Equatable {
+  pure func equals(self, other: Self) Bool
+}
+export interface Hashable requires Equatable {
+  pure func hash(self, into: editable Hasher) Void
+}
+export interface Comparable requires Equatable {
+  pure func compare(self, other: Self) Ordering
+}
+export interface Displayable {
+  pure func display(self, into: editable Builder) Void
+}
+export interface Iterable[T, I] where I implements Iterator[T] {
+  pure func iterate(self) I from self
+}
+export interface Iterator[T] {
+  pure func next(editable self) (alias T from self)?
+}
+export interface Consumable[T, I] where I implements Consumer[T] {
+  func consume(owned self) I
+}
+export interface Consumer[T] {
+  func next(editable self) T?
+}
+export interface Copyable {}
+export interface Shareable {}
+export interface Abandonable {
+  func abandon(owned self) Void
+}
+export interface Default {
+  pure func default() Self
+}
+export interface Encodable {
+  pure func encode(self, into: editable Encoder) Void
+}
+export interface Decodable {
+  try func decode(source: editable Decoder) Self
+}
+export interface Codec requires Encodable, Decodable {}
+export interface Authority {}
+export interface From[S] {
+  func from(source: S) Self
+}
+export class Builder {
+  export trusted pure func create() Builder
+  export trusted func append(editable self, text: StringView) Void
+  export trusted func appendLine(editable self, text: StringView) Void
+  export trusted func appendScalar(editable self, s: Scalar) Void
+  export trusted pure func finish(self) String
+}

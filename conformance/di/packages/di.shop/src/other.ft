@@ -1,0 +1,9 @@
+// An unrelated module of the package that declares a class and a factory of the same names as services.ft: the
+// context's module imports only services, so the elaboration must not see these.
+export class Quote {
+  weight: Int
+}
+
+export try func openPrices() Int {
+  return 0
+}

@@ -1,0 +1,37 @@
+// Collections and closures: List operations, callbacks, capture lists.
+// Run: bin/fortis run examples/04_collections.ft
+import fortis.host { Host }
+
+func sum(items: List[Int]) Int {
+  let mut acc = 0
+  for item in items {
+    acc = Int.wrappingAdd(acc, item)
+  }
+  return acc
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let numbers = List.of(3, 1, 4, 1, 5, 9, 2, 6)
+  caps.console.print("numbers ${numbers}")
+  caps.console.print("count ${numbers.count()}, sum ${sum(numbers)}")
+  let evens = numbers.filter(fn(n: Int) Bool => n % 2 == 0)
+  caps.console.print("evens ${evens}")
+  let doubled = numbers.map(fn(n: Int) Int => Int.wrappingMul(n, 2))
+  caps.console.print("doubled ${doubled}")
+  caps.console.print("big ones ${numbers.countWhere(fn(n: Int) Bool => n > 4)}")
+  let mut seen = 0
+  {
+    let mut tally = fn mut[editable seen](n: Int) Void {
+      seen = Int.wrappingAdd(seen, n)
+    }
+    editable tally(10)
+    editable tally(20)
+  }
+  caps.console.print("tally ${seen}")
+  let mut stack: List[Int] = List.default()
+  editable stack.push(1)
+  editable stack.push(2)
+  let top = editable stack.pop() ?? -1
+  caps.console.print("popped ${top}, left ${stack.count()}")
+}

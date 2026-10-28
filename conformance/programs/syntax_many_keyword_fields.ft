@@ -1,0 +1,2 @@
+// reject: E-SYN-002 (at the marked line)
+export type Heads = { view: Int, state: Int, action: Int, model: Int, component: Int, context: Int, resource: Int, application: Int, explore: Int }   // reject: E-SYN-002

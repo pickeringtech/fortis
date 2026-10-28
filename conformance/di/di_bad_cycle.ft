@@ -1,0 +1,13 @@
+// reject: E-DI-006 (at the marked line)
+// covers: PLAT-03-04
+// The cycle is reported at the binding first in identity order, whatever the declaration order.
+export class Orders {
+  inject customers: Customers
+}
+export class Customers {
+  inject orders: Orders
+}
+context Production {
+  provide Orders using Orders { lifetime: application }
+  provide Customers using Customers { lifetime: application }         // reject: E-DI-006 — Customers -> Orders -> Customers
+}

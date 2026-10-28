@@ -1,0 +1,42 @@
+// execute: cleanup 2|cleanup 1|cleanup 4|defer outer|cleanup 3|done
+// requires: runtime
+// covers: LANG-05-02, LANG-07-07
+// 7.9: a local that owns a cleanup, including a class that only holds one in a field, is destroyed with its
+// block, in reverse initialisation order. An early exit destroys the inner block's wrapper before the outer
+// block's defer runs (5.1, D-181).
+import fortis.host { Host, Console, Capabilities }
+
+export class Res {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export class Wrapper {
+  export item: Res
+}
+
+func normal(console: Shared[Console]) Void {
+  let a = Res(id: 1, console: console.retain())
+  let w = Wrapper(item: Res(id: 2, console: console.retain()))
+}
+
+func early(console: Shared[Console], deep: Bool) Void {
+  let a = Res(id: 3, console: console.retain())
+  defer { console.print("defer outer") }
+  if deep {
+    let w = Wrapper(item: Res(id: 4, console: console.retain()))
+    return
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  normal(console)
+  early(console, true)
+  console.print("done")
+}

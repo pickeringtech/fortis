@@ -1,0 +1,41 @@
+// execute: gone 1|label|z
+// execute-trace: drop Noisy
+// requires: runtime
+// covers: LANG-07-07
+// 9.2: a constructor evaluates the spread first, dropping the source fields the target lacks, then the
+// explicit fields, left to right. The explicit field's call runs after that cleanup.
+import fortis.host { Host, Console, Capabilities }
+
+export class Noisy {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("gone ${self.id}")
+  }
+}
+
+export class Wide {
+  export extra: Noisy
+}
+
+export class Narrow {
+  export name: String
+}
+
+func label(console: Shared[Console]) String {
+  console.print("label")
+  return "z"
+}
+
+func run(console: Shared[Console]) Void {
+  let w = Wide(extra: Noisy(id: 1, console: console.retain()))
+  let n = Narrow(name: label(console), ...move w)
+  console.print(n.name)
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

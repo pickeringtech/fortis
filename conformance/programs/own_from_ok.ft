@@ -1,0 +1,15 @@
+// accept
+// covers: LANG-07-06
+// A function that returns a loan names its one origin with from; the caller writes alias p to keep the loan (7.6).
+export class User {
+  export name: String
+}
+
+export pure func displayName(user: User) StringView from user {
+  return alias user.name
+}
+
+func caller(user: User) Int {
+  let name = displayName(alias user)
+  return name.scalarCount()
+}

@@ -1,0 +1,22 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-71: R1 (X-93) gives `for i in 0..<p.count()` the length fact unless the body assigns or exclusively loans `p`,
+// but both checkers tested `p` by exact name, so a body that loans a prefix of `p` (here `b`, owner of `b.items`)
+// kept the fact. The first iteration empties `b.items`; with two items, the second iteration's `b.items[1]` is
+// outside the now-empty list, and the run-time index check fires.
+export class Bag {
+  export items: List[Int]
+
+  export func drain(editable self) Void {
+    self.items = List.default()
+  }
+}
+
+export func walk(b: editable Bag) Int {
+  let mut total = 0
+  for i in 0..<b.items.count() {
+    total = Int.wrappingAdd(total, b.items[i])   // reject: E-REF-002 — `b` is loaned editable in the body
+    editable b.drain()
+  }
+  return total
+}

@@ -1,0 +1,46 @@
+// reject: E-EFF-020 (at the marked lines)
+// covers: LANG-11-01
+// D-113: the core's file-system operations, name resolution and a database statement perform blocking I/O, so they
+// have the `block` effect (11.1) and an `async` function may not call them: the cooperative executor has one thread.
+import fortis.host { FileSystem, File, Network, RawSql, Path }
+
+async try func readText(fs: FileSystem, p: Path) String {
+  return fs.readText(p) or fail              // reject: E-EFF-020 — FileSystem.readText blocks
+}
+
+async try func writeAll(fs: FileSystem, p: Path) Void {
+  fs.writeAll(p, "text") or fail             // reject: E-EFF-020 — FileSystem.writeAll blocks
+}
+
+async try func readAll(fs: FileSystem, p: Path) Bytes {
+  return fs.readAll(p) or fail               // reject: E-EFF-020 — FileSystem.readAll blocks
+}
+
+async try func opened(fs: FileSystem, p: Path) File {
+  return fs.open(p) or fail                  // reject: E-EFF-020 — FileSystem.open blocks
+}
+
+async try func created(fs: FileSystem, p: Path) File {
+  return fs.create(p) or fail                // reject: E-EFF-020 — FileSystem.create blocks
+}
+
+async try func drained(fs: FileSystem, f: owned File) Bytes {
+  let mut file = move f
+  return editable file.readAll() or fail     // reject: E-EFF-020 — File.readAll blocks
+}
+
+async try func appended(fs: FileSystem, f: owned File, data: BytesView) Void {
+  let mut file = move f
+  editable file.writeAll(data) or fail       // reject: E-EFF-020 — File.writeAll blocks
+}
+
+async try func address(net: Network) String {
+  return net.resolve("localhost") or fail    // reject: E-EFF-020 — Network.resolve blocks
+}
+
+async try func rows(sql: RawSql) Int {
+  return sql.execute("select 1") or fail     // reject: E-EFF-020 — RawSql.execute blocks
+}
+
+export func main(args: List[String]) Void {
+}

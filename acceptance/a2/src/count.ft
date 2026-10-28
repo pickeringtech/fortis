@@ -1,0 +1,59 @@
+// Word counting: pure functions over text, and the async task that counts one file's words.
+import fortis.text { Text }
+
+// One file's tally: how many words of at least the minimum length, and the longest of them.
+export class Tally derive Equatable {
+  export name: String
+  export words: Int
+  export longest: String
+}
+
+// The words of `text` with at least `minLength` scalars.
+export pure func words(text: StringView, minLength: Int) List[String] {
+  let mut kept: List[String] = List.default()
+  for w in Text.words(text) {
+    if w.scalarCount() >= minLength {
+      editable kept.push(copy w)
+    }
+  }
+  return move kept
+}
+
+// The longest word, the first of equal length; empty for no words.
+export pure func longest(ws: ListView[String]) String {
+  let mut best = String.from("")
+  for w in ws {
+    if w.scalarCount() > best.scalarCount() {
+      best = copy w
+    }
+  }
+  return move best
+}
+
+// A cooperative task: counts one file's words (it runs on the core executor while the others wait their turn).
+export async func count(name: owned String, text: owned String, minLength: Int) Tally {
+  let ws = words(text, minLength)
+  return Tally(name: move name, words: ws.count(), longest: longest(ws))
+}
+
+test "words keeps those of at least the minimum length" {
+  let ws = words("a bb ccc dddd", 3)
+  expect ws.count() == 2
+  expect longest(ws) == "dddd"
+}
+
+test "longest prefers the first of equal length" cases {
+  "first": { text: "ab cd ef", expected: "ab" }
+  "single": { text: "word", expected: "word" }
+  "empty": { text: "", expected: "" }
+} as row {
+  expect longest(words(row.text, 1)) == row.expected
+}
+
+property "every kept word has the minimum length" forall (n: Int<1..8>) {
+  let ws = words("a bb ccc dddd eeeee ffffff ggggggg hhhhhhhh", n)
+  for w in ws {
+    expect w.scalarCount() >= n
+  }
+  expect ws.count() == 9 - n
+}

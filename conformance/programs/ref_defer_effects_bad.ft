@@ -1,0 +1,14 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02, LANG-12-01
+// D-75, second form: a `defer` body's assignment was taken as done at its registration, though the body runs only at
+// the block's exit. Here `d` is still 0 at the division. Both checkers accepted this module before the fix.
+export func f() Int {
+  let mut d: Int<0..1> = 0
+  {
+    defer {
+      d = 1
+    }
+    let q = 10 / d                           // reject: E-REF-002 — the deferred `d = 1` has not run yet
+  }
+  return 0
+}

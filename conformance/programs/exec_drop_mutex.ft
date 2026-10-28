@@ -1,0 +1,51 @@
+// execute: mutex made|drop in mutex|class made|drop guarded|drop locked|handles 2|handles 1|drop shared mutex|end
+// requires: runtime
+// covers: LANG-07-07
+// 7.9 (X-250; D-30): a `Mutex[T]` owns its value, so destroying the mutex destroys the value: at block exit, as a
+// field of a destroyed class (after the class's own cleanup), and when the last `Shared` handle to it goes.
+import fortis.host { Host, Console, Capabilities }
+
+export class Res {
+  console: Shared[Console]
+  label: String
+  cleanup(editable self) Void {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+export class Guarded {
+  lock: Mutex[Res]
+  console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("drop guarded")
+  }
+}
+
+func atExit(console: Shared[Console]) Void {
+  let m = Mutex.create(Res(console: console.retain(), label: "in mutex"))
+  console.print("mutex made")
+}
+
+func inClass(console: Shared[Console]) Void {
+  let g = Guarded(lock: Mutex.create(Res(console: console.retain(), label: "locked")), console: console.retain())
+  console.print("class made")
+}
+
+func lastHandle(console: Shared[Console]) Void {
+  let s = Shared.create(Mutex.create(Res(console: console.retain(), label: "shared mutex")))
+  {
+    let t = s.retain()
+    console.print("handles 2")
+  }
+  console.print("handles 1")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  atExit(console)
+  inClass(console)
+  lastHandle(console)
+  console.print("end")
+}

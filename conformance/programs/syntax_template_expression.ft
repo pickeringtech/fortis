@@ -1,0 +1,6 @@
+// reject: E-SYN-000 (at the marked line)
+export error TooMany {
+  code: "limits.too_many"
+  payload { n: Int }
+  message: "Too many: ${n + 1}"          // reject: E-SYN-000 — a template placeholder names a payload field
+}

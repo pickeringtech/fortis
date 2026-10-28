@@ -1,0 +1,38 @@
+// `fortis.collections` implementation (DEL-26). Signatures equal `reference/library/collections.ft`.
+import fortis.numeric { min }
+// Bottom-up merge sort: stable, O(n log n) comparisons and copies, O(n) extra space.
+export pure func sorted(items: ListView[Int]) List[Int] {
+  let n = items.count()
+  let mut current: List[Int] = List.default()
+  let mut k = 0
+  while k < n {
+    editable current.push(items.get(k) ?? 0)
+    k = Int.wrappingAdd(k, 1)
+  }
+  let mut width = 1
+  while width < n {
+    let mut next: List[Int] = List.default()
+    let mut lo = 0
+    while lo < n {
+      let mid = min(Int.saturatingAdd(lo, width), n)
+      let hi = min(Int.saturatingAdd(lo, Int.saturatingMul(width, 2)), n)
+      let mut i = lo
+      let mut j = mid
+      while i < mid || j < hi {
+        let a = current.get(i) ?? 0
+        let b = current.get(j) ?? 0
+        if j >= hi || (i < mid && a <= b) {
+          editable next.push(a)
+          i = Int.wrappingAdd(i, 1)
+        } else {
+          editable next.push(b)
+          j = Int.wrappingAdd(j, 1)
+        }
+      }
+      lo = hi
+    }
+    current = move next
+    width = Int.saturatingMul(width, 2)
+  }
+  return move current
+}

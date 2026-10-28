@@ -1,0 +1,6 @@
+// reject: E-OWN-030 (at the marked line)
+// covers: LANG-06-07
+export trivial class Named {               // reject: E-OWN-030 — String is not trivial
+  export name: String
+  export index: Int
+}

@@ -1,0 +1,2 @@
+// reject: E-SYN-002 (at the marked line)
+export type Pair = { view: Int, state: Int }   // reject: E-SYN-002

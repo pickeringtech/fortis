@@ -1,0 +1,10 @@
+// accept
+// covers: LANG-05-08
+try func half(n: Int) Int => n
+func nothing() Void {
+}
+recovers func run(items: List[Int], n: Int) Void {
+  discard items.count()
+  discard half(n) or recover 0
+  nothing()
+}

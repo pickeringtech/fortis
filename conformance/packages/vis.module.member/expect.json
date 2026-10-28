@@ -1,0 +1,7 @@
+{"verdict": "reject", "code": "E-NAM-004", "covers": ["LANG-04-05"], "records": [
+  {"file": "app.ft", "line": 9, "column": 20, "code": "E-NAM-004", "message": "vis.module.member.util does not export `Secret`", "candidates": ["Box", "Holder", "limit"]},
+  {"file": "app.ft", "line": 23, "column": 26, "code": "E-NAM-004", "message": "vis.module.member.util does not export `Secret`", "candidates": ["Box", "Holder", "limit"]},
+  {"file": "app.ft", "line": 18, "column": 28, "code": "E-NAM-004", "message": "vis.module.member.util does not export `Secret`", "candidates": ["Box", "Holder", "limit"]},
+  {"file": "app.ft", "line": 13, "column": 31, "code": "E-NAM-004", "message": "vis.module.member.util does not export `inner`", "candidates": ["Box", "Holder", "limit"]},
+  {"file": "app.ft", "line": 15, "column": 32, "code": "E-NAM-004", "message": "vis.module.member.util does not export `inner`", "candidates": ["Box", "Holder", "limit"]}
+]}

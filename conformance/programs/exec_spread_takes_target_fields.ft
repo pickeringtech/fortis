@@ -1,0 +1,53 @@
+// execute: a 3|b 4 9|c 5 2|d 6 1|a 1
+// requires: runtime
+// covers: LANG-09-02
+// A constructor spread `...copy p` or `...move p` fills every field of the target that the source has, and nothing
+// else (9.2): the source's other fields are not taken, the remaining fields are given after it or take their
+// defaults, and a record can be the source. The interpreter once took every field of the source and stopped on the
+// first one the target lacks (D-53).
+import fortis.host { Host }
+
+class Wide {
+  export name: String
+  export size: Int
+  export extra: Int
+}
+
+class Narrow {
+  export name: String
+  export size: Int
+}
+
+class Tagged {
+  export name: String
+  export size: Int
+  export tag: Int
+}
+
+class Padded {
+  export name: String
+  export size: Int
+  export pad: Int = 2
+}
+
+class Single {
+  export size: Int
+  export count: Int = 1
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let w = Wide(name: "a", size: 3, extra: 1)
+  let n = Narrow(...copy w)
+  caps.console.print("${n.name} ${n.size}")
+  let wb = Wide(name: "b", size: 4, extra: 7)
+  let t = Tagged(...copy wb, tag: 9)
+  caps.console.print("${t.name} ${t.size} ${t.tag}")
+  let wc = Wide(name: "c", size: 5, extra: 8)
+  let p = Padded(...move wc)
+  caps.console.print("${p.name} ${p.size} ${p.pad}")
+  let r = { name: "d", size: 6 }
+  let s = Single(...copy r)
+  caps.console.print("${r.name} ${s.size} ${s.count}")
+  caps.console.print("${w.name} ${w.extra}")
+}

@@ -1,0 +1,9 @@
+import ord.app.y { fb }
+
+export class Cee {
+  export n: Int
+}
+
+export func fc() Cee => Cee(n: 1)
+
+export func probe() Cee => fb()

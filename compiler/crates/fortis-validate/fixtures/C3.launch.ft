@@ -1,0 +1,12 @@
+// DEL-45 fixture for C3.launch: a cooperative launch boxes its future under the v1 runtime host, which declares no
+// inline task storage (SP-04-async, X-125), so the launching function's summary carries `alloc`.
+noalloc async func work(n: Int) Int => n
+async func both() Int {
+  scope tasks {
+    let t = tasks.launch(work(1))
+    return await t
+  }
+}
+export async func main(args: List[String]) Void {
+  discard await both()
+}

@@ -1,0 +1,11 @@
+// reject: E-EFF-010 (at the marked line)
+// covers: LANG-11-07
+// D-110: a loop's condition is evaluated on every iteration, so a call there is a call inside the loop (11.6).
+import fortis.host { Host, Capabilities }
+func ready(caps: owned Capabilities) Bool => true
+export func main(args: List[String]) Void {
+  let mut n = 0
+  while ready(Host.capabilities()) {      // reject: E-EFF-010 — inside a loop's condition
+    n = 1
+  }
+}

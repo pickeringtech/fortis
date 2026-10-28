@@ -1,0 +1,20 @@
+// context: LR-10.4-01 (Language Reference 10.4, catch and recover)
+export error NotFound {
+  code: "accounts.not_found"
+}
+
+export class Account {
+  export name: String
+  export pure func guest() Account => Account(name: "guest")
+}
+
+try func loadAccount(id: Int) Account {
+  if id < 0 {
+    fail NotFound()
+  }
+  return Account(name: "user ${id}")
+}
+
+recovers func example(id: Int) Void {
+  // {{example}}
+}

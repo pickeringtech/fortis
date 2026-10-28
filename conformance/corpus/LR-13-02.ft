@@ -1,0 +1,10 @@
+// accept
+import acme.orders { Order, Payments, Receipt, OrderProcessing }
+@observe(OrderProcessing)
+async try func processOrder(order: Order, payments: Payments) Receipt {
+  capture customerTier = order.customer.tier
+  capture region = order.customer.address.region
+  let receipt = await payments.charge(order) or fail
+  capture transactionId = receipt.transactionId
+  return move receipt
+}

@@ -1,0 +1,39 @@
+// accept
+// covers: LANG-07-07
+// Neighbours of a consuming match and a tuple move: a match that does not move, a match of a fresh value,
+// a parenthesized move, a flat tuple pattern, and a move of the whole tuple followed by a read of one element.
+func read_match(s: String) Int {
+  return match s {
+    t => t.scalarCount()
+  }
+}
+
+func fresh_match() Int {
+  return match "ab" {
+    t => t.scalarCount()
+  }
+}
+
+func paren_move(s: owned String) Int {
+  return match move (s) {
+    t => t.scalarCount()
+  }
+}
+
+func flat_let(pair: owned (String, String)) Int {
+  let (a, b) = move pair
+  discard b
+  return a.scalarCount()
+}
+
+func whole_then_read(pair: owned (String, Int)) Int {
+  let moved = move pair
+  return moved.0.scalarCount()
+}
+
+func wildcard_move(s: owned String) Int {
+  match move s {
+    _ => {}
+  }
+  return 1
+}

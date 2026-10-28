@@ -1,0 +1,18 @@
+// execute: 1970-01-01T00:01:40Z|100s|true
+// requires: runtime
+// covers: LANG-11-07
+// A frozen clock reads its instant; elapsedSince measures against now().
+import fortis.host { Host, Clock }
+try func sinceEpoch(clock: Clock) Duration {
+  let start = Timestamp.epoch()
+  return clock.elapsedSince(start) or fail
+}
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let at = Timestamp.add(Timestamp.epoch(), Duration.seconds(100)) or fail
+  let frozen = caps.clock.frozen(at)
+  caps.console.print("${frozen.now()}")
+  let d = sinceEpoch(frozen) or fail
+  caps.console.print("${d}")
+  caps.console.print("${Timestamp.after(caps.clock.now(), at)}")
+}

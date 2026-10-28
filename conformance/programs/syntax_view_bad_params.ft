@@ -1,0 +1,6 @@
+// reject: E-SYN-000 (at the marked line)
+import fortis.web.ssr { SafeHtml }
+
+export view Page(+) {                       // reject: E-SYN-000 — a declared view takes a parameter list
+  <p>x</p>
+}

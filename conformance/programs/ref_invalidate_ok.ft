@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-06-02
+// Assignment re-establishes a fact from the assigned expression (6.3).
+pure func reassign(n: Int) Int<0..100> {
+  let mut m = 7
+  m = 3
+  let v: Int<0..10> = m
+  return v
+}

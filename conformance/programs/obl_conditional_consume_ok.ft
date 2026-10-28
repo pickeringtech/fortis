@@ -1,0 +1,76 @@
+// accept
+// covers: LANG-10-01
+// The operand that always runs may consume the outcome. A handler that does not touch
+// another outcome leaves that outcome for the path that always runs. `or fail` is not a join.
+// A catch handler that returns leaves the function, so the success path still consumes the outcome.
+export error EmptyCart {
+  code: "probe.empty"
+}
+
+try func load(n: Int) Int {
+  if n < 0 {
+    fail EmptyCart()
+  }
+  return n
+}
+
+try func explode(n: Int) Int {
+  let b = load(n)
+  return b or fail
+}
+
+recovers func leftOfOr(flag: Bool) Bool {
+  let b = load(-1)
+  return (b or recover 0) == 0 || flag
+}
+
+recovers func leftOfAnd(flag: Bool) Bool {
+  let b = load(-1)
+  return (b or recover 0) == 0 && flag
+}
+
+recovers func bothHandlers() Int {
+  let a = load(1)
+  let b = load(-1)
+  return Int.saturatingAdd(a or recover 0, b or recover 0)
+}
+
+recovers func catchLeavesOther() Int {
+  let a = load(1)
+  let b = load(-1)
+  let n = a catch e {
+    recover 0
+  }
+  return Int.saturatingAdd(n, b or recover 0)
+}
+
+recovers func ifBoth(flag: Bool) Int {
+  let b = load(-1)
+  if flag {
+    return b or recover 0
+  }
+  return b or recover 0
+}
+
+recovers func guardAlways(n: Int, flag: Bool) Int {
+  let b = load(-1)
+  return match n {
+    k when (b or recover 0) == 0 || flag => k
+    _ => 0
+  }
+}
+
+recovers func nullish(p: Int?) Int {
+  let b = load(-1)
+  let n = b or recover 0
+  return p ?? n
+}
+
+recovers func catchReturns() Int {
+  let a = load(1)
+  let b = load(2)
+  let x = a catch e {
+    return b or recover 0
+  }
+  return Int.saturatingAdd(x, b or recover 0)
+}

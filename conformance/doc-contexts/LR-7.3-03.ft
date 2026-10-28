@@ -1,0 +1,5 @@
+// context: LR-7.3-03 (Language Reference 7.3, a loan ends with its block)
+// base: LR-2-01
+try func example(lines: owned List[Line]) Void {
+  // {{example}}
+}

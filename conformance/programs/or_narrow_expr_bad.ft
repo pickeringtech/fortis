@@ -1,0 +1,10 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// D-51.6: `||` does not narrow (LR 6.3, 6.8). In `p == null || p.m()` the right operand is reached only when
+// `p == null` is false, but `||` narrows neither operand, so `p` is still `Limit?` where `p.m()` needs `Limit`.
+export class Limit {
+  export most: Int
+  export pure func holds(self, n: Int) Bool => n <= self.most
+}
+
+export pure func viaOr(p: Limit?, n: Int) Bool => p == null || p.holds(n)   // reject: E-TYP-040 — `||` did not narrow `p`

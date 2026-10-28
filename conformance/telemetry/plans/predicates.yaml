@@ -1,0 +1,82 @@
+# Predicates the oracle checks by value: a numeric range, exclusion, `any`, the outcome class, presence of transformed
+# fields and quoted strings; a histogram whose value is often absent (such records still take their series), and a
+# dimension often absent (its value is null in the tuple).
+schema: fortis.project/v1
+telemetry:
+  privacy:
+    transforms:
+      OrderProcessing:
+        email: hash
+        note: redact
+        card: drop
+  projections:
+    mid_amounts:
+      source: OrderProcessing.v2
+      where:
+        all:
+          - field: amount
+            range: [500, 1199]
+          - field: provider
+            not_in: [Braintree]
+          - field: outcome
+            equals: success
+      dimensions: [provider]
+      metrics:
+        - name: mid.count
+          instrument: counter
+    either:
+      source: OrderProcessing.v2
+      where:
+        any:
+          - field: region
+            equals: DE
+          - field: tier
+            in: [Enterprise]
+      dimensions: [region]
+      metrics:
+        - name: either.count
+          instrument: counter
+    transformed_present:
+      source: OrderProcessing.v2
+      where:
+        all:
+          - field: note
+            present: true
+          - field: email
+            present: true
+          - not:
+              field: tier
+              present: false
+      dimensions: [tier]
+      metrics:
+        - name: present.count
+          instrument: counter
+    by_sku:
+      source: OrderProcessing.v2
+      where:
+        field: sku
+        in: ["sku1", 'sku3']
+      dimensions: [sku]
+      metrics:
+        - name: sku.count
+          instrument: counter
+    discounts:
+      source: OrderProcessing.v2
+      dimensions: [region]
+      metrics:
+        - name: discount.size
+          instrument: histogram
+          value: discount
+          buckets: [100, 400]
+      cardinality:
+        limit: 2
+        overflow: aggregate
+    by_discount:
+      source: OrderProcessing.v2
+      dimensions: [discount]
+      metrics:
+        - name: discount.count
+          instrument: counter
+      cardinality:
+        limit: 3
+        overflow: aggregate

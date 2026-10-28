@@ -1,0 +1,80 @@
+// The word-tally command-line tool (Programme 14, application A2): the core only.
+//
+// `async try func main` runs on the core executor. The FileSystem and Environment authorities come from
+// Host.capabilities(). One `launchBlocking` task reads every file the manifest names (reading may block, so it runs
+// on the blocking pool); one cooperative task per file counts its words. A synchronous `defer` reports that the
+// tally finished on every exit. A manifest entry that does not exist is a structured failure: the read's
+// `fs.not_found` travels to main, which fails, and the runtime reports it once at the entry boundary.
+import fortis.host { Host, Capabilities, FileSystem, Environment, SecretAccess, Path, reveal }
+import fortis.text { Text }
+import acme.tally.count { Tally, count }
+
+// The minimum word length from TALLY_MIN (1 to 6), or 1 when it is unset or anything else.
+func minLength(env: Environment, access: SecretAccess) Int {
+  let text = match env.get("TALLY_MIN") {
+    present(s) => reveal(s, access)
+    null => String.from("1")
+  }
+  return match text {
+    "2" => 2
+    "3" => 3
+    "4" => 4
+    "5" => 5
+    "6" => 6
+    otherwise => 1
+  }
+}
+
+// The files the manifest names, and their texts.
+export class Inputs {
+  export names: List[String]
+  export texts: List[String]
+}
+
+// Read on the blocking pool: the manifest, then every file it names. A file that cannot be read fails the read
+// (`fs.not_found` names it), and the failure travels to main.
+try func readAll(fs: FileSystem) Inputs {
+  let mut names: List[String] = List.default()
+  let mut texts: List[String] = List.default()
+  let manifest = fs.readText(Path.parse("manifest.txt") or fail) or fail
+  for name in Text.words(manifest) {
+    let text = fs.readText(Path.parse(copy name) or fail) or fail
+    editable names.push(copy name)
+    editable texts.push(move text)
+  }
+  return Inputs(names: move names, texts: move texts)
+}
+
+// The reads run on the blocking pool (the one `launchBlocking`); each file's words are counted by a cooperative task.
+async try func tally(fs: owned FileSystem, minimum: Int) List[Tally] {
+  scope tasks {
+    let reader = tasks.launchBlocking(fn once[move fs]() Outcome[Inputs] => readAll(fs))
+    let inputs = await reader or fail
+    let mut tallies: List[Tally] = List.default()
+    let mut i = 0
+    for name in inputs.names {
+      let text = inputs.texts.get(i) ?? ""
+      let t = tasks.launch(count(copy name, copy text, minimum))
+      editable tallies.push(await t)
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move tallies
+  }
+}
+
+export async try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(fileSystem: fs, environment: env, secretAccess: access, console: console, network: net, clock: clock, random: rnd, process: proc, supervisor: sup, rawSql: sql) = move caps
+  defer {
+    console.print("tally finished")
+  }
+  let minimum = minLength(env, access)
+  console.print("minimum word length ${minimum}")
+  let tallies = await tally(move fs, minimum) or fail
+  let mut total = 0
+  for t in tallies {
+    console.print("${t.name}: ${t.words} words, longest ${t.longest}")
+    total = Int.wrappingAdd(total, t.words)
+  }
+  console.print("total ${total} words in ${tallies.count()} files")
+}

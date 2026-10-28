@@ -1,0 +1,14 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// A failed guard leaves the false state. `when p != null` does not make `p` present in a later arm (LR 6.8, 9.8).
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+}
+
+export pure func later(n: Int, p: Cell?) Bool {
+  return match n {
+    v when p != null => true
+    otherwise => p.read()                     // reject: E-TYP-040 — the guard's false state has no fact
+  }
+}

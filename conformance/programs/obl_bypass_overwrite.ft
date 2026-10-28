@@ -1,0 +1,8 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-01
+try func half(n: Int) Int => n
+recovers func run(n: Int) Int {
+  let mut o = half(n)
+  o = half(Int.wrappingAdd(n, 1))          // reject: E-OBL-001 — the first outcome is overwritten unconsumed
+  return o or recover 0
+}

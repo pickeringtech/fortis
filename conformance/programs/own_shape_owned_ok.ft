@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-07-09
+// The supported shapes: an owned value in Shared, a fn closure (not fn mut) in Shared.
+export class Config {
+  export limit: Int
+}
+func run(c: Config) Int {
+  let shared = Shared.create(copy c)
+  let f = fn[copy c]() Int => c.limit
+  let keep = Shared.create(move f)
+  return shared.limit
+}

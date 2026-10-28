@@ -1,0 +1,13 @@
+// accept
+// covers: LANG-05-09
+pure func page(size: Int<1..100> = 20, offset: Int<0..> = 0) Int => Int.saturatingAdd(size, offset)
+
+pure func calls() Int {
+  let a = page()
+  let b = page(10)
+  let c = page(10, 5)
+  let d = page(size: 10, offset: 5)
+  let e = page(offset: 5, size: 10)
+  let f = page(10, offset: 5)
+  return Int.saturatingAdd(Int.saturatingAdd(a, b), Int.saturatingAdd(Int.saturatingAdd(c, d), Int.saturatingAdd(e, f)))
+}

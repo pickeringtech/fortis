@@ -1,0 +1,12 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-01
+try func half(n: Int) Int => n
+try func run(n: Int<0..3>) Int {
+  for i in 0..n {
+    let o = half(i)                        // reject: E-OBL-001 — consumed only on the break path
+    if i == 2 {
+      return o or fail
+    }
+  }
+  return 0
+}

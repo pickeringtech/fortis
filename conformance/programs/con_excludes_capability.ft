@@ -1,0 +1,14 @@
+// reject: E-EFF-001 (at the marked lines)
+// covers: LANG-11-06
+// `excludes capability` covers the parameters and, transitively, every callee that requires the authority (11.5).
+import fortis.host { Network }
+contract NoNet {
+  excludes capability Network
+}
+export class Client {
+  export net: Network
+}
+func fetch(net: Network) Int => 1
+NoNet func direct(net: Network) Int => 0    // reject: E-EFF-001 — takes the excluded capability
+NoNet func viaField(c: Client) Int => fetch(c.net)   // reject: E-EFF-001 — calls a function that requires Network
+NoNet func clean(n: Int) Int => n

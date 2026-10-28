@@ -1,0 +1,13 @@
+// illustrative
+class CheckoutService {
+  export inject gateway: Shared[dynamic PaymentGateway]
+  export inject clock: Clock
+}
+
+context Production(clock: owned Clock) {
+  provide Clock using instance move clock
+  provide Shared[dynamic PaymentGateway] using StripeGateway { lifetime: application }
+  provide Shared[dynamic PaymentGateway] using AdyenGateway
+    to [CheckoutService.gateway, PreviewService.gateway]
+  provide CheckoutService
+}

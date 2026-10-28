@@ -1,0 +1,1 @@
+export pure func limit() Int => 3

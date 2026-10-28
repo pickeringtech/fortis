@@ -1,0 +1,5 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-03-02
+// reject: E-SYN-000 — a string does not span lines, escaped or not
+export pure func f() String => "${"a\
+ b"}"

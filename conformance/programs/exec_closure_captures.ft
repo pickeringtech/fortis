@@ -1,0 +1,21 @@
+// execute: 1|6|3
+// requires: runtime
+// covers: LANG-08-02
+// 8.3: a copy capture is a snapshot; an editable capture writes through to the owner; a fn once consumes its move capture.
+import fortis.host { Host }
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut n = 1
+  let snapshot = fn[copy n]() Int => n
+  {
+    let mut bump = fn mut[editable n]() Void {
+      n = Int.wrappingAdd(n, 5)
+    }
+    editable bump()
+  }
+  caps.console.print("${snapshot()}")
+  caps.console.print("${n}")
+  let items = List.of(1, 2)
+  let consume = fn once[move items]() Int => Int.wrappingAdd(items.count(), 1)
+  caps.console.print("${move consume()}")
+}

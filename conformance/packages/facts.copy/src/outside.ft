@@ -1,0 +1,13 @@
+// accept
+// Importing Tagged does not import Kind or Flag. Both are still copyable, and Flag is trivial.
+import facts.copy.sealed { Tagged, enabled }
+
+pure func copied() Tagged {
+  let t = Tagged.first("a")
+  return copy t
+}
+pure func flag() Void {
+  let f = enabled()
+  let g = f
+  let _ = g
+}

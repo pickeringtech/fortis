@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-10-03
+// report consumes the failure; annotate(move f, note) keeps exactly one obligation alive (10.6).
+try func half(n: Int) Int => n
+
+func handle(n: Int) Int {
+  let v = half(n) catch e {
+    report annotate(move e, "handle") as receipt
+    recover 0
+  }
+  return v
+}

@@ -1,0 +1,13 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-10-04
+// A String payload allocates: the function cannot claim noalloc (10.4, 11.4).
+export error Named {
+  code: "demo.named"
+  payload { name: String }
+}
+export noalloc try func check(n: Int) Int {
+  if n > 10 {
+    fail Named(name: "big")                  // reject: E-EFF-001 — an allocating failure under noalloc
+  }
+  return n
+}

@@ -1,0 +1,8 @@
+// accept — S8: for over a moved place consumes it
+pure func run(xs: owned List[Int]) Int {
+  let mut total = 0
+  for x in move xs {
+    total = Int.wrappingAdd(total, x)
+  }
+  return total
+}

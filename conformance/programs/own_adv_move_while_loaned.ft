@@ -1,0 +1,13 @@
+// reject: E-OWN-011 (at the marked line)
+// covers: LANG-07-05
+export class Box {
+  export label: String
+}
+func consume(b: owned Box) Void {
+}
+func run() Int {
+  let box = Box(label: "a")
+  let seen = alias box
+  consume(move box)                        // reject: E-OWN-011 — moved while seen holds a read loan
+  return seen.label.scalarCount()
+}

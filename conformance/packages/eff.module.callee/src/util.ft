@@ -1,0 +1,14 @@
+// accept
+export func f() Int {
+  let s = "${1}"
+  return 1
+}
+
+export class Node {
+  export n: Int
+
+  export func m(self) Int {
+    let s = "${self.n}"
+    return 1
+  }
+}

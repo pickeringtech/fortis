@@ -1,0 +1,99 @@
+// execute: made 1|made 2|arm 1|cleanup 1|cleanup 2|after|made 1|made 2|arm|cleanup 1|cleanup 2|after|made 1|made 2|arm 2|cleanup 2|cleanup 1|after|made 1|made 2|arm|cleanup 2|cleanup 1|after|made 1|made 2|yes 1 2|cleanup 2|cleanup 1|after|made 1|made 2|arm 1|cleanup 1|cleanup 2|after
+// execute-trace: drop Handle|drop Handle|drop Handle|drop Handle|drop Handle|drop Handle|drop Handle|drop Handle
+// requires: runtime
+// covers: LANG-09-06, LANG-07-07
+// 9.8, 7.9: `match move` consumes the value. A field written `_` is destroyed with that consumed value, after the
+// arm's named bindings (reverse binding order) and before the next statement. A match that binds every field stays
+// reverse-init order. A guard that fails does not destroy the value; the arm that runs does.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export class Pair {
+  export first: Handle
+  export second: Handle
+}
+
+export enum Choice {
+  Two(a: Handle, b: Handle)
+  Empty
+}
+
+func pair(console: Shared[Console]) Pair => Pair(first: Handle.make(1, alias console), second: Handle.make(2, alias console))
+
+func rest(console: Shared[Console]) Void {
+  let p = pair(alias console)
+  match move p {
+    Pair(first: a, second: _) => { console.print("arm ${a.id}") }
+  }
+  console.print("after")
+}
+
+func choice(console: Shared[Console]) Void {
+  let c = Choice.Two(a: Handle.make(1, alias console), b: Handle.make(2, alias console))
+  match move c {
+    Two(a: a, b: _) => { console.print("arm") }
+    Empty => { console.print("empty") }
+  }
+  console.print("after")
+}
+
+func firstDiscarded(console: Shared[Console]) Void {
+  let p = pair(alias console)
+  match move p {
+    Pair(first: _, second: a) => { console.print("arm ${a.id}") }
+  }
+  console.print("after")
+}
+
+func bothBound(console: Shared[Console]) Void {
+  let p = pair(alias console)
+  match move p {
+    Pair(first: a, second: b) => { console.print("arm") }
+  }
+  console.print("after")
+}
+
+func guardFails(console: Shared[Console]) Void {
+  let p = pair(alias console)
+  match move p {
+    Pair(first: a, second: _) when a.id == 0 => { console.print("no ${a.id}") }
+    Pair(first: a, second: b) => { console.print("yes ${a.id} ${b.id}") }
+  }
+  console.print("after")
+}
+
+func guardHolds(console: Shared[Console]) Void {
+  let p = pair(alias console)
+  match move p {
+    Pair(first: a, second: _) when a.id == 1 => { console.print("arm ${a.id}") }
+    Pair(first: a, second: b) => { console.print("other") }
+  }
+  console.print("after")
+}
+
+func run(console: Shared[Console]) Void {
+  rest(alias console)
+  choice(alias console)
+  firstDiscarded(alias console)
+  bothBound(alias console)
+  guardFails(alias console)
+  guardHolds(alias console)
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

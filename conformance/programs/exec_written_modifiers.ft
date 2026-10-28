@@ -1,0 +1,33 @@
+// execute: 8|fallback 0|ok
+// requires: runtime
+// covers: LANG-11-05, LANG-11-06
+// `try` and `recovers` are written where the summary has them; a contract is a conjunction of claims applied in
+// the modifier position (11.3, 11.5).
+import fortis.host { Host }
+
+export contract Lean {
+  pure
+}
+
+export error Negative {
+  code: "demo.negative"
+}
+
+export Lean try func halve(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n / 2
+}
+
+recovers func safeHalve(n: Int) Int {
+  let v = halve(n) or recover 0
+  return v
+}
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${safeHalve(16)}")
+  caps.console.print("fallback ${safeHalve(-1)}")
+  caps.console.print("ok")
+}

@@ -1,0 +1,15 @@
+// reject: E-TYP-120 (at the marked lines)
+pure func stray(n: Int) Int {
+  give n                                    // reject: E-TYP-120 — give outside an arm
+}
+
+try func wrongEnd(n: Int) Int {
+  let v = Int.add(n, 1) catch e {
+    give 0                                  // reject: E-TYP-120 — a catch block ends with recover
+  }
+  recover v                                 // reject: E-TYP-120 — recover outside a catch block
+}
+
+pure func looseBreak(n: Int) Int {
+  break                                     // reject: E-TYP-120 — break outside a loop
+}

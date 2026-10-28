@@ -1,0 +1,9 @@
+// reject: E-TYP-080 (at the marked line)
+// covers: LANG-09-03
+export interface Scaler {
+  func scale(self, k: Int<0..100>) Int
+}
+export class Doubler implements Scaler {   // reject: E-TYP-080 — narrows the parameter refinement: a stronger precondition
+  export factor: Int
+  func scale(self, k: Int<0..10>) Int => Int.wrappingMul(self.factor, k)
+}

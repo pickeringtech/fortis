@@ -1,0 +1,58 @@
+// execute: stripe:live:5 audited #1|stripe:live:7 audited #1|request 42 stripe:live:9 audited #1
+// covers: PLAT-03-01, PLAT-03-02
+// Two levels: an application level holding a Shared gateway (an instance binding) and a Copyable counter, and a
+// request level holding the request's id. Transient bindings are built per use; a Shared slot takes `retain()`,
+// a Copyable one a copy, an owned one a fresh value; the request level holds its own handles of what it uses.
+import fortis.host { Host, Console, Capabilities }
+
+export class StripeGateway {
+  key: String
+  export func charge(self, cents: Int) String => "stripe:${self.key}:${cents}"
+}
+
+export class AuditLog {
+  suffix: String = "audited"
+  export func line(self, text: String) String => "${text} ${self.suffix}"
+}
+
+export class Counter {
+  value: Int = 1
+}
+
+export class CheckoutService {
+  inject gateway: Shared[StripeGateway]
+  limit: Int = 100
+  inject audit: AuditLog
+  inject counter: Counter
+  export func pay(self, cents: Int) String => "${self.audit.line(self.gateway.charge(cents))} #${self.counter.value}"
+}
+
+export class RequestHandler {
+  inject checkout: CheckoutService
+  inject id: RequestId
+  export func handle(self, cents: Int) String => "request ${self.id.value} ${self.checkout.pay(cents)}"
+}
+
+export class RequestId {
+  value: Int
+}
+
+context Production(key: owned String) {
+  request(id: owned RequestId)
+  provide Shared[StripeGateway] using instance Shared.create(StripeGateway(key: move key))
+  provide AuditLog
+  provide Counter using Counter { lifetime: application }
+  provide CheckoutService
+  provide RequestId using instance move id { lifetime: request }
+  provide RequestHandler
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let app = Production.application("live")
+  let checkout = app.checkoutService()
+  caps.console.print(checkout.pay(5))
+  caps.console.print(app.checkoutService().pay(7))
+  let req = app.request(RequestId(value: 42))
+  caps.console.print(req.requestHandler().handle(9))
+}

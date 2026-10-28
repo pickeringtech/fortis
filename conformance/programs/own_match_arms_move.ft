@@ -1,0 +1,34 @@
+// accept
+// covers: LANG-07-04
+// Two arms of one match may each `move` the same place. The arms are mutually exclusive, so the place
+// is moved on every path that continues and is not moved twice (D-159 review). A `copy` in an earlier
+// aggregate element is not a move: the place stays live after the match.
+func either(b: Bool) String {
+  let x = String.from("x")
+  return match b {
+    true => move x
+    false => move x
+  }
+}
+
+func eitherBlock(b: Bool) String {
+  let x = String.from("x")
+  return match b {
+    true => {
+      give move x
+    }
+    false => {
+      give move x
+    }
+  }
+}
+
+func copyThenMatch(b: Bool) Int {
+  let x = String.from("x")
+  let pair = (copy x, match b {
+    true => String.from("y")
+    false => String.from("z")
+  })
+  discard pair
+  return x.scalarCount()
+}

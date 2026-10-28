@@ -1,0 +1,5 @@
+// DEL-45 fixture for C1.effects (summaries): a pure function with a pure summary.
+pure func twice(n: Int) Int => Int.wrappingAdd(n, n)
+export func main(args: List[String]) Void {
+  discard twice(2)
+}

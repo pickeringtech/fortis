@@ -1,0 +1,54 @@
+// execute: empty|ok 3, refused 1
+// requires: runtime
+// reports: runtime-failure:demo.odd
+// covers: LANG-10-01, LANG-10-02, LANG-05-05
+// Programme 16, interaction linear outcome in a linear container + early return: a function returns early before
+// the container exists, and on its other path consumes every outcome of the container before returning.
+import fortis.host { Host }
+
+export error Odd {
+  code: "demo.odd"
+  payload { n: Int }
+}
+
+try func even(n: Int) Int {
+  if n % 2 == 1 {
+    fail Odd(n: n)
+  }
+  return n
+}
+
+func batch(xs: List[Int]) List[Outcome[Int]] {
+  let mut out: List[Outcome[Int]] = List.default()
+  for x in xs {
+    editable out.push(even(x))
+  }
+  return move out
+}
+
+func summarise(xs: List[Int]) String {
+  if xs.count() == 0 {
+    return "empty"
+  }
+  let results = batch(xs)
+  let mut ok = 0
+  let mut refused = 0
+  move results.consumeEach(fn mut[editable ok, editable refused](r: owned Outcome[Int]) Void {
+    match move r {
+      success(v) => {
+        ok = Int.wrappingAdd(ok, 1)
+      }
+      failure(f) => {
+        refused = Int.wrappingAdd(refused, 1)
+        report f
+      }
+    }
+  })
+  return "ok ${ok}, refused ${refused}"
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print(summarise(List.default()))
+  caps.console.print(summarise(List.of(2, 4, 5, 6)))
+}

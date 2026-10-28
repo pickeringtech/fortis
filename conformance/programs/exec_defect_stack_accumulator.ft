@@ -1,0 +1,13 @@
+// execute: defect:stack_exhaustion
+// requires: runtime
+// covers: LANG-10-06
+// Unbounded recursion whose single recursive call feeds an accumulator (`deep(n + 1) + 1`) is the stack
+// exhaustion defect on every backend: natively it is never turned into a loop that would run forever (10.8).
+import fortis.host { Host }
+
+func deep(n: Int) Int => Int.wrappingAdd(deep(Int.wrappingAdd(n, 1)), 1)
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${deep(0)}")
+}

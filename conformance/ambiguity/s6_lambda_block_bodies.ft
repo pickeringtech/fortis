@@ -1,0 +1,7 @@
+// accept — S6: block-bodied lambdas and capture lists
+pure func run(items: List[Int], threshold: Int) Int {
+  let big = pure fn[threshold](x: Int) Bool {
+    return x > threshold
+  }
+  return items.countWhere(big)
+}

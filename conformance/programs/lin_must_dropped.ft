@@ -1,0 +1,14 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-06-09
+// A class holding a Must witness is linear (6.12): dropping it at block end is rejected.
+export class Tx {
+  witness: Must
+  export func begin() Tx => Tx(witness: Must.create())
+  export func commit(owned self) Void {
+    let Tx(witness: w) = move self
+    Must.discharge(move w)
+  }
+}
+func run() Void {
+  let tx = Tx.begin()                      // reject: E-OBL-001 — never committed
+}

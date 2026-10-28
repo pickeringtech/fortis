@@ -1,0 +1,6 @@
+// accept
+export async func task() Int => 1
+
+export pure func ignore(work: async fn() Int) Int => 0
+
+export pure func render() String => "${ignore(async fn() Int => await task())}"   // the closure is built, not run (LR 3.6, 8.2)

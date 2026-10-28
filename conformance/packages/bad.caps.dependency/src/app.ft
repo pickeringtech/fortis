@@ -1,0 +1,8 @@
+// reject: E-EFF-010 (in the dependency caps.minter)
+// D-110: a dependency's function named `main`, even its own manifest's entry, is not the program's entry `main`, so
+// it may not create the capabilities (11.6, LANG-11-07).
+import caps.minter.lib
+
+export func main(args: List[String]) Void {
+  lib.main(copy args)
+}

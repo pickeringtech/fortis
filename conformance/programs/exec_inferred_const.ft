@@ -1,0 +1,15 @@
+// execute: limit 3, 3 names
+// requires: runtime
+// covers: LANG-04-02, LANG-05-01
+// An unannotated constant is usable at its initialiser's type, including a method call on a `List.of` constant
+// (the guide's example; D-54.4). `limit` also meets an `Int` annotation.
+import fortis.host { Host }
+
+const limit = 3
+const names = List.of("ada", "brian", "carla")
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let n: Int = limit
+  caps.console.print("limit ${n}, ${names.count()} names")
+}

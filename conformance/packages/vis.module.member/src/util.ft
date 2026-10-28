@@ -1,0 +1,16 @@
+// accept
+export class Box {
+  export n: Int
+}
+
+export class Holder[T] {
+  export item: T?
+}
+
+class Secret {
+  n: Int
+}
+
+export const limit: Int = 10
+
+const inner: Int = 3

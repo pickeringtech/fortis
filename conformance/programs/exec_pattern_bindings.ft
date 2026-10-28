@@ -1,0 +1,32 @@
+// execute: paid ref-9|draft|moved ref-2
+// requires: runtime
+// covers: LANG-09-06
+// A pattern over a borrowed scrutinee binds read loans; `match move` binds owned values (9.8).
+import fortis.host { Host }
+
+export enum Status {
+  Draft
+  Paid(reference: String)
+}
+
+pure func describe(s: Status) String {
+  return match s {
+    Draft => "draft"
+    Paid(reference) => "paid ${reference}"
+  }
+}
+
+func take(s: owned Status) String {
+  return match move s {
+    Draft => "draft"
+    Paid(reference) => "moved ${reference}"
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let paid = Status.Paid(reference: "ref-9")
+  caps.console.print(describe(paid))
+  caps.console.print(describe(Status.Draft))
+  caps.console.print(take(Status.Paid(reference: "ref-2")))
+}

@@ -1,0 +1,5 @@
+// reject: E-TYP-050 (at the marked line)
+// covers: LANG-05-09
+pure func scale(value: Int, factor: Int) Int => Int.wrappingMul(value, factor)
+
+pure func run() Int => scale(2)             // reject: E-TYP-050 — factor has no default

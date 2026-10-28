@@ -1,0 +1,7 @@
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let magic = b"FTS1"
+  caps.console.print("${magic.byteCount()} bytes")
+}

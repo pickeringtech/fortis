@@ -1,0 +1,17 @@
+// E-LIM-001: `nest[T]` calls itself at `Box[T]`, so its instantiations are nest[Int], nest[Box[Int]],
+// nest[Box[Box[Int]]], ... without end. The program checks and runs on the VM (which does not instantiate), and
+// a native build stops with the instantiation budget and the chain, before lowering.
+export class Box[T] {
+  export value: T
+}
+
+pure func nest[T](x: T, n: Int<0..100>) Int where T implements Copyable {
+  if n == 0 {
+    return 0
+  }
+  return nest(Box(value: copy x), n - 1)
+}
+
+export func main(args: List[String]) Void {
+  discard nest(1, 5)
+}

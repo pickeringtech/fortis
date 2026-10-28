@@ -1,0 +1,80 @@
+// execute: 3|2|launched|joined 4|drop second|drop first|made|drop c|drop b|drop a|pattern 3|drop boxed|closure 8|drop y|drop captured|drop x|alias 1|end
+// requires: runtime
+// covers: LANG-12-04
+// D-10: a task launched in a scope may take read loans of locals declared inside the scope's block (12.5): the scope
+// joins its tasks when the block exits, before the block's locals are destroyed in reverse order (7.9), an
+// awaited result and a closure that holds a loan of the task set among them, and a binding a `let` pattern makes
+// may be lent too. Natively those locals are declared before the task set so that Rust drops them after it.
+import fortis.host { Host, Console, Capabilities }
+
+export class Res {
+  console: Shared[Console]
+  label: String
+  cleanup(editable self) Void {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+async func size(text: String) Int => text.scalarCount()
+
+async func total(a: Res, b: Res) Int => Int.wrappingAdd(a.label.scalarCount(), b.label.scalarCount())
+
+async func make(console: owned Shared[Console], label: owned String) Res {
+  console.print("made")
+  return Res(console: console.retain(), label: move label)
+}
+
+export class Boxed {
+  export text: String
+  export guard: Res
+}
+
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  scope tasks {
+    let words = List.of(String.from("abc"), String.from("de"))
+    for w in words {
+      let t = tasks.launch(size(w))
+      let n = await t
+      console.print("${n}")
+    }
+  }
+  scope tasks {
+    let first = Res(console: console.retain(), label: "first")
+    let second = Res(console: console.retain(), label: "second")
+    let t = tasks.launch(total(first, second))
+    console.print("launched")
+    let n = await t
+    console.print("joined ${Int.wrappingSub(n, 7)}")
+  }
+  scope tasks {
+    let a = Res(console: console.retain(), label: "a")
+    let t = tasks.launch(make(console.retain(), String.from("b")))
+    let b = await t
+    let c = Res(console: console.retain(), label: "c")
+  }
+  scope tasks {
+    let boxed = Boxed(text: String.from("abc"), guard: Res(console: console.retain(), label: "boxed"))
+    let Boxed(text: word, guard: g) = move boxed
+    let t = tasks.launch(size(word))
+    let n = await t
+    console.print("pattern ${n}")
+  }
+  scope tasks {
+    let x = Res(console: console.retain(), label: "x")
+    let r = Res(console: console.retain(), label: "captured")
+    let f = fn[alias tasks, move r]() Int => r.label.scalarCount()
+    let y = Res(console: console.retain(), label: "y")
+    console.print("closure ${f()}")
+  }
+  scope tasks {
+    let s = alias tasks
+    let word = String.from("a")
+    let t = s.launch(size(word))
+    let n = await t
+    console.print("alias ${n}")
+  }
+  console.print("end")
+}

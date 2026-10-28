@@ -1,0 +1,11 @@
+// reject: E-TYP-050 (at the marked line)
+// PLAT-03-01 (D-90): a module whose only use of the Dependency injection kit is an `inject` member (here
+// followed by a tab) is elaborated too, so the slot is a constructor parameter that a construction must pass.
+export class Repo {
+}
+
+export class Shop {
+  inject	repo: Repo
+}
+
+func make() Shop => Shop()               // reject: E-TYP-050 — Shop needs its slot `repo`

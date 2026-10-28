@@ -1,0 +1,32 @@
+// execute: recovered -1
+// execute-trace: launch work#1 on blocking|launch quick#2|suspend main|start work#1|complete work#1|start quick#2|complete quick#2|resume main|join quick#2|loans-end|join work#1
+// requires: runtime
+// covers: LANG-12-03
+// 12.4: without a checkpoint() a blocking callback never observes cancellation: it runs to completion and is joined.
+import fortis.host { Host }
+export error Bad {
+  code: "demo.bad"
+}
+async try func quick() Int {
+  fail Bad()
+}
+async try func run() Int {
+  let items = List.of(1, 2, 3)
+  scope tasks {
+    let w = tasks.launchBlocking(fn once[move items]() Int {
+      let mut total = 0
+      for i in items {
+        total = Int.wrappingAdd(total, i)
+      }
+      return total
+    })
+    let q = tasks.launch(quick())
+    let x = await q or fail
+    return Int.wrappingAdd(x, await w)
+  }
+}
+export async recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let r = await run() or recover -1
+  caps.console.print("recovered ${r}")
+}

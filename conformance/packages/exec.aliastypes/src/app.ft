@@ -1,0 +1,26 @@
+// LANG-04-03, LANG-04-04: a type named through a module alias in an annotation is that module's type: parameters,
+// results, bindings, optionals and lists written `right.Item` hold the values `right.Item(...)` builds.
+import fortis.host { Host }
+import same.left.items as left
+import same.right.items as right
+
+pure func heavier(a: right.Item, b: right.Item) String {
+  if a.weight >= b.weight {
+    return a.show()
+  }
+  return b.show()
+}
+
+pure func labelOf(item: left.Item?) String => item?.label ?? "none"
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let a: right.Item = right.Item(count: 1, weight: 4)
+  let b: right.Item = right.Item(count: 2, weight: 9)
+  caps.console.print(heavier(a, b))
+  let found: left.Item? = left.Item(label: "kept")
+  caps.console.print(labelOf(found))
+  caps.console.print(labelOf(null))
+  let items: List[right.Item] = List.of(move a, move b)
+  caps.console.print("${items.count()} items, via ${right.Item(count: 3, weight: 1).show()}")
+}

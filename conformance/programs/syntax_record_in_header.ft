@@ -1,0 +1,12 @@
+// accept
+export interface Shaped[T] {
+  pure func shape(self) T
+}
+
+class Box implements Shaped[{ value: Int }] {        // not exported: anonymous records stay out of exported signatures (LR 6.9)
+  value: Int
+
+  pure func shape(self) { value: Int } => { value: self.value }
+
+  pure func where(self) Int => self.value            // method name: keyword permitted (LR 3.4)
+}

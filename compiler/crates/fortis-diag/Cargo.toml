@@ -1,0 +1,7 @@
+[package]
+name = "fortis-diag"
+version.workspace = true
+edition.workspace = true
+description = "DEL-03 diagnostic records: classes, fields, JSON rendering"
+
+[dependencies]

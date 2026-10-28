@@ -1,0 +1,5 @@
+// illustrative
+while condition { … }
+for item in iterable { … }
+for i in start..<end { … }      // also start..end (inclusive)
+loop { … }

@@ -1,0 +1,47 @@
+// execute: made 1|ping 1|cleanup 1|made 2|see 2|cleanup 2|made 3|made 4|both|cleanup 4|cleanup 3|made 5|see 5|still|cleanup 5
+// execute-trace: drop Handle|drop Handle|drop Handle|drop Handle|loans-end|drop Handle
+// requires: runtime
+// covers: LANG-07-07
+// 5.7, 7.9: a call result used only as a receiver or a read argument is a temporary. It is destroyed at the
+// end of the full statement, after the call returns, in reverse creation order. A value bound to a name is
+// not one: it lives until its binding's block exits.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  export func ping(self) Void {
+    self.console.print("ping ${self.id}")
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+func see(h: Handle, console: Shared[Console]) Void {
+  console.print("see ${h.id}")
+}
+
+func both(a: Handle, b: Handle, console: Shared[Console]) Void {
+  console.print("both")
+}
+
+func run(console: Shared[Console]) Void {
+  Handle.make(1, alias console).ping()
+  see(Handle.make(2, alias console), console)
+  both(Handle.make(3, alias console), Handle.make(4, alias console), console)
+  let kept = Handle.make(5, alias console)
+  see(alias kept, console)
+  console.print("still")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

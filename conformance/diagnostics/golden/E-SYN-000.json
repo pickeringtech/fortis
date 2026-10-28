@@ -1,0 +1,28 @@
+{
+  "class": "Syntax",
+  "code": "E-SYN-000",
+  "column": 34,
+  "fields": {
+    "expected_tokens": [
+      "'('",
+      "'Self'",
+      "'alias'",
+      "'async'",
+      "'dynamic'",
+      "'editable'",
+      "'fn'",
+      "'noalloc'",
+      "'pure'",
+      "'recovers'",
+      "'trusted'",
+      "'try'"
+    ],
+    "found_token": "=>"
+  },
+  "file": "conformance/programs/syntax_missing_return_type.ft",
+  "line": 2,
+  "message": "unexpected PUNCT '=>'",
+  "rule": "LANG-03-02",
+  "severity": "error",
+  "status": "violated"
+}

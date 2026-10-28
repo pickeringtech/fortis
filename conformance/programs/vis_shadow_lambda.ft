@@ -1,0 +1,6 @@
+// reject: E-NAM-003 (at the marked line)
+// covers: LANG-04-05
+pure func scaled(items: List[Int], factor: Int) List[Int] {
+  let out = items.map(fn[factor](factor: Int) Int => Int.wrappingMul(factor, 2))   // reject: E-NAM-003 — the lambda parameter shadows the captured `factor`
+  return move out
+}

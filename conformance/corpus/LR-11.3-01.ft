@@ -1,0 +1,15 @@
+// accept
+pure try func increment(x: Int) Int => Int.add(x, 1) or fail
+
+pure recovers func fallback(x: Int) Int => increment(x) or recover 0   // accept: fail removed, recovers added
+
+class Cell {
+  export value: Int
+  pure func set(editable self, value: Int) Void { self.value = value }   // footprint: {self}
+}
+
+pure func build() Cell {
+  let mut cell = Cell(value: 0)
+  editable cell.set(1)          // accept: cell is fresh, so the footprint imports nothing
+  return move cell
+}

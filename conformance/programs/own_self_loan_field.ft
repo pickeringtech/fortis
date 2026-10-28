@@ -1,0 +1,6 @@
+// reject: E-OWN-053 (at the marked line)
+// covers: LANG-07-06
+export class Table {                       // reject: E-OWN-053 — a loan derived from the class's own fields
+  export rows: List[String]
+  export first: StringView from self
+}

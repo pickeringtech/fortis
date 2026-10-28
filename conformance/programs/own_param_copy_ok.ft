@@ -1,0 +1,10 @@
+// accept
+// covers: LANG-07-02
+// A parameter is never rebound; a local copy is (7.6).
+// A parameter is never rebound; a local copy is.
+pure func bump(start: Int, label: String) Int {
+  let mut current = start
+  current = Int.wrappingAdd(current, 1)
+  let mut text = copy label
+  return current
+}

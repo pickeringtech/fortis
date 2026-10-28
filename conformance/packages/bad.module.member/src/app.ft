@@ -1,0 +1,56 @@
+// reject: E-NAM-001 (at the marked lines)
+// LANG-04-03 (D-36): a member named through a module alias must be declared by that module, in every position a
+// type's is: a call, a value, a constant expression (an initialiser, a field's or a parameter's default) and a place,
+// also inside a lambda's body.
+// Each record lists the module's exported members as candidates.
+import bad.module.member.util as util
+
+const fallback: Int = util.limit
+
+const ceiling: Int = util.ceiling       // reject: E-NAM-001 — util declares no ceiling
+
+class Holder {
+  n: Int = util.floor                   // reject: E-NAM-001 — util declares no floor
+}
+
+func ok() Int => util.clamp(copy util.limit)
+
+func renamed() Int => util.clampTo(1)   // reject: E-NAM-001 — util declares no clampTo
+
+func value() Int {
+  let f = util.maximum                  // reject: E-NAM-001 — util declares no maximum
+  return 0
+}
+
+func copied() Int => copy util.minimum  // reject: E-NAM-001 — util declares no minimum
+
+func defaulted(n: Int = util.start) Int => n  // reject: E-NAM-001 — util declares no start
+
+func inLambda() Int {
+  let f = fn() Int => copy util.middle  // reject: E-NAM-001 — util declares no middle (a lambda names the alias directly)
+  return f()
+}
+
+func grouped() Int => (util).clampTo(1) // reject: E-NAM-001 — a module is not a value
+
+func bound() Int {
+  let m = util                          // reject: E-NAM-001 — a module is not a value
+  return 0
+}
+
+func copied2() Int {
+  let m = copy util                     // reject: E-NAM-001 — a module is not a value
+  return 0
+}
+
+func loaned() Int {
+  let m = alias util                    // reject: E-NAM-001 — a module is not a value
+  return 0
+}
+
+const whole: Int = util                 // reject: E-NAM-001 — a module is not a value
+
+func indexed() Int {
+  let m = copy util[0]                  // reject: E-NAM-001 — a module is not a value
+  return 0
+}

@@ -1,0 +1,13 @@
+// reject: E-OBS-011 (at the marked line)
+// covers: LANG-13-02
+observation Trace {
+  tier: Int                          required: all
+}
+@observe(Trace)
+func process(items: List[Int]) Int {
+  capture tier = 0
+  for item in items {
+    capture tier = item                    // reject: E-OBS-011 — capture inside a loop body
+  }
+  return 0
+}

@@ -1,0 +1,10 @@
+// reject: E-DI-009 (at the marked line)
+// covers: PLAT-03-03
+// `using Class` fills the `inject` slots and leaves ordinary fields to their defaults; a field without one needs
+// an `instance` or `factory` binding.
+export class Pool {
+  size: Int
+}
+context Production {
+  provide Pool                                                         // reject: E-DI-009 — Pool.size has no default
+}

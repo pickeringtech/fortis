@@ -1,0 +1,13 @@
+// execute: 1|2|4|8|16
+// requires: runtime
+// covers: LANG-05-01
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut n: Int<1..64> = 1
+  while n < 20 {
+    caps.console.print("${n}")
+    n = n * 2
+  }
+}

@@ -1,0 +1,3 @@
+// reject: E-NAM-001
+import acme.billing.internal { secret }
+export pure func f() Int => secret()

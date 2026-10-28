@@ -1,0 +1,8 @@
+// A class holding a Counter, and a function that makes one.
+import repro.unimported.inner { Counter }
+
+export class Holder {
+  export counter: Counter
+}
+
+export pure func make() Holder => Holder(counter: Counter(n: 3))

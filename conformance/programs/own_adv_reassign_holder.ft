@@ -1,0 +1,12 @@
+// reject: E-OWN-011 (at the marked line)
+// covers: LANG-07-05
+export class Box {
+  export label: String
+}
+func run() Int {
+  let a = Box(label: "a")
+  let b = Box(label: "b")
+  let mut seen = alias a
+  seen = alias b                           // reject: E-OWN-011 — a loan-holding binding cannot be reassigned
+  return seen.label.scalarCount()
+}

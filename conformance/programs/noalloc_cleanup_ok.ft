@@ -1,0 +1,19 @@
+// accept
+// covers: LANG-10-04
+// noalloc covers the cleanup path too: a local whose cleanup allocates nothing may live in a noalloc function.
+export class Ticket {
+  export id: Int
+  cleanup(editable self) Void {
+    self.id = 0
+  }
+}
+export error Late {
+  code: "demo.late"
+}
+export noalloc try func stamp(n: Int) Int {
+  let t = Ticket(id: n)
+  if n < 0 {
+    fail Late()
+  }
+  return t.id
+}

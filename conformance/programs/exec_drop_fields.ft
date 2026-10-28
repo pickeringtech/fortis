@@ -1,0 +1,35 @@
+// execute: cleanup pair|cleanup 1|cleanup 2|done
+// requires: runtime, DEL-21
+// covers: LANG-07-07
+// 7.9: a class value runs its own cleanup, then its fields drop in declaration order. Each value holds the console
+// through a Shared handle (no field stores a loan, X-137).
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export class Pair {
+  export first: Handle
+  export second: Handle
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("cleanup pair")
+  }
+}
+
+func run(console: Shared[Console]) Void {
+  let p = Pair(first: Handle(id: 1, console: console.retain()), second: Handle(id: 2, console: console.retain()), console: console.retain())
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+  console.print("done")
+}

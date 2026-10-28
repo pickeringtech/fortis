@@ -1,0 +1,201 @@
+{
+  "rule": "PROG-ARC-02",
+  "manifests": [
+    {
+      "capability": "SecretAccess",
+      "ok": true,
+      "operations": 1,
+      "diagnostics": [],
+      "violation": "conformance/programs/secret_reveal_without_access.ft",
+      "refusal": "fortisc check reports E-TYP-040"
+    },
+    {
+      "capability": "FileSystem",
+      "ok": true,
+      "operations": 10,
+      "diagnostics": [],
+      "violation": "conformance/programs/exec_host_violations.ft",
+      "refusal": "the native run prints 'fs.outside_root|fs.outside_root|fs.closed|network.unreachable|clock.future|process.denied|sql.unavailable|path.invalid'"
+    },
+    {
+      "capability": "Network",
+      "ok": true,
+      "operations": 1,
+      "diagnostics": [],
+      "violation": "conformance/programs/exec_host_violations.ft",
+      "refusal": "the native run prints 'fs.outside_root|fs.outside_root|fs.closed|network.unreachable|clock.future|process.denied|sql.unavailable|path.invalid'"
+    },
+    {
+      "capability": "Clock",
+      "ok": true,
+      "operations": 4,
+      "diagnostics": [],
+      "violation": "conformance/programs/exec_host_violations.ft",
+      "refusal": "the native run prints 'fs.outside_root|fs.outside_root|fs.closed|network.unreachable|clock.future|process.denied|sql.unavailable|path.invalid'"
+    },
+    {
+      "capability": "Random",
+      "ok": true,
+      "operations": 2,
+      "diagnostics": [],
+      "violation": "conformance/programs/host_random_bound.ft",
+      "refusal": "fortisc check reports E-REF-001"
+    },
+    {
+      "capability": "Environment",
+      "ok": true,
+      "operations": 1,
+      "diagnostics": [],
+      "violation": "conformance/programs/secret_not_a_string.ft",
+      "refusal": "fortisc check reports E-TYP-040"
+    },
+    {
+      "capability": "Process",
+      "ok": true,
+      "operations": 1,
+      "diagnostics": [],
+      "violation": "conformance/programs/exec_host_violations.ft",
+      "refusal": "the native run prints 'fs.outside_root|fs.outside_root|fs.closed|network.unreachable|clock.future|process.denied|sql.unavailable|path.invalid'"
+    },
+    {
+      "capability": "Supervisor",
+      "ok": true,
+      "operations": 2,
+      "diagnostics": [],
+      "violation": "conformance/programs/host_supervisor_twice.ft",
+      "refusal": "fortisc check reports E-OWN-020"
+    },
+    {
+      "capability": "Console",
+      "ok": true,
+      "operations": 1,
+      "diagnostics": [],
+      "violation": "conformance/programs/host_console_secret.ft",
+      "refusal": "fortisc check reports E-TYP-040"
+    },
+    {
+      "capability": "RawSql",
+      "ok": true,
+      "operations": 1,
+      "diagnostics": [],
+      "violation": "conformance/programs/exec_host_violations.ft",
+      "refusal": "the native run prints 'fs.outside_root|fs.outside_root|fs.closed|network.unreachable|clock.future|process.denied|sql.unavailable|path.invalid'"
+    }
+  ],
+  "rejections": [
+    {
+      "fixture": "async_not_cancellable.json",
+      "expect": "cancellation: sleep is async",
+      "refused": true,
+      "diagnostics": [
+        "cancellation: sleep is async, so it is a cancellation point"
+      ]
+    },
+    {
+      "fixture": "effects_without_io.json",
+      "expect": "effects: resolve declares",
+      "refused": true,
+      "diagnostics": [
+        "effects: resolve declares ['fail'], the checker derives ['alloc', 'block', 'fail', 'io']"
+      ]
+    },
+    {
+      "fixture": "failure_the_adapter_cannot_produce.json",
+      "expect": "fs.gone",
+      "refused": true,
+      "diagnostics": [
+        "effects: readText declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']",
+        "effects: writeAll declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']",
+        "effects: readAll declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']",
+        "effects: open declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']",
+        "effects: create declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']",
+        "effects: subtree declares ['io'], the checker derives ['alloc', 'io']",
+        "effects: File.readAll declares ['fail'], the checker derives ['alloc', 'block', 'fail']",
+        "failures: File.readAll declares ['fs.closed', 'fs.gone', 'fs.wrong_mode'], its contract names ['fs.closed', 'fs.wrong_mode']",
+        "failures: File.readAll declares fs.gone, which the native adapter never produces",
+        "effects: File.writeAll declares ['fail'], the checker derives ['block', 'fail']",
+        "effects: Path.parse declares ['fail'], the checker derives ['alloc', 'fail']"
+      ]
+    },
+    {
+      "fixture": "missing_allocation.json",
+      "expect": "missing facet: allocation",
+      "refused": true,
+      "diagnostics": [
+        "missing facet: allocation (resolve)",
+        "effects: resolve declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']"
+      ]
+    },
+    {
+      "fixture": "missing_cancellation.json",
+      "expect": "missing facet: cancellation",
+      "refused": true,
+      "diagnostics": [
+        "missing facet: cancellation (resolve)",
+        "effects: resolve declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']"
+      ]
+    },
+    {
+      "fixture": "missing_effects.json",
+      "expect": "missing facet: effects",
+      "refused": true,
+      "diagnostics": [
+        "missing facet: effects (resolve)"
+      ]
+    },
+    {
+      "fixture": "missing_failures.json",
+      "expect": "missing facet: failures",
+      "refused": true,
+      "diagnostics": [
+        "missing facet: failures (resolve)",
+        "effects: resolve declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']"
+      ]
+    },
+    {
+      "fixture": "missing_handle_ownership.json",
+      "expect": "handle:",
+      "refused": true,
+      "diagnostics": [
+        "handle: representation, ownership and created_by must be declared",
+        "effects: resolve declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']"
+      ]
+    },
+    {
+      "fixture": "missing_operation.json",
+      "expect": "missing operation: Clock.sleep",
+      "refused": true,
+      "diagnostics": [
+        "missing operation: Clock.sleep"
+      ]
+    },
+    {
+      "fixture": "missing_ownership.json",
+      "expect": "missing facet: ownership",
+      "refused": true,
+      "diagnostics": [
+        "missing facet: ownership (resolve)",
+        "effects: resolve declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']"
+      ]
+    },
+    {
+      "fixture": "missing_violation.json",
+      "expect": "violation:",
+      "refused": true,
+      "diagnostics": [
+        "effects: resolve declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']",
+        "violation: fixture, refused_by, expect and clause must be declared"
+      ]
+    },
+    {
+      "fixture": "undeclared_failure.json",
+      "expect": "failures: resolve declares",
+      "refused": true,
+      "diagnostics": [
+        "effects: resolve declares ['fail', 'io'], the checker derives ['alloc', 'block', 'fail', 'io']",
+        "failures: resolve declares ['network.timeout', 'network.unreachable'], its contract names ['network.unreachable']",
+        "failures: resolve declares network.timeout, which the native adapter never produces"
+      ]
+    }
+  ]
+}

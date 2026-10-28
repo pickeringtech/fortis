@@ -1,0 +1,10 @@
+// reject: E-EFF-010 (at the marked line)
+// covers: LANG-11-07
+// A function that reaches the Environment capability through the Capabilities record has no Authority in its signature (11.6).
+import fortis.host { Host, Capabilities, Path }
+func home(caps: Capabilities) Bool {
+  let v = caps.environment.get("PATH")            // reject: E-EFF-010
+  return true
+}
+export func main(args: List[String]) Void {
+}

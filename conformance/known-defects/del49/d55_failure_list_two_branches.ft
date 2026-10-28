@@ -1,0 +1,21 @@
+import fortis.host { Host }
+
+func gather(errors: owned List[Failure]) Failure? {
+  if errors.isEmpty() {
+    let none = Failures.aggregate(move errors)
+    report none
+    return null
+  }
+  return Failures.aggregate(move errors)
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let errors: List[Failure] = List.default()
+  match gather(move errors) {
+    present(f) => {
+      report f
+    }
+    null => caps.console.print("none")
+  }
+}

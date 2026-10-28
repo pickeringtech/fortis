@@ -1,0 +1,9 @@
+// reject: E-TYP-040 (at the marked line)
+// Every interpolated expression must be Displayable (3.5, 6.10).
+export class Customer {
+  export name: String
+}
+
+pure func label(customer: Customer) String {
+  return "customer ${customer}"             // reject: E-TYP-040 — Customer is not Displayable
+}

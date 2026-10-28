@@ -1,0 +1,5 @@
+// accept
+export class Helper {
+  export name: String
+  export pure func greet(self) String => "hello ${self.name}"
+}

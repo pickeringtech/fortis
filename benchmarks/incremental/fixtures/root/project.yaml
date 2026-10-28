@@ -1,0 +1,6 @@
+schema: fortis.project/v1
+name: acme.tools
+version: 1.0.0
+root: tools
+dependencies:
+  fortis: "1.0"

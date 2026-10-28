@@ -1,0 +1,18 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-08-04
+// A field whose type is a closure type holds one lambda. A second lambda, in another
+// construction or by assignment, needs `dynamic fn(...)`.
+class Step {
+  export run: fn(Int) Int
+}
+
+func run() Int {
+  let first = Step(run: fn(x: Int) Int => x)
+  let second = Step(run: fn(x: Int) Int => Int.saturatingAdd(x, 1))   // reject: E-TYP-040 — the field already holds one lambda
+  let mut held = Step(run: fn(x: Int) Int => Int.saturatingMul(x, 2))   // reject: E-TYP-040 — a third lambda in the same field
+  held.run = fn(x: Int) Int => x                                       // reject: E-TYP-040 — a field assignment of a second lambda
+  discard first
+  discard second
+  discard held
+  return 0
+}

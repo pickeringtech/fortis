@@ -1,0 +1,2 @@
+// accept
+export pure func secret() Int => 42

@@ -1,0 +1,19 @@
+// reject: E-OWN-020 (at the marked lines)
+// covers: LANG-07-04
+export class Box {
+  export label: String
+}
+
+func consume(box: owned Box) Void {
+}
+
+func flow(flag: Bool) Int {
+  let box = Box(label: "a")
+  consume(move box)
+  let again = alias box                     // reject: E-OWN-020 — box was moved
+  let other = Box(label: "b")
+  if flag {
+    consume(move other)
+  }
+  return other.label.scalarCount()         // reject: E-OWN-020 — moved on one path
+}

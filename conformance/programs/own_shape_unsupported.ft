@@ -1,0 +1,13 @@
+// reject: E-OWN-090 (at the marked line)
+// covers: LANG-07-09
+// A loan derived from a receiver stored in a Shared has no safe lowering (7.10).
+export class Store {
+  export name: String
+  export pure func label(self) StringView from self => alias self.name
+}
+
+func keep(store: Store) Int {
+  let text = store.label()
+  let shared = Shared.create(move text)     // reject: E-OWN-090
+  return shared.scalarCount()
+}

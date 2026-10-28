@@ -1,0 +1,4 @@
+// The exported module of exp.lib: its declarations are importable across packages (4.3).
+import exp.lib.internal { base }
+
+export pure func answer() Int => Int.wrappingAdd(base(), 2)

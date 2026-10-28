@@ -1,0 +1,2 @@
+// reject: E-SYN-000 (at the marked line)
+export func describe(value: Int) => "value"  // reject: E-SYN-000 — a function head needs a return type before `=>`

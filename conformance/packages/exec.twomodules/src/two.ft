@@ -1,0 +1,12 @@
+class Node {
+  count: Int
+  weight: Int
+  func show(self) String => "second ${self.count} ${self.weight}"
+}
+
+func helper() String => "second helper"
+
+export func second() String {
+  let n = Node(count: 1, weight: 2)
+  return "${n.show()} ${helper()}"
+}

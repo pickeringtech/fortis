@@ -1,0 +1,10 @@
+// accept
+import fortis.host { Network }
+import acme.net { Url, Body, fetch }
+async try func fetchBoth(net: Network, a: Url, b: Url) (Body, Body) {
+  scope tasks {
+    let first = tasks.launch(fetch(net, a))
+    let second = tasks.launch(fetch(net, b))
+    return (await first or fail, await second or fail)
+  }
+}

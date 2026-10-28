@@ -1,0 +1,12 @@
+// reject: E-OWN-090 (at the marked line)
+// covers: LANG-07-09
+// C.2: a loan stored in a Mutex has no safe lowering; own the value instead.
+export class User {
+  export name: String
+}
+pure func displayName(user: User) StringView from user => alias user.name
+func run(user: User) Int {
+  let seen = displayName(alias user)
+  let guarded = Mutex.create(move seen)    // reject: E-OWN-090 — a loan stored in Mutex
+  return 0
+}

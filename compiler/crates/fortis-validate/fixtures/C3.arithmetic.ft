@@ -1,0 +1,10 @@
+// DEL-45 fixture for C3.arithmetic: arithmetic and comparison in a noalloc function.
+noalloc func larger(a: Int, b: Int) Int {
+  if a > b {
+    return a
+  }
+  return b
+}
+export func main(args: List[String]) Void {
+  discard larger(1, 2)
+}

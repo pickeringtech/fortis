@@ -1,0 +1,6 @@
+// reject: E-TYP-080 (at the marked line)
+// Comparable requires Equatable, which Version neither derives nor implements (9.5).
+export class Version derive Comparable {    // reject: E-TYP-080
+  export major: Int
+  export minor: Int
+}

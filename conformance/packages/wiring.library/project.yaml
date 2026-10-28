@@ -1,0 +1,6 @@
+schema: fortis.project/v1
+name: wiring.library
+version: 1.0.0
+exports: [wiring]
+dependencies:
+  fortis: "1.0"

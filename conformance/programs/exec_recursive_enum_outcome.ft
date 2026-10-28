@@ -1,0 +1,29 @@
+// execute: leaf 0
+// requires: runtime
+// covers: LANG-09-05
+// `Outcome[Tree]` stores the tree inline, so a recursive field of that type is boxed (D-55). A
+// consuming match handles the success and reports the failure.
+import fortis.host { Host }
+
+export enum Tree {
+  Leaf
+  Node(child: Outcome[Tree])
+}
+
+func consume(t: owned Tree) Int {
+  return match move t {
+    Leaf => 0
+    Node(child: found) => match move found {
+      success(inner) => Int.saturatingAdd(consume(move inner), 1)
+      failure(f) => {
+        report f
+        give 0
+      }
+    }
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("leaf ${consume(Tree.Leaf)}")
+}

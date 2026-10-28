@@ -1,0 +1,16 @@
+// execute: 14|20|true|false|7|-6
+// requires: runtime
+// covers: LANG-05-06
+// Precedence and associativity follow 5.6: multiplication before addition, comparison after arithmetic, `&&` before
+// `||`, unary minus binding tightest, left associativity for subtraction.
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${2 + 3 * 4}")
+  caps.console.print("${(2 + 3) * 4}")
+  caps.console.print("${1 + 1 == 2 && 3 > 2 || false}")
+  caps.console.print("${false && true || false}")
+  caps.console.print("${10 - 2 - 1}")
+  caps.console.print("${-2 * 3}")
+}

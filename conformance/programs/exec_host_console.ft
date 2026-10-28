@@ -1,0 +1,12 @@
+// execute: hello|world
+// requires: runtime
+// covers: LANG-11-07
+import fortis.host { Host, Console }
+func greet(console: Console, name: StringView) Void {
+  console.print(name)
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  greet(caps.console, "hello")
+  greet(caps.console, "world")
+}

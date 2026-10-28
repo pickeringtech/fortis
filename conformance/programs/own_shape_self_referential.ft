@@ -1,0 +1,8 @@
+// reject: E-OWN-053 (at the marked line)
+// covers: LANG-07-09
+// C.2: a self-referential class (a field that loans the class's own storage) has no safe lowering; use indices or
+// Shared with Weak.
+export class Document {                   // reject: E-OWN-053 — its field loans the class's own storage
+  export text: String
+  export firstWord: StringView from self
+}

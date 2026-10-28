@@ -1,0 +1,11 @@
+// DEL-45 fixture for C1.lambda (declared kind covers the body): a `fn mut` lambda mutating its editable capture.
+export func main(args: List[String]) Void {
+  let mut n = 1
+  {
+    let mut bump = fn mut[editable n]() Void {
+      n = Int.wrappingAdd(n, 1)
+    }
+    editable bump()
+  }
+  discard n
+}

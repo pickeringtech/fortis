@@ -1,0 +1,20 @@
+// execute: ada|3
+// requires: runtime
+// covers: LANG-07-06
+import fortis.host { Host }
+
+export class User {
+  export name: String
+}
+
+pure func displayName(user: User) StringView from user {
+  return alias user.name
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let user = User(name: "ada")
+  let name = displayName(alias user)
+  caps.console.print(name)
+  caps.console.print("${name.scalarCount()}")
+}

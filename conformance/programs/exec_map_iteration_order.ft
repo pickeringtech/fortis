@@ -1,0 +1,31 @@
+// execute: b=2,a=1,c=3|b=2,a=1,c=3|x,y
+// requires: runtime
+// covers: LANG-06-06
+// Map and Set iteration is deterministic per build: insertion order, the same on every run (6.6).
+import fortis.host { Host }
+
+pure func show(m: Map[String, Int]) String {
+  let mut out = String.from("")
+  for entry in m {
+    out = if out == "" { give "${entry.0}=${entry.1}" } else { give "${out},${entry.0}=${entry.1}" }
+  }
+  return move out
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut m: Map[String, Int] = Map.default()
+  editable m.set("b", 2)
+  editable m.set("a", 1)
+  editable m.set("c", 3)
+  caps.console.print(show(m))
+  caps.console.print(show(m))
+  let mut s: Set[String] = Set.default()
+  discard editable s.add("x")
+  discard editable s.add("y")
+  let mut items = String.from("")
+  for x in s {
+    items = if items == "" { give copy x } else { give "${items},${x}" }
+  }
+  caps.console.print(items)
+}

@@ -1,0 +1,17 @@
+// accept neighbours: nested optionals and an optional element stay `dynamic fn`.
+// Not a gate program: a dynamic fn is a boxed closure, and the native parity
+// audit counts boxed closures. Both checkers must accept every function here.
+func optionalElements() List[(dynamic fn(Int) Int)?] {
+  let xs: List[(dynamic fn(Int) Int)?] = List.of(null, fn(x: Int) Int => x, fn(x: Int) Int => Int.saturatingAdd(x, 1))
+  return move xs
+}
+
+func nestedList() (List[dynamic fn(Int) Int]?)? {
+  let xs: (List[dynamic fn(Int) Int]?)? = List.of(fn(x: Int) Int => x, fn(x: Int) Int => Int.saturatingAdd(x, 1))
+  return move xs
+}
+
+func nestedRecord() ({ fs: List[dynamic fn(Int) Int] }?)? {
+  let r: ({ fs: List[dynamic fn(Int) Int] }?)? = { fs: List.of(fn(x: Int) Int => x, fn(x: Int) Int => Int.saturatingAdd(x, 1)) }
+  return move r
+}

@@ -1,0 +1,177 @@
+// base: src/feed.ft
+// class: E-SYN
+// change: an unclosed call
+// The stock feed: lines of `sku,bin,quantity,name`. Every parsing function is `noalloc`: fields are views `from` the
+// input, digits are read in place, and failures use the bounded representation (Language Reference 11.4, 10).
+import acme.stock.ids { SkuId, BinId }
+
+export error Malformed {
+  code: "feed.malformed"
+}
+
+export class Entry derive Equatable {
+  export sku: SkuId
+  export bin: BinId
+  export quantity: Int<0..10000>
+}
+
+// The index-th segment of text between separators, as a view of the text (7.6).
+export pure noalloc try func segment(text: StringView, separator: Scalar, index: Int<0..>) StringView from text {
+  let n = text.scalarCount(
+  let mut start = 0
+  let mut seen = 0
+  for i in 0..<n {
+    let s = text.scalarAt(i) or fail
+    if s == separator {
+      if seen == index {
+        return text.slice(start, i) or fail
+      }
+      seen = Int.add(seen, 1) or fail
+      start = i + 1
+    }
+  }
+  if seen == index {
+    return text.slice(start, n) or fail
+  }
+  fail Malformed()
+}
+
+// The decimal value of a field of one to six digits.
+export pure noalloc try func number(field: StringView) Int<0..999999> {
+  let n = field.scalarCount()
+  if n == 0 || n > 6 {
+    fail Malformed()
+  }
+  let mut value = 0
+  for i in 0..<n {
+    let s = field.scalarAt(i) or fail
+    let d = Scalar.digitValue(s)
+    if d == null {
+      fail Malformed()
+    }
+    value = Int.add(Int.mul(value, 10) or fail, d) or fail
+  }
+  return Int<0..999999>.validate(value) or fail
+}
+
+// The number of separator-delimited segments in text.
+export pure noalloc try func segmentCount(text: StringView, separator: Scalar) Int {
+  let mut count = 1
+  for i in 0..<text.scalarCount() {
+    let s = text.scalarAt(i) or fail
+    if s == separator {
+      count = Int.add(count, 1) or fail
+    }
+  }
+  return count
+}
+
+// One record, parsed without allocation; nominal and refined fields are validated at this boundary.
+export pure noalloc try func entry(line: StringView) Entry {
+  let comma = Scalar.of(",")
+  if (segmentCount(line, comma) or fail) != 4 {
+    fail Malformed()
+  }
+  let sku = SkuId.validate(number(segment(line, comma, 0) or fail) or fail) or fail
+  let bin = BinId.validate(number(segment(line, comma, 1) or fail) or fail) or fail
+  let quantity = Int<0..10000>.validate(number(segment(line, comma, 2) or fail) or fail) or fail
+  return Entry(sku: sku, bin: bin, quantity: quantity)
+}
+
+// The fourth field, the item's name, as a view of the line.
+export pure noalloc try func nameField(line: StringView) StringView from line => segment(line, Scalar.of(","), 3) or fail
+
+// The number of newline-terminated records in a byte buffer, read in place.
+export pure noalloc func lineCount(data: BytesView) Int {
+  let mut lines = 0
+  for i in 0..<data.byteCount() {
+    if (data.get(i) ?? 0) == 10 {
+      lines = Int.saturatingAdd(lines, 1)
+    }
+  }
+  return lines
+}
+
+// A rolling checksum of the bytes, wrapping by definition.
+export pure noalloc func checksum(data: BytesView) Int {
+  let mut h = 17
+  for i in 0..<data.byteCount() {
+    h = Int.wrappingAdd(Int.wrappingMul(h, 31), data.get(i) ?? 0)
+  }
+  return h
+}
+
+test "segments are views of the text" {
+  let comma = Scalar.of(",")
+  expect (segment("a,bc,,d", comma, 0) or fail) == "a"
+  expect (segment("a,bc,,d", comma, 1) or fail) == "bc"
+  expect (segment("a,bc,,d", comma, 2) or fail) == ""
+  expect (segment("a,bc,,d", comma, 3) or fail) == "d"
+  expect (segmentCount("a,bc,,d", comma) or fail) == 4
+  expect (segmentCount("", comma) or fail) == 1
+  let past = segment("a,b", comma, 2) catch e {
+    expect e.code == "feed.malformed"
+    recover ""
+  }
+  expect past == ""
+}
+
+test "numbers of one to six digits" cases {
+  "zero": { text: "0", value: 0 }
+  "largest": { text: "999999", value: 999999 }
+  "leading zeros": { text: "000042", value: 42 }
+} as row {
+  expect (number(row.text) or fail) == row.value
+}
+
+test "malformed numbers" cases {
+  "empty": { text: "" }
+  "seven digits": { text: "1000000" }
+  "letter": { text: "12a" }
+  "sign": { text: "-1" }
+  "space": { text: " 1" }
+} as row {
+  let n = number(row.text) catch e {
+    expect e.code == "feed.malformed"
+    recover 0
+  }
+  expect n == 0
+}
+
+test "entries validate every field" {
+  let good = entry("999999,999,10000,max") or fail
+  expect good == Entry(sku: SkuId(999999), bin: BinId(999), quantity: 10000)
+  expect (nameField("1,1,1,widget") or fail) == "widget"
+  let zeroSku = entry("0,1,1,x") catch e {
+    expect e.code == "refinement.out_of_range"
+    recover copy good
+  }
+  let bigBin = entry("1,1000,1,x") catch e {
+    expect e.code == "refinement.out_of_range"
+    recover copy good
+  }
+  let tooMany = entry("1,1,10001,x") catch e {
+    expect e.code == "refinement.out_of_range"
+    recover copy good
+  }
+  let short = entry("1,1,1") catch e {
+    expect e.code == "feed.malformed"
+    recover copy good
+  }
+  let long = entry("1,1,1,x,y") catch e {
+    expect e.code == "feed.malformed"
+    recover copy good
+  }
+  expect zeroSku == good && bigBin == good && tooMany == good && short == good && long == good
+}
+
+test "byte buffers are read in place" {
+  // a buffer with known bytes: the canonical encoding of a string is a 6-byte prefix and then its UTF-8 bytes
+  let data = String.from("a\nb\n").toBytes()
+  expect lineCount(data) == 2
+  expect data.byteCount() == 10
+  let empty = String.from("").toBytes()
+  expect lineCount(empty) == 0
+  expect checksum(empty) == checksum(String.from("").toBytes())
+  expect checksum(data) != checksum(String.from("a\nc\n").toBytes())
+}

@@ -1,0 +1,17 @@
+// accept
+// covers: LANG-06-02
+// Comparison forms narrow the tracked place in the true branch; && narrows by both conjuncts (6.3).
+pure func forms(n: Int, m: Int) Int<0..100> {
+  if n >= 0 && n <= 100 {
+    return n
+  }
+  if n == 7 {
+    return n
+  }
+  if m > -1 {
+    if m < 101 {
+      return m
+    }
+  }
+  return 0
+}

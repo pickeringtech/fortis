@@ -1,0 +1,10 @@
+// accept
+// covers: LANG-08-02
+func counter(base: String) fn() Int from base {
+  let f = fn[alias base]() Int => base.scalarCount()
+  return move f
+}
+func run(items: List[Int], threshold: Int) Int {
+  let big = fn[threshold](x: Int) Bool => x > threshold
+  return items.countWhere(big)
+}

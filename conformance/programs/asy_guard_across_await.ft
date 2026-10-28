@@ -1,0 +1,9 @@
+// reject: E-ASY-002 (at the marked line)
+// covers: LANG-12-06
+async func pause() Void {
+}
+async try func run(m: Mutex[Int]) Int {
+  let g = await m.lock() or fail
+  await pause()                            // reject: E-ASY-002 — the guard g is live across the await
+  return 0
+}

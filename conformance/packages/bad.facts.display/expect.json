@@ -1,0 +1,1 @@
+{"verdict": "reject", "code": "E-TYP-040", "covers": ["LANG-04-04", "LANG-03-05"], "onefile": "src/use.ft", "at": ["bad.facts.display/src/use.ft:11"]}

@@ -1,0 +1,7 @@
+// accept
+import fortis.money { Currency }
+export error CurrencyMismatch {
+  code: "billing.invoice.currency_mismatch"
+  payload { expected: Currency, found: Currency }
+  message: "Line currency ${found} does not match invoice currency ${expected}"
+}

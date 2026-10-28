@@ -1,0 +1,14 @@
+// accept
+// covers: LANG-07-08, LANG-07-01
+export class Config {
+  export limit: Int
+  export tags: List[String]
+}
+func run(c: Config, text: String) Int {
+  let a = copy c
+  let b = copy c.tags
+  let t = copy text
+  let shared = Shared.create(Config(limit: 1, tags: List.default()))
+  let again = shared.retain()
+  return a.limit
+}

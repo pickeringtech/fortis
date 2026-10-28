@@ -1,0 +1,77 @@
+// execute: 3|rejected refinement.out_of_range|2|rejected refinement.out_of_range|accepted|rejected refinement.out_of_range|7|rejected refinement.out_of_range
+// reports: runtime-failure:refinement.out_of_range|runtime-failure:refinement.out_of_range|runtime-failure:refinement.out_of_range|runtime-failure:refinement.out_of_range
+// requires: runtime
+// covers: LANG-06-03
+// `validate` into a refinement that measures its value (6.3): `String<scalars: …>` counts Unicode scalars and
+// `List[T]<length: …>` counts elements; a newtype checks its representation's own refinement, never one of its type
+// arguments' (`List[Int<0..9>]<length: 1..3>` is refined by `length: 1..3`, not by `0..9`), and an integer range
+// refines the value itself (D-53).
+import fortis.host { Host }
+
+type Digits = List[Int<0..9>]<length: 1..3>
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  match String<scalars: 1..5>.validate(String.from("héé")) {
+    success(name) => caps.console.print("${name.scalarCount()}")
+    failure(f) => {
+      caps.console.print("rejected ${f.code}")
+      report f
+    }
+  }
+  match String<scalars: 1..5>.validate(String.from("abcdef")) {
+    success(name) => caps.console.print("${name.scalarCount()}")
+    failure(f) => {
+      caps.console.print("rejected ${f.code}")
+      report f
+    }
+  }
+  let mut items: List[Int] = List.default()
+  editable items.push(1)
+  editable items.push(2)
+  match List[Int]<length: 0..3>.validate(copy items) {
+    success(few) => caps.console.print("${few.count()}")
+    failure(f) => {
+      caps.console.print("rejected ${f.code}")
+      report f
+    }
+  }
+  editable items.push(3)
+  editable items.push(4)
+  match List[Int]<length: 0..3>.validate(move items) {
+    success(many) => caps.console.print("${many.count()}")
+    failure(f) => {
+      caps.console.print("rejected ${f.code}")
+      report f
+    }
+  }
+  let small: List[Int<0..9>] = List.of(4, 5)
+  match Digits.validate(move small) {
+    success(d) => caps.console.print("accepted")
+    failure(f) => {
+      caps.console.print("rejected ${f.code}")
+      report f
+    }
+  }
+  let big: List[Int<0..9>] = List.of(1, 2, 3, 4)
+  match Digits.validate(move big) {
+    success(d) => caps.console.print("accepted")
+    failure(f) => {
+      caps.console.print("rejected ${f.code}")
+      report f
+    }
+  }
+  match Int<0..10>.validate(7) {
+    success(n) => caps.console.print("${n}")
+    failure(f) => {
+      report f
+    }
+  }
+  match Int<0..10>.validate(11) {
+    success(n) => caps.console.print("${n}")
+    failure(f) => {
+      caps.console.print("rejected ${f.code}")
+      report f
+    }
+  }
+}

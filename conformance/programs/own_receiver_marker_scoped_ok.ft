@@ -1,0 +1,14 @@
+// accept
+// covers: LANG-07-05, LANG-07-06
+// A marked receiver belongs to the call it marks: `editable b.toText()` reaches no declared signature, and its
+// marker must not become a reservation of the next call, here `size(b)`, which takes a read loan of `b` (X-114).
+export class Box derive Encodable {
+  export n: Int
+}
+pure func size(b: Box) Int => b.n
+func run() Int {
+  let mut b = Box(n: 1)
+  let text = editable b.toText()
+  discard text
+  return size(b)
+}

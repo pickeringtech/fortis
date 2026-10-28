@@ -1,0 +1,7 @@
+// reject: E-TYP-040 (at the marked line)
+// LANG-04-04 (D-137): a package whose name begins with `fortis` is not the standard package, so its types carry
+// their identity like any other package's: one module's `Node` is not another's (as in bad.module.types).
+import fortissimo.types.one as one
+import fortissimo.types.two as two
+
+func mixed() Int => two.weigh(one.Node(label: "x"))   // reject: E-TYP-040 — one's Node is not two's

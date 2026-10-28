@@ -1,0 +1,14 @@
+// reject: E-OBS-001 (at the marked line)
+// covers: LANG-13-02
+// 13: an await is a cancellation edge; a `required: all` field must be captured before it.
+async func pause() Void {
+}
+observation Trace {
+  tier: Int                          required: all
+}
+@observe(Trace)
+async func process(n: Int) Int {
+  await pause()                            // reject: E-OBS-001 — tier is not captured before this cancellation point
+  capture tier = n
+  return n
+}

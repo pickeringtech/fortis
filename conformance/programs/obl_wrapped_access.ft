@@ -1,0 +1,7 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-10-01
+try func half(n: Int) Int => n
+
+pure func double(n: Int) Int => Int.wrappingMul(n, 2)
+
+func use(n: Int) Int => double(half(n))     // reject: E-TYP-040 — double expects Int, got Outcome[Int]

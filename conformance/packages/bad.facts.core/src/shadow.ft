@@ -1,0 +1,8 @@
+// reject: E-OWN-002
+import bad.facts.core.named { Wrap }
+
+export class FileSystem {
+  export n: Int
+}
+
+func duplicate(w: Wrap) FileSystem => copy w.fs    // reject: E-OWN-002 — the bare import is still host.FileSystem

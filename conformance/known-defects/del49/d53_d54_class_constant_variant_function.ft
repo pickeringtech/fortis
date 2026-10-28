@@ -1,0 +1,62 @@
+import fortis.host { Host }
+
+class Grid {
+  const size = 8
+  export cells: Int
+}
+
+enum Coin derive Equatable {
+  Penny
+  Pound
+  Other(pence: Int<0..10000>)
+
+  export pure func pence(self) Int<0..10000> {
+    return match self {
+      Penny => 1
+      Pound => 100
+      Other(pence: p) => p
+    }
+  }
+}
+
+pure func wrap(pence: Int<0..10000>) Coin => Coin.Other(pence: pence)
+
+func build(make: fn(Int<0..10000>) Coin, n: Int<0..10000>) Coin => make(n)
+
+mixin Loud {
+  requires pure func name(self) String
+  export pure func shout(self) String => "${self.name()}!"
+  export pure func whisper(self) String => "(${self.name()})"
+}
+
+class Dog with Loud {
+  export pure func name(self) String => "dog"
+  export pure func whisper(self) String => "..."
+}
+
+class Box {
+  export label: String
+  export weight: Int
+}
+
+pure func heavy(b: owned Box) Bool {
+  return match move b {
+    Box(label: l, weight: w) when w > 10 => true
+    otherwise => false
+  }
+}
+
+pure func pairSum(r: { a: Int<0..100>, b: Int<0..100> }) Int {
+  return match r {
+    { a: x, b: y } => x + y
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${Grid.size}")
+  caps.console.print("${Coin.Pound.pence()} ${Coin.Other(pence: 7).pence()}")
+  let d = Dog()
+  caps.console.print("${d.shout()} ${d.whisper()}")
+  caps.console.print("${pairSum({ a: 2, b: 3 })}")
+}

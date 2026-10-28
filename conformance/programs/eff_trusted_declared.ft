@@ -1,0 +1,23 @@
+// reject: E-EFF-001 (at the marked lines)
+// covers: LANG-11-01, LANG-11-03, LANG-11-07
+// D-112: a trusted operation's effects come from its modifiers, from its receiver and parameters (one that takes an
+// Authority performs I/O through it, 11.6), and from the effect data its standard package ships
+// (reference/library/effects/fortis.json), however the call names it. `reveal` takes a SecretAccess and its data says
+// it allocates: before, `peek` was accepted by both checkers (it may not perform io, and only `reveal` gives it any), and
+// `lean`, which calls it through a module alias, by fortisc.
+import fortis.host { Host, Secret, SecretAccess, reveal }
+import fortis.host as h
+
+export contract NoIo {
+  forbids io
+}
+
+NoIo func peek(s: Secret[String], access: SecretAccess) String => reveal(s, access)      // reject: E-EFF-001 — io, which NoIo forbids
+
+noalloc func lean(s: Secret[String], access: SecretAccess) String => h.reveal(s, access)  // reject: E-EFF-001 — reveal allocates
+
+func shown(s: Secret[String], access: SecretAccess) String => reveal(s, access)
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+}

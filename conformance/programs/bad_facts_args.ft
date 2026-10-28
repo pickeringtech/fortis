@@ -1,0 +1,27 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-04-04
+// The same hole as bad.facts.nested, in one file: both classes have an empty package identity,
+// so List[FileSystem] compares equal to List[host.FileSystem]. An owned list where the view is
+// expected takes the same shortcut on its element.
+import fortis.host
+
+class FileSystem {
+  n: Int
+}
+
+func kept(xs: owned List[FileSystem]) List[FileSystem] => move xs
+func hostKept(xs: owned List[host.FileSystem]) List[host.FileSystem] => move xs
+
+func wrong(xs: owned List[FileSystem]) List[host.FileSystem] => move xs    // reject: E-TYP-040 — the element is the user's class
+func mapWrong(xs: owned Map[String, FileSystem]) Map[String, host.FileSystem] => move xs    // reject: E-TYP-040
+func keyWrong(xs: owned Map[FileSystem, Int]) Map[host.FileSystem, Int] => move xs    // reject: E-TYP-040
+func setWrong(xs: owned Set[FileSystem]) Set[host.FileSystem] => move xs    // reject: E-TYP-040
+func nestWrong(xs: owned List[List[FileSystem]]) List[List[host.FileSystem]] => move xs    // reject: E-TYP-040
+func optWrong(xs: owned List[FileSystem?]) List[host.FileSystem?] => move xs    // reject: E-TYP-040
+func viewCall(xs: List[FileSystem]) Int => viewCount(xs)    // reject: E-TYP-040 — List where ListView is expected
+func viewOwn(xs: owned List[FileSystem]) Void {
+  let v: ListView[host.FileSystem] = move xs    // reject: E-TYP-040
+  discard v
+}
+
+func viewCount(v: ListView[host.FileSystem]) Int => v.count()

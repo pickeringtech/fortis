@@ -1,0 +1,523 @@
+// `fortis.prelude` implementation (DEL-26). Imported implicitly into every module (Language Reference 4.3).
+// Derived operations have Fortis bodies; primitives are `trusted` intrinsics whose contract is the comment above
+// them (Language Reference 11.3: the review record of a trusted intrinsic is its documentation comment). The
+// signatures equal `reference/library/prelude.ft` (DEL-06); `conformance/tools/library_check.py` enforces it.
+import fortis.host { Supervisor }
+
+// ---- unit, boolean, integers (6.2, 6.4) ----
+export class Void {}
+export class Never {}
+export class Bool {}
+
+export class Int {
+  // intrinsic: checked 64-bit two's-complement addition; fails `numeric.overflow` outside [-2^63, 2^63-1]; O(1), no allocation
+  export trusted pure try func add(a: Int, b: Int) Int
+  // intrinsic: checked subtraction; fails `numeric.overflow`; O(1), no allocation
+  export trusted pure try func sub(a: Int, b: Int) Int
+  // intrinsic: checked multiplication; fails `numeric.overflow`; O(1), no allocation
+  export trusted pure try func mul(a: Int, b: Int) Int
+  // intrinsic: truncating division; fails `numeric.divide_by_zero` when b = 0 and `numeric.overflow` for -2^63 / -1; O(1)
+  export trusted pure try func div(a: Int, b: Int) Int
+  // intrinsic: remainder with the sign of a; fails `numeric.divide_by_zero` when b = 0; O(1)
+  export trusted pure try func rem(a: Int, b: Int) Int
+  // intrinsic: a * 2^bits; fails `numeric.shift_range` unless 0 <= bits < 64 and `numeric.overflow` when the result is out of range; O(1)
+  export trusted pure try func shiftLeft(a: Int, bits: Int) Int
+  // intrinsic: addition modulo 2^64 into [-2^63, 2^63-1]; total; O(1)
+  export trusted pure func wrappingAdd(a: Int, b: Int) Int
+  // intrinsic: subtraction modulo 2^64; total; O(1)
+  export trusted pure func wrappingSub(a: Int, b: Int) Int
+  // intrinsic: multiplication modulo 2^64; total; O(1)
+  export trusted pure func wrappingMul(a: Int, b: Int) Int
+  // intrinsic: addition clamped to [-2^63, 2^63-1]; total; O(1)
+  export trusted pure func saturatingAdd(a: Int, b: Int) Int
+  // intrinsic: subtraction clamped to [-2^63, 2^63-1]; total; O(1)
+  export trusted pure func saturatingSub(a: Int, b: Int) Int
+  // intrinsic: multiplication clamped to [-2^63, 2^63-1]; total; O(1)
+  export trusted pure func saturatingMul(a: Int, b: Int) Int
+  // intrinsic: the value when it lies in the refinement of the receiver type; fails `refinement.out_of_range` otherwise; O(1)
+  export trusted pure try func validate(value: Int) Int
+}
+export class Int8 {}
+export class Int16 {}
+export class Int32 {}
+export class Int64 {}
+export class UInt8 {}
+export class UInt16 {}
+export class UInt32 {}
+export class UInt64 {}
+export class UInt {}
+export class Byte {}
+export class Float {
+  // intrinsic: IEEE 754 binary64 correctly rounded square root; NaN for negative input; O(1)
+  export trusted pure func sqrt(x: Float) Float
+  // intrinsic: the IEEE 754 totalOrder key of x as a signed 64-bit integer; O(1)
+  export trusted pure func totalOrder(x: Float) Int64
+  // intrinsic: true exactly when a and b have the same 64-bit pattern; O(1)
+  export trusted pure func bitsEqual(a: Float, b: Float) Bool
+  // intrinsic: true exactly for NaN; O(1)
+  export trusted pure func isNaN(x: Float) Bool
+}
+export class Float32 {
+  // intrinsic: IEEE 754 binary32 correctly rounded square root; O(1)
+  export trusted pure func sqrt(x: Float32) Float32
+  // intrinsic: true exactly for NaN; O(1)
+  export trusted pure func isNaN(x: Float32) Bool
+}
+export enum RoundingMode {
+  HalfEven
+  HalfAwayFromZero
+  TowardZero
+  AwayFromZero
+}
+export class Decimal {
+  // intrinsic: the sum at the larger operand scale, rounded half to even when it needs more than 96 coefficient bits; fails `numeric.overflow` when the integer part does not fit (6.4); O(digits)
+  export trusted pure try func add(a: Decimal, b: Decimal) Decimal
+  // intrinsic: the difference at the larger operand scale, rounded half to even when needed; fails `numeric.overflow` (6.4); O(digits)
+  export trusted pure try func sub(a: Decimal, b: Decimal) Decimal
+  // intrinsic: the product at the sum of the scales, rounded half to even above 28 fractional digits or 96 coefficient bits; fails `numeric.overflow` (6.4); O(digits^2)
+  export trusted pure try func mul(a: Decimal, b: Decimal) Decimal
+  // intrinsic: the quotient at the largest scale that fits, rounded half to even; fails `numeric.divide_by_zero` and `numeric.overflow` (6.4); O(digits^2)
+  export trusted pure try func div(a: Decimal, b: Decimal) Decimal
+  // intrinsic: the remainder with the sign of the dividend at the larger operand scale; fails `numeric.divide_by_zero` (6.4); O(digits^2)
+  export trusted pure try func rem(a: Decimal, b: Decimal) Decimal
+  // intrinsic: value rounded to scale by mode; total; O(digits)
+  export trusted pure func round(value: Decimal, scale: Int<0..28>, mode: RoundingMode) Decimal
+  // intrinsic: the binary value of x rounded to scale by mode; fails `numeric.overflow` for a non-finite x or an integer part that does not fit (6.4); O(digits)
+  export trusted pure try func fromFloat(x: Float, scale: Int<0..28>, mode: RoundingMode) Decimal
+  // intrinsic: the number of fractional digits; O(1)
+  export trusted pure func scale(self) Int<0..28>
+}
+export class BigInt {}
+
+// ---- text (6.6) ----
+export class String {
+  // intrinsic: an owned copy of the view; allocates; O(n) in bytes
+  export trusted pure func from(text: StringView) String
+  export pure func empty() String => String.from("")
+  // intrinsic: the number of Unicode scalar values; O(n) in bytes
+  export trusted pure func scalarCount(self) Int
+  // intrinsic: the UTF-8 length in bytes; O(1)
+  export trusted pure func byteCount(self) Int
+}
+export class StringView {
+  // intrinsic: the number of Unicode scalar values; O(n) in bytes
+  export trusted pure func scalarCount(self) Int
+  // intrinsic: the UTF-8 length in bytes; O(1)
+  export trusted pure func byteCount(self) Int
+  // intrinsic: the scalars [start, end) as a view of the same owner; fails `text.slice_bounds` unless 0 <= start <= end <= scalarCount; O(n) in bytes, no allocation
+  export trusted pure try func slice(self, start: Int, end: Int) StringView
+  // intrinsic: the scalar at index; fails `text.index` past the end; O(n) in bytes
+  export trusted pure try func scalarAt(self, index: Int) Scalar
+}
+export class Bytes {
+  // intrinsic: the length in bytes; O(1)
+  export trusted pure func byteCount(self) Int
+  // intrinsic: the byte at index, or null outside [0, byteCount); never allocates; O(1)
+  export trusted pure func get(self, index: Int) Byte?
+}
+export class BytesView {
+  // intrinsic: the length in bytes; O(1)
+  export trusted pure func byteCount(self) Int
+  // intrinsic: the length in bytes (same as byteCount); O(1)
+  export trusted pure func count(self) Int
+  // intrinsic: the byte at index, or null outside [0, byteCount); never allocates; O(1)
+  export trusted pure func get(self, index: Int) Byte?
+}
+export class Scalar {
+  // intrinsic: the single scalar of a one-scalar view; a constant expression for a literal; O(1)
+  export trusted pure func of(text: StringView) Scalar
+  // intrinsic: the value 0-9 of an ASCII decimal digit, null otherwise; O(1)
+  export trusted pure func digitValue(s: Scalar) Int<0..9>?
+  // intrinsic: the value 0-15 of an ASCII hexadecimal digit (either case), null otherwise; O(1)
+  export trusted pure func hexValue(s: Scalar) Int<0..15>?
+}
+
+// ---- time (6.2; operations in fortis.time, which declares the same nominal types) ----
+export class Duration {
+  // intrinsic: n * 86400 * 10^9 nanoseconds; O(1) (n bounded by the 64-bit count)
+  export trusted pure func days(n: Int<0..>) Duration
+  // intrinsic: n * 3600 * 10^9 nanoseconds; O(1)
+  export trusted pure func hours(n: Int<0..>) Duration
+  // intrinsic: n * 60 * 10^9 nanoseconds; O(1)
+  export trusted pure func minutes(n: Int<0..>) Duration
+  // intrinsic: n * 10^9 nanoseconds; O(1)
+  export trusted pure func seconds(n: Int<0..>) Duration
+  // intrinsic: n * 10^6 nanoseconds; O(1)
+  export trusted pure func milliseconds(n: Int<0..>) Duration
+  // intrinsic: sum of the signed 64-bit nanosecond counts; fails `numeric.overflow`; O(1)
+  export trusted pure try func add(a: Duration, b: Duration) Duration
+  // intrinsic: difference of the nanosecond counts; fails `numeric.overflow`; O(1)
+  export trusted pure try func sub(a: Duration, b: Duration) Duration
+  // intrinsic: the count times factor; fails `numeric.overflow`; O(1)
+  export trusted pure try func multiply(d: Duration, factor: Int) Duration
+  // intrinsic: the signed 64-bit nanosecond count; O(1)
+  export trusted pure func nanoseconds(self) Int
+}
+export class Instant {}
+export class Timestamp {
+  // intrinsic: 1970-01-01T00:00:00Z as a signed 64-bit nanosecond count of 0; O(1)
+  export trusted pure func epoch() Timestamp
+  // intrinsic: t + d in nanoseconds since the epoch; fails `numeric.overflow`; O(1)
+  export trusted pure try func add(t: Timestamp, d: Duration) Timestamp
+  // intrinsic: a is strictly later than b; O(1)
+  export trusted pure func after(a: Timestamp, b: Timestamp) Bool
+  // intrinsic: a is strictly earlier than b; O(1)
+  export trusted pure func before(a: Timestamp, b: Timestamp) Bool
+}
+
+// ---- collections (6.7) ----
+export class List[T] {
+  // intrinsic: an empty list with no allocation until the first push; O(1)
+  export trusted pure func default() List[T]
+  // intrinsic: a list holding the arguments in order; allocates once; O(n)
+  export trusted pure func of(...items: owned T) List[T]
+  // intrinsic: the number of elements; O(1)
+  export trusted pure func count(self) Int
+  // intrinsic: appends item; amortised O(1) (capacity doubles), worst case O(n) for the growth step
+  export trusted func push(editable self, item: owned T) Void
+  // intrinsic: removes and returns the last element, null when empty; O(1)
+  export trusted func pop(editable self) T?
+  // intrinsic: a read loan of the element at index, null outside [0, count); O(1)
+  export trusted pure func get(self, index: Int) (alias T from self)?
+  // intrinsic: the element at index; fails `collection.index` outside [0, count); O(1)
+  export trusted pure try func at(self, index: Int) T
+  // intrinsic: replaces the element at index, dropping the old value; fails `collection.index`; O(1)
+  export trusted try func set(editable self, index: Int, value: owned T) Void
+  export pure func isEmpty(self) Bool => self.count() == 0
+  export pure func first(self) (alias T from self)? => self.get(0)
+  export pure func reversed(self) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = self.count()
+    while i > 0 {
+      i = Int.wrappingSub(i, 1)
+      match self.get(i) {
+        present(item) => {
+          editable out.push(copy item)
+        }
+        null => {
+        }
+      }
+    }
+    return move out
+  }
+  export pure func concat(self, other: ListView[T]) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          editable out.push(copy item)
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    let mut j = 0
+    let m = other.count()
+    while j < m {
+      match other.get(j) {
+        present(item) => {
+          editable out.push(copy item)
+        }
+        null => {
+        }
+      }
+      j = Int.wrappingAdd(j, 1)
+    }
+    return move out
+  }
+  export pure func countWhere(self, keep: pure fn(T) Bool) Int {
+    let mut kept = 0
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          if keep(item) {
+            kept = Int.wrappingAdd(kept, 1)
+          }
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return kept
+  }
+  export pure func map[U](self, f: pure fn(T) U) List[U] {
+    let mut out: List[U] = List.default()
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          editable out.push(f(item))
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  export pure func filter(self, keep: pure fn(T) Bool) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          if keep(item) {
+            editable out.push(copy item)
+          }
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  // intrinsic: a cursor over read loans of the elements in order; O(1) to create, O(1) per step
+  export trusted pure func iterate(self) ListCursor[T] from self
+  // consumes the list (10.7): no early exit, so no element is left unvisited; an empty list makes no calls
+  // intrinsic: calls visit once per element in order, transferring each element out; O(n) plus the callback per element
+  export trusted func consumeEach(owned self, visit: fn mut(owned T) Void) Void
+}
+export class ListCursor[T] implements Iterator[T] {
+  // intrinsic: a read loan of the next element, null at the end; O(1)
+  export trusted pure func next(editable self) (alias T from self)?
+}
+export class ListView[T] {
+  // intrinsic: the number of elements; O(1)
+  export trusted pure func count(self) Int
+  // intrinsic: a read loan of the element at index, null outside [0, count); O(1)
+  export trusted pure func get(self, index: Int) (alias T from self)?
+  export pure func isEmpty(self) Bool => self.count() == 0
+  export pure func reversed(self) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = self.count()
+    while i > 0 {
+      i = Int.wrappingSub(i, 1)
+      match self.get(i) {
+        present(item) => {
+          editable out.push(copy item)
+        }
+        null => {
+        }
+      }
+    }
+    return move out
+  }
+}
+export class Array[T, N] {
+  // intrinsic: N copies of value; O(N), inline storage
+  export trusted pure func filled(value: T) Array[T, N]
+  // intrinsic: N; O(1)
+  export trusted pure func count(self) Int
+  // intrinsic: replaces the element at index; O(1)
+  export trusted func set(editable self, index: Int, value: owned T) Void
+}
+export class Map[K, V] {
+  // intrinsic: an empty map; O(1)
+  export trusted pure func default() Map[K, V]
+  // intrinsic: a read loan of the value for key, null when absent; expected O(1) under the release's fixed hash function
+  export trusted pure func get(self, key: K) (alias V from self)?
+  // intrinsic: inserts or replaces the value for key, dropping a replaced value; amortised expected O(1)
+  export trusted func set(editable self, key: owned K, value: owned V) Void
+  // intrinsic: the number of keys; O(1)
+  export trusted pure func count(self) Int
+}
+export class OrderedMap[K, V] {}
+export class Set[T] {
+  // intrinsic: an empty set; O(1)
+  export trusted pure func default() Set[T]
+  // intrinsic: inserts item, true when it was absent; amortised expected O(1)
+  export trusted func add(editable self, item: owned T) Bool
+  // intrinsic: membership; expected O(1)
+  export trusted pure func contains(self, item: T) Bool
+  // intrinsic: the number of items; O(1)
+  export trusted pure func count(self) Int
+}
+export class FixedList[T, N] {}
+export class FixedMap[K, V, N] {}
+export class VariantMap[E, V] {}
+
+// ---- outcomes and failures (10) ----
+export class Must {
+  // intrinsic: a zero-sized linear witness; O(1), no allocation
+  export trusted pure func create() Must
+  // intrinsic: consumes the witness; O(1)
+  export trusted pure func discharge(m: owned Must) Void
+}
+export class Outcome[T] {
+  // intrinsic: an outcome holding value; O(1)
+  export trusted pure func success(value: owned T) Outcome[T]
+  // intrinsic: an outcome holding f; O(1)
+  export trusted pure func failure(f: owned Failure) Outcome[T]
+  // intrinsic: the successes in order when every element succeeds, otherwise the first failure in order, consuming every other element's obligation; O(n)
+  export trusted pure try func collect(list: owned List[Outcome[T]]) List[T]
+}
+export class Failure {
+  export code: StringView from static
+}
+export class Report {}
+export class Failures {
+  // intrinsic: one failure with code `failure.aggregate` whose cause chain is the list in order; O(n)
+  export trusted pure func aggregate(list: owned List[Failure]) Failure
+}
+// intrinsic: f with note added to its annotation trail; the result carries the single obligation of f; O(1) amortised
+export trusted pure func annotate(f: owned Failure, note: StringView) Failure
+
+// ---- concurrency (12) ----
+export class Future[T] {}
+export class Task[T] implements Abandonable {
+  // intrinsic: cancels the task and waits for it to finish (12.4); its result is consumed by the scope
+  export trusted func abandon(owned self) Void
+}
+export class Cancellation {}
+export class TaskDefect {}
+export enum TaskCompletion[T] {
+  Completed(value: T)
+  Cancelled(reason: Cancellation)
+  Defect(info: TaskDefect)
+}
+export class Shared[T] {
+  // intrinsic: a reference-counted owner holding value, strong count 1; allocates once; O(1)
+  export trusted pure func create(value: owned T) Shared[T]
+  // intrinsic: a new strong handle, strong count + 1; O(1)
+  export trusted pure func retain(self) Shared[T]
+  // intrinsic: a weak handle to the same value; O(1)
+  export trusted pure func downgrade(self) Weak[T]
+}
+export class Weak[T] {
+  // intrinsic: a strong handle when the value is alive, null after the last strong handle was dropped; O(1)
+  export trusted func upgrade(self) Shared[T]?
+  // intrinsic: a new weak handle; O(1)
+  export trusted pure func retain(self) Weak[T]
+}
+export class Mutex[T] {
+  // intrinsic: a mutex owning value; O(1)
+  export trusted pure func create(value: owned T) Mutex[T]
+  // intrinsic: an exclusive guard over the value, released when the guard is dropped, suspending until the lock is free; fails `concurrency.poisoned` if a holder was terminated by a defect (unreachable on the interpreter, where a defect ends the program)
+  export trusted async try func lock(self) MutexGuard[T] from self
+  // intrinsic: an exclusive guard over the value, released when the guard is dropped, blocking the thread until free (the `block` effect); fails `concurrency.poisoned`
+  export trusted try func lockBlocking(self) MutexGuard[T] from self
+}
+export class MutexGuard[T] {
+  // intrinsic: a copy of the protected value, read through the exclusive guard (12.7); allocates when the value owns heap storage
+  export trusted pure func get(self) T where T implements Copyable
+  // intrinsic: replaces the protected value with value and drops the old one; a write to storage shared between tasks (`mutate`, 11.1)
+  export trusted func set(self, value: owned T) Void
+  // intrinsic: replaces the protected value with value and returns the old one, which the caller now owns; a write to storage shared between tasks (`mutate`, 11.1)
+  export trusted func replace(self, value: owned T) T
+}
+export class AtomicInt {
+  // intrinsic: an atomic integer holding value; O(1)
+  export trusted pure func create(value: Int) AtomicInt
+  // intrinsic: the current value (seqcst); O(1)
+  export trusted pure func load(self) Int
+  // intrinsic: replaces the value (seqcst); O(1)
+  export trusted func store(self, value: Int) Void
+  // intrinsic: adds delta with wrapping and returns the previous value (seqcst); O(1)
+  export trusted func fetchAdd(self, delta: Int) Int
+}
+export class AtomicBool {
+  // intrinsic: an atomic boolean holding value; O(1)
+  export trusted pure func create(value: Bool) AtomicBool
+  // intrinsic: the current value (seqcst); O(1)
+  export trusted pure func load(self) Bool
+  // intrinsic: replaces the value (seqcst); O(1)
+  export trusted func store(self, value: Bool) Void
+}
+export class Scope {
+  // intrinsic: a task running work on the cooperative executor of this scope (12.5); O(1)
+  export trusted func launch[T](self, work: owned Future[T]) Task[T]
+  // intrinsic: a task running work on the parallel pool (12.5); the environment is Shareable; O(1)
+  export trusted func launchParallel[T](self, work: owned Future[T]) Task[T]
+  // intrinsic: a task running work on the bounded blocking pool (12.5); O(1)
+  export trusted func launchBlocking[T](self, work: owned fn once() T) Task[T]
+  // intrinsic: removes task from the scope and hands its join obligation to supervisor (12.5); O(1)
+  export trusted func detach[T](self, task: owned Task[T], supervisor: Supervisor) Void
+}
+// intrinsic: runs both futures to completion inside the parent and returns both results (12.5)
+export trusted async func join[A, B](a: owned Future[A], b: owned Future[B]) (A, B)
+// intrinsic: a cancellation point for parallel and blocking tasks (12.4); no effect in cooperative tasks
+export trusted func checkpoint() Void
+// Fault injection for the conformance corpus (10.8): a defect of the named class terminates the task at once.
+// Not a language feature: the reference toolchain's one hook for the defect taxonomy tests.
+// intrinsic: terminates the task with a defect of the named class (10.8); the conformance corpus's only fault-injection hook
+export trusted func injectDefect(kind: StringView) Never
+
+// ---- observation (13): the core aspect that attaches a schema to a function ----
+export class ObservationSchema {}
+export aspect observe(schema: ObservationSchema) {
+  metadata
+}
+
+// ---- built-in interfaces (6.10) ----
+export class Hasher {}
+export enum Ordering derive Equatable {
+  Less
+  Equal
+  Greater
+}
+export class Encoder {}
+export class Decoder {}
+export interface Equatable {
+  pure func equals(self, other: Self) Bool
+}
+export interface Hashable requires Equatable {
+  pure func hash(self, into: editable Hasher) Void
+}
+export interface Comparable requires Equatable {
+  pure func compare(self, other: Self) Ordering
+}
+export interface Displayable {
+  pure func display(self, into: editable Builder) Void
+}
+export interface Iterable[T, I] where I implements Iterator[T] {
+  pure func iterate(self) I from self
+}
+export interface Iterator[T] {
+  pure func next(editable self) (alias T from self)?
+}
+export interface Consumable[T, I] where I implements Consumer[T] {
+  func consume(owned self) I
+}
+export interface Consumer[T] {
+  func next(editable self) T?
+}
+export interface Copyable {}
+export interface Shareable {}
+export interface Abandonable {
+  func abandon(owned self) Void
+}
+export interface Default {
+  pure func default() Self
+}
+export interface Encodable {
+  pure func encode(self, into: editable Encoder) Void
+}
+export interface Decodable {
+  try func decode(source: editable Decoder) Self
+}
+export interface Codec requires Encodable, Decodable {}
+export interface Authority {}
+export interface From[S] {
+  func from(source: S) Self
+}
+export class Builder {
+  // intrinsic: an empty builder; O(1)
+  export trusted pure func create() Builder
+  // intrinsic: appends the view; amortised O(len)
+  export trusted func append(editable self, text: StringView) Void
+  // intrinsic: appends the view and a line feed; amortised O(len)
+  export trusted func appendLine(editable self, text: StringView) Void
+  // intrinsic: appends one scalar; amortised O(1)
+  export trusted func appendScalar(editable self, s: Scalar) Void
+  // intrinsic: the accumulated text as an owned String; O(total length)
+  export trusted pure func finish(self) String
+}

@@ -1,0 +1,35 @@
+// D-181 (docs/delivery/defects.json): an early exit from a nested block finishes the inner block's exit (its defers,
+// then its locals) before the outer block's (5.1, 7.9). The interpreter and the VM print
+// `inner defer|drop inner|outer defer|drop outer|end`; natively both blocks' defers run first and Rust drops the
+// locals afterwards: `inner defer|outer defer|drop inner|drop outer|end`.
+import fortis.host { Host, Console, Capabilities }
+
+export class Res {
+  console: Shared[Console]
+  label: String
+  cleanup(editable self) Void {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func run(console: Shared[Console]) Void {
+  let outer = Res(console: console.retain(), label: "outer")
+  defer {
+    console.print("outer defer")
+  }
+  {
+    let inner = Res(console: console.retain(), label: "inner")
+    defer {
+      console.print("inner defer")
+    }
+    return
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+  console.print("end")
+}

@@ -1,0 +1,19 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// The call keeps the narrowed receiver; the `editable` loan then drops the fact, so a later read of
+// the same place is optional again (LR 6.3, 6.8).
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+  export func change(editable self) Void {
+    self.n = 1
+  }
+}
+
+export func stale(p: editable Cell?) Bool {
+  if p != null {
+    editable p.change()
+    return p.read()                           // reject: E-TYP-040 — the loan dropped `p`'s fact
+  }
+  return false
+}

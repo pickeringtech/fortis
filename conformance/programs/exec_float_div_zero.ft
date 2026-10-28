@@ -1,0 +1,12 @@
+// execute: Infinity|-Infinity|NaN|true
+// requires: runtime
+// covers: LANG-06-05
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${1.0 / 0.0}")
+  caps.console.print("${-1.0 / 0.0}")
+  caps.console.print("${0.0 / 0.0}")
+  caps.console.print("${1.0 / 0.0 > 1.0e308}")
+}

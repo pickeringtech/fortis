@@ -1,0 +1,10 @@
+// accept
+pure func clamp(value: Int, low: Int<0..100>, high: Int<0..100>) Int<0..100> {
+  if value < low {
+    return low
+  }
+  if value > high {
+    return high
+  }
+  return value                          // interval of value here: [low, high] ⊆ [0, 100]
+}

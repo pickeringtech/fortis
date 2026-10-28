@@ -1,0 +1,5 @@
+// reject: E-SYN-001 (at the marked line)
+// covers: LANG-03-01
+export pure func double(value: Int) Int {
+  return value * 2;                      // reject: E-SYN-001
+}

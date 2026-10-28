@@ -1,0 +1,7 @@
+// reject: E-TYP-100 (at the marked line)
+// covers: LANG-06-10
+// Neither Displayable nor Int is declared in this package.
+implement Displayable for Int {            // reject: E-TYP-100
+  pure func display(self, into: editable Builder) Void {
+  }
+}

@@ -1,0 +1,30 @@
+// execute: other 7|penny|other 9
+// requires: runtime
+// covers: LANG-09-07
+// `Coin.Other` where a function type is expected is the constructor (LR 9.7), so `List.map` can apply it.
+// Called, or where the expected type is the enum, the same name is still the variant value.
+import fortis.host { Host }
+
+enum Coin {
+  Penny
+  Other(pence: Int)
+}
+
+pure func label(c: Coin) String {
+  return match c {
+    Penny => "penny"
+    Other(pence: n) => "other ${n}"
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let coins = List.of(7).map(Coin.Other)
+  match coins.first() {
+    present(c) => caps.console.print(label(c))
+    null => caps.console.print("empty")
+  }
+  let penny: Coin = Coin.Penny
+  caps.console.print(label(penny))
+  caps.console.print(label(Coin.Other(pence: 9)))
+}

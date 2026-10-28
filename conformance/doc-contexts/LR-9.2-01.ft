@@ -1,0 +1,21 @@
+// context: LR-9.2-01 (Language Reference 9.2, constructor spreads)
+export class Customer {
+  export id: Int
+  export name: String
+  export email: String
+}
+
+export class CustomerResponse {
+  export id: Int
+  export name: String
+}
+
+export class CustomerSummary {
+  export id: Int
+  export name: String
+  export invoiceCount: Int
+}
+
+func example(customer: Customer, count: Int) Void {
+  // {{example}}
+}

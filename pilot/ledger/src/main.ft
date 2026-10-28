@@ -1,0 +1,140 @@
+// The `ledger` program: reads a double-entry journal through the FileSystem capability, checks it, reports
+// every problem with its line number, and prints the reports the command line asks for.
+//
+// Output: the reports and the journal's problems (one line each, with its line number) go to standard output.
+// The failures behind problems that came from a failed parse (a bad date, amount, account name or commodity
+// code) are also reported, one failure record each, on standard error: the parser hands them over instead of
+// discarding them (see parser.ft).
+import fortis.host { Console, FileSystem, Host, Path }
+import pilot.ledger.cli { Command, Invocation, UsageError, UsageProblem, parseArguments, usage, usageProblemText, wantsHelp }
+import pilot.ledger.validate { Loaded, loadJournal }
+import pilot.ledger.diagnostic { Diagnostic, Diagnostics }
+import pilot.ledger.journal { Journal, Period }
+// AccountClass is imported so that AccountName counts as Copyable here (pilot/repro/copy-imported-optional).
+import pilot.ledger.account { AccountClass, AccountName }
+import pilot.ledger.date { Date }
+import pilot.ledger.reports { balanceReport, incomeStatement, register, summary, treeReport, trialBalance }
+
+// `ledger check` found errors in the journal.
+export error JournalHasErrors {
+  code: "ledger.journal_has_errors"
+  payload { errors: Int }
+  message: "the journal has ${errors} errors"
+}
+
+// A usage error, an unreadable journal, or `check` on a journal with errors makes `main` fail: the runtime then
+// writes one failure record to standard error and the exit status is 1.
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let invocation = parseArguments(args) catch e {
+    explainUsage(caps.console, e)
+    caps.console.print(usage)
+    fail e
+  }
+  let Invocation(file: file, command: command) = move invocation
+  if wantsHelp(command) {
+    caps.console.print(usage)
+    return
+  }
+  let mut sink: List[Failure] = List.default()
+  let outcome = readJournal(caps.fileSystem, file, editable sink)
+  // The sink is reported before the outcome is looked at, so that no failure is left in it on any path.
+  reportAll(move sink)
+  let loaded = move outcome catch e {
+    caps.console.print("ledger: cannot read ${file}: ${e.code}")
+    fail e
+  }
+  let Loaded(journal: journal, diagnostics: diagnostics) = move loaded
+  caps.console.print("ledger: ${file}: ${summary(journal)}")
+  printProblems(caps.console, diagnostics)
+  run(caps.console, journal, diagnostics, move command) or fail
+}
+
+// Prints what the command asks for.
+try func run(console: Console, journal: Journal, diagnostics: Diagnostics, command: owned Command) Void {
+  match move command {
+    All => {
+      printReport(console, balanceReport(journal) or fail)
+      printReport(console, treeReport(journal) or fail)
+      printReport(console, trialBalance(journal) or fail)
+      printWholeIncomeStatement(console, journal) or fail
+      let assets = AccountName.parse("assets") or fail
+      printReport(console, register(journal, assets) or fail)
+    }
+    Balance => printReport(console, balanceReport(journal) or fail)
+    Tree => printReport(console, treeReport(journal) or fail)
+    Trial => printReport(console, trialBalance(journal) or fail)
+    Income(first: startDate, last: endDate) => {
+      if startDate != null && endDate != null {
+        let period = Period(first: startDate, last: endDate)
+        printReport(console, incomeStatement(journal, period) or fail)
+      } else {
+        printWholeIncomeStatement(console, journal) or fail
+      }
+    }
+    Register(account: account) => printReport(console, register(journal, account) or fail)
+    Check => {
+      let errors = diagnostics.errorCount()
+      if errors > 0 {
+        console.print("ledger: the journal has ${errors} errors")
+        fail JournalHasErrors(errors: errors)
+      }
+      console.print("ledger: no errors")
+    }
+    Help => console.print(usage)
+  }
+}
+
+// Reads and checks the journal file. Only the file system can fail here; problems inside the journal are
+// diagnostics, and the failures behind them go to the sink.
+try func readJournal(fs: FileSystem, file: StringView, sink: editable List[Failure]) Loaded {
+  let path = Path.parse(String.from(file)) or fail
+  let text = fs.readText(path) or fail
+  return loadJournal(text, editable sink) or fail
+}
+
+// Reports every failure of the sink, in order, on the diagnostic plane (standard error).
+func reportAll(sink: owned List[Failure]) Void {
+  move sink.consumeEach(fn mut(f: owned Failure) Void {
+    report f
+  })
+}
+
+// Prints the problems of a journal, if it has any.
+func printProblems(console: Console, diagnostics: Diagnostics) Void {
+  if diagnostics.count() == 0 {
+    return
+  }
+  console.print("")
+  console.print("Problems (errors: ${diagnostics.errorCount()}, warnings: ${diagnostics.warningCount()})")
+  for d in diagnostics.inLineOrder() {
+    console.print("  ${d.render()}")
+  }
+}
+
+// Prints a report, after a blank line.
+func printReport(console: Console, lines: ListView[String]) Void {
+  console.print("")
+  for line in lines {
+    console.print(line)
+  }
+}
+
+// Prints the income statement of the whole journal.
+try func printWholeIncomeStatement(console: Console, journal: Journal) Void {
+  match journal.dateRange() {
+    present(range) => printReport(console, incomeStatement(journal, range) or fail)
+    null => {
+      console.print("")
+      console.print("Income statement: no transactions")
+    }
+  }
+}
+
+// Prints what was wrong with the command line. The failure is only inspected here; the caller still owns it.
+func explainUsage(console: Console, f: Failure) Void {
+  match f {
+    is UsageError(problem: p, argument: at) => console.print("ledger: ${usageProblemText(p)} (argument ${at})")
+    otherwise(other) => console.print("ledger: an argument was refused: ${other.code}")
+  }
+}

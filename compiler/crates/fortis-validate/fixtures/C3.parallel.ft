@@ -1,0 +1,11 @@
+// DEL-45 fixture for C3.parallel: launchParallel and launchBlocking allocate (the summary has alloc).
+async func work(n: Int) Int => n
+async func run() Int {
+  scope tasks {
+    let t = tasks.launchParallel(work(1))
+    return await t
+  }
+}
+export async func main(args: List[String]) Void {
+  discard await run()
+}

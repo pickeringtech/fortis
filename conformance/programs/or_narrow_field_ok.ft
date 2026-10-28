@@ -1,0 +1,37 @@
+// accept
+// covers: LANG-06-08
+// A null test on a field narrows that field for a later method in the same `&&` chain or branch
+// (LR 6.8), including a field reached through a narrowed optional.
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+}
+
+export class Holder {
+  export p: Cell?
+}
+
+export class Box {
+  export p: Cell?
+}
+
+export class Wrap {
+  export mid: Box?
+}
+
+export class Outer {
+  export box: Box
+}
+
+export pure func viaAnd(d: Holder) Bool => d.p != null && d.p.read()
+
+export pure func viaIf(d: Holder) Bool {
+  if d.p != null {
+    return d.p.read()
+  }
+  return false
+}
+
+export pure func viaNested(d: Outer) Bool => d.box.p != null && d.box.p.read()
+
+export pure func viaMid(d: Wrap) Bool => d.mid != null && d.mid.p != null && d.mid.p.read()

@@ -1,0 +1,4 @@
+{"id":"o1","customer":"ann","lines":[{"sku":"tea","quantity":2,"unitPrice":"1.50"},{"sku":"cake","quantity":1,"unitPrice":"3.25"}]}
+{"id":"o2","customer":"bo","lines":[{"sku":"coffee","quantity":3,"unitPrice":"2.10"}]}
+{"id":"o3","customer":"cy","lines":[]}
+{"id":"o4","customer":"di","lines":[{"sku":"tea","quantity":1,"unitPrice":"-1.00"}]}

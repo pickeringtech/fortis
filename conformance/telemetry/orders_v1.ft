@@ -1,0 +1,134 @@
+// execute: 240 orders, 63 sessions
+// Version 1 of OrderProcessing (no provider, note or card): the producer an older build runs (SP-09 V1).
+// The SP-09-telemetry workload. There are 240 activations of an observed order function. Each one captures:
+// - a region, a tier and a provider (enums: 4 x 3 x 3 = 36 dimension tuples, more than a projection's limit);
+// - an amount;
+// - three sensitive bounded Strings built on random canary cores, which the harness writes into the constants below
+//   for each run: the customer's email (40 customers, so equal values repeat), a note and a card number.
+// Every tenth order also records an Audit event, which no projection selects. There are 60 sessions with start and end
+// events. The tier changes between the two for every third session (Basic to Enterprise) and every sixth (Enterprise to
+// Basic). Then come three anomalous lifecycles:
+// session 60 starts twice, session 61 only ends, and session 62 starts again after it ends, then ends again. A last
+// start has no session key at all.
+import fortis.host { Host }
+
+const coreEmail: String = "c0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0"
+const coreNote: String = "c0n0n0n0n0n0n0n0n0n0n0n0n0n0n0n0"
+const coreCard: String = "c0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0"
+
+export enum Region derive Codec {
+  UK
+  IE
+  FR
+  DE
+}
+
+export enum Tier derive Codec {
+  Basic
+  Business
+  Enterprise
+}
+
+export enum Provider derive Codec {
+  Stripe
+  Adyen
+  Braintree
+}
+
+observation OrderProcessing {
+  version: 1
+  region: Region                     required: all
+  tier: Tier                         required: all
+  amount: Int                        required: all
+  email: String<scalars: 0..64>      required: all
+  encoding: bounded(512)
+}
+
+observation Audit {
+  order: Int                         required: none
+  encoding: bounded(32)
+}
+
+observation Session {
+  session: Int                       required: none
+  tier: Tier                         required: none
+  phase: Int                         required: none
+  encoding: bounded(64)
+}
+
+pure func regionOf(n: Int) Region {
+  let k = Int.wrappingMul(n, 7) % 4
+  if k == 0 {
+    return Region.UK
+  }
+  if k == 1 {
+    return Region.IE
+  }
+  if k == 2 {
+    return Region.FR
+  }
+  return Region.DE
+}
+
+pure func tierOf(n: Int) Tier {
+  let k = Int.wrappingMul(n, 5) % 3
+  if k == 0 {
+    return Tier.Basic
+  }
+  if k == 1 {
+    return Tier.Business
+  }
+  return Tier.Enterprise
+}
+
+// n mod 9 decides the provider within n mod 3's tier, so (region, tier, provider) takes all 36 values (CRT on 4 x 9)
+pure func providerOf(n: Int) Provider {
+  let r = n % 9
+  if r < 3 {
+    return Provider.Stripe
+  }
+  if r < 6 {
+    return Provider.Adyen
+  }
+  return Provider.Braintree
+}
+
+@observe(OrderProcessing)
+func processOrder(n: Int) Int {
+  capture region = regionOf(n)
+  capture tier = tierOf(n)
+  capture amount = Int.wrappingAdd(Int.wrappingMul(n % 17, 100), 99)
+  capture email = "${coreEmail}u${n % 40}@example.org"
+  return n
+}
+
+func session(n: Int) Void {
+  record Session(session: n, tier: tierOf(n), phase: 1)
+  let later = if n % 3 == 0 { give Int.wrappingAdd(n, 1) } else if n % 6 == 1 { give Int.wrappingAdd(n, 2) } else { give n }
+  record Session(session: n, tier: tierOf(later), phase: 2)
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut orders = 0
+  for i in 0..<240 {
+    discard processOrder(i)
+    if i % 10 == 0 {
+      record Audit(order: i)
+    }
+    orders = Int.wrappingAdd(orders, 1)
+  }
+  for s in 0..<60 {
+    session(s)
+  }
+  record Session(session: 60, tier: Tier.Business, phase: 1)
+  record Session(session: 60, tier: Tier.Business, phase: 1)
+  record Session(session: 60, tier: Tier.Business, phase: 2)
+  record Session(session: 61, tier: Tier.Business, phase: 2)
+  record Session(session: 62, tier: Tier.Enterprise, phase: 1)
+  record Session(session: 62, tier: Tier.Enterprise, phase: 2)
+  record Session(session: 62, tier: Tier.Enterprise, phase: 1)
+  record Session(session: 62, tier: Tier.Enterprise, phase: 2)
+  record Session(tier: Tier.Business, phase: 1)
+  caps.console.print("${orders} orders, 63 sessions")
+}

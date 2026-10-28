@@ -1,0 +1,10 @@
+[package]
+name = "fortis-lower"
+description = "The production native lowering (DEL-36): validated typed IR to safe Rust (#![forbid(unsafe_code)]), with an audit of every copy and reference-count operation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fortis-mir = { path = "../fortis-mir" }
+fortis-types = { path = "../fortis-types" }

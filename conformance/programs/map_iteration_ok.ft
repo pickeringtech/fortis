@@ -1,0 +1,10 @@
+// accept
+// covers: LANG-06-06
+// A map is iterated in insertion order; collecting its entries into another map while reading it is accepted (6.6).
+func copyAll(source: Map[Int, Int]) Map[Int, Int] {
+  let mut out: Map[Int, Int] = Map.default()
+  for entry in source {
+    editable out.set(entry.0, entry.1)
+  }
+  return move out
+}

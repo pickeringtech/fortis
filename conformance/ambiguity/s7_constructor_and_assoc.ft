@@ -1,0 +1,17 @@
+// accept — S7: constructor, associated function, variant, refined validate
+export class User {
+  export name: String
+  export pure func guest() User => User(name: "guest")
+}
+export enum Kind {
+  Plain
+  Named(label: String)
+}
+pure func run(raw: Int) Int {
+  let u = User(name: "a")
+  let g = User.guest()
+  let k = Kind.Plain
+  let n = Kind.Named(label: "x")
+  let v = Int<0..9>.validate(raw) or recover 0
+  return v
+}

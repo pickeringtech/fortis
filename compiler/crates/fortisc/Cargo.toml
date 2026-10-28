@@ -1,0 +1,35 @@
+[package]
+name = "fortisc"
+version.workspace = true
+edition.workspace = true
+description = "The production frontend command (DEL-31 slice): parse and check Fortis modules"
+
+[[bin]]
+name = "fortisc"
+path = "src/main.rs"
+
+# the incremental daemon (Programme 5.1), on the counting allocator that measures its retention (X-141)
+[[bin]]
+name = "fortisd"
+path = "src/fortisd.rs"
+
+[dependencies]
+fortis-syntax = { path = "../fortis-syntax" }
+fortis-diag = { path = "../fortis-diag" }
+fortis-names = { path = "../fortis-names" }
+fortis-types = { path = "../fortis-types" }
+fortis-ir = { path = "../fortis-ir" }
+fortis-mir = { path = "../fortis-mir" }
+fortis-vm = { path = "../fortis-vm" }
+fortis-validate = { path = "../fortis-validate" }
+fortis-lower = { path = "../fortis-lower" }
+fortis-fmt = { path = "../fortis-fmt" }
+fortis-view = { path = "../fortis-view" }
+fortis-di = { path = "../fortis-di" }
+fortis-query-db = { path = "../../query-db" }
+
+[features]
+# SP-07's apparatus check: the VM's fault switches (fortis-vm reload-faults); never in a default build
+reload-faults = ["fortis-vm/reload-faults"]
+# SP-12's apparatus check: the package database's fault switches (fortis-query-db faults); never in a default build
+qdb-faults = ["fortis-query-db/faults"]

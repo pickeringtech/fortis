@@ -1,0 +1,45 @@
+// accept — src/report.ft in package acme.reporting
+import fortis.text
+import fortis.host { Host }
+import acme.billing.invoices { Invoice, CustomerId }
+import acme.reporting.store { Archive, Invoices }   // illustrative dependency
+
+// A nominal type: a ReportId is an Int, but it is not an Int.
+export type ReportId = Int<1..>
+
+export error NothingToReport {
+  code: "reporting.empty"
+  message: "No invoices were supplied"
+}
+
+// `try` says this can fail. `pure` says it does no I/O, reads no clock,
+// and mutates nothing it did not create.
+export pure try func summarise(invoices: List[Invoice]) String {
+  if invoices.isEmpty() {
+    fail NothingToReport()
+  }
+  let mut out = text.Builder.create()           // fresh local storage: mutation is still pure
+  for invoice in invoices {                     // read loan of each invoice
+    let total = invoice.total() or fail         // propagate failure, keep the success value
+    editable out.appendLine("${invoice.customer}: ${total}")
+  }
+  return out.finish()
+}
+
+// Ownership is explicit when an existing value is involved.
+export func archive(store: editable Archive, invoices: owned List[Invoice]) Void {
+  let count = invoices.count()
+  editable store.add(move invoices)             // `store` is loaned exclusively; `invoices` is given away
+  editable store.note("archived ${count}")
+}
+
+// The entry point. `try main` that fails prints one report and exits 1.
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()                // I/O needs an explicit capability value
+  let invoices = Invoices.load(caps.fileSystem, args) or fail
+  let reportText = summarise(invoices) catch e { // explicit binding; must end in recover/return/fail
+    report e                                    // consumes the failure; it cannot also be propagated
+    recover "no report"
+  }
+  caps.console.print(reportText)
+}

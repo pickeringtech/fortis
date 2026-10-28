@@ -1,0 +1,18 @@
+// accept
+// covers: LANG-07-06
+// An optional loan result names its origin inside the optional: `(alias String from self)?` (7.6).
+export class Item {
+  export sku: Int
+  export name: String
+}
+export class Shelf {
+  export items: List[Item]
+  export func nameOf(self, sku: Int) (alias String from self)? {
+    for item in self.items {
+      if item.sku == sku {
+        return alias item.name
+      }
+    }
+    return null
+  }
+}

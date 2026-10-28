@@ -1,0 +1,5 @@
+// reject: E-NAM-001 (at the marked line)
+// Pinned for the corrections check: the correction renames the misspelt binding to the visible `total`.
+func double(total: Int) Int {
+  return Int.wrappingAdd(totl, total)      // reject: E-NAM-001
+}

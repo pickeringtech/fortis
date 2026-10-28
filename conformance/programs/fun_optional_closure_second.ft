@@ -1,0 +1,9 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-08-04
+// An optional closure binding is still that one lambda. A second lambda is LANG-08-04.
+func run() Int {
+  let mut f: (fn(Int) Int)? = fn(x: Int) Int => x
+  f = fn(x: Int) Int => Int.saturatingAdd(x, 1)                 // reject: E-TYP-040 — a second lambda in an optional closure binding
+  discard f
+  return 0
+}

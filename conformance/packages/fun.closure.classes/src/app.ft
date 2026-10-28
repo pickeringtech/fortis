@@ -1,0 +1,16 @@
+// Two classes in one module each hold their own lambda in a field of the same name.
+export class A {
+  export run: fn(Int) Int
+}
+
+export class B {
+  export run: fn(Int) Int
+}
+
+export func main(args: List[String]) Void {
+  discard args
+  let a = A(run: pure noalloc fn(x: Int) Int => x)
+  let b = B(run: pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1))
+  discard a
+  discard b
+}

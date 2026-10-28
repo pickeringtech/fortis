@@ -1,0 +1,16 @@
+// accept
+// Kind is not exported to every user of Tagged. Copyability is Tagged's, computed in this module.
+export enum Kind derive Equatable {
+  First
+  Second
+}
+export class Tagged derive Equatable {
+  name: String
+  export kind: Kind
+  export pure func first(text: StringView) Tagged => Tagged(name: String.from(text), kind: Kind.First)
+}
+export enum Flag {
+  On
+  Off
+}
+export pure func enabled() Flag => Flag.On

@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-06-01
+export type UserId = Int<1..>
+export type OrderId = Int<1..>
+
+export interface UserLookup {
+  pure func has(self, id: UserId) Bool
+}
+
+export class Users implements UserLookup {
+  export pure func has(self, id: UserId) Bool => true
+}

@@ -1,0 +1,14 @@
+// DEL-45 fixture for C3.failure-payload: a failure with a heap payload allocates (here, outside noalloc).
+export error Bad {
+  code: "fixture.bad"
+  payload { reason: String }
+}
+try func build(n: Int) Int {
+  if n > 1 {
+    fail Bad(reason: "too big")
+  }
+  return n
+}
+export recovers func main(args: List[String]) Void {
+  discard build(3) or recover 0
+}

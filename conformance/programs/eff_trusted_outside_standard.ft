@@ -1,0 +1,27 @@
+// reject: E-EFF-001 (at the marked lines)
+// covers: LANG-11-04
+// D-146 (the integrator's decision, for the user's review): `trusted` declares effects the checker does not prove, so
+// only the standard packages (the published compatibility set: the standard library and its audited first-party
+// adapters) may write it; a program's own `trusted` function or method is refused, so no declaration can bypass effect
+// soundness. Both checkers accepted these (X-132 gave their effects the `unknown` status).
+trusted func fastHash(x: Int) Int                        // reject: E-EFF-001 — a program may not declare `trusted`
+
+class Cache {
+  export size: Int
+  trusted noalloc func lookup(self, key: Int) Int        // reject: E-EFF-001 — nor a trusted method
+}
+
+export interface Counted {
+  func count(self) Int
+}
+
+class Tally {
+  export n: Int
+}
+
+implement Counted for Tally {
+  trusted pure func count(self) Int => 1                  // reject: E-EFF-001 — an implement block's member
+}
+
+export func main(args: List[String]) Void {
+}

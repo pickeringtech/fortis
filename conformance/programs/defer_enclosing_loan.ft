@@ -1,0 +1,20 @@
+// reject: E-OWN-010 (at the marked line)
+// covers: LANG-05-02, LANG-12-01
+// A loan held by a binding of an enclosing block still applies when the inner block exits, so the
+// deferred write conflicts with it; the inner block's own loans have ended by then (12.1, 5.1).
+export class Buffer {
+  export used: Int
+  export func clear(editable self) Void {
+    self.used = 0
+  }
+  export func peek(self) alias Buffer from self => alias self
+}
+func run() Int {
+  let mut buf = Buffer(used: 3)
+  let seen = buf.peek()
+  {
+    let inner = buf.peek()
+    defer { editable buf.clear() }         // reject: E-OWN-010 — `seen` of the enclosing block still holds a read loan
+  }
+  return seen.used
+}

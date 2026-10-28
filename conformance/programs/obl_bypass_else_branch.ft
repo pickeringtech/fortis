@@ -1,0 +1,13 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-01
+try func half(n: Int) Int => n
+try recovers func run(n: Int, a: Bool, b: Bool) Int {
+  let o = half(n)                          // reject: E-OBL-001 — the else-if branch leaves it open
+  if a {
+    return o or fail
+  } else if b {
+    return 1
+  } else {
+    return o or recover 0
+  }
+}

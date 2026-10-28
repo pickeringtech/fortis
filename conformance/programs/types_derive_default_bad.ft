@@ -1,0 +1,9 @@
+// reject: E-TYP-090 (at the marked line)
+export class Customer {
+  export name: String
+}
+
+export class Settings derive Default {     // reject: E-TYP-090 — owner has no initialiser and Customer has no Default
+  export retries: Int = 3
+  export owner: Customer
+}

@@ -1,0 +1,7 @@
+// accept
+let mut invoice = Invoice.create(customer: CustomerId(7), currency: Currency.GBP, lines: move lines) or fail
+{
+  let items = alias invoice.lines
+  discard items.count()
+}                                          // loan ends here
+editable invoice.issue(Timestamp.epoch())  // accept

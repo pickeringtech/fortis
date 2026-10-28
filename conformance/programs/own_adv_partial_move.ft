@@ -1,0 +1,12 @@
+// reject: E-OWN-040 (at the marked line)
+// covers: LANG-07-04
+export class Invoice {
+  export lines: List[Int]
+  export title: String
+}
+func take(xs: owned List[Int]) Void {
+}
+func run(flag: Bool) Void {
+  let invoice = Invoice(lines: List.of(1), title: "t")
+  take(move invoice.lines)                 // reject: E-OWN-040 — partial move out of a binding that still owns invoice
+}

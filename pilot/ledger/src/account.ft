@@ -1,0 +1,375 @@
+// Account names: colon-separated paths such as `assets:bank:current`, whose first segment names one of the five
+// classes of account in double-entry bookkeeping.
+import pilot.ledger.scan { splitOn }
+import pilot.ledger.order { sortedBy }
+
+// The five classes of account. Assets and expenses normally carry debit (positive) balances; liabilities,
+// equity and income normally carry credit (negative) balances.
+export enum AccountClass derive Equatable {
+  Assets
+  Liabilities
+  Equity
+  Income
+  Expenses
+}
+
+// Why an account name was refused.
+export enum AccountProblem derive Equatable {
+  Empty
+  EmptySegment
+  BadCharacter
+  UnknownClass
+  TooDeep
+}
+
+// An account name is malformed.
+export error BadAccountName {
+  code: "ledger.account.bad_name"
+  payload { problem: AccountProblem, position: Int }
+  message: "malformed account name (problem at position ${position})"
+}
+
+// The most segments an account name may have.
+export const maxDepth = 8
+
+// A validated account name. Built only by `AccountName.parse`, so every value is well formed.
+export class AccountName derive Equatable {
+  full: String
+  parts: List[String]
+  accountClass: AccountClass
+
+  // An account name from its text: segments of lower-case letters, digits, `-` and `_`, each starting with a
+  // letter, separated by single colons, the first naming an account class.
+  export pure try func parse(text: StringView) AccountName {
+    if text.scalarCount() == 0 {
+      fail BadAccountName(problem: AccountProblem.Empty, position: 0)
+    }
+    let pieces = splitOn(text, Scalar.of(":")) or fail
+    if pieces.count() > maxDepth {
+      fail BadAccountName(problem: AccountProblem.TooDeep, position: 0)
+    }
+    let mut position = 0
+    for piece in pieces {
+      checkSegment(piece, position) or fail
+      position = Int.add(position, piece.scalarCount()) or fail
+      position = Int.add(position, 1) or fail
+    }
+    let first = pieces.at(0) or fail
+    let found = classNamed(first)
+    if found == null {
+      fail BadAccountName(problem: AccountProblem.UnknownClass, position: 0)
+    }
+    return AccountName(full: String.from(text), parts: move pieces, accountClass: found)
+  }
+
+  // The full name, `assets:bank:current`.
+  export pure func text(self) String => copy self.full
+
+  // The class named by the first segment.
+  export pure func kind(self) AccountClass => self.accountClass
+
+  // The number of segments; a top-level account such as `assets` has depth 1.
+  export pure func depth(self) Int => self.parts.count()
+
+  // The last segment, `current` for `assets:bank:current`.
+  export pure func leaf(self) String {
+    let n = self.parts.count()
+    return match self.parts.get(Int.saturatingSub(n, 1)) {
+      present(last) => copy last
+      null => copy self.full
+    }
+  }
+
+  // The names of this account and every account above it, outermost first:
+  // `assets`, `assets:bank`, `assets:bank:current`.
+  export pure func lineage(self) List[String] {
+    let mut out: List[String] = List.default()
+    let mut path = Builder.create()
+    let mut first = true
+    for part in self.parts {
+      if !first {
+        editable path.append(":")
+      }
+      editable path.append(part)
+      editable out.push(path.finish())
+      first = false
+    }
+    return move out
+  }
+
+  // The name of the account directly above this one, or null for a top-level account.
+  export pure func parentText(self) String? {
+    let names = self.lineage()
+    let n = names.count()
+    if n < 2 {
+      return null
+    }
+    return match names.get(Int.saturatingSub(n, 2)) {
+      present(parent) => copy parent
+      null => null
+    }
+  }
+
+  // True when this account is `other` or lies below it.
+  export pure func isWithin(self, other: StringView) Bool {
+    for name in self.lineage() {
+      if name == other {
+        return true
+      }
+    }
+    return false
+  }
+}
+
+// The class whose lower-case name is the text, or null.
+export pure func classNamed(text: StringView) AccountClass? {
+  if text == "assets" {
+    return AccountClass.Assets
+  }
+  if text == "liabilities" {
+    return AccountClass.Liabilities
+  }
+  if text == "equity" {
+    return AccountClass.Equity
+  }
+  if text == "income" {
+    return AccountClass.Income
+  }
+  if text == "expenses" {
+    return AccountClass.Expenses
+  }
+  return null
+}
+
+// The display name of a class.
+export pure func classLabel(kind: AccountClass) StringView from static {
+  return match kind {
+    Assets => "Assets"
+    Liabilities => "Liabilities"
+    Equity => "Equity"
+    Income => "Income"
+    Expenses => "Expenses"
+  }
+}
+
+// The position of a class in reports: the balance-sheet classes first, then the income-statement classes.
+// (Written by hand: a derived Comparable fails at run time on both backends; pilot/FRICTION.md.)
+export pure func classRank(kind: AccountClass) Int<0..4> {
+  return match kind {
+    Assets => 0
+    Liabilities => 1
+    Equity => 2
+    Income => 3
+    Expenses => 4
+  }
+}
+
+// True for the classes whose balances are normally debits (positive).
+export pure func isDebitNormal(kind: AccountClass) Bool {
+  return match kind {
+    Assets => true
+    Expenses => true
+    Liabilities => false
+    Equity => false
+    Income => false
+  }
+}
+
+// True for the classes reported on the income statement.
+export pure func isIncomeStatementClass(kind: AccountClass) Bool {
+  return kind == AccountClass.Income || kind == AccountClass.Expenses
+}
+
+// True for the scalars allowed inside a segment after its first letter.
+pure try func isSegmentScalar(s: Scalar, first: Bool) Bool {
+  let letters = "abcdefghijklmnopqrstuvwxyz"
+  let n = letters.scalarCount()
+  for i in 0..<n {
+    let candidate = letters.scalarAt(i) or fail
+    if candidate == s {
+      return true
+    }
+  }
+  if first {
+    return false
+  }
+  if Scalar.digitValue(s) != null {
+    return true
+  }
+  return s == Scalar.of("-") || s == Scalar.of("_")
+}
+
+// Checks one segment; `offset` is where it starts in the whole name, for the failure's position.
+pure try func checkSegment(segment: StringView, offset: Int) Void {
+  let n = segment.scalarCount()
+  if n == 0 {
+    fail BadAccountName(problem: AccountProblem.EmptySegment, position: offset)
+  }
+  for i in 0..<n {
+    let s = segment.scalarAt(i) or fail
+    let allowed = isSegmentScalar(s, i == 0) or fail
+    if !allowed {
+      let at = Int.add(offset, i) or fail
+      fail BadAccountName(problem: AccountProblem.BadCharacter, position: at)
+    }
+  }
+}
+
+// Account names ordered for reports: by class rank, then alphabetically, so that a parent comes directly
+// before its children.
+export pure func sortedAccountNames(names: ListView[AccountName]) List[AccountName] {
+  return sortedBy(names, pure fn(a: AccountName, b: AccountName) Bool => accountPrecedes(a, b))
+}
+
+// The report order of two accounts: by class, then segment by segment, a shorter name before any longer name
+// it begins. Comparing whole texts would put `assets:bank-x` between `assets:bank` and `assets:bank:current`.
+export pure func accountPrecedes(a: AccountName, b: AccountName) Bool {
+  let ra = classRank(a.kind())
+  let rb = classRank(b.kind())
+  if ra != rb {
+    return ra < rb
+  }
+  return segmentsPrecede(a.parts, b.parts)
+}
+
+// Lexicographic order of two segment lists.
+pure func segmentsPrecede(a: ListView[String], b: ListView[String]) Bool {
+  let na = a.count()
+  let nb = b.count()
+  let mut i = 0
+  while i < na && i < nb {
+    let x = a.get(i)
+    let y = b.get(i)
+    if x != null && y != null && x != y {
+      return x < y
+    }
+    i = Int.saturatingAdd(i, 1)
+  }
+  return na < nb
+}
+
+test "valid account names" cases {
+  "top level":    { text: "assets", depth: 1, leaf: "assets" }
+  "two levels":   { text: "expenses:food", depth: 2, leaf: "food" }
+  "three levels": { text: "assets:bank:current", depth: 3, leaf: "current" }
+  "digits":       { text: "liabilities:card-2", depth: 2, leaf: "card-2" }
+  "underscore":   { text: "income:side_job", depth: 2, leaf: "side_job" }
+} as row {
+  let name = AccountName.parse(row.text) or fail
+  expect name.text() == row.text
+  expect name.depth() == row.depth
+  expect name.leaf() == row.leaf
+}
+
+// What a refused name was refused for, so that tests can compare it.
+class Refusal {
+  export problem: AccountProblem
+  export position: Int
+}
+
+// The refusal of a malformed name, or null when the name is valid.
+pure try recovers func refusalOf(text: StringView) Refusal? {
+  return match AccountName.parse(text) {
+    success(name) => null
+    failure(f) => match move f {
+      is BadAccountName(problem: p, position: at) => Refusal(problem: p, position: at)
+      otherwise(other) => fail other
+    }
+  }
+}
+
+test "malformed account names" cases {
+  "empty":          { text: "", problem: AccountProblem.Empty, position: 0 }
+  "empty segment":  { text: "assets::cash", problem: AccountProblem.EmptySegment, position: 7 }
+  "trailing colon": { text: "assets:", problem: AccountProblem.EmptySegment, position: 7 }
+  "upper case":     { text: "assets:Bank", problem: AccountProblem.BadCharacter, position: 7 }
+  "space":          { text: "assets:my bank", problem: AccountProblem.BadCharacter, position: 9 }
+  "digit first":    { text: "assets:1bank", problem: AccountProblem.BadCharacter, position: 7 }
+  "unknown class":  { text: "stuff:cash", problem: AccountProblem.UnknownClass, position: 0 }
+  "too deep":       { text: "assets:a:b:c:d:e:f:g:h", problem: AccountProblem.TooDeep, position: 0 }
+} as row {
+  let refusal = refusalOf(row.text) or fail
+  expect refusal != null
+  if refusal != null {
+    expect refusal.problem == row.problem
+    expect refusal.position == row.position
+  }
+}
+
+test "classes of accounts" {
+  let cash = AccountName.parse("assets:cash") or fail
+  expect cash.kind() == AccountClass.Assets
+  expect isDebitNormal(cash.kind())
+  let salary = AccountName.parse("income:salary") or fail
+  expect !isDebitNormal(salary.kind())
+  expect isIncomeStatementClass(salary.kind())
+  expect !isIncomeStatementClass(cash.kind())
+  expect classLabel(AccountClass.Equity) == "Equity"
+  expect classRank(AccountClass.Assets) < classRank(AccountClass.Expenses)
+}
+
+test "lineage and parents" {
+  let name = AccountName.parse("assets:bank:current") or fail
+  let lineage = name.lineage()
+  expect lineage.count() == 3
+  expect (lineage.at(0) or fail) == "assets"
+  expect (lineage.at(1) or fail) == "assets:bank"
+  expect (lineage.at(2) or fail) == "assets:bank:current"
+  expect name.parentText() == "assets:bank"
+  let top = AccountName.parse("assets") or fail
+  expect top.parentText() == null
+  expect name.isWithin("assets:bank")
+  expect name.isWithin("assets:bank:current")
+  expect !name.isWithin("assets:ban")
+}
+
+test "report order of accounts" {
+  let texts: List[String] = List.of("expenses:food", "assets:cash", "income:salary", "assets:bank", "equity:opening", "liabilities:card")
+  let mut names: List[AccountName] = List.default()
+  for text in texts {
+    editable names.push(AccountName.parse(text) or fail)
+  }
+  let ordered = sortedAccountNames(names).map(pure fn(n: AccountName) String => n.text())
+  expect (ordered.at(0) or fail) == "assets:bank"
+  expect (ordered.at(1) or fail) == "assets:cash"
+  expect (ordered.at(2) or fail) == "liabilities:card"
+  expect (ordered.at(3) or fail) == "equity:opening"
+  expect (ordered.at(4) or fail) == "income:salary"
+  expect (ordered.at(5) or fail) == "expenses:food"
+}
+
+test "a subtree stays together" {
+  let texts: List[String] = List.of("assets:bank-x", "assets:bank:current", "assets:bank", "assets")
+  let mut names: List[AccountName] = List.default()
+  for text in texts {
+    editable names.push(AccountName.parse(text) or fail)
+  }
+  let ordered = sortedAccountNames(names).map(pure fn(n: AccountName) String => n.text())
+  expect (ordered.at(0) or fail) == "assets"
+  expect (ordered.at(1) or fail) == "assets:bank"
+  expect (ordered.at(2) or fail) == "assets:bank:current"
+  expect (ordered.at(3) or fail) == "assets:bank-x"
+}
+
+test "sorting parsed names" {
+  let mut names: List[AccountName] = List.default()
+  editable names.push(AccountName.parse("expenses:rent") or fail)
+  editable names.push(AccountName.parse("assets:cash") or fail)
+  let ordered = sortedAccountNames(names)
+  expect (ordered.at(0) or fail).text() == "assets:cash"
+}
+
+property "a parent always precedes its child" forall (depth: Int<1..6>) {
+  let mut text: String = "assets"
+  let mut i = 1
+  while i < depth {
+    text = "${text}:level${i}"
+    i = i + 1
+  }
+  let child = AccountName.parse("${text}:leaf") or fail
+  let parent = AccountName.parse(text) or fail
+  expect accountPrecedes(parent, child)
+  expect !accountPrecedes(child, parent)
+  expect child.parentText() == parent.text()
+  expect child.depth() == depth + 1
+}

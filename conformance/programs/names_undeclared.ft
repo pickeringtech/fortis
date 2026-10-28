@@ -1,0 +1,5 @@
+// reject: E-NAM-001 (at the marked line)
+// covers: LANG-04-05
+export pure func double(value: Int) Int {
+  return valeu * 2                       // reject: E-NAM-001 — `valeu` is not declared
+}

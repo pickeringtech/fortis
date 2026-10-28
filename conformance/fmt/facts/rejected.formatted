@@ -1,0 +1,5 @@
+// A module the checker rejects is laid out only: inference over a rejected module is not a fact.
+func broken(xs: List[Int]) Int {
+  let scaled = xs.map(fn(x: Int) Int => Int.wrappingMul(x, true))
+  return scaled.count()
+}

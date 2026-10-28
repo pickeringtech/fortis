@@ -1,0 +1,85 @@
+// `fortis.host` implementation (DEL-28). Signatures equal `reference/library/host.ft`. Every operation is an intrinsic of
+// the host adapter; the development adapters of the reference toolchain are described in each contract.
+export class Path {
+  // intrinsic: a path from its text; fails `path.invalid` for empty text or text containing NUL; O(n)
+  export trusted pure try func parse(text: String) Path
+}
+export class Secret[T] {}
+export class SecretAccess implements Authority {}
+// intrinsic: the secret value (a copy); requires the SecretAccess capability (15); O(size)
+export trusted func reveal[T](secret: Secret[T], cap: SecretAccess) T
+export class FileSystem implements Authority {
+  // intrinsic: the UTF-8 contents of path below this root; fails `fs.outside_root` when the path is absolute or escapes the root, `fs.not_found`, `fs.not_a_file` or `fs.invalid_text`. Development adapter: the root is a fresh empty temporary directory per run, or FORTIS_DEV_ROOT when set; blocks the calling thread (the `block` effect, 11.1)
+  export trusted try func readText(self, path: Path) String
+  // intrinsic: replaces the contents of path with text, creating the file; fails `fs.outside_root` or `fs.not_found` (missing parent directory); blocks the calling thread (the `block` effect, 11.1)
+  export trusted try func writeAll(self, path: Path, text: StringView) Void
+  // intrinsic: the bytes of path; fails `fs.outside_root`, `fs.not_found` or `fs.not_a_file`; blocks the calling thread (the `block` effect, 11.1)
+  export trusted try func readAll(self, path: Path) Bytes
+  // intrinsic: an open file for reading; fails `fs.outside_root` or `fs.not_found`; blocks the calling thread (the `block` effect, 11.1)
+  export trusted try func open(self, path: Path) File
+  // intrinsic: an open file for writing, created or truncated; fails `fs.outside_root` or `fs.not_found`; blocks the calling thread (the `block` effect, 11.1)
+  export trusted try func create(self, path: Path) File
+  // intrinsic: a FileSystem confined below path; a path that escapes this root yields a confinement that refuses every operation with `fs.outside_root` (attenuation never widens)
+  export trusted func subtree(self, path: Path) FileSystem
+}
+export class File {
+  // intrinsic: the remaining bytes of a file opened for reading; fails `fs.closed` after close and `fs.wrong_mode` on a file opened for writing; blocks the calling thread (the `block` effect, 11.1)
+  export trusted try func readAll(editable self) Bytes
+  // intrinsic: appends data to a file opened for writing; fails `fs.closed` after close and `fs.wrong_mode` on a file opened for reading; blocks the calling thread (the `block` effect, 11.1)
+  export trusted try func writeAll(editable self, data: BytesView) Void
+  // intrinsic: closes the file; closing twice has no effect; dropping an open file closes it
+  export trusted func close(editable self) Void
+}
+export class Network implements Authority {
+  // intrinsic: the address of host. Development adapter: offline; `localhost` resolves to 127.0.0.1 and every other host fails `network.unreachable`; blocks the calling thread (the `block` effect, 11.1)
+  export trusted try func resolve(self, host: StringView) String
+}
+export class Clock implements Authority {
+  // intrinsic: suspends the task for duration of the clock's time (a cancellation point, 12.4). Development adapter: virtual time on the controlled scheduler
+  export trusted async func sleep(self, duration: Duration) Void
+  // intrinsic: the current instant in UTC (nondet). Development adapter: the system clock; a frozen clock returns its instant
+  export trusted func now(self) Timestamp
+  // intrinsic: a clock whose now() is always instant (for tests and replay)
+  export trusted func frozen(self, instant: Timestamp) Clock
+  // intrinsic: now() minus earlier; fails `clock.future` when earlier is after now()
+  export trusted try func elapsedSince(self, earlier: Timestamp) Duration
+}
+export class Random implements Authority {
+  // intrinsic: a uniformly distributed integer in [0, bound) (nondet; rejection sampling, no modulo bias). Development adapter: SplitMix64 from seed 0, or FORTIS_DEV_SEED
+  export trusted func below(self, bound: Int<1..>) Int<0..>
+  // intrinsic: a generator with its own deterministic sequence from seed (replay)
+  export trusted func seeded(self, seed: Int) Random
+}
+export class Environment implements Authority {
+  // intrinsic: the variable as a Secret, or null when unset or when name is empty or contains `=` (nondet). Development adapter: the process environment
+  export trusted func get(self, name: StringView) Secret[String]?
+}
+export class Process implements Authority {
+  // intrinsic: runs program with arguments to completion and returns its exit status (the `block` effect). Development adapter: starts no process; simulates `true` (0) and `false` (1) and refuses every other program with `process.denied`
+  export trusted try func run(self, program: StringView, arguments: ListView[String]) Int
+}
+export class Supervisor implements Authority {}
+export class Console implements Authority {
+  // intrinsic: writes text and a line feed to standard output
+  export trusted func print(self, text: StringView) Void
+}
+export class RawSql implements Authority {
+  // intrinsic: runs one SQL statement and returns the affected row count. Development adapter: has no database; every statement fails `sql.unavailable`; blocks the calling thread (the `block` effect, 11.1)
+  export trusted try func execute(self, statement: StringView) Int
+}
+export class Capabilities {
+  export fileSystem: FileSystem
+  export network: Network
+  export clock: Clock
+  export random: Random
+  export environment: Environment
+  export process: Process
+  export supervisor: Supervisor
+  export console: Console
+  export secretAccess: SecretAccess
+  export rawSql: RawSql
+}
+export class Host {
+  // intrinsic: the ten process-wide capabilities, created by one direct call in the entry main (11.6): every other use is rejected statically (E-EFF-010), and a second creation stops the run with the runtime-invariant defect (10.8)
+  export trusted func capabilities() Capabilities
+}

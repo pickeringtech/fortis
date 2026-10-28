@@ -1,0 +1,10 @@
+// LANG-04-05: a type imported through a module alias is still checked: its members are its declaration's.
+import fortis.host { Host }
+import same.left.items as left
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let a = left.Item(label: "x")
+  let n: Int = a.nothingHere(1, 2)
+  caps.console.print("${n}")
+}

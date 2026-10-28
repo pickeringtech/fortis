@@ -1,0 +1,685 @@
+{
+ "application": "A2",
+ "title": "Command-line tool: a word tally",
+ "programme": "Programme 14, application A2",
+ "chunk": "DEL-44",
+ "backend": "interpreter, vm, native",
+ "evidence_integrity": {
+  "algorithm": "sha256",
+  "inputs": {
+   "acceptance/a2/project.yaml": "6e6f3efdf407ba1d843b9ab4ab253e3b1b58466e0451abf32072fa4bd1dfca19",
+   "acceptance/a2/spec.json": "f353047bd6eabbdfe9ef8a546f4635903c92df8b85a8d86ff706ead43c75f937",
+   "acceptance/a2/src/count.ft": "8db69a53fa7ef589e82a73c37f61250600f9bf2b8ba77f1b55b2f7f614ccb589",
+   "acceptance/a2/src/main.ft": "a15b4007e473dbc1959cb9034a1906c0a7cbbbb487386dcf0ef700bd35126e63",
+   "acceptance/a2/data/alpha.txt": "1153a4080f1fcb04425aa0b841c2b14606fe6df25d9076d2a1face2d5af57129",
+   "acceptance/a2/data/beta.txt": "39431da50cc51adb9b8199f914924db9702d120f7105a8fe50a5636949ccc0ed",
+   "acceptance/a2/data/gamma.txt": "7ec4c8300dc48e14e95e184cea8d23a6f193a6c074f35e772f635664b3ee6c0d",
+   "acceptance/a2/data/manifest.txt": "5dd732bf2c97802fcf7ce870744e7b9fe8c113976b3752a6aa2c1ab7b8d0a53c",
+   "acceptance/a2/expected/missing.out": "67bd1ec824cef72d324a16f03e65d4ae5bf48021df4ddaf9673175ec57243b9c",
+   "acceptance/a2/expected/run.out": "c76f501a742ec8159b1c6facc8157e28adf0197a2c807fa15105a2a644ead32b"
+  },
+  "toolchain": {
+   "bin/fortis": "bf3c2f39ce0dc71433520f186490ad1516d7bdbd89eccdecb7240fc56ff92d39",
+   "reference/grammar/fortis.ebnf": "c383b8df6bb6969b485a2e57bc97bd208aecd7960bfb91211a7a54e7df7bee8a",
+   "reference/library/collections.ft": "c82c455a1f0f272ebde557d64653b4e35deadf9709a36b0884364b8830418aa6",
+   "reference/library/host.ft": "4517eb9c86078d3ff6a2be558e445a2624e44ea5e41df96a2a69c9a903a18a50",
+   "reference/library/money.ft": "298a4d676d3aea3c9aa19bcd765a1435c9155a9a76b2a07e05d5deb5112d7c32",
+   "reference/library/numeric.ft": "bb10b04dd00f13577c6b040821dc33c2d1182935e0dd7a1140c433aa6b0cd006",
+   "reference/library/prelude.ft": "b60a75b6c8f8fc3af1640105e09a013fcc2a1f4d2800b1413c64ced788a4fd87",
+   "reference/library/text.ft": "f266a96757315891e117bec2c442f774899acb3becf88953b3d49348d796ddc1",
+   "reference/library/time.ft": "92a71fe2a9cc17a65e977ec8e222ddf53807402c9136cce4fd0ab51e8d1f806f",
+   "reference/library/effects/fortis.json": "9caf0e859d8e0edb73b779141d176618269a383b6ce767bfed9cf21cc6f1b9cc",
+   "reference/library/examples/acme.accounts.ft": "88d76e68505e7fd5e3bbe74c36faae35c8dbf05df4bf5bd16900cbcb848f66c0",
+   "reference/library/examples/acme.orders.ft": "6c784fd1d3a15f0e08ff03438a5d6e52457f4c2ab08ef51dc935030a58a74127",
+   "reference/library/kits/fortis.codec.json.ft": "222704eb2751b60d4cd65b2c7ff1140079869cf0212bf5e0b546ebcd7d083408",
+   "reference/library/kits/fortis.data.ft": "537abe45340f45b4575b7583727dca8217b787585259e692a15241f4aa9d01ab",
+   "reference/library/kits/fortis.data.postgres.ft": "d6cd5738f9eab69359df55532351bcb73050703a44197184d0d52519565329a6",
+   "reference/library/kits/fortis.di.ft": "4248d47deb6645d03dbe9e812d2f7c8a6dfd9bd66985311cf88a066e05bea030",
+   "reference/library/kits/fortis.di.provenance.ft": "d617c5ab6c3cb8262969b311d33bfa6ba59a50889bcad7c1776656de583cc25e",
+   "reference/library/kits/fortis.http.server.ft": "9fa319de4d160f7dd1c56021f39b85de9f2b8c73446020ee7472c909e1b40700",
+   "reference/library/kits/fortis.runtime.ft": "c9a0d7ecba706ead5816cad8441009b81aee40fff850aa558130c24d93ddde6b",
+   "reference/library/kits/fortis.security.ft": "6bf60abb47149eb3bade4a0ec3febb8f2e0e940228df2d996597555c8e80658e",
+   "reference/library/kits/fortis.web.components.ft": "134fae6980df7b88110ee9073b0c40306a4387c0f31af00dac09686830eaf3a0",
+   "reference/library/kits/fortis.web.ssr.ft": "134fae6980df7b88110ee9073b0c40306a4387c0f31af00dac09686830eaf3a0",
+   "checker/__init__.py": "900fbe73a08a67a16307be6b0e9b1b9a1d2e5c267573781c87b4ef997753cb0b",
+   "checker/cfg.py": "f9ab9443d09a123f22ee29a7d387201de02373ad39191119f8b36c6f3fad75af",
+   "checker/check.py": "8fedfbbb6f039d8a8043860eeac922b94a30d03edf168d7fcb0907c823f9799c",
+   "checker/decl_ir.py": "6d71211838b837084d892bbc290d28a50dbee1e2402b104e6a5c9acfde81af11",
+   "checker/decls.py": "ed00221d90fb251d654aa107b7a4d9559c58cbeef73892bacff97e1676756c6d",
+   "checker/effects.py": "642ce78e08d74bc62744df8b8b301bf70ac6de6134b670809f6f4ae0377d6891",
+   "checker/intervals.py": "f3a28b514c2845158ae369ecdbddc6aba0dfecd81c9001257e983e1023023f81",
+   "checker/literals.py": "1bfbd61d153e92fb3a6ca0310adbdd740f4345fe804952df908ed8f4d39d2bf9",
+   "checker/owners.py": "7f55c107401f3760800af275a311c72dccab2ca62e3c8730d0a19324d66d6f54",
+   "checker/plans.py": "da13e9938c530d22c56db2829089c5f7b73afdbbeacf31e89d91f8d619441540",
+   "checker/sets_report.py": "bb44cb770881fc3f806d83931875d18949fad2333a1aaa556bffde4163d87c78",
+   "checker/typer.py": "966e0fa7fa3e76b05b777c84ead963cf437ac80f47b4736ecaf6811e67cfff4e",
+   "checker/types.py": "2b405f69cd2c6e315f645be6b2b1e4b6c0369f05def1aa82d960732115e6f752",
+   "interpreter/ARCHITECTURE.md": "c6e079cbfd9171a93e30db1cb89425d7d7092fbe17ee3c6b3eb0a122f938c5a9",
+   "interpreter/INTRINSICS.md": "5129221f72ce36869b320d12934f468d5d7ed7661d46b8673646a6367a3c8d9d",
+   "interpreter/__init__.py": "f7e8c21ebc20a380e124902d33257569293f3d564d237417fc3ecc79d1559881",
+   "interpreter/codec.py": "8ab907a5f405fa4477bc4c23f1e7c41ff8605ed96b4724997b9440fa69983272",
+   "interpreter/eval.py": "a45120e6dbc61f6498d79e67975166358b480a74264a43064988f3ceed8e7f6e",
+   "interpreter/executor.py": "47cf8967ce7141fda4e23317024b3b98962f23cc80efcb6237332255bcbceb0a",
+   "interpreter/intrinsics.py": "5ab9c23eb8d799f2d8f6ae2d5a83fed4d275fec35d49bd8a59ff5aba740f088b",
+   "interpreter/link.py": "c2d70463f9efb748058ecdcbf8bd2bc10c2583bc2c373a4a1b6c2f411070bff3",
+   "interpreter/numeric.py": "ffe884bb3a712855385f95f58103bcbba3e85a11399b25fd70d0a7d41fbfebcf",
+   "interpreter/probe_threads.py": "d61da049ba465e78ee629a107bbb7a08ba9ff7343e20e6cc1a5c365df90d472c",
+   "interpreter/records.py": "02e2a7af19367f37bf04c4f192b26da45591f39c37ae06158c14746f4dbc577f",
+   "interpreter/run.py": "d830e9868366233d6f58b42968486cde43c61ae06dc93a0f0acb02764d4b79cd",
+   "interpreter/telemetry.py": "e869bd34033a4a24519a02adb318ca33ee29a6e25389997d755807b3958e3fb2",
+   "interpreter/values.py": "173420921e94d926efe00f5aad0492eb25e57e0caa70773a8c56252f038f8c5c",
+   "library/fortis/collections.ft": "e6bb3a59aca8af5493cf7b2d165e3ceeb85ef9b1bf307cb241eb343d7e07f97d",
+   "library/fortis/compatibility.yaml": "01f0777bc5a36559b9cad1444a90e4aa4eccf09db9a190c199ccd96f60487adf",
+   "library/fortis/host.ft": "90e7739deb638aba9e99050eceb01ded4baf22fb97a26afac64a05e01a381ee1",
+   "library/fortis/money.ft": "3bab6fac383123cc718f182b5edcd7562893d4bd6bd7ad4688a34c1835f6925b",
+   "library/fortis/numeric.ft": "424551b3caa9c9f8af3d23a268b95596575bb56f0794a7ac8cedaafb000e9bcc",
+   "library/fortis/prelude.ft": "bdd6910d79da2f87b11c6d9bc309ada41bc0b561c4d1c8c3aac4e6ea4934e281",
+   "library/fortis/text.ft": "2166365c0294f4adcd18efa1181a691b39e06c6a4811a0af6d3c0d001a2646c5",
+   "library/fortis/time.ft": "1b3b31179ea033326ac0d2a5e3d71517e235d686ad89b9e77868ba45c50b4024",
+   "conformance/tools/names.py": "2f42a32f51487ce3e75acad596498c37f44498af12720836e17154d1c3b26169",
+   "conformance/tools/parser.py": "534c046d465202d42c4d91364bd8bbcd8dc1e6fe4c400c8c72fbbc6d1288321f",
+   "conformance/tools/lexer.py": "baa321c0be1e9381294192d4bef63a58812e3ed5afe3af91e73aabf2727864fc",
+   "conformance/tools/resolve.py": "5f34beb9ccf23c441847f7cf13605152e6ffd15b01a921b841fdb1c8ff107943",
+   "conformance/tools/project.py": "81c1dedbec42b425cad620050f1f88aff75643d69b5a3b5d318a2743dedf63cc",
+   "conformance/tools/tree.py": "a2f0cfb800b403c14439dc7033f8edcf3aca6f1a6a15704aef3b64ef4d981622",
+   "conformance/tools/diagnostics.py": "d22044ec6118620dc492bc03d94e4fc4f13fd823bb73e129c4a862a449a057b6",
+   "acceptance/run.py": "6fcfb0af167b6e587466f261fc05b30dceb901f447836b8959c1416292065d4e"
+  },
+  "outputs": {
+   "check.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "run.stdout": "c76f501a742ec8159b1c6facc8157e28adf0197a2c807fa15105a2a644ead32b",
+   "run.stderr": "188289ceacbd75e3fef95d968e69cf32fc4236262dfab2f333597e39a43bb404",
+   "test.stdout": "49e2342dca2172ad682e441dd636041b7b28a19cc098d9db5dfb780132758806",
+   "test.stderr": "60da922d0fd20f7aa3ddd9e5718cecd9697ccd6f13803719d1a3ac2afa52a448"
+  },
+  "digest": "7d9cfaec2624381edc2741da7440d7690e158915a0c614d36b9b742ab101811b"
+ },
+ "execution_attestation": {
+  "commit": "eddd9558333b0cf402b47760f17a7206f2b29c5b",
+  "worktree_clean": true,
+  "host": "rpickz-framework-desktop",
+  "platform": "Linux-7.2.5-3-omarchy-x86_64-with-glibc2.44",
+  "python": "3.12.12",
+  "harness": "python3 -I acceptance/run.py a2",
+  "steps": [
+   {
+    "step": "check",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "acceptance/a2",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:30.033+00:00",
+    "duration_ms": 285,
+    "exit": 0
+   },
+   {
+    "step": "run",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "run",
+     "acceptance/a2",
+     "--inventory",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "<fresh copy of acceptance/a2/data>"
+    },
+    "started": "2026-10-27T11:54:30.319+00:00",
+    "duration_ms": 834,
+    "exit": 0
+   },
+   {
+    "step": "native build",
+    "argv": [
+     "compiler/target/release/fortisc",
+     "build",
+     "--format",
+     "json",
+     "--out",
+     "build/tmp/acceptance-a2-bin-okp5s8m6/a2",
+     "acceptance/a2"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:31.154+00:00",
+    "duration_ms": 134,
+    "exit": 0
+   },
+   {
+    "step": "main on the interpreter",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "run",
+     "acceptance/a2",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "build/tmp/acceptance-a2-interpreter-uago8l5f",
+     "TALLY_MIN": "4"
+    },
+    "started": "2026-10-27T11:54:31.290+00:00",
+    "duration_ms": 864,
+    "exit": 0
+   },
+   {
+    "step": "missing input on the interpreter",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "run",
+     "acceptance/a2",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "build/tmp/acceptance-a2-interpreter-9tigi64v"
+    },
+    "started": "2026-10-27T11:54:32.155+00:00",
+    "duration_ms": 869,
+    "exit": 1
+   },
+   {
+    "step": "main on the VM",
+    "argv": [
+     "compiler/target/release/fortisc",
+     "vm",
+     "acceptance/a2"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "build/tmp/acceptance-a2-vm-2jr3d_6t",
+     "TALLY_MIN": "4"
+    },
+    "started": "2026-10-27T11:54:33.025+00:00",
+    "duration_ms": 39,
+    "exit": 0
+   },
+   {
+    "step": "missing input on the VM",
+    "argv": [
+     "compiler/target/release/fortisc",
+     "vm",
+     "acceptance/a2"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "build/tmp/acceptance-a2-vm-het89osg"
+    },
+    "started": "2026-10-27T11:54:33.064+00:00",
+    "duration_ms": 40,
+    "exit": 1
+   },
+   {
+    "step": "main natively",
+    "argv": [
+     "build/tmp/acceptance-a2-bin-okp5s8m6/a2"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "build/tmp/acceptance-a2-native-nxpnf28q",
+     "TALLY_MIN": "4",
+     "FORTIS_TRACE": "1"
+    },
+    "started": "2026-10-27T11:54:33.106+00:00",
+    "duration_ms": 0,
+    "exit": 0
+   },
+   {
+    "step": "missing input natively",
+    "argv": [
+     "build/tmp/acceptance-a2-bin-okp5s8m6/a2"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "build/tmp/acceptance-a2-native-22foszgp",
+     "FORTIS_TRACE": "1"
+    },
+    "started": "2026-10-27T11:54:33.107+00:00",
+    "duration_ms": 0,
+    "exit": 1
+   },
+   {
+    "step": "test",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "test",
+     "acceptance/a2",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:33.108+00:00",
+    "duration_ms": 964,
+    "exit": 0
+   },
+   {
+    "step": "test on the VM",
+    "argv": [
+     "compiler/target/release/fortisc",
+     "test",
+     "--format",
+     "json",
+     "acceptance/a2"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:34.073+00:00",
+    "duration_ms": 45,
+    "exit": 0
+   },
+   {
+    "step": "mutant 1 check",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a2-variant-5xtn1d80/acme.tally",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:34.120+00:00",
+    "duration_ms": 287,
+    "exit": 0
+   },
+   {
+    "step": "mutant 1 test",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "test",
+     "build/tmp/acceptance-a2-variant-5xtn1d80/acme.tally",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:34.408+00:00",
+    "duration_ms": 969,
+    "exit": 1
+   },
+   {
+    "step": "mutant 2 check",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a2-variant-5tiwtyx7/acme.tally",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:35.379+00:00",
+    "duration_ms": 294,
+    "exit": 0
+   },
+   {
+    "step": "mutant 2 test",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "test",
+     "build/tmp/acceptance-a2-variant-5tiwtyx7/acme.tally",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:35.673+00:00",
+    "duration_ms": 841,
+    "exit": 1
+   },
+   {
+    "step": "mutant 3 check",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a2-variant-8hd2gi2w/acme.tally",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:36.516+00:00",
+    "duration_ms": 273,
+    "exit": 0
+   },
+   {
+    "step": "mutant 3 run",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "run",
+     "build/tmp/acceptance-a2-variant-8hd2gi2w/acme.tally",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "<fresh copy of acceptance/a2/data>"
+    },
+    "started": "2026-10-27T11:54:36.790+00:00",
+    "duration_ms": 874,
+    "exit": 0
+   }
+  ]
+ },
+ "semantic_correctness": {
+  "passed": true,
+  "checks": [
+   {
+    "check": "package checks with 0 findings",
+    "passed": true,
+    "detail": {
+     "findings": 0,
+     "codes": []
+    }
+   },
+   {
+    "check": "run exits 0",
+    "passed": true,
+    "detail": {
+     "exit": 0
+    }
+   },
+   {
+    "check": "run output equals the expected output",
+    "passed": true,
+    "detail": {
+     "lines": 6,
+     "diff": []
+    }
+   },
+   {
+    "check": "runtime failures reported once each, by code",
+    "passed": true,
+    "detail": {
+     "observed": {},
+     "expected": {}
+    }
+   },
+   {
+    "check": "observation frames",
+    "passed": true,
+    "detail": {
+     "observed": []
+    }
+   },
+   {
+    "check": "no unrequested runtime work (inventory)",
+    "passed": true,
+    "detail": {
+     "observed": {
+      "detached": 0,
+      "di_registry": false,
+      "kind": "runtime-inventory",
+      "records": {},
+      "tasks": 4,
+      "tasks_by_executor": {
+       "blocking": 1,
+       "cooperative": 3,
+       "parallel": 0
+      },
+      "telemetry_exporters": 0,
+      "virtual_time_ns": 0
+     },
+     "expected": {
+      "tasks": 4,
+      "detached": 0,
+      "tasks_by_executor": {
+       "cooperative": 3,
+       "parallel": 0,
+       "blocking": 1
+      },
+      "di_registry": false,
+      "telemetry_exporters": 0
+     }
+    }
+   },
+   {
+    "check": "the application builds natively",
+    "passed": true,
+    "detail": {
+     "exit": 0,
+     "tail": "{\"binary\": \"build/tmp/acceptance-a2-bin-okp5s8m6/a2\", \"kind\": \"build\", \"manifest\": \"build/tmp/acceptance-a2-bin-okp5s8m6/a2.build.json\"}\n"
+    }
+   },
+   {
+    "check": "interpreter: main: output, exit 0 and failures none as expected",
+    "passed": true,
+    "detail": {
+     "exit": 0,
+     "failures": {},
+     "seconds": 0.864,
+     "diff": []
+    }
+   },
+   {
+    "check": "interpreter: missing input: output, exit 1 and failures {'fs.not_found': 1} as expected",
+    "passed": true,
+    "detail": {
+     "exit": 1,
+     "failures": {
+      "fs.not_found": 1
+     },
+     "seconds": 0.869,
+     "diff": []
+    }
+   },
+   {
+    "check": "vm: main: output, exit 0 and failures none as expected",
+    "passed": true,
+    "detail": {
+     "exit": 0,
+     "failures": {},
+     "seconds": 0.039,
+     "diff": []
+    }
+   },
+   {
+    "check": "vm: missing input: output, exit 1 and failures {'fs.not_found': 1} as expected",
+    "passed": true,
+    "detail": {
+     "exit": 1,
+     "failures": {
+      "fs.not_found": 1
+     },
+     "seconds": 0.04,
+     "diff": []
+    }
+   },
+   {
+    "check": "native: main: output, exit 0 and failures none as expected",
+    "passed": true,
+    "detail": {
+     "exit": 0,
+     "failures": {},
+     "seconds": 0.0,
+     "diff": []
+    }
+   },
+   {
+    "check": "native: missing input: output, exit 1 and failures {'fs.not_found': 1} as expected",
+    "passed": true,
+    "detail": {
+     "exit": 1,
+     "failures": {
+      "fs.not_found": 1
+     },
+     "seconds": 0.0,
+     "diff": []
+    }
+   },
+   {
+    "check": "VM: pools as requested (executor trace)",
+    "passed": true,
+    "detail": {
+     "observed": {
+      "blocking": 1,
+      "parallel": 0
+     },
+     "requested": {
+      "blocking": 1,
+      "parallel": 0
+     }
+    }
+   },
+   {
+    "check": "native: pools as requested (executor trace)",
+    "passed": true,
+    "detail": {
+     "observed": {
+      "blocking": 1,
+      "parallel": 0
+     },
+     "requested": {
+      "blocking": 1,
+      "parallel": 0
+     }
+    }
+   },
+   {
+    "check": "tests pass",
+    "passed": true,
+    "detail": {
+     "passed": 29,
+     "failed": 0,
+     "tests": 3
+    }
+   },
+   {
+    "check": "tests pass on the VM (fortisc test)",
+    "passed": true,
+    "detail": {
+     "failed": 0,
+     "kind": "test-summary",
+     "passed": 5,
+     "rule": "PROG-TST-01"
+    }
+   },
+   {
+    "check": "feature: async try func main run by the core executor",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: FileSystem and Environment capability values from Host.capabilities()",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: synchronous defer",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: scope with cooperative tasks",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: one launchBlocking",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: structured failures reported once at the entry boundary",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: no parallel or blocking pool thread, DI registry or exporter unless requested",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "imports no kit package",
+    "passed": true,
+    "detail": {
+     "outside": [],
+     "allowed": [
+      "fortis.host",
+      "fortis.text",
+      "acme.tally."
+     ]
+    }
+   },
+   {
+    "check": "mutant 1 killed (src/count.ft)",
+    "passed": true,
+    "detail": {
+     "mutation": "if w.scalarCount() >= minLength {  ->  if w.scalarCount() > minLength {",
+     "killed_by": "test `words keeps those of at least the minimum length`",
+     "statuses": [
+      "fail"
+     ]
+    }
+   },
+   {
+    "check": "mutant 2 killed (src/count.ft)",
+    "passed": true,
+    "detail": {
+     "mutation": "if w.scalarCount() > best.scalarCount() {  ->  if w.scalarCount() >= best.scalarCount() {",
+     "killed_by": "test `longest prefers the first of equal length`",
+     "statuses": [
+      "fail",
+      "pass",
+      "pass"
+     ]
+    }
+   },
+   {
+    "check": "mutant 3 killed (src/main.ft)",
+    "passed": true,
+    "detail": {
+     "mutation": "total = Int.wrappingAdd(total, t.words)  ->  total = Int.wrappingAdd(total, 1)",
+     "killed_by": "run output differs"
+    }
+   }
+  ],
+  "failed": []
+ }
+}

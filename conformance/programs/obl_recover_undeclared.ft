@@ -1,0 +1,5 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-10-05
+try func half(n: Int) Int => n
+
+export func safeHalf(n: Int) Int => half(n) or recover 0     // reject: E-EFF-001 — discharges a failure without `recovers`

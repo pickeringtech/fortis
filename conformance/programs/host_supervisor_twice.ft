@@ -1,0 +1,12 @@
+// reject: E-OWN-020 (at the marked line)
+// covers: LANG-11-07
+// Detaching transfers the task's join obligation once: a second detach of the same task is refused.
+import fortis.host { Supervisor }
+async func work() Int => 1
+async func spawn(supervisor: Supervisor) Void {
+  scope tasks {
+    let t = tasks.launch(work())
+    tasks.detach(move t, supervisor)
+    tasks.detach(move t, supervisor)             // reject: E-OWN-020 — t was moved to the supervisor
+  }
+}

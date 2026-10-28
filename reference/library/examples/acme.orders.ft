@@ -1,0 +1,34 @@
+// Illustrative dependency of the Language Reference 13 examples (DEL-20): the acme.orders package.
+export enum CustomerTier derive Equatable, Encodable {
+  Standard
+  Premium
+}
+export enum Region derive Equatable, Encodable {
+  EU
+  US
+}
+export type TransactionId = Int<1..>
+export class Address derive Encodable {
+  export region: Region
+}
+export class Customer derive Encodable {
+  export tier: CustomerTier
+  export address: Address
+}
+export class Order derive Encodable {
+  export id: Int
+  export customer: Customer
+}
+export class Receipt {
+  export transactionId: TransactionId
+}
+export class Payments implements Authority {
+  export trusted async try func charge(self, order: Order) Receipt
+}
+export observation OrderProcessing {
+  version: 1
+  customerTier: CustomerTier         required: all
+  region: Region                     required: all
+  transactionId: TransactionId?      required: success
+  encoding: bounded(512)
+}

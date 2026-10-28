@@ -1,0 +1,34 @@
+// execute: circle 3|square 4|area 28
+// requires: runtime
+// covers: LANG-09-01, LANG-09-03
+// Behaviour is shared through interfaces and composition, never inheritance; each implementation keeps the
+// interface's contract (9.1, 9.3).
+import fortis.host { Host }
+
+export interface Shape {
+  pure func name(self) String
+  pure func area(self) Int
+}
+
+export class Circle implements Shape {
+  export r: Int
+  export pure func name(self) String => "circle ${self.r}"
+  export pure func area(self) Int => Int.wrappingMul(3, Int.wrappingMul(self.r, self.r))
+}
+
+export class Square implements Shape {
+  export side: Int
+  export pure func name(self) String => "square ${self.side}"
+  export pure func area(self) Int => Int.wrappingMul(self.side, self.side)
+}
+
+pure func total(a: Circle, b: Square) Int => Int.wrappingAdd(a.area(), b.area())
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let c = Circle(r: 3)
+  let s = Square(side: 4)
+  caps.console.print(c.name())
+  caps.console.print(s.name())
+  caps.console.print("area ${Int.wrappingSub(total(c, s), 15)}")
+}

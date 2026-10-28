@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-04-03
+// The same module may be imported twice when the imports bind disjoint names (4.3): what 4.3 rejects is one name
+// bound twice, not one module named twice.
+import fortis.host { Host }
+import fortis.money { Money }
+import fortis.money { Currency }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${Money.zero(Currency.GBP)}")
+}

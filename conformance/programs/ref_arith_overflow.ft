@@ -1,0 +1,9 @@
+// reject: E-REF-002 (at the marked lines)
+// covers: LANG-06-02, LANG-06-04
+pure func unproved(a: Int, b: Int<0..100>, c: Int8) Int {
+  let s = a + 1                              // reject: E-REF-002 — a may be MAX
+  let t = c * c                              // reject: E-REF-002 — 127 * 127 exceeds Int8
+  let u = a / b                              // reject: E-REF-002 — b may be zero
+  let v = b << a                             // reject: E-REF-002 — shift amount unproved
+  return s
+}

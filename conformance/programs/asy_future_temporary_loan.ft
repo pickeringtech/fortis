@@ -1,0 +1,85 @@
+// reject: E-OWN-051 (at the marked lines)
+// covers: LANG-07-04
+// D-31 (12.3, 5.7, X-251): a future keeps the loans of its arguments and receiver and may not outlive them. A
+// temporary argument or receiver (a call's result, a constructed value, a `copy`, an interpolated string) ends with
+// its statement, so a future that borrows one may be awaited in that statement, or launched directly (the task then
+// owns it), but not bound or returned; awaiting another future in the statement does not change that, nor does an
+// await whose result is itself a future. A default argument evaluated afresh is a temporary too. Bind the argument
+// first, or take the parameter `owned`.
+import fortis.host { Host, Console, Capabilities }
+
+async func make(console: Shared[Console]) Int {
+  console.print("made")
+  return 1
+}
+
+async func greet(name: String) Int => name.scalarCount()
+
+async func one() Int => 1
+
+export class Word {
+  export s: String
+  export async func size(self) Int => self.s.scalarCount()
+}
+
+func keep(f: owned Future[Int], n: Int) Future[Int] => move f
+
+async func relay(f: owned Future[Int]) Future[Int] => move f
+
+async func sizeOf(w: Word = Word(s: "abc")) Int => w.s.scalarCount()
+
+async try func relayTry(f: owned Future[Int]) Future[Int] => move f
+
+async func consume(f: owned Future[Int]) Int => await f
+
+async func relayOpt(f: owned Future[Int]) Future[Int]? => move f
+
+async try func wrapped() Int {
+  let f = await relayTry(greet(String.from("abc"))) or fail             // reject: E-OWN-051 — an outcome of a future still borrows it
+  return await f
+}
+
+func later() Future[Int] => greet(String.from("abc"))                  // reject: E-OWN-051 — an expression body returns it
+
+func laterBlock() Future[Int] {
+  return greet(String.from("abc"))                                       // reject: E-OWN-051 — the future is returned
+}
+
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  let a = await make(console.retain())
+  scope tasks {
+    let t = tasks.launch(make(console.retain()))
+    let n = await t
+    let u = keep(greet(String.from("abc")), await one())                 // reject: E-OWN-051 — another await does not end it
+    let m = await u
+    let nested = tasks.launch(consume(greet(String.from("abc"))))        // reject: E-OWN-051 — a nested future's temporary is not the launch's
+    let nn = await nested
+    console.print("task ${n} ${m} ${nn}")
+  }
+  let f = make(console.retain())                                         // reject: E-OWN-051 — the bound future outlives it
+  let b = await f
+  let g = greet("${a}")                                                  // reject: E-OWN-051 — an interpolation is a temporary too
+  let c = await g
+  let name = String.from("ada")
+  let h = greet(copy name)                                               // reject: E-OWN-051 — so is a copy
+  let k = await h
+  let hg = greet((copy name))                                            // reject: E-OWN-051 — grouped or not
+  let kg = await hg
+  let w = Word(s: String.from("abc")).size()                            // reject: E-OWN-051 — and a temporary receiver
+  let x = await w
+  let r = await relay(greet(String.from("abc")))                         // reject: E-OWN-051 — the awaited result still borrows it
+  let q = await r
+  let o = sizeOf()                                                       // reject: E-OWN-051 — and so does a default argument
+  let p = await o
+  let v = await relayOpt(greet(String.from("abc")))                      // reject: E-OWN-051 — and an optional future
+  let vn = match move v {
+    present(fv) => await fv
+    null => 0
+  }
+  let d = await greet("literal")
+  let e = await Word(s: String.from("ab")).size()
+  console.print("end ${b} ${c} ${d} ${k} ${x} ${e} ${q} ${p} ${vn} ${kg}")
+}

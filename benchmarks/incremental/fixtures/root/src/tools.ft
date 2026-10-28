@@ -1,0 +1,5 @@
+export class Helper {
+  export name: String
+}
+
+export func take(x: Int) Int => x

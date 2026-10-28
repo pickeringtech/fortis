@@ -1,0 +1,13 @@
+// reject: E-TYP-080 (at the marked line)
+// covers: LANG-06-01
+// Two newtypes over the same representation are distinct types.
+export type UserId = Int<1..>
+export type OrderId = Int<1..>
+
+export interface UserLookup {
+  pure func has(self, id: UserId) Bool
+}
+
+export class Users implements UserLookup {    // reject: E-TYP-080 — has(OrderId) is not has(UserId)
+  export pure func has(self, id: OrderId) Bool => true
+}

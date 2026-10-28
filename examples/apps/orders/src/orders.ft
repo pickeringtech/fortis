@@ -1,0 +1,34 @@
+// Orders as typed records decoded from the canonical text codec. Each order is processed under an observation
+// schema, so every activation leaves one structured record (the application's log line) with its outcome.
+import fortis.money { Money, Currency }
+import shop.orders.pricing { Line, lineTotal }
+
+export class Order derive Codec {
+  export id: String<scalars: 1..16>
+  export customer: String<scalars: 1..64>
+  export lines: List[Line]<length: 1..50>
+}
+
+observation OrderProcessed {
+  version: 1
+  orderId: String<scalars: 0..16>     required: all
+  lineCount: Int                      required: all
+  total: Decimal                      required: success
+}
+
+@observe(OrderProcessed)
+export try func process(order: Order) Money {
+  capture orderId = copy order.id
+  capture lineCount = order.lines.count()
+  let mut total = Money.zero(Currency.GBP)
+  for line in order.lines {
+    total = Money.add(total, lineTotal(line) or fail) or fail
+  }
+  capture total = total.amount
+  return move total
+}
+
+test "an order's total is the sum of its lines" {
+  let order = Order.fromText("{\"id\":\"o1\",\"customer\":\"ann\",\"lines\":[{\"sku\":\"tea\",\"quantity\":2,\"unitPrice\":\"1.50\"},{\"sku\":\"cake\",\"quantity\":1,\"unitPrice\":\"3.25\"}]}") or fail
+  expect (process(order) or fail).amount == 6.25d
+}

@@ -1,0 +1,33 @@
+// accept
+// covers: LANG-05-01, LANG-08-02
+// The valid neighbours of fun_copy_capture_assigned.ft (D-155): a `copy` capture is read freely in every
+// kind; a closure that keeps state captures with `move` into a binding it may edit (LR 8.2), and an
+// `editable` capture writes through to the outer binding (LR 8.3).
+func run() Int {
+  let base = 10
+  let twice = pure noalloc fn[copy base]() Int {
+    return Int.saturatingAdd(base, base)
+  }
+  let shown = pure noalloc fn once[copy base]() Int {
+    return base
+  }
+  let mut total = 0
+  let mut bump = pure noalloc fn mut[move total]() Int {
+    total = Int.saturatingAdd(total, 1)
+    return total
+  }
+  let mut counter = 0
+  let mut count = noalloc fn mut[editable counter]() Void {
+    counter = Int.saturatingAdd(counter, 1)
+  }
+  let mut step = 4
+  let mut finish = pure noalloc fn once[move step]() Int {
+    step = Int.saturatingAdd(step, 5)
+    return step
+  }
+  let a = twice()
+  let b = editable bump()
+  let c = move finish()
+  editable count()
+  return Int.saturatingAdd(Int.saturatingAdd(a, b), Int.saturatingAdd(c, move shown()))
+}

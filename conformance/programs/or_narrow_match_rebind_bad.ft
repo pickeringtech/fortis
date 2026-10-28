@@ -1,0 +1,15 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// A guard fact names that arm's binding. A later arm that binds the same name does not inherit it
+// (LR 6.8, 9.8). With `(present Cell, null)`, the second `p` is null.
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+}
+
+pure func rebind(q: (Cell?, Cell?)) Bool {
+  return match q {
+    (p, _) when p == null => false
+    (_, p) => p.read()                        // reject: E-TYP-040 — this `p` is the second element
+  }
+}

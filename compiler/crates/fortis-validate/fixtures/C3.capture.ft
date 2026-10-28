@@ -1,0 +1,12 @@
+// DEL-45 fixture for C3.capture: a capture into a bounded frame in a noalloc function.
+observation Count {
+  items: Int                         required: all
+}
+@observe(Count)
+noalloc func counted(n: Int) Int {
+  capture items = n
+  return n
+}
+export func main(args: List[String]) Void {
+  discard counted(2)
+}

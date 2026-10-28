@@ -1,0 +1,40 @@
+// execute: 42|caught demo.too_big
+// requires: runtime
+// reports: observation-frame:schema=Check,outcome=success|observation-frame:schema=Check,outcome=failure
+// covers: LANG-11-03, LANG-13-02, LANG-10-01
+// Programme 16, interaction `noalloc` + failure + capture: a `noalloc try` function observed with trivial fields
+// captures on its success and failure paths and fails with a payload of trivial fields; nothing allocates.
+import fortis.host { Host }
+
+export error TooBig {
+  code: "demo.too_big"
+  payload { limit: Int }
+}
+
+observation Check {
+  input: Int        required: all
+  result: Int       required: success
+  limit: Int        required: failure
+}
+
+@observe(Check)
+noalloc try func checked(n: Int<0..1000>) Int {
+  capture input = n
+  if n > 100 {
+    capture limit = 100
+    fail TooBig(limit: 100)
+  }
+  capture result = n
+  return n
+}
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let a = checked(42) or recover -1
+  caps.console.print("${a}")
+  let b = checked(500) catch e {
+    caps.console.print("caught ${e.code}")
+    recover -1
+  }
+  discard b
+}

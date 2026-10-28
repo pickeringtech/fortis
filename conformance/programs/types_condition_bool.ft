@@ -1,0 +1,15 @@
+// accept
+// covers: LANG-05-03
+pure func classify(count: Int, ready: Bool) Int {
+  if ready {
+    return 1
+  }
+  if count > 3 && !ready {
+    return 2
+  }
+  let mut n: Int<0..> = 0
+  while n < count {
+    n = n + 1
+  }
+  return n
+}

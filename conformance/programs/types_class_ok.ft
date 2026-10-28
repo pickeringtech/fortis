@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-09-01
+export class Counter {
+  count: Int
+  export limit: Int = 10
+  const step = 1
+  export pure func create() Counter => Counter(count: 0)
+  export pure func current(self) Int => self.count
+  export func bump(editable self) Void {
+    self.count = self.count + Counter.step
+  }
+}

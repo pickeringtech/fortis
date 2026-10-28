@@ -1,0 +1,11 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-01
+try func half(n: Int) Int => n
+recovers func run(n: Int, flag: Bool) Int {
+  let o = half(n)                          // reject: E-OBL-001 — open at the early return
+  if flag {
+    return 1
+  }
+  discard o or recover 0
+  return 0
+}

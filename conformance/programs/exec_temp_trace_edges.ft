@@ -1,0 +1,54 @@
+// execute: after none|made 1|cleanup 1|after some|made 2|consume 2|cleanup 2|after arm
+// execute-trace: drop Handle|drop Handle
+// requires: runtime
+// covers: LANG-07-07
+// 7.9: discarding an absent optional announces nothing. A match arm that moves its binding does not announce
+// that binding again after the arm; the consuming callee announces it once.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  export func consume(owned self) Void {
+    self.console.print("consume ${self.id}")
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export enum Choice {
+  One(h: Handle)
+  Empty
+}
+
+func none() Handle? {
+  return null
+}
+
+func some(console: Shared[Console]) Handle? {
+  return Handle.make(1, alias console)
+}
+
+func run(console: Shared[Console]) Void {
+  discard none()
+  console.print("after none")
+  discard some(console)
+  console.print("after some")
+  match Choice.One(h: Handle.make(2, alias console)) {
+    One(h: h) => { move h.consume() }
+    Empty => {}
+  }
+  console.print("after arm")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

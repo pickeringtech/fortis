@@ -1,0 +1,18 @@
+import fortis.host { Host }
+
+func applyAll(steps: List[dynamic fn(Int) Int], start: Int) Int {
+  let mut value = start
+  for step in steps {
+    value = step(value)
+  }
+  return value
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let bonus = 10
+  let double: dynamic fn(Int) Int = fn(n: Int) Int => Int.saturatingMul(n, 2)
+  let addBonus: dynamic fn(Int) Int = fn[bonus](n: Int) Int => Int.saturatingAdd(n, bonus)
+  let steps = List.of(move double, move addBonus)
+  caps.console.print("${applyAll(steps, 5)}")
+}

@@ -1,0 +1,6 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-03-06
+try func half(n: Int) Int => n
+try func render(n: Int) String {
+  return "value ${half(n) or fail}"       // reject: E-SYN-000 — an interpolation may not handle an outcome
+}

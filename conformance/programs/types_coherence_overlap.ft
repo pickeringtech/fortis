@@ -1,0 +1,9 @@
+// reject: E-TYP-100 (at the marked line)
+// covers: LANG-06-10
+export class Tag derive Equatable {
+  export name: String
+}
+
+implement Equatable for Tag {              // reject: E-TYP-100 — Tag already derives Equatable
+  pure func equals(self, other: Tag) Bool => true
+}

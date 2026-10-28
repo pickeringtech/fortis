@@ -1,0 +1,43 @@
+// Repro (FRICTION entry 34): a `catch` whose block moves the failure and returns, inside a `for` loop, is
+// accepted by both checkers and passes on the interpreter, but the VM refuses the whole program:
+//   compiler/target/release/fortisc test pilot/repro/catch-in-loop.ft
+//   -> "the typed IR is invalid (C1.move main::function inLoop:25 `e` is used after it was moved): a compiler
+//       defect"
+// The same `catch` outside a loop (`outsideLoop`) is accepted. Related to move-in-returning-branch.ft.
+export error Big {
+  code: "probe.big"
+}
+
+pure try func check(n: Int) Void {
+  if n > 5 {
+    fail Big()
+  }
+}
+
+pure try recovers func sink(f: owned Failure) Int {
+  let lost: Outcome[Int] = Outcome.failure(move f)
+  return move lost or recover -1
+}
+
+pure try recovers func inLoop(items: List[Int]) Int {
+  for n in items {
+    check(n) catch e {
+      let v = sink(move e) or fail
+      return v
+    }
+  }
+  return 0
+}
+
+pure try recovers func outsideLoop(n: Int) Int {
+  check(n) catch e {
+    let v = sink(move e) or fail
+    return v
+  }
+  return 0
+}
+
+test "loop" {
+  expect (inLoop(List.of(1, 9)) or fail) == -1
+  expect (outsideLoop(9) or fail) == -1
+}

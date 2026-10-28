@@ -1,0 +1,4 @@
+// reject: E-SYN-000 (at the marked line)
+export model Widget {
+  key id: Int<1..
+}                                         // reject: E-SYN-000 — the refinement opened on the line above is never closed

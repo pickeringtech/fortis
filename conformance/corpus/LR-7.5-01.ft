@@ -1,0 +1,10 @@
+// reject: E-OWN-001, E-OWN-020 (at the marked lines)
+let user = User(name: copy name, age: 30)
+let mut independent = copy user
+let seen = alias user
+rename(editable independent, "Richard")
+enqueue(move independent)
+// reject: E-OWN-001 — assignment of an existing ownership-bearing place without a marker
+let other = user
+// reject: E-OWN-020 — independent was moved
+let again = alias independent

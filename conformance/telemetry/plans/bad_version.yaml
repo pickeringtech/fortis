@@ -1,0 +1,8 @@
+# E-TEL-002: a version the registry does not hold
+telemetry:
+  projections:
+    p:
+      source: OrderProcessing.v9   # expect: E-TEL-002
+      metrics:
+        - name: p.count
+          instrument: counter

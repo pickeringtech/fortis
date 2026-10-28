@@ -1,0 +1,3 @@
+// Signature module for `fortis.collections` (Language Reference 6.7): growth APIs beyond the prelude's
+// core operations live here (the `alloc` feature set enables them).
+export trusted pure func sorted(items: ListView[Int]) List[Int]

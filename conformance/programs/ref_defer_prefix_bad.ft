@@ -1,0 +1,18 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02, LANG-12-01
+// A deferred `c.v = 1` holds after its block only if nothing else in the body writes `c.v`, `c` or a field of it (the
+// D-75 rule); here `c = Cell(v: 0)` replaces the cell after it, so `c.v` is 0 at the division.
+export class Cell {
+  export v: Int<0..1>
+}
+
+export func f() Int {
+  let mut c = Cell(v: 0)
+  {
+    defer {
+      c.v = 1
+      c = Cell(v: 0)
+    }
+  }
+  return 10 / c.v                            // reject: E-REF-002 — the deferred body ends with `c.v == 0`
+}

@@ -1,0 +1,12 @@
+// execute: 6|3
+// requires: runtime
+// covers: LANG-08-02
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let doubled = List.of(1, 2, 3).map(fn(x: Int) Int => Int.wrappingMul(x, 2))
+  caps.console.print("${doubled.get(2) ?? 0}")
+  let evens = List.of(1, 2, 3, 4, 5, 6).countWhere(fn(x: Int) Bool => x % 2 == 0)
+  caps.console.print("${evens}")
+}

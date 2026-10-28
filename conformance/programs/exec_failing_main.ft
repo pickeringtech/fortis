@@ -1,0 +1,15 @@
+// execute: before|fail:demo.boom
+// requires: runtime
+// covers: LANG-04-06
+import fortis.host { Host }
+
+export error Boom {
+  code: "demo.boom"
+  payload { reason: String }
+}
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("before")
+  fail Boom(reason: "on purpose")
+}

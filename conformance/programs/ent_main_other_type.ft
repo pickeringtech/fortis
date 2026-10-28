@@ -1,0 +1,6 @@
+// accept
+// covers: LANG-04-06
+// A module-level type whose name is not List, String or Void leaves 4.6's signature meaning the prelude types.
+export class Args {}
+
+export func main(args: List[String]) Void {}

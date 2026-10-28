@@ -1,0 +1,15 @@
+// illustrative
+import fortis.web.components { SafeHtml }
+
+server component Counter {
+  state { count: Int<0..1000000> }
+
+  try action increment(editable self) Void {
+    let next = Int.add(self.state.count, 1) or fail
+    self.state.count = Int<0..1000000>.validate(next) or fail
+  }
+
+  view {
+    <button on:click=${increment}>Count: ${self.state.count}</button>
+  }
+}

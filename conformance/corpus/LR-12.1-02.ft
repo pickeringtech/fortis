@@ -1,0 +1,10 @@
+// accept
+import fortis.host { FileSystem, Path }
+try func copyFile(fs: FileSystem, source: Path, target: Path) Void {
+  let mut input = fs.open(source) or fail
+  defer { editable input.close() }            // checked at each exit; input must still be owned there
+  let mut output = fs.create(target) or fail
+  defer { editable output.close() }
+  let data = editable input.readAll() or fail  // the defer holds no loan, so this is fine
+  editable output.writeAll(data) or fail
+}

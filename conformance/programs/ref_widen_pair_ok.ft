@@ -1,0 +1,10 @@
+// accept
+// covers: LANG-06-02
+// The accepted repair: accumulate into an unrefined Int with a checked operation and validate once (6.3).
+pure try func sumTo(n: Int<0..1000>) Int<0..500500> {
+  let mut total: Int = 0
+  for i in 0..n {
+    total = Int.add(total, i) or fail
+  }
+  return Int<0..500500>.validate(total) or fail
+}

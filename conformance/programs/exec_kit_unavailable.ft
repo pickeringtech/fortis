@@ -1,0 +1,10 @@
+// execute: dynamic:kit not available: `Db` comes from fortis.data, which this kernel does not implement
+// requires: runtime
+import fortis.host { Host }
+import fortis.data { Db }
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let db = Db.connect("postgres://localhost/app") or fail
+  caps.console.print("unreachable")
+}

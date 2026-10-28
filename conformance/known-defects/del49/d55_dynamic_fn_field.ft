@@ -1,0 +1,12 @@
+import fortis.host { Host }
+
+class Step {
+  export run: dynamic fn(Int) Int
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let step = Step(run: fn(n: Int) Int => Int.saturatingMul(n, 2))
+  let f = alias step.run
+  caps.console.print("${f(4)}")
+}

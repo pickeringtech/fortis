@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-06-02
+// Interval arithmetic: refined operands prove the operators (6.3, 6.4).
+pure func sums(a: Int<0..100>, b: Int<0..100>, d: Int<1..10>) Int<0..300> {
+  let s = a + b                              // [0, 200]
+  let p = d * 2                              // [2, 20]
+  let q = a / d                              // [0, 100]: the divisor excludes zero
+  let r = a % d                              // [0, 9]
+  let sh = d << 2                            // [4, 40]
+  let neg = -a                               // [-100, 0]
+  return s + p
+}

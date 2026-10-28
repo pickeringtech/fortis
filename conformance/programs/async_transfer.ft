@@ -1,0 +1,41 @@
+// accept — src/transfers.ft in package acme.bank
+// Deciding-cycle program 3: an async try handler that opens a transaction, awaits finds on it,
+// writes through the generated model API, and either commits by moving the transaction or leaves
+// the Abandonable transaction to roll back on `or fail` (Platform 5.1, 5.4).
+import fortis.data { Db, Tx }
+import fortis.host { Clock }
+import fortis.money { Money }
+import acme.bank.accounts { Account, AccountId, Receipt }
+
+export error InsufficientFunds {
+  code: "bank.transfer.insufficient_funds"
+  payload { available: Money, requested: Money }
+  message: "Requested ${requested} exceeds available ${available}"
+}
+
+export error AccountMissing {
+  code: "bank.account.missing"
+  payload { id: AccountId }
+  message: "No account ${id}"
+}
+
+export async try func transfer(db: Db, clock: Clock, source: AccountId, target: AccountId, amount: Money) Receipt {
+  let mut tx = db.transaction()                                      // returns the linear Tx (Platform 5.4)
+  let mut debit = await Account.find(tx, source) or fail            // a read: no marker (LR 7.5)
+  if debit == null {
+    fail AccountMissing(id: source)                                 // tx is abandoned on unwind: rollback
+  }
+  let mut credit = await Account.find(tx, target) or fail
+  if credit == null {
+    fail AccountMissing(id: target)
+  }
+  if Money.greaterThan(amount, debit.balance) {
+    fail InsufficientFunds(available: debit.balance, requested: amount)
+  }
+  debit.balance = Money.subtract(debit.balance, amount) or fail
+  credit.balance = Money.add(credit.balance, amount) or fail
+  await editable debit.save(editable tx) or fail
+  await editable credit.save(editable tx) or fail
+  await move tx.commit() or fail                                    // consumes the linear handle
+  return Receipt(source: source, target: target, amount: amount, postedAt: clock.now())
+}

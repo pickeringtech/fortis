@@ -1,0 +1,12 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-11-09
+// The hooks' effects join the function's summary: a nondeterministic before hook breaks the target's `pure` claim.
+import fortis.host { Clock }
+export aspect stamped() {
+  needs clock: Clock
+  before {
+    discard clock.now()                    // reject: E-EFF-001 — nondet under pure
+  }
+}
+@stamped()
+pure func work(clock: Clock, n: Int) Int => n

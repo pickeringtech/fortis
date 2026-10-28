@@ -1,0 +1,378 @@
+{
+ "Void": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Never": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Bool": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Int": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Int8": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Int16": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Int32": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Int64": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "UInt": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "UInt8": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "UInt16": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "UInt32": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "UInt64": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Byte": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Float32": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Float": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Decimal": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Duration": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Instant": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Timestamp": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Scalar": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Int?": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "(Int, Bool)": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "{ a: Int, b: Bool }": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Int<0..9>": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Point": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Status": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "UserId": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "BigInt": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "String": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Bytes": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "List[Int]": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "List[String]": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Array[Int, 4]": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Map[String, Int]": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "OrderedMap[String, Int]": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Set[Int]": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "FixedList[Int, 4]": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "FixedMap[String, Int, 4]": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "(Int, String)": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "{ a: Int, b: String }": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Person": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Money": {
+  "trivial": false,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "Currency": {
+  "trivial": true,
+  "copyable": true,
+  "shareable": true,
+  "linear": false
+ },
+ "StringView": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": false,
+  "linear": false
+ },
+ "BytesView": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": false,
+  "linear": false
+ },
+ "ListView[Int]": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": false,
+  "linear": false
+ },
+ "Shared[Int]": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": true,
+  "linear": false
+ },
+ "Weak[Int]": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": true,
+  "linear": false
+ },
+ "Mutex[Int]": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": true,
+  "linear": false
+ },
+ "AtomicInt": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": true,
+  "linear": false
+ },
+ "AtomicBool": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": true,
+  "linear": false
+ },
+ "Future[Int]": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": false,
+  "linear": true
+ },
+ "Task[Int]": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": false,
+  "linear": true
+ },
+ "Outcome[Int]": {
+  "trivial": false,
+  "copyable": false,
+  "linear": true
+ },
+ "Failure": {
+  "trivial": false,
+  "copyable": false,
+  "linear": true
+ },
+ "Must": {
+  "trivial": false,
+  "copyable": false,
+  "linear": true
+ },
+ "List[Outcome[Int]]": {
+  "trivial": false,
+  "copyable": false,
+  "linear": true
+ },
+ "List[Shared[Int]]": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": true,
+  "linear": false
+ },
+ "Outcome[Int]?": {
+  "trivial": false,
+  "copyable": false,
+  "linear": true
+ },
+ "fn(Int) Int": {
+  "trivial": false,
+  "copyable": false,
+  "linear": false
+ },
+ "Report": {
+  "trivial": false,
+  "linear": false
+ },
+ "Handle": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": false,
+  "linear": true
+ },
+ "Cache": {
+  "trivial": false,
+  "copyable": false,
+  "shareable": true,
+  "linear": false
+ }
+}

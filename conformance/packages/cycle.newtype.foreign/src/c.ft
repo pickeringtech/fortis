@@ -1,0 +1,13 @@
+// reject: E-TYP-040 (at the marked line)
+// LANG-04-04 (D-35): a and b import each other, and a's `take` takes b's newtype `Small`. c declares a newtype of the
+// same name and representation, which is a different type (6.9). a is checked first and loads b's table, so the
+// check enters the cycle at b and builds a's table while b's is still being built; before D-35 was fixed, `take`'s
+// parameter named no declaration there and c's own `Small` was accepted for it.
+import cycle.newtype.foreign.a { take }
+
+type Small = Int<0..10>
+
+func mine(s: Small) Int {
+  discard take(s)                       // reject: E-TYP-040 — c's Small is not b's Small
+  return 0
+}

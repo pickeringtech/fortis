@@ -1,0 +1,15 @@
+// execute: 5|h|3
+// requires: runtime
+// covers: LANG-06-06
+import fortis.host { Host }
+import fortis.text { Scalar }
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let word = "hello"
+  caps.console.print("${word.scalarCount()}")
+  let first = word.scalarAt(0) or fail
+  caps.console.print("${first}")
+  let piece = word.slice(2, 5) or fail
+  caps.console.print("${piece.scalarCount()}")
+}

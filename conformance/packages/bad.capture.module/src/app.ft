@@ -1,0 +1,39 @@
+// reject: E-FUN-011, E-NAM-001 (at the marked lines)
+// LANG-08-03 (X-230, D-136): a capture entry names a local or parameter (8.3). A module alias, a module constant and a
+// function are module-level names, not captures; the lambda's body names them directly, so a member named through a
+// captured alias is checked there as anywhere else (bad.module.member checks the other positions).
+import bad.capture.module.util as util
+
+const limit: Int = 3
+
+func helper() Int => 1
+
+func viaAlias() Int {
+  let f = fn[copy util]() Int => util.clamp(1)        // reject: E-FUN-011 — util is a module alias
+  return f()
+}
+
+func viaConst() Int {
+  let g = fn[limit]() Int => limit                    // reject: E-FUN-011 — limit is a module constant
+  return g()
+}
+
+func viaFunction() Int {
+  let h = fn[helper]() Int => helper()                // reject: E-FUN-011 — helper is a function
+  return h()
+}
+
+func capturedCall() Int {
+  let f = fn[copy util]() Int => util.missing()       // reject: E-FUN-011, E-NAM-001 — util declares no missing
+  return f()
+}
+
+func capturedValue() Int {
+  let f = fn[copy util]() Int => util.gone            // reject: E-FUN-011, E-NAM-001 — util declares no gone
+  return f()
+}
+
+func direct() Int {
+  let k = fn() Int => util.clamp(limit)
+  return k()
+}

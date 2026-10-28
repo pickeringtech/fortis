@@ -1,0 +1,43 @@
+// execute: built new|new
+// covers: PLAT-03-02, PLAT-03-04
+// A child binding that replaces a more specific parent binding leaves the parent's instance unbuilt: selection
+// never reaches it, so the child does not construct it (an eager parent factory that fails or allocates has no
+// effect on the child).
+import fortis.host { Host, Console, Capabilities }
+
+export class Gateway {
+  name: String
+}
+
+export class Checkout {
+  inject gateway: Shared[Gateway]
+}
+
+export func openOld(console: Shared[Console]) Shared[Gateway] {
+  console.print("built old")
+  return Shared.create(Gateway(name: "old"))
+}
+
+export func openNew(console: Shared[Console]) Shared[Gateway] {
+  console.print("built new")
+  return Shared.create(Gateway(name: "new"))
+}
+
+context Production(console: owned Shared[Console]) {
+  provide Shared[Console] using instance move console
+  provide Shared[Gateway] using factory openOld to Checkout.gateway { lifetime: application }
+  provide Checkout
+}
+
+context Staging {
+  provide Shared[Gateway] using factory openNew replaces { lifetime: application }
+  parent Production
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  let staging = Staging.application(console.retain())
+  console.print(staging.checkout().gateway.name)
+}

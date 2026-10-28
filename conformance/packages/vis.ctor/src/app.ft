@@ -1,0 +1,6 @@
+// reject: E-NAM-004 (at the marked line)
+import vis.ctor.util { Thing }
+
+export func main(args: List[String]) Void {
+  let t = Thing(secret: 1, open: 2)       // reject: E-NAM-004 — the constructor needs every field visible (9.2)
+}

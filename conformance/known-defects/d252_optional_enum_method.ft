@@ -1,0 +1,25 @@
+// D-252: `?.code()` on an optional enum value is a method call; the interpreter prints 1|1, the VM stops with
+// "no payload field `code`" and the native build fails (E0615).
+import fortis.host { Host }
+
+enum Light derive Equatable {
+  Red
+  Amber
+
+  export pure func code(self) Int {
+    return match self {
+      Red => 1
+      Amber => 2
+    }
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut lights: List[Light] = List.default()
+  editable lights.push(Light.Red)
+  for l in lights {
+    caps.console.print("${l.code()}")
+  }
+  caps.console.print("${lights.get(0)?.code() ?? 0}")
+}

@@ -1,0 +1,11 @@
+// accept
+// covers: LANG-11-02
+export class Cell {
+  export value: Int
+  export pure func set(editable self, value: Int) Void {
+    self.value = value
+  }
+}
+pure func through(c: editable Cell) Void {
+  editable c.set(3)
+}

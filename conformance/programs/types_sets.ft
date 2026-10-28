@@ -1,0 +1,26 @@
+// accept
+// Six declared types for the trivial/copyable/shareable/linear sets report (6.11, 6.12, 12.7).
+export trivial class Point {
+  export x: Int
+  export y: Int
+}
+
+export class Person {
+  export name: String
+  export age: Int
+}
+
+export enum Status {
+  Draft
+  Issued(at: Timestamp)
+}
+
+export type UserId = Int<1..>
+
+export class Handle {
+  task: Task[Int]
+}
+
+export class Cache {
+  entries: Shared[List[Int]]
+}

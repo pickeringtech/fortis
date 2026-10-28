@@ -1,0 +1,11 @@
+// reject: E-OBS-012 (at the marked line)
+// covers: LANG-13-01
+observation Trace {
+  tier: Int                          required: all
+}
+@observe(Trace)
+func process(n: Int) Int {
+  capture tier = n
+  capture colour = n                       // reject: E-OBS-012 — not a field of Trace
+  return n
+}

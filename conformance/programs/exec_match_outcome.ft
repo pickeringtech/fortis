@@ -1,0 +1,33 @@
+// execute: ok 4|failed demo.odd
+// requires: runtime
+// covers: LANG-10-01
+import fortis.host { Host }
+
+export error Odd {
+  code: "demo.odd"
+  payload { value: Int }
+}
+
+try func half(n: Int) Int {
+  if n % 2 == 1 {
+    fail Odd(value: n)
+  }
+  return n / 2
+}
+
+func show(n: Int) String {
+  return match half(n) {
+    success(v) => "ok ${v}"
+    failure(f) => {
+      let text = "failed ${f.code}"
+      report f
+      give move text
+    }
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print(show(8))
+  caps.console.print(show(7))
+}

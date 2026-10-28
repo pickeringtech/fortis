@@ -1,0 +1,15 @@
+// native: E-INT-002 (error[E0308]: mismatched types): assigning a generic `T` to a `T?` place is lowered without
+// the present injection (`Some`). The interpreter and the VM print `5`.
+import fortis.host { Host }
+
+pure func wrap[T](value: T) T? where T implements Copyable {
+  let mut out: T? = null
+  out = copy value
+  return move out
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let w: Int? = wrap(5)
+  caps.console.print("${w ?? 0}")
+}

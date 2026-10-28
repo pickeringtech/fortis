@@ -1,0 +1,9 @@
+// reject: E-TYP-080 (at the marked line)
+// covers: LANG-09-03
+export interface Scorer {
+  pure func score(self, value: Int<0..100>) Int
+}
+
+export class Halver implements Scorer {    // reject: E-TYP-080 — narrows the parameter and drops pure
+  export func score(self, value: Int<0..50>) Int => 0
+}

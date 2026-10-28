@@ -1,0 +1,58 @@
+// execute: made 1|held|cleanup 1|after let|made 2|returned|cleanup 2|after return|made 3|boxed|cleanup 3|after box|made 4|eaten|cleanup 4|after eat
+// execute-trace: loans-end|drop Handle|loans-end|drop Handle|drop Handle
+// requires: runtime
+// covers: LANG-07-07
+// 7.9: a field moved out of a temporary at a binding, a return, a constructor or an owned argument
+// leaves that temporary. The temporary is still destroyed, and it does not destroy the field again.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export class Box {
+  export h: Handle
+}
+
+func take(console: Shared[Console]) Handle {
+  return Box(h: Handle.make(2, alias console)).h
+}
+
+func eat(h: owned Handle, console: Shared[Console]) Void {
+  console.print("eaten")
+}
+
+func run(console: Shared[Console]) Void {
+  {
+    let h = Box(h: Handle.make(1, alias console)).h
+    console.print("held")
+  }
+  console.print("after let")
+  {
+    let h = take(alias console)
+    console.print("returned")
+  }
+  console.print("after return")
+  {
+    let b = Box(h: Box(h: Handle.make(3, alias console)).h)
+    console.print("boxed")
+  }
+  console.print("after box")
+  eat(Box(h: Handle.make(4, alias console)).h, console)
+  console.print("after eat")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

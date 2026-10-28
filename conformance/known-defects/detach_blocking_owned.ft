@@ -1,0 +1,16 @@
+// D-182 (docs/delivery/defects.json): a `launchBlocking` task whose closure owns its captures may be detached (12.5:
+// it holds no loan). The interpreter and the VM run it and print `detached|end`; natively the blocking work is always
+// registered as a local child, so `detach` fails at run time ("detach of a task whose future holds a loan").
+import fortis.host { Host, Capabilities }
+
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: console, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  scope tasks {
+    let s = String.from("abc")
+    let t = tasks.launchBlocking(fn once[move s]() Int => s.scalarCount())
+    tasks.detach(move t, sup)
+    console.print("detached")
+  }
+  console.print("end")
+}

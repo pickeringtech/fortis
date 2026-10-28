@@ -1,0 +1,10 @@
+// reject: E-EFF-010 (at the marked line)
+// covers: LANG-11-07
+// D-110: `Host.capabilities` taken as a function value would let a program create the capabilities wherever the value
+// is called; it is never a value (11.6).
+import fortis.host { Host, Capabilities }
+export func main(args: List[String]) Void {
+  let make = Host.capabilities             // reject: E-EFF-010 — Host.capabilities is never a value
+  let caps = make()
+  caps.console.print("made")
+}

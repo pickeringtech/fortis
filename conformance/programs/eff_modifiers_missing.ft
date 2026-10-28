@@ -1,0 +1,8 @@
+// reject: E-EFF-001 (at the marked lines)
+// covers: LANG-11-05, LANG-11-01
+try func half(n: Int) Int => n
+async try func fetch(n: Int) Int => n
+recovers func suspends(n: Int) Int {
+  return await fetch(n) or recover 0       // reject: E-EFF-001 — suspends without `async`
+}
+export func discharges(n: Int) Int => half(n) or recover 0   // reject: E-EFF-001 — recovers without the modifier

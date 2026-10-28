@@ -1,0 +1,8 @@
+// accept
+import fortis.host
+
+export class Holder {
+  export path: host.Path
+}
+
+export func held(p: host.Path) Holder => Holder(path: copy p)

@@ -1,0 +1,10 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-11-01
+// The blocking pool runs synchronous work: an async closure is not assignable to its `fn() T` parameter (11.3, 12.5).
+async func fetch() Int => 1
+async func run() Int {
+  scope tasks {
+    let t = tasks.launchBlocking(async fn() Int => await fetch())   // reject: E-TYP-040 — a blocking pool runs no async work
+    return await t
+  }
+}

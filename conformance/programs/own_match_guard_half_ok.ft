@@ -1,0 +1,45 @@
+// accept
+// covers: LANG-10-01
+// Neighbours of own_match_guard_half.ft: every path consumes the outcome, including a guard that
+// always runs because its pattern is irrefutable.
+try func make() Int => 1
+
+recovers func consume(o: owned Outcome[Int]) Bool {
+  discard o or recover 0
+  return false
+}
+
+recovers func everyArm(n: Int) Void {
+  let o = make()
+  match n {
+    0 => {
+      discard o or recover 0
+    }
+    _ => {
+      discard o or recover 0
+    }
+  }
+}
+
+recovers func guardAlways(n: Int) Void {
+  let o = make()
+  match n {
+    _ when consume(move o) => {
+    }
+    _ => {
+    }
+  }
+}
+
+recovers func laterGuard(n: Int) Void {
+  let o = make()
+  match n {
+    0 => {
+      discard o or recover 0
+    }
+    _ when consume(move o) => {
+    }
+    _ => {
+    }
+  }
+}

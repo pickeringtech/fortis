@@ -1,0 +1,6 @@
+# E-TEL-004: a transform naming a field the schema does not declare
+telemetry:
+  privacy:
+    transforms:
+      OrderProcessing:
+        phone: hash   # expect: E-TEL-004

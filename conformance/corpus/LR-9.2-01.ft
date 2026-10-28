@@ -1,0 +1,3 @@
+// accept
+let response = CustomerResponse(...copy customer)
+let summary = CustomerSummary(...copy customer, invoiceCount: count)

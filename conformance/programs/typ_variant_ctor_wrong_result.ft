@@ -1,0 +1,22 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-01
+// One enum owns `Red`, so the unprefixed name is unambiguous (9.7). Where a function type is expected it denotes
+// that enum's constructor, `pure fn() Light`. The constructor does not meet `fn() Int`, nor `fn() Paint` when
+// `Paint` does not declare `Red` (D-253).
+enum Light {
+  Red
+  Green
+}
+
+enum Paint {
+  Blue
+  Green
+}
+
+pure func takeInt(f: fn() Int) Int => 1
+
+pure func takePaint(f: fn() Paint) Int => 1
+
+pure func passInt() Int => takeInt(Red)       // reject: E-TYP-040 — result Light is not Int
+
+pure func passPaint() Int => takePaint(Red)   // reject: E-TYP-040 — result Light is not Paint

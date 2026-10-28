@@ -1,0 +1,9 @@
+// reject: E-OWN-001 (at the marked lines)
+// covers: LANG-07-01
+// An expression body is the return of its expression: an existing place needs a marker there too (7.1; X-118).
+export class Doc {
+  export name: String
+  export func title(self) String => self.name             // reject: E-OWN-001
+  export func copied(self) String => copy self.name
+}
+func label(d: Doc) String => d.name                        // reject: E-OWN-001

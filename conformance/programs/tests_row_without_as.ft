@@ -1,0 +1,8 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-14-01
+pure func double(n: Int) Int => Int.wrappingAdd(n, n)
+test "doubling" cases {
+  "one": { n: 1, expected: 2 }
+} {                                        // reject: E-SYN-000 — rows must be bound explicitly with `as`
+  expect double(n) == expected
+}

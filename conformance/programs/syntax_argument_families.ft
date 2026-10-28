@@ -1,0 +1,7 @@
+// accept
+// covers: LANG-05-06
+export pure func g(x: Int, flag: Bool) Int => x
+
+export pure func f(a: Int?, b: Int, c: Bool, d: Bool) Int {
+  return g(a ?? b, c || d)                // separate arguments: not E-SYN-004
+}

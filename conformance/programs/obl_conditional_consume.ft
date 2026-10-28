@@ -1,0 +1,54 @@
+// reject: E-OBL-001 (at the marked lines)
+// covers: LANG-10-01
+// A conditional operand consumes a linear outcome only when it runs (5.7, 10.1, 10.2).
+// `||`, `&&`, `??`, `or recover` and `catch` used to keep one ownership state, so the
+// skipped operand's consume was treated as unconditional. An irrefutable `when` copies
+// that state into the next arm.
+export error EmptyCart {
+  code: "probe.empty"
+}
+
+try func load(n: Int) Int {
+  if n < 0 {
+    fail EmptyCart()
+  }
+  return n
+}
+
+recovers func viaRecover() Int {
+  let a = load(1)
+  let b = load(-1)                          // reject: E-OBL-001 — the handler that consumes b runs only on failure
+  return a or recover (b or recover 0)
+}
+
+recovers func viaOr(flag: Bool) Bool {
+  let b = load(-1)                          // reject: E-OBL-001 — the right of || runs only when flag is false
+  return flag || (b or recover 0) == 0
+}
+
+recovers func viaAnd(flag: Bool) Bool {
+  let b = load(-1)                          // reject: E-OBL-001 — the right of && runs only when flag is true
+  return flag && (b or recover 0) == 0
+}
+
+recovers func viaNull(p: Int?) Int {
+  let b = load(-1)                          // reject: E-OBL-001 — the ?? fallback runs only when p is null
+  return p ?? (b or recover 0)
+}
+
+recovers func viaCatch() Int {
+  let a = load(1)
+  let b = load(-1)                          // reject: E-OBL-001 — the catch handler runs only on failure
+  return a catch e {
+    discard b or recover 0
+    recover 0
+  }
+}
+
+recovers func viaGuard(n: Int, flag: Bool) Int {
+  let b = load(-1)                          // reject: E-OBL-001 — an irrefutable guard's || still skips the consume
+  return match n {
+    k when flag || (b or recover 0) == 0 => k
+    _ => 0
+  }
+}

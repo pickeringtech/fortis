@@ -1,0 +1,8 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-07-06
+pure func plus(n: Int) Int => n
+func run(xs: List[Int]) Int {
+  let mut cursor = alias xs.iterate()
+  let item = editable cursor.next()
+  return plus(item)                        // reject: E-TYP-040 — next yields (alias Int from self)?, not Int
+}

@@ -1,0 +1,6 @@
+// reject: E-SYN-000 (at the marked line)
+export error Odd {
+  code: "x.odd"
+  payload { n: Int }
+  message: "${null}"                       // reject: E-SYN-000 — a placeholder is a payload field name
+}

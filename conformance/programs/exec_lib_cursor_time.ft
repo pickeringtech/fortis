@@ -1,0 +1,22 @@
+// execute: a|b|c|true|false
+// requires: runtime
+// covers: LANG-05-03
+// List.iterate gives a cursor over read loans; Timestamp ordering (15).
+import fortis.host { Host }
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let letters = List.of("a", "b", "c")
+  let mut cursor = letters.iterate()
+  loop {
+    match editable cursor.next() {
+      present(s) => caps.console.print(s)
+      null => {
+        break
+      }
+    }
+  }
+  let start = Timestamp.epoch()
+  let later = Timestamp.add(start, Duration.seconds(5)) or recover start
+  caps.console.print("${Timestamp.after(later, start)}")
+  caps.console.print("${Timestamp.before(later, start)}")
+}

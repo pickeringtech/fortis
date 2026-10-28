@@ -1,0 +1,11 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-11-03
+// Appendix C.3 and X-125: a cooperative `launch` is allocation-free only for a future that fits the scope's inline
+// storage declared by the runtime host; the v1 host declares none (SP-04-async), so a launch allocates.
+noalloc async func add(a: Int, b: Int) Int => Int.wrappingAdd(a, b)
+noalloc async func launched(n: Int) Int {
+  scope tasks {
+    let t = tasks.launch(add(n, 1))        // reject: E-EFF-001 — a cooperative launch allocates under the v1 host
+    return await t
+  }
+}

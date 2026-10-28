@@ -1,0 +1,10 @@
+// accept
+// covers: LANG-06-09
+try func half(n: Int) Int => n
+recovers func run(n: Int, flag: Bool) Int {
+  let maybe: Outcome[Int]? = if flag { give half(n) } else { give null }
+  return match move maybe {
+    present(o) => o or recover 0
+    null => 0
+  }
+}

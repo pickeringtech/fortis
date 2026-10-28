@@ -1,0 +1,29 @@
+// reject: E-NAM-004 (at the marked lines)
+// LANG-04-05 (D-36): a member util does not export is not visible here in any position a module alias names it: a
+// type (also as a type argument, reported once), a constant expression and a place, as in a call or a value
+// (vis.decl, where the typer reports it). Each record lists util's exported members as candidates.
+import vis.module.member.util as util
+
+func boxed(b: util.Box) Int => b.n
+
+func typed(s: util.Secret) Int => 0     // reject: E-NAM-004 — util does not export Secret
+
+const outer: Int = util.limit
+
+const copiedInner: Int = util.inner     // reject: E-NAM-004 — util does not export inner
+
+func placed() Int => copy util.inner    // reject: E-NAM-004 — util does not export inner
+
+func held() Int {
+  let h = util.Holder[util.Secret](item: null)   // reject: E-NAM-004 — util does not export Secret
+  return 0
+}
+
+func nested() Int {
+  let h = Pair[Pair[util.Secret]](item: null)    // reject: E-NAM-004 — util does not export Secret
+  return 0
+}
+
+class Pair[T] {
+  item: T?
+}

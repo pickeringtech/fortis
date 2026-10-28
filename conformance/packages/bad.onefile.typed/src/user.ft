@@ -1,0 +1,8 @@
+// reject: E-TYP-040
+// Checked on its own, this module's type error is reported even though the sibling failed the name check. The
+// package check still reports the sibling and does not type-check (D-51.8).
+import bad.onefile.typed.util { limit }
+
+export pure func use() Int => limit()
+
+export pure func broken() Int => true

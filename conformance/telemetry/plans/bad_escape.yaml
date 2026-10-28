@@ -1,0 +1,11 @@
+# E-TEL-004: a quoted scalar with an escape outside the plan's YAML subset
+telemetry:
+  projections:
+    p:
+      source: OrderProcessing.v2
+      where:
+        field: sku
+        equals: "sku\x31"   # expect: E-TEL-004
+      metrics:
+        - name: p.count
+          instrument: counter

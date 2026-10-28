@@ -1,0 +1,33 @@
+// execute: quick|slow start|slow end|sum 7
+// execute-trace: launch quick#1|launch slow#2|suspend main|start quick#1|complete quick#1|resume main|join quick#1|suspend main|start slow#2|suspend slow#2|time 10ms|complete slow#2|resume main|join slow#2|loans-end
+// requires: runtime
+// covers: LANG-12-04
+// A recovered child failure leaves its sibling running: the scope block continues and joins the sibling normally.
+import fortis.host { Host, Console, Clock }
+export error Bad {
+  code: "demo.bad"
+}
+async try func quick(console: Console) Int {
+  console.print("quick")
+  fail Bad()
+}
+async func slow(console: Console, clock: Clock) Int {
+  console.print("slow start")
+  await clock.sleep(10ms)
+  console.print("slow end")
+  return 7
+}
+async recovers func run(console: Console, clock: Clock) Int {
+  scope tasks {
+    let first = tasks.launch(quick(console))
+    let second = tasks.launch(slow(console, clock))
+    let x = await first or recover 0
+    let y = await second
+    return Int.wrappingAdd(x, y)
+  }
+}
+export async recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let sum = await run(caps.console, caps.clock)
+  caps.console.print("sum ${sum}")
+}

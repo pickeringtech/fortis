@@ -1,0 +1,63 @@
+// execute: moved|cleanup 1|outer defer|nested|cleanup 2|outer defer|held|cleanup 3|outer defer|done
+// requires: runtime
+// covers: LANG-05-02, LANG-07-07
+// Moving a closure, nesting it in another closure, or returning it does not postpone its captures until
+// after an enclosing defer (7.9, D-181). The closure is destroyed with the block that holds it.
+import fortis.host { Host, Console, Capabilities }
+
+export class Res {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+func moved(console: Shared[Console]) Void {
+  defer { console.print("outer defer") }
+  {
+    let r = Res(id: 1, console: console.retain())
+    let f = pure noalloc fn[move r]() Int => r.id
+    let g = move f
+    discard g
+    console.print("moved")
+    return
+  }
+}
+
+func nested(console: Shared[Console]) Void {
+  defer { console.print("outer defer") }
+  {
+    let r = Res(id: 2, console: console.retain())
+    let f = pure noalloc fn[move r]() Int => r.id
+    let g = pure noalloc fn[move f]() Int => f()
+    discard g
+    console.print("nested")
+    return
+  }
+}
+
+func make(console: Shared[Console]) fn() Int {
+  let r = Res(id: 3, console: console.retain())
+  return pure noalloc fn[move r]() Int => r.id
+}
+
+func held(console: Shared[Console]) Void {
+  defer { console.print("outer defer") }
+  {
+    let g = make(console)
+    discard g
+    console.print("held")
+    return
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  moved(console)
+  nested(console)
+  held(console)
+  console.print("done")
+}

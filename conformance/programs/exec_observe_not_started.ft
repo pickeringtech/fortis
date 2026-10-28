@@ -1,0 +1,62 @@
+// execute: quick|recovered -1|quick|recovered -1
+// reports: observation-frame:outcome=failure|task-lifecycle:state=not_started|observation-frame:outcome=not_started|observation-frame:outcome=failure|observation-frame:outcome=failure|task-lifecycle:state=not_started|observation-frame:outcome=not_started|observation-frame:outcome=failure
+// requires: runtime
+// covers: LANG-13-02
+// D-27 (13): an observed activation whose task is cancelled before it starts produces a frame marked `not_started`
+// without any captured fields, after the task's `not_started` lifecycle record, on every backend, whether the task
+// was launched from the call or from a future bound first and moved to another local.
+import fortis.host { Host, Console }
+
+export error Bad {
+  code: "demo.bad"
+}
+
+observation Work {
+  step: Int required: none
+}
+
+@observe(Work)
+async try func quick(console: Console) Int {
+  capture step = 1
+  console.print("quick")
+  fail Bad()
+}
+
+@observe(Work)
+async func late(console: Console) Int {
+  capture step = 2
+  console.print("late ran")
+  return 1
+}
+
+@observe(Work)
+async try func run(console: Console) Int {
+  capture step = 0
+  scope tasks {
+    let first = tasks.launch(quick(console))
+    let second = tasks.launch(late(console))
+    let x = await first or fail
+    return Int.wrappingAdd(x, await second)
+  }
+}
+
+@observe(Work)
+async try func runBound(console: Console) Int {
+  capture step = 3
+  scope tasks {
+    let first = tasks.launch(quick(console))
+    let pending = late(console)
+    let moved = move pending
+    let second = tasks.launch(move moved)
+    let x = await first or fail
+    return Int.wrappingAdd(x, await second)
+  }
+}
+
+export async recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let r = await run(caps.console) or recover -1
+  caps.console.print("recovered ${r}")
+  let s = await runBound(caps.console) or recover -1
+  caps.console.print("recovered ${s}")
+}

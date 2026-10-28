@@ -1,0 +1,21 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-06-08, LANG-10-01
+// A `when` guard narrows in its arm (LR 6.8, 9.8), and a `failure` binding of an owned outcome is an
+// obligation that arm must consume (LR 10.1). Reading the narrowed place does not consume the binding.
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+}
+
+try func make(n: Int) Int => n
+
+export func dropped(n: Int, p: Cell?) Bool {
+  return match make(n) {
+    failure(f) when p != null => p.read()   // reject: E-OBL-001 — f is not consumed
+    success(_) => false
+    failure(f) => {
+      report f
+      give false
+    }
+  }
+}

@@ -1,0 +1,17 @@
+[package]
+name = "fortis-vm"
+description = "The Fortis development VM (Programme 2.1, 6.1): executes the validated typed IR with tagged values and reference counting"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fortis-mir = { path = "../fortis-mir" }
+fortis-runtime = { path = "../fortis-runtime" }
+fortis-types = { path = "../fortis-types" }
+fortis-diag = { path = "../fortis-diag" }
+
+[features]
+# the apparatus check of SP-07 (spikes/SP-07/design.md 13): fault switches read from FORTIS_RELOAD_FAULT; never in a
+# default build
+reload-faults = []

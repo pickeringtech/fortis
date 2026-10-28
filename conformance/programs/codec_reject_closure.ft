@@ -1,0 +1,7 @@
+// reject: E-TYP-090 (at the marked line)
+// covers: LANG-06-10
+// DEL-29 exclusion 5 of 7: a closure is code plus captures; it has no canonical encoding.
+export class Rule derive Encodable {      // reject: E-TYP-090
+  export name: String
+  export accepts: pure fn(Int) Bool
+}

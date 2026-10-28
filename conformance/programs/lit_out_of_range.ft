@@ -1,0 +1,17 @@
+// reject: E-REF-001 (at the marked lines)
+// covers: LANG-03-05
+// An integer literal must fit its target type; the literal's interval is exact (3.5).
+pure func ranges() Void {
+  let a: Int8 = 128                        // reject: E-REF-001
+  let b: Int16 = -32769                    // reject: E-REF-001
+  let c: Int32 = 2147483648                // reject: E-REF-001
+  let d: Int64 = 9223372036854775808       // reject: E-REF-001
+  let e: UInt8 = 256                       // reject: E-REF-001
+  let f: UInt16 = 65536                    // reject: E-REF-001
+  let g: UInt32 = -1                       // reject: E-REF-001
+  let h: UInt64 = -1                       // reject: E-REF-001
+  let i: Byte = 0x100                      // reject: E-REF-001
+  let j: Int = 0x8000_0000_0000_0000       // reject: E-REF-001
+  let k: UInt = 18446744073709551616       // reject: E-REF-001
+  let m: Int<0..100> = 101                 // reject: E-REF-001
+}

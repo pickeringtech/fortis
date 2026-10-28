@@ -1,0 +1,19 @@
+// Expanded contract modifiers (LR 11.5, X-130): the name stays; the single-word modifiers it stands for follow it.
+export contract FastCalculation {
+  pure
+  noalloc
+}
+
+export contract Lean {
+  noalloc
+}
+
+export FastCalculation func square(value: Int<-1000000..1000000>) Int => value * value
+
+// `pure` is written already: only `noalloc` is added
+export FastCalculation pure func cube(value: Int<-1000..1000>) Int => value * value * value
+
+export class Gauge {
+  export level: Int
+  export Lean func doubled(self) Int => Int.wrappingMul(self.level, 2)
+}

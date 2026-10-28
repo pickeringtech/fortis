@@ -1,0 +1,18 @@
+// execute: ok
+// requires: runtime
+// covers: LANG-04-03, LANG-09-07
+// `money.Currency.GBP` kept as a function value is fortis.money's variant, not this program's enum of the
+// same name (D-142).
+import fortis.host { Host }
+import fortis.money as money
+
+enum Currency {
+  Fake
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let f: fn() money.Currency = money.Currency.GBP
+  let v = f()
+  caps.console.print("ok")
+}

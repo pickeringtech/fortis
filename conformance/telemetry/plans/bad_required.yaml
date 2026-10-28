@@ -1,0 +1,9 @@
+# E-TEL-004: a plan may not add a required field
+telemetry:
+  projections:
+    p:
+      source: OrderProcessing
+      required: [email]   # expect: E-TEL-004
+      metrics:
+        - name: p.count
+          instrument: counter

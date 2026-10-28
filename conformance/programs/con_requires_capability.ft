@@ -1,0 +1,7 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-11-06
+import fortis.host { Clock }
+contract Timed {
+  requires capability Clock
+}
+Timed func tick(n: Int) Int => n            // reject: E-EFF-001 — Timed requires capability Clock: no Clock parameter

@@ -1,0 +1,2 @@
+// Not in exp.lib's `exports:`, so no other package may import it (4.3); its own package may.
+export pure func base() Int => 40

@@ -1,0 +1,3 @@
+// accept
+import acme.util.strings { shout }
+export pure func f() String => shout("x")

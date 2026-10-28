@@ -1,0 +1,22 @@
+// reject: E-TYP-040
+// A local FileSystem is not fortis.host.FileSystem inside a type argument. The outer List
+// (or Map, Set, Array) is one prelude type, so comparing only its origin accepts the move.
+import fortis.host
+
+class FileSystem {
+  n: Int
+}
+
+func kept(xs: owned List[FileSystem]) List[FileSystem] => move xs
+func hostKept(xs: owned List[host.FileSystem]) List[host.FileSystem] => move xs
+
+func wrong(xs: owned List[FileSystem]) List[host.FileSystem] => move xs
+func mapWrong(xs: owned Map[String, FileSystem]) Map[String, host.FileSystem] => move xs
+func keyWrong(xs: owned Map[FileSystem, Int]) Map[host.FileSystem, Int] => move xs
+func setWrong(xs: owned Set[FileSystem]) Set[host.FileSystem] => move xs
+func nestWrong(xs: owned List[List[FileSystem]]) List[List[host.FileSystem]] => move xs
+func optWrong(xs: owned List[FileSystem?]) List[host.FileSystem?] => move xs
+func ordWrong(xs: owned OrderedMap[String, FileSystem]) OrderedMap[String, host.FileSystem] => move xs
+func arrWrong(xs: owned Array[FileSystem, 4]) Array[host.FileSystem, 4] => move xs
+func fixWrong(xs: owned FixedList[FileSystem, 4]) FixedList[host.FileSystem, 4] => move xs
+func fixMapWrong(xs: owned FixedMap[String, FileSystem, 4]) FixedMap[String, host.FileSystem, 4] => move xs

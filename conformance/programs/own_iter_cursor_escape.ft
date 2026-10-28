@@ -1,0 +1,6 @@
+// reject: E-OWN-051 (at the marked line)
+// covers: LANG-07-06
+func first(xs: ListView[Int]) ListCursor[Int] from xs {
+  let local = List.of(1, 2)
+  return alias local.iterate()             // reject: E-OWN-051 — the cursor borrows a local
+}

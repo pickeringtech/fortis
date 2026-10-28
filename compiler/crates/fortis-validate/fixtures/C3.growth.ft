@@ -1,0 +1,5 @@
+// DEL-45 fixture for C3.growth: list growth allocates (here, outside noalloc).
+func build() List[Int] => List.of(1, 2)
+export func main(args: List[String]) Void {
+  discard build().count()
+}

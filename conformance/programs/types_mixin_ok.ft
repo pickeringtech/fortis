@@ -1,0 +1,18 @@
+// accept
+// covers: LANG-09-04
+export mixin Summarised {
+  requires pure func title(self) String
+  requires pure func lineCount(self) Int
+  export pure func summary(self) String => "${self.title()} (${self.lineCount()} lines)"
+}
+
+export mixin Tagged {
+  export pure func tag(self) String => "tagged"
+}
+
+export class Report with Summarised, Tagged {
+  export name: String
+  export pure func title(self) String => copy self.name
+  export pure func lineCount(self) Int => 3
+  export pure func tag(self) String => "report"      // the class's own method takes precedence
+}

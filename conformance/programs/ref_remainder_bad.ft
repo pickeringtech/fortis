@@ -1,0 +1,6 @@
+// reject: E-REF-001 (at the marked line)
+// covers: LANG-06-02
+pure func rem(a: Int, d: Int<1..10>) Int {
+  let x: Int<0..9> = a % d                   // reject: E-REF-001 — a may be negative: [-9, 9]
+  return x
+}

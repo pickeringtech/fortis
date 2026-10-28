@@ -1,0 +1,91 @@
+// execute: order 2|drop a|drop b|partial made|partial 5|drop first|drop second|drop taken|drop kept|once 5|once after|drop param capture|param 13|param after|reassign 3|drop one|reassign 3|drop two|drop argument|drop held|consumed 12|consumed after|drop lambda param|lambda 12|end
+// requires: runtime
+// covers: LANG-07-07
+// 7.9 (X-250; D-30): a closure owns its `copy`, `move` and bare captures. Destroying it destroys those its body has
+// not moved out, in capture-list order, whichever capture the body names first, and the whole of a captured value even
+// when the body reads one field. A `move f()` call consumes the closure: it is destroyed when the call returns, after
+// the call's owned parameters. A closure passed to an `owned` parameter goes with that parameter, and assigning to a
+// binding destroys the closure it held.
+import fortis.host { Host, Console, Capabilities }
+
+export class Res {
+  console: Shared[Console]
+  label: String
+  cleanup(editable self) Void {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+export class Pair {
+  first: Res
+  second: Res
+}
+
+func order(console: Shared[Console]) Void {
+  let a = Res(console: console.retain(), label: "a")
+  let b = Res(console: console.retain(), label: "b")
+  let f = fn[move a, move b]() Int => Int.wrappingAdd(b.label.scalarCount(), a.label.scalarCount())
+  console.print("order ${f()}")
+}
+
+func partial(console: Shared[Console]) Void {
+  let p = Pair(first: Res(console: console.retain(), label: "first"), second: Res(console: console.retain(), label: "second"))
+  let f = fn[move p]() Int => p.first.label.scalarCount()
+  console.print("partial made")
+  console.print("partial ${f()}")
+}
+
+func consume(r: owned Res) Int => r.label.scalarCount()
+
+func callOnce(console: Shared[Console]) Void {
+  let a = Res(console: console.retain(), label: "kept")
+  let b = Res(console: console.retain(), label: "taken")
+  let f = fn once[move a, move b]() Int => consume(move b)
+  console.print("once ${move f()}")
+  console.print("once after")
+}
+
+func take(f: owned fn() Int) Int => f()
+
+func ownedParam(console: Shared[Console]) Void {
+  let a = Res(console: console.retain(), label: "param capture")
+  console.print("param ${take(fn[move a]() Int => a.label.scalarCount())}")
+  console.print("param after")
+}
+
+func counter(r: owned Res) fn() Int => fn[move r]() Int => r.label.scalarCount()
+
+func reassign(console: Shared[Console]) Void {
+  let mut f = counter(Res(console: console.retain(), label: "one"))
+  console.print("reassign ${f()}")
+  f = counter(Res(console: console.retain(), label: "two"))
+  console.print("reassign ${f()}")
+}
+
+func consumedWithParam(console: Shared[Console]) Void {
+  let held = Res(console: console.retain(), label: "held")
+  let f = fn once[move held](x: owned Res) Int => Int.wrappingAdd(x.label.scalarCount(), held.label.scalarCount())
+  let arg = Res(console: console.retain(), label: "argument")
+  console.print("consumed ${move f(move arg)}")
+  console.print("consumed after")
+}
+
+func ownedLambdaParam(console: Shared[Console]) Void {
+  let r = Res(console: console.retain(), label: "lambda param")
+  let f = fn(x: owned Res) Int => x.label.scalarCount()
+  console.print("lambda ${f(move r)}")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  order(console)
+  partial(console)
+  callOnce(console)
+  ownedParam(console)
+  reassign(console)
+  consumedWithParam(console)
+  ownedLambdaParam(console)
+  console.print("end")
+}

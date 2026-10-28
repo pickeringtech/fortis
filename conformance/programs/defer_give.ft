@@ -1,0 +1,8 @@
+// reject: E-DEF-001 (at the marked line)
+// covers: LANG-12-01
+func run(n: Int) Int {
+  defer {
+    give n                                 // reject: E-DEF-001
+  }
+  return n
+}

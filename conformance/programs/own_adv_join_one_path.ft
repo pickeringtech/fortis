@@ -1,0 +1,16 @@
+// reject: E-OWN-020 (at the marked line)
+// covers: LANG-07-04
+export class Box {
+  export label: String
+}
+func consume(b: owned Box) Void {
+}
+func run(flag: Bool, other: Bool) Int {
+  let box = Box(label: "a")
+  if flag {
+    if other {
+      consume(move box)
+    }
+  }
+  return box.label.scalarCount()           // reject: E-OWN-020 — moved on one nested path
+}

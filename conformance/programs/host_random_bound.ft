@@ -1,0 +1,5 @@
+// reject: E-REF-001 (at the marked line)
+// covers: LANG-11-07
+// The Random contract needs bound >= 1; the adapter's signature refuses a zero bound statically.
+import fortis.host { Random }
+func roll(r: Random) Int => r.below(0)           // reject: E-REF-001 — Int<1..> excludes 0

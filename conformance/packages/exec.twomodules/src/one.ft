@@ -1,0 +1,11 @@
+class Node {
+  label: String
+  func show(self) String => "first ${self.label}"
+}
+
+func helper() String => "first helper"
+
+export func first() String {
+  let n = Node(label: "a")
+  return "${n.show()} ${helper()}"
+}

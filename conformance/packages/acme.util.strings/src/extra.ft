@@ -1,0 +1,2 @@
+// accept
+export pure func extra() Int => 1

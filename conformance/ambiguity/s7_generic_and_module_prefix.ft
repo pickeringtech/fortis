@@ -1,0 +1,11 @@
+// accept — S7: generic type arguments and module-qualified types
+import fortis.text
+import fortis.money { Money, Currency }
+pure func run() Int {
+  let mut b = text.Builder.create()
+  editable b.append("x")
+  let m = Money.of(Currency.GBP, 1d)
+  let xs: List[Int] = List.default()
+  let ys = List[Int].default()
+  return xs.count()
+}

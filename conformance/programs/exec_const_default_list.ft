@@ -1,0 +1,19 @@
+// execute: 3 3 2 10|8
+// requires: runtime
+// covers: LANG-09-02
+// A field default is a constant expression (9.1, 5.1), which may call a constant-foldable `Type.of(...)`
+// constructor; its arguments are evaluated like any call's. (Defect D-22: every backend dropped them, so the
+// default was an empty list.)
+import fortis.host { Host }
+export class Policy {
+  limits: List[Int] = List.of(10, 20, 30)
+  size: Int = 4
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let p = Policy()
+  let q = Policy(limits: List.of(1, 2))
+  let l = copy p.limits
+  caps.console.print("${p.limits.count()} ${l.count()} ${q.limits.count()} ${p.limits.get(0) ?? -1}")
+  caps.console.print("${Int.wrappingMul(p.size, 2)}")
+}

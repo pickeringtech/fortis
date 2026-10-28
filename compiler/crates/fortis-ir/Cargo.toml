@@ -1,0 +1,11 @@
+[package]
+name = "fortis-ir"
+version.workspace = true
+edition.workspace = true
+description = "Frontend IR: the declaration IR and the control-flow graph of each body"
+
+[dependencies]
+fortis-syntax = { path = "../fortis-syntax" }
+fortis-diag = { path = "../fortis-diag" }
+fortis-types = { path = "../fortis-types" }
+fortis-names = { path = "../fortis-names" }

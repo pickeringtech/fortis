@@ -1,0 +1,19 @@
+// execute: done
+// reports: observation-frame:truncated=['label']
+// requires: runtime
+// covers: LANG-13-03
+// 13: a String field is bounded by the schema; a longer value is truncated and the frame records which field was.
+import fortis.host { Host }
+observation Trace {
+  label: String<scalars: 0..4>       required: all
+}
+@observe(Trace)
+func work(text: String) Int {
+  capture label = text
+  return 1
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  discard work("abcdefgh")
+  caps.console.print("done")
+}

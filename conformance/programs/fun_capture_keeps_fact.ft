@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-06-02
+func run(n: Int) Int<0..100> {
+  let mut m = 0
+  if n >= 0 && n <= 100 {
+    m = n
+    let peek = fn[alias m]() Int => m
+    discard peek()
+    return m
+  }
+  return 0
+}

@@ -1,0 +1,7 @@
+// accept
+// covers: LANG-03-06
+try func half(n: Int) Int => n
+recovers func render(n: Int) String {
+  let h = half(n) or recover 0
+  return "value ${h} of ${n}"
+}

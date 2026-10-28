@@ -1,0 +1,4 @@
+// reject: E-SYN-000 (at the marked line)
+export pure func f() String {
+  return "${1 // }"                        // reject: E-SYN-000 — no comment inside an interpolation (LR 3.6)
+}

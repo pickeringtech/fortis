@@ -1,0 +1,9 @@
+// accept — S2: record types, record patterns and block arms
+pure func area(r: { width: Int, height: Int }) Int {
+  return match r {
+    { width: w, height: h } => {
+      let a = Int.saturatingMul(w, h)
+      give a
+    }
+  }
+}

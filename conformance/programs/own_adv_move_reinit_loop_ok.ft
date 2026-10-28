@@ -1,0 +1,15 @@
+// accept
+// covers: LANG-07-04
+export class Box {
+  export label: String
+}
+func consume(b: owned Box) Void {
+}
+func run(n: Int<0..3>) Void {
+  let mut box = Box(label: "a")
+  for i in 0..n {
+    consume(move box)
+    box = Box(label: "b")
+  }
+  consume(move box)
+}

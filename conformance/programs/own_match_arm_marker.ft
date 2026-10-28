@@ -1,0 +1,35 @@
+// reject: E-OWN-001 (at the marked lines)
+// covers: LANG-07-01
+// A `=>` expression arm hands its value to the enclosing binding exactly like `give` (9.8): an existing
+// ownership-bearing place needs `move` or `copy` there (7.5). Without the marker the checkers accepted the
+// program and native then failed with E0507, a move out of borrowed content (D-159).
+export class User {
+  export name: String
+  export age: Int
+}
+
+export enum Slot {
+  Empty
+  Full(label: String)
+}
+
+func pickName(user: User, flag: Bool) String {
+  return match flag {
+    true => user.name                       // reject: E-OWN-001 — a field of a loaned parameter, no marker
+    false => String.from("anonymous")
+  }
+}
+
+func nameOf(opt: User?) String {
+  return match opt {
+    present(u) => u.name                    // reject: E-OWN-001 — a field through a payload's read loan
+    null => String.from("anonymous")
+  }
+}
+
+func takeLabel(slot: owned Slot) String {
+  return match move slot {
+    Full(label: l) => l                     // reject: E-OWN-001 — an owned payload needs move or copy
+    Empty => String.from("none")
+  }
+}

@@ -1,0 +1,4 @@
+// illustrative
+defer {
+  statements
+}

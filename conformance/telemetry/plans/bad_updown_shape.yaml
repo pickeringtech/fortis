@@ -1,0 +1,14 @@
+# E-TEL-003: a lifecycle without an end
+telemetry:
+  projections:
+    s:
+      source: Session
+      bind_at: lifecycle_start
+      metrics:
+        - name: s.open
+          instrument: updown
+          lifecycle:   # expect: E-TEL-003
+            key: session
+            start:
+              field: phase
+              equals: 1

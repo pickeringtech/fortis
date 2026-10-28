@@ -1,0 +1,6 @@
+// reject: E-DI-010
+// PLAT-03-01 (D-138): a package is checked with its dependencies, elaborated as they are, so a dependency's
+// Dependency injection findings are reported with it, by both checkers.
+import wiring.library.wiring { Pool }
+
+func size() Int => Pool().size

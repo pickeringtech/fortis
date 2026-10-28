@@ -1,0 +1,8 @@
+// reject: E-OWN-020 (at the marked line)
+// covers: LANG-07-04
+func run(xs: owned List[String]) Int {
+  for x in move xs {
+    discard x.scalarCount()
+  }
+  return xs.count()                        // reject: E-OWN-020 — xs was consumed by the loop
+}

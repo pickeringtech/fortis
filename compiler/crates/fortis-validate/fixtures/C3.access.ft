@@ -1,0 +1,10 @@
+// DEL-45 fixture for C3.access: field access in a noalloc function.
+export class User {
+  export name: String
+  export age: Int
+}
+noalloc func nameLength(u: User) Int => u.name.scalarCount()
+export func main(args: List[String]) Void {
+  let u = User(name: "ada", age: 36)
+  discard nameLength(u)
+}

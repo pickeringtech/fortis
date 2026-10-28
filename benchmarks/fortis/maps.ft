@@ -1,0 +1,13 @@
+// Maps: count ten million keys over a thousand buckets.
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut counts: Map[Int, Int] = Map.default()
+  for i in 0..<10_000_000 {
+    let key = Int.wrappingMul(i, 7919) % 1000
+    let seen = counts.get(key) ?? 0
+    editable counts.set(key, Int.wrappingAdd(seen, 1))
+  }
+  caps.console.print("${counts.count()} ${counts.get(17) ?? 0}")
+}

@@ -1,0 +1,38 @@
+// execute: gone 1|gone 2|a
+// execute-trace: drop Noisy|drop Noisy
+// requires: runtime
+// covers: LANG-07-07
+// 9.2, 7.9: `...move` consumes the source. Fields the target lacks are dropped at the spread, in the source's
+// declaration order, and their cleanup runs before the new value is used.
+import fortis.host { Host, Console, Capabilities }
+
+export class Noisy {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("gone ${self.id}")
+  }
+}
+
+export class Wide {
+  export name: String
+  export extra: Noisy
+  export tail: Noisy
+}
+
+export class Narrow {
+  export name: String
+}
+
+func run(console: Shared[Console]) Void {
+  let w = Wide(name: "a", extra: Noisy(id: 1, console: console.retain()), tail: Noisy(id: 2, console: console.retain()))
+  let n = Narrow(...move w)
+  console.print(n.name)
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

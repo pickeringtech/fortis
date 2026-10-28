@@ -1,0 +1,8 @@
+// accept
+// covers: LANG-05-06
+pure func grouped(a: Bool, b: Int<0..100>?, c: Int<0..100>, d: Int<0..100>) Bool {
+  let v = (b ?? c) + d * 2 - 1
+  let w = a || (v > 3 && v < 10)
+  let bits = (v & 3) | (v ^ 1)
+  return w && bits >= 0
+}

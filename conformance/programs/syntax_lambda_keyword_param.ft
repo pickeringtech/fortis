@@ -1,0 +1,6 @@
+// reject: E-SYN-002 (at the marked line)
+// covers: LANG-03-04
+export pure func f() Int {
+  let pick = fn(view) Int => 1             // reject: E-SYN-002 — `view` is reserved
+  return pick(0)
+}

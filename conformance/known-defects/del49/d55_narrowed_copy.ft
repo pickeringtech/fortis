@@ -1,0 +1,16 @@
+// native: E-INT-002 (error[E0308]): `copy name` of a `String?` parameter narrowed to `String` by `name != null`
+// is lowered without unwrapping. The interpreter and the VM print `anonymous` and `Bo`.
+import fortis.host { Host }
+
+pure func nickname(name: String?) String {
+  if name != null {
+    return copy name
+  }
+  return "anonymous"
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print(nickname(null))
+  caps.console.print(nickname("Bo"))
+}

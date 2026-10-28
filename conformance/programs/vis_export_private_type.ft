@@ -1,0 +1,9 @@
+// reject: E-TYP-030 (at the marked line)
+// An exported signature may name only exported types (4.4).
+class Ledger {
+  entries: List[Int]
+}
+
+export pure func open() Ledger {          // reject: E-TYP-030 — Ledger is not exported
+  return Ledger(entries: List.of())
+}

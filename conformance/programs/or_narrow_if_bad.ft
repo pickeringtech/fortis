@@ -1,0 +1,15 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// D-51.6: `||` does not narrow (LR 6.3, 6.8), and an `if` condition is no exception: neither branch of the
+// condition's `||` holds `p` present, and the true branch of the `if` gets no fact from it either.
+export class Limit {
+  export most: Int
+  export pure func holds(self, n: Int) Bool => n <= self.most
+}
+
+export pure func inIf(p: Limit?, n: Int) Bool {
+  if p == null || p.holds(n) {              // reject: E-TYP-040 — `||` did not narrow `p`
+    return true
+  }
+  return false
+}

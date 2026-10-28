@@ -1,0 +1,21 @@
+// execute: matched|typed|viewed
+// requires: runtime
+// covers: LANG-03-04
+// A keyword may name a method or associated function, and is admitted after `.` (memberName), though not as a
+// binding (3.4).
+import fortis.host { Host }
+
+export class Probe {
+  export label: String
+  export pure func match(self) String => "matched"
+  export pure func type(self) String => "typed"
+  export pure func view(self) String => "viewed"
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let p = Probe(label: "p")
+  caps.console.print(p.match())
+  caps.console.print(p.type())
+  caps.console.print(p.view())
+}

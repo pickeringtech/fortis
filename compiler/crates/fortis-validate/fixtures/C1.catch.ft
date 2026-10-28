@@ -1,0 +1,17 @@
+// DEL-45 fixture for C1.catch (recover/return semantics): the catch block ends in `recover`.
+export error Bad {
+  code: "fixture.bad"
+}
+try func check(n: Int) Int {
+  if n > 9 {
+    fail Bad()
+  }
+  return n
+}
+export func main(args: List[String]) Void {
+  let v = check(30) catch e {
+    report e
+    recover 0
+  }
+  discard v
+}

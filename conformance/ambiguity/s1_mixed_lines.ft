@@ -1,0 +1,6 @@
+// accept — S1: a refinement and a comparison on one line
+pure func mixed(a: Int<0..9>, b: Int) Bool => a < b
+pure func validateIt(raw: Int) Bool {
+  let v = Int<0..9>.validate(raw) or recover 0
+  return v < 5
+}

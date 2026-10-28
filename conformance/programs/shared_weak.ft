@@ -1,0 +1,18 @@
+// accept
+// covers: LANG-07-08
+// Shared/Weak API as Language Reference 7.8 states: retain, downgrade, upgrade; no copy.
+// `upgrade` is nondet (another task may have dropped the last strong handle), so this is not `pure`.
+import fortis.text
+
+export class Node {
+  export label: String
+}
+
+export func describe(root: Shared[Node]) String {
+  let handle = root.retain()                 // another strong handle; `copy root` would be E-OWN-002
+  let weak = handle.downgrade()
+  let again = weak.upgrade() ?? root.retain()
+  return "${again.label} (${root.label})"
+}
+
+export pure func share(root: Shared[Node]) Shared[Node] => root.retain()   // retain has no effects: pure is fine

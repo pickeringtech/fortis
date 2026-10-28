@@ -1,0 +1,16 @@
+// LANG-04-04 (D-134): `tools` is the package's root module, so `import root.identity` and
+// `import root.identity.tools` name the same module, and its types are the same types however an import names it:
+// a braced import of the package (here), a plain one (`identity.Kind` in both) and an alias of the full path
+// (`full.Kind`), with both and tools importing each other. A `Helper` built here passes to third's `show`, which
+// imports the module by its full path.
+import fortis.host { Host }
+import root.identity { Helper, Kind, kindOf }
+import root.identity.both { same }
+import root.identity.third { show }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let h = Helper(n: 4)
+  let two = same(kindOf(h)) == Kind.Two
+  caps.console.print("${show(h)} ${two}")
+}

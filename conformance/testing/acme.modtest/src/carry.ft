@@ -1,0 +1,12 @@
+// Imports the observation and not the alias it records. Kind is not a name of this module. The plan step resolves
+// the field in the module that declares the observation, where Kind is an alias of Int, so the noalloc claim holds.
+import acme.modtest.numbers { Trace }
+
+@observe(Trace)
+export noalloc func traced() Int {
+  return 1
+}
+
+test "an imported observation of an alias of Int runs" {
+  expect traced() == 1
+}

@@ -1,0 +1,12 @@
+// reject: E-DI-011 (at the marked line)
+// covers: PLAT-03-03
+export class Repo {
+  size: Int = 1
+}
+export class Service {
+  inject lazy repo: Repo                   // reject: E-DI-011 — lazy edges
+}
+context Production {
+  provide Repo
+  provide Service
+}

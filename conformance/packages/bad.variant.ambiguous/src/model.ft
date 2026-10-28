@@ -1,0 +1,17 @@
+// reject: E-NAM-001 (at the marked line)
+// Two enums of the module declare `Red`, and `let red = Red` gives no expected type: 9.7 lets the prefix be left
+// out only where the expected type is that enum, so the bare name is ambiguous (D-253).
+enum Light {
+  Red
+  Green
+}
+
+enum Paint {
+  Red
+  Blue
+}
+
+func picked() Int {
+  let red = Red                           // reject: E-NAM-001 — `Red` is ambiguous
+  return 1
+}

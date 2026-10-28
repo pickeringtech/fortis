@@ -1,0 +1,160 @@
+// accept
+// covers: LANG-06-02, LANG-09-05
+// What the fixes of D-70..D-77 and D-79 keep proved: narrowing by a comparison whose operands have no effects, a ranged
+// loop whose body loans another place, a `while` without `break`, a `break` whose state proves the fact, an `if`
+// expression or `match` whose every path sets the place, a deferred body whose operations are safe at every exit, a
+// deferred literal assignment (or negated literal) seen after its block, an uncalled lambda's own writes (in a
+// comparison and in a loop),
+// `present(x)` covering the present case, `present(true)` with `present(false)` covering it together, one-field enum
+// payloads covering their variant together, and an irrefutable pattern's guard setting the place on every way on.
+export enum Choice {
+  Flag(value: Bool)
+}
+
+export pure func flags(c: Choice) Int {
+  return match c {
+    Flag(true) => 1
+    Flag(false) => 2
+  }
+}
+
+export func guarded(v: Int, take: Bool) Int {
+  let mut d: Int<0..1> = 0
+  match v {
+    _ when (if take {
+      d = 1
+      give true
+    } else {
+      d = 1
+      give false
+    }) => {}
+    otherwise => {}
+  }
+  return 10 / d
+}
+
+export func lambda_in_loop(xs: ListView[Int]) Int {
+  let mut total = 0
+  for i in 0..<xs.count() {
+    let unused = fn() Void {
+      let mut xs: List[Int] = List.of(1)
+      let gone = editable xs.pop()
+    }
+    total = Int.wrappingAdd(total, xs[i])
+  }
+  return total
+}
+export class Box {
+  export items: List[Int]
+  export other: List[Int]
+}
+
+export class Cell {
+  export v: Int<0..10>
+}
+
+func five(work: fn() Int) Int<1..10> {
+  return 5
+}
+
+export func broken() Int {
+  let mut i: Int<0..1> = 0
+  while i < 1 {
+    i = 1
+    break
+  }
+  return 10 / i
+}
+
+export func deferred_literal() Int {
+  let mut d: Int<0..1> = 0
+  {
+    defer {
+      d = 1
+    }
+  }
+  return 10 / d
+}
+
+export func deferred_negative() Int {
+  let mut d: Int<-1..0> = 0
+  {
+    defer {
+      d = -1
+    }
+  }
+  return 1 / d
+}
+
+export func lambda_writes(c: Cell, arr: Array[Int, 10]) Int {
+  if c.v < five(fn() Int {
+    let mut c: Int = 0
+    c = 1
+    return c
+  }) {
+    return arr[c.v]
+  }
+  return 0
+}
+
+export pure func both_bools(v: Bool?) Int {
+  return match v {
+    null => 0
+    present(true) => 1
+    present(false) => 2
+  }
+}
+
+export func narrowed(xs: ListView[Int], i: Int<0..1000>) Int {
+  if i >= 0 && i < xs.count() {
+    return xs[i]
+  }
+  if i >= xs.count() {
+    return 0
+  }
+  return xs[i]
+}
+
+export func ranged(b: editable Box) Int {
+  let mut total = 0
+  for i in 0..<b.items.count() {
+    total = Int.wrappingAdd(total, b.items[i])
+    editable b.other.push(i)
+  }
+  return total
+}
+
+export func counted(n: Int<1..10>) Int {
+  let mut i: Int<0..10> = 0
+  while i < n {
+    i = i + 1
+  }
+  return 10 / i
+}
+
+export func every_path(take: Bool, v: Int?) Int {
+  let mut d: Int<0..1> = 0
+  let a = if take {
+    d = 1
+    give 0
+  } else {
+    d = 1
+    give 1
+  }
+  let m = match v {
+    null => 1
+    present(x) => 2
+  }
+  return 10 / d + a + m
+}
+
+export func deferred(xs: ListView[Int]) Int {
+  let mut d: Int<1..2> = 1
+  {
+    defer {
+      let q = 10 / d
+    }
+    d = 2
+  }
+  return d
+}

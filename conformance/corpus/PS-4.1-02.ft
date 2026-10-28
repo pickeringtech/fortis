@@ -1,0 +1,2 @@
+// illustrative — src/routes.ft
+export const routes = Routes.of(customers.getCustomer, customers.createCustomer, invoices.getInvoice)

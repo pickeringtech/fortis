@@ -1,0 +1,24 @@
+// both checkers: E-NAM-001 (twice per call, two records at one position) for the associated functions that
+// `derive From[S]` and `derive Default` generate (LR 6.10: `From[S]` is `func from(source: S) Self`, associated;
+// `Default` is `pure func default() Self`); and `c.to()`, which both checkers accept, runs on no backend
+// (interpreter: dynamic error `no method to`; VM and native: unbuilt).
+class Customer {
+  export name: String
+  export age: Int
+}
+
+class Summary derive From[Customer] {
+  export name: String
+}
+
+class Settings derive Default {
+  export retries: Int = 3
+}
+
+test "derived associated functions" {
+  let c = Customer(name: "Ada", age: 36)
+  let s = Summary.from(c)
+  let d = Settings.default()
+  expect s.name == "Ada"
+  expect d.retries == 3
+}

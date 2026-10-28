@@ -1,0 +1,10 @@
+// accept
+// This module imports Kind as well. It must agree with outside.ft: Tagged is copyable either way.
+import facts.copy.sealed { Kind, Tagged }
+
+pure func copied() Tagged {
+  let t = Tagged.first("b")
+  let k = Kind.First
+  let _ = k
+  return copy t
+}

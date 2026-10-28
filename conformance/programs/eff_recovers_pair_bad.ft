@@ -1,0 +1,8 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-10-05
+try func half(n: Int) Int => n
+export func quiet(n: Int) Int {
+  return half(n) catch e {
+    recover 0                              // reject: E-EFF-001 — recovered without a prior report: `recovers` is required
+  }
+}

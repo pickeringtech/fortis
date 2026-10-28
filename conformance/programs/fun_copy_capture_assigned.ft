@@ -1,0 +1,29 @@
+// reject: E-NAM-002 (at the marked lines)
+// covers: LANG-05-01
+// A `copy` capture is read-only in the closure body, in every kind (LR 8.2; X-340(3), D-155): assigning to
+// it is rejected at check time, as the interpreter already refused it at run time. A closure that keeps
+// state captures with `move` into a binding it may edit, or takes an `editable` capture (8.3).
+func run() Void {
+  let base = 10
+  let mut bump = fn mut[copy base]() Int {
+    base = Int.saturatingAdd(base, 1)          // reject: E-NAM-002 — a copy capture may not be reassigned
+    return base
+  }
+  discard editable bump()
+  let plain = fn[copy base]() Int {
+    base = 7                                   // reject: E-NAM-002 — read-only in a fn too; no kind may edit it
+    return base
+  }
+  discard plain()
+  let spent = fn once[copy base]() Int {
+    base = 8                                   // reject: E-NAM-002 — read-only in a fn once too
+    return base
+  }
+  discard move spent()
+  let step = 3
+  let mut bare = fn mut[step]() Int {
+    step = 4                                   // reject: E-NAM-002 — a bare entry copies its value and is read-only
+    return step
+  }
+  discard editable bare()
+}

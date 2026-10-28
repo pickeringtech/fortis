@@ -1,0 +1,14 @@
+[package]
+name = "fortis-native"
+description = "The runtime of natively lowered Fortis programs (DEL-36): typed intrinsics, display, failures, records and development host adapters, on the exact semantics of fortis-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fortis-runtime = { path = "../fortis-runtime" }
+
+[features]
+# the allocator probe of SP-04-async (PROG-CMP-08): a counting global allocator and phase accounting for the
+# futures of `noalloc` async functions; the only `unsafe` code of the runtime, absent from production builds
+alloc-probe = []

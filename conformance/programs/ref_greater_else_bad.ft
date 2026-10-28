@@ -1,0 +1,12 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-70: the else branch of `i > xs.count()` gives only `i <= xs.count()`, which does not permit indexing.
+// Both checkers accepted this module before the fix (they recorded the else branch as `i < xs.count()`); with
+// `xs = [7]` and `i = 1`, `xs[i]` is at the count: the VM's index check halts (`index 1 out of range`), and native
+// code raises the defect `index_out_of_range`.
+export pure func at(xs: ListView[Int], i: Int<0..1000>) Int {
+  if i > xs.count() {
+    return 0
+  }
+  return xs[i]                               // reject: E-REF-002 — i may equal the count
+}

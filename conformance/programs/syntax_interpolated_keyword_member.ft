@@ -1,0 +1,7 @@
+// accept
+// covers: LANG-03-04
+export class Counter {
+  export pure func await(self) Int => 1    // a keyword as a method name (LR 3.4)
+}
+
+export pure func show(c: Counter) String => "${c.await()}"

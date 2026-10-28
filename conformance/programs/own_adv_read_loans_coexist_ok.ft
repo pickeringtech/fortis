@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-07-05
+export class Pair {
+  export left: String
+  export right: String
+}
+func run(p: Pair) Int {
+  let a = alias p.left
+  let b = alias p.right
+  let c = alias p
+  return Int.saturatingAdd(a.scalarCount(), Int.saturatingAdd(b.scalarCount(), c.left.scalarCount()))
+}

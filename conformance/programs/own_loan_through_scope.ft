@@ -1,0 +1,16 @@
+// reject: E-ASY-001, E-OBL-001 (at the marked line)
+// covers: LANG-07-04, LANG-12-05
+// A task may hold a loan of any binding declared in or before the scope block; storing the task outside the
+// scope would let the loan outlive its owner, so a task never leaves its scope (12.5).
+export class Buffer {
+  export used: Int
+}
+async func scan(b: Buffer) Int => b.used
+async func run() Int {
+  let mut kept: Task[Int]? = null
+  scope tasks {
+    let local = Buffer(used: 1)
+    kept = tasks.launch(scan(local))       // reject: E-ASY-001, E-OBL-001 — the task is stored outside the scope (and the optional slot is overwritten and dropped)
+  }
+  return 0
+}

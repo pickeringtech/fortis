@@ -1,0 +1,23 @@
+// Repro (FRICTION entry 28): checking one module of a package by file path gives different findings from
+// checking the package. For this module:
+//   bin/fortis check pilot/repro/copy-imported-optional          -> no findings
+//   bin/fortis check pilot/repro/copy-imported-optional/src/user.ft
+//     -> line 12: E-TYP-090 "derive Equatable: field `code: Code` does not implement Equatable"
+//     -> line 19: E-OWN-002 "`copy plain`: There is not Copyable"; line 21: E-OWN-002 "`copy t`: There? ..."
+// and for outside.ft it is the other way round (the package check reports E-OWN-002, the file check nothing).
+// Docs: README "check it: ... `bin/fortis check mean.ft`"; agent/README "fortis check FILE.ft|DIR"; nothing says
+// a file inside a package is checked differently from the package.
+import repro.copyopt.model { Code }
+
+class There derive Equatable {
+  export code: Code
+}
+
+test "imported" {
+  let c = Code.validate(String.from("GBP")) or fail
+  let plain = There(code: copy c)
+  let plain2 = copy plain
+  let t: There? = There(code: copy c)
+  let t2 = copy t
+  expect c == c
+}

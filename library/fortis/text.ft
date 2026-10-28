@@ -1,0 +1,27 @@
+// `fortis.text` implementation (DEL-26). Signatures equal `reference/library/text.ft`.
+export class Builder {
+  // intrinsic: an empty builder; O(1)
+  export trusted pure func create() Builder
+  // intrinsic: appends the view; amortised O(len)
+  export trusted func append(editable self, text: StringView) Void
+  // intrinsic: appends the view and a line feed; amortised O(len)
+  export trusted func appendLine(editable self, text: StringView) Void
+  // intrinsic: appends one scalar; amortised O(1)
+  export trusted func appendScalar(editable self, s: Scalar) Void
+  // intrinsic: the accumulated text as an owned String; O(total length)
+  export trusted pure func finish(self) String
+}
+export class Scalar {
+  // intrinsic: the single scalar of a one-scalar view; a constant expression for a literal; O(1)
+  export trusted pure func of(text: StringView) Scalar
+  // intrinsic: the value 0-9 of an ASCII decimal digit, null otherwise; O(1)
+  export trusted pure func digitValue(s: Scalar) Int<0..9>?
+  // intrinsic: the value 0-15 of an ASCII hexadecimal digit (either case), null otherwise; O(1)
+  export trusted pure func hexValue(s: Scalar) Int<0..15>?
+}
+// intrinsic: the number of extended grapheme clusters (UAX #29, the rules GB3-GB9c and GB11-GB13 over combining marks, ZWJ sequences and regional-indicator pairs; Hangul syllable rules GB6-GB8 are not yet implemented); O(n)
+export trusted pure func graphemes(text: StringView) Int
+export class Text {
+  // intrinsic: the maximal runs of non-whitespace scalars (Unicode White_Space), in order, as owned strings; allocates; O(n)
+  export trusted pure func words(text: StringView) List[String]
+}

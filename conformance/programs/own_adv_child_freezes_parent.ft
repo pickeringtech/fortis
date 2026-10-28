@@ -1,0 +1,10 @@
+// reject: E-OWN-011 (at the marked line)
+// covers: LANG-07-05
+export class Cell {
+  export value: Int
+}
+func use(c: editable Cell) Int {
+  let child = alias c
+  c.value = 1                              // reject: E-OWN-011 — a read child freezes the exclusive parent
+  return child.value
+}

@@ -1,0 +1,9 @@
+// reject: E-OWN-002, E-TYP-040
+// A local FileSystem must not decide the facts of host.FileSystem, nor accept it.
+import bad.facts.core.model { Box }
+
+export class FileSystem {
+  export n: Int
+}
+
+func duplicate(b: Box) FileSystem => copy b.fs    // reject: E-OWN-002 — host.FileSystem implements Authority

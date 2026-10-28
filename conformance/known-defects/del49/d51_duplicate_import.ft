@@ -1,0 +1,7 @@
+import fortis.money { Money, Currency }
+import fortis.money { Money }
+import fortis.text
+
+export func main(args: List[String]) Void {
+  let m = Money.zero(Currency.GBP)
+}

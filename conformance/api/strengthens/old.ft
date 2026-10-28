@@ -1,0 +1,13 @@
+// API fixture: the previous version.
+export error Empty {
+  code: "api.empty"
+}
+
+export func area(width: Int, height: Int) Int => Int.wrappingMul(width, height)
+
+export try func first(xs: List[Int]) Int {
+  if xs.count() == 0 {
+    fail Empty()
+  }
+  return xs.count()
+}

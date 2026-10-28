@@ -1,0 +1,7 @@
+// accept
+// The same class imported by its bare name, still fortis.host.FileSystem.
+import fortis.host { FileSystem }
+
+export class Wrap {
+  export fs: FileSystem
+}

@@ -1,0 +1,7 @@
+// reject: E-NAM-001 (at the marked line)
+// covers: LANG-04-06
+// 4.6's entry signature names the prelude's List. A module-level class of that spelling matches the tokens and is
+// still not one of the forms (D-51.2).
+export class List[T] {}
+
+export func main(args: List[String]) Void {}   // reject: E-NAM-001 — main's List is not the prelude List

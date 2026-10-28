@@ -1,0 +1,20 @@
+// accept
+// covers: LANG-07-04
+// A `for` binding is a new binding: reusing the name of a binding moved by an earlier loop is not a use after move.
+export class Item {
+  export quantity: Int
+}
+func keep(item: owned Item, into: editable List[Item]) Void {
+  editable into.push(move item)
+}
+export func main(args: List[String]) Void {
+  let stock = List.of(Item(quantity: 1), Item(quantity: 2))
+  let mut kept: List[Item] = List.default()
+  for item in move stock {
+    keep(move item, editable kept)
+  }
+  let mut total = 0
+  for item in kept {
+    total = Int.saturatingAdd(total, item.quantity)
+  }
+}

@@ -1,0 +1,6 @@
+// illustrative
+application Billing {
+  entry: billing.main
+  capabilities: [FileSystem, Network, Clock]
+  shutdownDeadline: 30s
+}

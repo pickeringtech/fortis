@@ -1,0 +1,2 @@
+// Kit signature fixture (DEL-06; Platform 3). The Dependency injection kit's heads (`context`, `provide`
+// inside it, and the `inject` member) elaborate to ordinary declarations (fortis-di); the package exports nothing.

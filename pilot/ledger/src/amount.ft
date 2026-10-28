@@ -1,0 +1,525 @@
+// Amounts of a commodity, held exactly as integer counts of the commodity's smallest unit ("minor units":
+// pennies for GBP at scale 2, whole shares at scale 0), with parsing and formatting of decimal text.
+//
+// `Decimal` would be the natural representation, but the standard library has no way to build one from text,
+// so amounts are integers scaled by the commodity's declared number of decimal places.
+import pilot.ledger.order { sortedBy }
+
+// A commodity code such as GBP, USD or AAPL: one to ten upper-case ASCII letters.
+export type CommodityCode = String<scalars: 1..10>
+
+// The decimal text of an amount is malformed at the given scalar position.
+export error AmountSyntax {
+  code: "ledger.amount.syntax"
+  payload { position: Int }
+  message: "an amount is digits with optional thousands commas and decimals; problem at position ${position}"
+}
+
+// The amount has more decimal places than its commodity allows.
+export error TooPrecise {
+  code: "ledger.amount.too_precise"
+  payload { places: Int, scale: Int }
+  message: "the amount has ${places} decimal places but the commodity has ${scale}"
+}
+
+// A commodity code holds something other than upper-case letters, or has the wrong length.
+export error BadCommodityCode {
+  code: "ledger.amount.bad_code"
+  payload { position: Int }
+  message: "a commodity code is 1 to 10 upper-case letters; problem at position ${position}"
+}
+
+// A commodity and the number of decimal places its amounts are written with.
+export class Commodity {
+  export code: CommodityCode
+  export scale: Int<0..8>
+}
+
+// An exact quantity of one commodity.
+export class Amount derive Equatable {
+  export minor: Int
+  export code: CommodityCode
+
+  // The amount written at the commodity's scale, followed by its code: `-1,234.50 GBP`.
+  export pure func text(self, scale: Int<0..8>) String {
+    let digits = formatAmount(self.minor, scale)
+    return "${digits} ${self.code}"
+  }
+}
+
+// True for the scalars allowed in a commodity code.
+pure try func isUpperLetter(s: Scalar) Bool {
+  let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  let n = letters.scalarCount()
+  for i in 0..<n {
+    let candidate = letters.scalarAt(i) or fail
+    if candidate == s {
+      return true
+    }
+  }
+  return false
+}
+
+// A commodity code from its text.
+export pure try func parseCommodityCode(text: StringView) CommodityCode {
+  let n = text.scalarCount()
+  if n == 0 || n > 10 {
+    fail BadCommodityCode(position: 0)
+  }
+  for i in 0..<n {
+    let s = text.scalarAt(i) or fail
+    let letter = isUpperLetter(s) or fail
+    if !letter {
+      fail BadCommodityCode(position: i)
+    }
+  }
+  return CommodityCode.validate(String.from(text)) or fail
+}
+
+// 10 raised to the scale.
+export pure func powerOfTen(scale: Int<0..8>) Int<1..100000000> {
+  return match scale {
+    0 => 1
+    1 => 10
+    2 => 100
+    3 => 1000
+    4 => 10000
+    5 => 100000
+    6 => 1000000
+    7 => 10000000
+    otherwise => 100000000
+  }
+}
+
+// An amount in minor units from decimal text such as `1,234.5`, `-42`, `+0.25` at the given scale. Thousands
+// commas are optional but, when present, separate groups of exactly three digits.
+export pure try func parseAmount(text: StringView, scale: Int<0..8>) Int {
+  let n = text.scalarCount()
+  if n == 0 {
+    fail AmountSyntax(position: 0)
+  }
+  let first = text.scalarAt(0) or fail
+  let mut i = 0
+  let mut negative = false
+  if first == Scalar.of("-") {
+    negative = true
+    i = 1
+  } else if first == Scalar.of("+") {
+    i = 1
+  }
+  let mut whole = 0
+  let mut wholeDigits = 0
+  let mut groupDigits = 0
+  let mut sawComma = false
+  let mut inFraction = false
+  let mut fraction = 0
+  let mut places = 0
+  while i < n {
+    let s = text.scalarAt(i) or fail
+    let d = Scalar.digitValue(s)
+    if d != null {
+      if inFraction {
+        fraction = Int.mul(fraction, 10) or fail
+        fraction = Int.add(fraction, d) or fail
+        places = Int.add(places, 1) or fail
+      } else {
+        whole = Int.mul(whole, 10) or fail
+        whole = Int.add(whole, d) or fail
+        wholeDigits = Int.add(wholeDigits, 1) or fail
+        groupDigits = Int.add(groupDigits, 1) or fail
+        if sawComma && groupDigits > 3 {
+          fail AmountSyntax(position: i)
+        }
+      }
+    } else if s == Scalar.of(",") {
+      if inFraction || wholeDigits == 0 || (sawComma && groupDigits != 3) || (!sawComma && groupDigits > 3) {
+        fail AmountSyntax(position: i)
+      }
+      sawComma = true
+      groupDigits = 0
+    } else if s == Scalar.of(".") {
+      if inFraction || wholeDigits == 0 || (sawComma && groupDigits != 3) {
+        fail AmountSyntax(position: i)
+      }
+      inFraction = true
+    } else {
+      fail AmountSyntax(position: i)
+    }
+    i = Int.add(i, 1) or fail
+  }
+  if wholeDigits == 0 || (inFraction && places == 0) {
+    fail AmountSyntax(position: n)
+  }
+  if sawComma && !inFraction && groupDigits != 3 {
+    fail AmountSyntax(position: n)
+  }
+  if places > scale {
+    fail TooPrecise(places: places, scale: scale)
+  }
+  let mut padded = fraction
+  let mut k = places
+  while k < scale {
+    padded = Int.mul(padded, 10) or fail
+    k = Int.add(k, 1) or fail
+  }
+  let scaledWhole = Int.mul(whole, powerOfTen(scale)) or fail
+  let magnitude = Int.add(scaledWhole, padded) or fail
+  if negative {
+    return Int.sub(0, magnitude) or fail
+  }
+  return magnitude
+}
+
+// The decimal digits of a magnitude, least significant first; works for negative values too.
+pure func digitsOf(value: Int) List[Int<0..9>] {
+  let mut digits: List[Int<0..9>] = List.default()
+  let mut rest = value
+  if rest == 0 {
+    editable digits.push(0)
+  }
+  while rest != 0 {
+    let d = rest % 10
+    let mut positive: Int<0..9> = 0
+    if d < 0 {
+      positive = 0 - d
+    } else {
+      positive = d
+    }
+    editable digits.push(positive)
+    rest = rest / 10
+  }
+  return move digits
+}
+
+// An amount in minor units written at the given scale with thousands commas: `-1,234.50` for -123450 at
+// scale 2, `7` for 7 at scale 0.
+export pure func formatAmount(minor: Int, scale: Int<0..8>) String {
+  let mut digits = digitsOf(minor)
+  while digits.count() <= scale {
+    editable digits.push(0)
+  }
+  let total = digits.count()
+  let wholeCount = Int.saturatingSub(total, scale)
+  let mut out = Builder.create()
+  if minor < 0 {
+    editable out.append("-")
+  }
+  let mut position = Int.saturatingSub(total, 1)
+  let mut written = 0
+  while position >= scale {
+    let d = digits.get(position) ?? 0
+    editable out.append("${d}")
+    written = Int.saturatingAdd(written, 1)
+    let remaining = Int.saturatingSub(wholeCount, written)
+    if remaining > 0 && remaining % 3 == 0 {
+      editable out.append(",")
+    }
+    position = Int.saturatingSub(position, 1)
+  }
+  if scale > 0 {
+    editable out.append(".")
+    while position >= 0 {
+      let d = digits.get(position) ?? 0
+      editable out.append("${d}")
+      position = Int.saturatingSub(position, 1)
+    }
+  }
+  return out.finish()
+}
+
+// The declared commodities of a journal and their scales.
+export class Commodities {
+  scales: Map[CommodityCode, Int<0..8>]
+  declared: List[CommodityCode]
+
+  export pure func empty() Commodities => Commodities(scales: Map.default(), declared: List.default())
+
+  // Declares a commodity; returns false (and changes nothing) when it was already declared.
+  export pure func declare(editable self, code: CommodityCode, scale: Int<0..8>) Bool {
+    if self.scales.get(copy code) != null {
+      return false
+    }
+    editable self.declared.push(copy code)
+    editable self.scales.set(copy code, scale)
+    return true
+  }
+
+  // The scale of a declared commodity, or null.
+  export pure func scaleOf(self, code: CommodityCode) Int<0..8>? {
+    let found = self.scales.get(copy code)
+    if found == null {
+      return null
+    }
+    return found
+  }
+
+  export pure func isDeclared(self, code: CommodityCode) Bool => self.scales.get(copy code) != null
+
+  export pure func count(self) Int => self.declared.count()
+
+  // The declared codes in declaration order.
+  export pure func codes(self) List[CommodityCode] {
+    let mut out: List[CommodityCode] = List.default()
+    for code in self.declared {
+      editable out.push(copy code)
+    }
+    return move out
+  }
+}
+
+// Exact signed quantities of several commodities, such as the balance of an account. Zero quantities are
+// treated as absent. The codes are kept in a list beside the map because a map entry's key (`entry.0`) cannot
+// be marked `copy`: `copy entry.0` is not a place the grammar accepts (pilot/FRICTION.md).
+export class Holdings {
+  amounts: Map[CommodityCode, Int]
+  seen: List[CommodityCode]
+
+  export pure func empty() Holdings => Holdings(amounts: Map.default(), seen: List.default())
+
+  // A holding of one commodity.
+  export pure func single(code: CommodityCode, minor: Int) Holdings {
+    let mut h = Holdings.empty()
+    editable h.seen.push(copy code)
+    editable h.amounts.set(copy code, minor)
+    return move h
+  }
+
+  // Adds a quantity of one commodity; fails on overflow.
+  export pure try func add(editable self, code: CommodityCode, minor: Int) Void {
+    let current = self.amounts.get(copy code)
+    if current == null {
+      editable self.seen.push(copy code)
+      editable self.amounts.set(copy code, minor)
+      return
+    }
+    let sum = Int.add(current, minor) or fail
+    editable self.amounts.set(copy code, sum)
+  }
+
+  // Adds every quantity of another holding.
+  export pure try func addAll(editable self, other: Holdings) Void {
+    for code in other.seen {
+      editable self.add(copy code, other.amountOf(copy code)) or fail
+    }
+  }
+
+  // The quantity of one commodity, zero when absent.
+  export pure func amountOf(self, code: CommodityCode) Int => self.amounts.get(copy code) ?? 0
+
+  // True when every quantity is zero.
+  export pure func isZero(self) Bool {
+    for code in self.seen {
+      if self.amountOf(copy code) != 0 {
+        return false
+      }
+    }
+    return true
+  }
+
+  // The commodities with a non-zero quantity, in code order.
+  export pure func codes(self) List[CommodityCode] {
+    let mut out: List[CommodityCode] = List.default()
+    for code in self.seen {
+      if self.amountOf(copy code) != 0 {
+        editable out.push(copy code)
+      }
+    }
+    return sortedBy(out, pure noalloc fn(a: CommodityCode, b: CommodityCode) Bool => a < b)
+  }
+
+  // The holding with every quantity negated; fails only for the most negative Int.
+  export pure try func negated(self) Holdings {
+    let mut out = Holdings.empty()
+    for code in self.seen {
+      let flipped = Int.sub(0, self.amountOf(copy code)) or fail
+      editable out.add(copy code, flipped) or fail
+    }
+    return move out
+  }
+
+  // True when both holdings have the same non-zero quantities.
+  export pure func sameAs(self, other: Holdings) Bool {
+    for code in self.seen {
+      if other.amountOf(copy code) != self.amountOf(copy code) {
+        return false
+      }
+    }
+    for code in other.seen {
+      if self.amountOf(copy code) != other.amountOf(copy code) {
+        return false
+      }
+    }
+    return true
+  }
+
+  // The non-zero quantities as amounts, in code order.
+  export pure func asAmounts(self) List[Amount] {
+    let mut out: List[Amount] = List.default()
+    for code in self.codes() {
+      editable out.push(Amount(minor: self.amountOf(copy code), code: copy code))
+    }
+    return move out
+  }
+}
+
+test "commodity codes" cases {
+  "pounds":     { text: "GBP", ok: true }
+  "shares":     { text: "AAPL", ok: true }
+  "one letter": { text: "X", ok: true }
+  "lower case": { text: "gbp", ok: false }
+  "digit":      { text: "GB1", ok: false }
+  "empty":      { text: "", ok: false }
+  "too long":   { text: "ABCDEFGHIJK", ok: false }
+} as row {
+  let parsed = parseCommodityCode(row.text) catch e {
+    expect e.code == "ledger.amount.bad_code"
+    recover CommodityCode.validate(String.from("ERR")) or fail
+  }
+  let shown: String = "${parsed}"
+  expect (shown == row.text) == row.ok
+}
+
+test "powers of ten" cases {
+  "zero":  { scale: 0, expected: 1 }
+  "two":   { scale: 2, expected: 100 }
+  "eight": { scale: 8, expected: 100000000 }
+} as row {
+  expect powerOfTen(row.scale) == row.expected
+}
+
+test "parse amounts" cases {
+  "whole pounds":        { text: "12", scale: 2, minor: 1200 }
+  "pence":               { text: "12.34", scale: 2, minor: 1234 }
+  "one decimal":         { text: "12.3", scale: 2, minor: 1230 }
+  "negative":            { text: "-42.50", scale: 2, minor: -4250 }
+  "plus sign":           { text: "+0.25", scale: 2, minor: 25 }
+  "thousands":           { text: "1,234,567.89", scale: 2, minor: 123456789 }
+  "scale zero":          { text: "15", scale: 0, minor: 15 }
+  "negative zero":       { text: "-0.00", scale: 2, minor: 0 }
+  "high scale":          { text: "0.00000001", scale: 8, minor: 1 }
+  "group without point": { text: "1,000", scale: 0, minor: 1000 }
+} as row {
+  expect (parseAmount(row.text, row.scale) or fail) == row.minor
+}
+
+test "malformed amounts" cases {
+  "empty":            { text: "", scale: 2, code: "ledger.amount.syntax" }
+  "letters":          { text: "12a", scale: 2, code: "ledger.amount.syntax" }
+  "only a sign":      { text: "-", scale: 2, code: "ledger.amount.syntax" }
+  "trailing point":   { text: "12.", scale: 2, code: "ledger.amount.syntax" }
+  "leading point":    { text: ".5", scale: 2, code: "ledger.amount.syntax" }
+  "two points":       { text: "1.2.3", scale: 2, code: "ledger.amount.syntax" }
+  "short group":      { text: "1,23", scale: 2, code: "ledger.amount.syntax" }
+  "long group":       { text: "1,2345", scale: 2, code: "ledger.amount.syntax" }
+  "long first group": { text: "1234,567", scale: 2, code: "ledger.amount.syntax" }
+  "comma in decimals": { text: "1.234,5", scale: 4, code: "ledger.amount.syntax" }
+  "too precise":      { text: "1.234", scale: 2, code: "ledger.amount.too_precise" }
+  "decimals at 0":    { text: "1.5", scale: 0, code: "ledger.amount.too_precise" }
+  "overflow":         { text: "99999999999999999999", scale: 0, code: "numeric.overflow" }
+} as row {
+  let minor: Int = parseAmount(row.text, row.scale) catch e {
+    expect e.code == row.code
+    recover -1
+  }
+  expect minor == -1
+}
+
+test "format amounts" cases {
+  "pounds":        { minor: 123450, scale: 2, text: "1,234.50" }
+  "pence":         { minor: 5, scale: 2, text: "0.05" }
+  "zero":          { minor: 0, scale: 2, text: "0.00" }
+  "negative":      { minor: -4250, scale: 2, text: "-42.50" }
+  "scale zero":    { minor: 1000000, scale: 0, text: "1,000,000" }
+  "small whole":   { minor: 999, scale: 0, text: "999" }
+  "high scale":    { minor: 1, scale: 8, text: "0.00000001" }
+  "most negative": { minor: -9223372036854775808, scale: 2, text: "-92,233,720,368,547,758.08" }
+} as row {
+  expect formatAmount(row.minor, row.scale) == row.text
+}
+
+test "amount text" {
+  let gbp = parseCommodityCode("GBP") or fail
+  let a = Amount(minor: -1999, code: copy gbp)
+  expect a.text(2) == "-19.99 GBP"
+  expect a == Amount(minor: -1999, code: copy gbp)
+}
+
+test "commodity declarations" {
+  let mut known = Commodities.empty()
+  let gbp = parseCommodityCode("GBP") or fail
+  let jpy = parseCommodityCode("JPY") or fail
+  expect editable known.declare(copy gbp, 2)
+  expect editable known.declare(copy jpy, 0)
+  expect !(editable known.declare(copy gbp, 3))
+  expect known.count() == 2
+  expect known.scaleOf(copy gbp) == 2
+  expect known.isDeclared(copy jpy)
+  let usd = parseCommodityCode("USD") or fail
+  expect known.scaleOf(usd) == null
+}
+
+test "holdings add up per commodity" {
+  let gbp = parseCommodityCode("GBP") or fail
+  let usd = parseCommodityCode("USD") or fail
+  let mut h = Holdings.empty()
+  editable h.add(copy gbp, 100) or fail
+  editable h.add(copy usd, -50) or fail
+  editable h.add(copy gbp, -30) or fail
+  expect h.amountOf(copy gbp) == 70
+  expect h.amountOf(copy usd) == -50
+  expect !h.isZero()
+  let codes = h.codes()
+  expect codes.count() == 2
+  expect (codes.at(0) or fail) == gbp
+  let back = h.negated() or fail
+  editable h.addAll(back) or fail
+  expect h.isZero()
+  expect h.codes().count() == 0
+}
+
+test "holdings overflow is a failure" {
+  let gbp = parseCommodityCode("GBP") or fail
+  let mut h = Holdings.single(copy gbp, 9223372036854775807)
+  editable h.add(copy gbp, 1) catch e {
+    expect e.code == "numeric.overflow"
+    recover Void
+  }
+  expect h.amountOf(gbp) == 9223372036854775807
+}
+
+property "amounts survive formatting and parsing" forall (minor: Int<-100000000000000..100000000000000>, scale: Int<0..8>) {
+  let text = formatAmount(minor, scale)
+  expect (parseAmount(text, scale) or fail) == minor
+}
+
+property "negating an amount negates its text" forall (minor: Int<1..1000000000>, scale: Int<0..8>) {
+  let positive = formatAmount(minor, scale)
+  let negative = formatAmount(0 - minor, scale)
+  expect negative == "-${positive}"
+}
+
+property "adding holdings is commutative" forall (a: Int<-1000000..1000000>, b: Int<-1000000..1000000>, c: Int<-1000000..1000000>) {
+  let gbp = parseCommodityCode("GBP") or fail
+  let eur = parseCommodityCode("EUR") or fail
+  let mut left = Holdings.single(copy gbp, a)
+  editable left.add(copy eur, b) or fail
+  let mut right = Holdings.single(copy eur, c)
+  editable right.add(copy gbp, b) or fail
+  let mut leftThenRight = Holdings.empty()
+  editable leftThenRight.addAll(left) or fail
+  editable leftThenRight.addAll(right) or fail
+  let mut rightThenLeft = Holdings.empty()
+  editable rightThenLeft.addAll(right) or fail
+  editable rightThenLeft.addAll(left) or fail
+  expect leftThenRight.sameAs(rightThenLeft)
+}
+
+property "a holding plus its negation is zero" forall (a: Int<-1000000000..1000000000>, b: Int<-1000000000..1000000000>) {
+  let gbp = parseCommodityCode("GBP") or fail
+  let usd = parseCommodityCode("USD") or fail
+  let mut h = Holdings.single(copy gbp, a)
+  editable h.add(copy usd, b) or fail
+  let minus = h.negated() or fail
+  editable h.addAll(minus) or fail
+  expect h.isZero()
+}

@@ -1,0 +1,11 @@
+// DEL-45 fixture for C1.optional (absence is not failure): an optional handled with `??`.
+func maybe(n: Int) Int? {
+  if n > 0 {
+    return n
+  }
+  return null
+}
+export func main(args: List[String]) Void {
+  let v = maybe(3) ?? 0
+  discard v
+}

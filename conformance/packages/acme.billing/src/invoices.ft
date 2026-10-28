@@ -1,0 +1,10 @@
+// accept
+import acme.billing.money { Amount }
+import acme.billing.internal as internal
+import acme.util { Helper }
+
+export class Invoice {
+  export total: Amount
+  export owner: Helper
+  export pure func code(self) Int => internal.secret()
+}

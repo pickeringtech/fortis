@@ -1,0 +1,17 @@
+{
+  "class": "Syntax",
+  "code": "E-SYN-002",
+  "column": 7,
+  "fields": {
+    "expected_tokens": [
+      "lowerIdent"
+    ],
+    "found_token": "view"
+  },
+  "file": "conformance/programs/syntax_keyword_binding.ft",
+  "line": 4,
+  "message": "keyword 'view' used as an identifier",
+  "rule": "LANG-03-04",
+  "severity": "error",
+  "status": "violated"
+}

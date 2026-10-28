@@ -1,0 +1,5 @@
+// reject: E-SYN-002 (at the marked line)
+// covers: LANG-03-04
+export pure func render(view: Int) Int {  // reject: E-SYN-002 — `view` is reserved
+  return view
+}

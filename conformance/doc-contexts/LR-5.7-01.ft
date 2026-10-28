@@ -1,0 +1,16 @@
+// context: LR-5.7-01 (Language Reference 5.7, call evaluation)
+export class Buffer {
+  export items: List[Int]
+  export pure func length(self) Int => self.items.count()
+}
+
+func update(buffer: editable Buffer, n: Int) Void {
+  editable buffer.items.push(n)
+}
+
+func consume(buffer: owned Buffer) Int => buffer.length()
+
+func example() Void {
+  let mut buffer = Buffer(items: List.default())
+  // {{example}}
+}

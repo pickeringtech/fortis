@@ -1,0 +1,12 @@
+# E-TEL-001: a predicate value that is not a variant of the field's enum
+telemetry:
+  projections:
+    p:
+      source: OrderProcessing
+      where:
+        field: region
+        in: [UK, Wales]   # expect: E-TEL-001
+      dimensions: [region]
+      metrics:
+        - name: p.count
+          instrument: counter

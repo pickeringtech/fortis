@@ -1,0 +1,5 @@
+schema: fortis.project/v1
+name: lock.app
+version: 0.1.0
+dependencies:
+  fortis: "1.0"

@@ -1,0 +1,36 @@
+// execute: left|right|left failed demo.bad, right 2
+// execute-trace: launch left#1|launch right#2|suspend main|start left#1|complete left#1|resume main|join left#1|suspend main|start right#2|complete right#2|resume main|join right#2
+// requires: runtime
+// covers: LANG-12-04
+// 12.5: `join` runs both futures to completion even when one fails; the failure is part of the returned tuple.
+import fortis.host { Host, Console }
+export error Bad {
+  code: "demo.bad"
+}
+async try func left(console: Console) Int {
+  console.print("left")
+  fail Bad()
+}
+async func right(console: Console) Int {
+  console.print("right")
+  return 2
+}
+async recovers func run(console: Console) Void {
+  let pair = await join(left(console), right(console))
+  let (a, b) = move pair
+  let text = match move a {
+    success(v) => "left ${v}"
+    failure(f) => match move f {
+      is Bad => "left failed demo.bad"
+      otherwise(other) => {
+        report other
+        give "left failed"
+      }
+    }
+  }
+  console.print("${text}, right ${b}")
+}
+export async recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  await run(caps.console)
+}

@@ -1,0 +1,3 @@
+// accept
+pure func helper() Int => 1
+export pure func visible() Int => 2

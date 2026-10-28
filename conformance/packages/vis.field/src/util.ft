@@ -1,0 +1,18 @@
+// accept
+export class Thing {
+  secret: Int
+  export open: Int
+  export pure func create() Thing => Thing(secret: 1, open: 2)
+  pure func hidden(self) Int => self.secret
+  export pure func shown(self) Int => Int.saturatingAdd(self.hidden(), self.open)
+}
+
+export class Plain {
+  export a: Int
+  export b: Int
+}
+
+pure func inside() Int {
+  let t = Thing(secret: 3, open: 4)      // every field is visible inside the module (9.2)
+  return Int.saturatingAdd(t.secret, t.hidden())
+}

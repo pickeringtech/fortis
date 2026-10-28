@@ -1,0 +1,14 @@
+// accept
+// covers: LANG-10-05
+try func half(n: Int) Int => n
+export func reported(n: Int) Int {
+  return half(n) catch e {
+    report e
+    recover 0
+  }
+}
+export recovers func quiet(n: Int) Int {
+  return half(n) catch e {
+    recover 0
+  }
+}

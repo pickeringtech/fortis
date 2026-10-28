@@ -1,0 +1,8 @@
+// accept — S5: a marker before a closure binding being called
+func run() Int {
+  let runOnce = fn once(n: Int) Int => n
+  let mut counter = fn mut(n: Int) Int => n
+  let a = move runOnce(1)
+  let b = editable counter(2)
+  return Int.saturatingAdd(a, b)
+}

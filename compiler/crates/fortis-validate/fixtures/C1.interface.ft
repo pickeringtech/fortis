@@ -1,0 +1,12 @@
+// DEL-45 fixture for C1.interface (substitutability): an implementation within its interface method's contract.
+export interface Shape {
+  pure func area(self) Int
+}
+export class Square implements Shape {
+  export side: Int
+  export pure func area(self) Int => Int.wrappingMul(self.side, self.side)
+}
+export func main(args: List[String]) Void {
+  let s = Square(side: 3)
+  discard s.area()
+}

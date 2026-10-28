@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-04-06
+// a note, not a test request
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("noted")
+}

@@ -1,0 +1,8 @@
+// DEL-45 fixture for C3.shared-create: Shared.create allocates (here, outside noalloc).
+export class Box {
+  export n: Int
+}
+func build() Shared[Box] => Shared.create(Box(n: 1))
+export func main(args: List[String]) Void {
+  discard build()
+}

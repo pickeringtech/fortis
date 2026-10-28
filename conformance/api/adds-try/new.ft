@@ -1,0 +1,11 @@
+// API fixture: `parsePort` may now fail, so every caller must handle an outcome.
+export error BadPort {
+  code: "api.bad_port"
+}
+
+export try func parsePort(text: String) Int { // expect: E-EFF-040
+  if text.scalarCount() == 0 {
+    fail BadPort()
+  }
+  return text.scalarCount()
+}

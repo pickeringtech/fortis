@@ -1,0 +1,15 @@
+type UserId = Int<1..>
+type OrderId = Int<1..>
+type Count = Int<0..>
+type Label = String
+
+pure func describe(id: UserId) Int => 1
+pure func named(l: Label) Int => 1
+
+test "interchange" {
+  let order = OrderId(7)
+  let count = Count(3)
+  expect describe(order) == 1
+  expect describe(count) == 1
+  expect named(String.from("x")) == 1
+}

@@ -1,0 +1,21 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-73, a call as the whole condition: its effects reach both branches and the state after the `if`.
+export class Cell {
+  export v: Int<0..1>
+}
+
+func reset(c: editable Cell) Bool {
+  c.v = 0
+  return false
+}
+
+export func f(c: editable Cell) Int {
+  if c.v != 1 {
+    return 0
+  }
+  if reset(editable c) {
+    return 0
+  }
+  return 10 / c.v                            // reject: E-REF-002 — `reset` set `c.v` to 0
+}

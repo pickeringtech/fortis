@@ -1,0 +1,12 @@
+// accept — S5: markers on bare places and field paths
+export class Box {
+  export label: String
+}
+func consume(b: owned Box) Void {
+}
+func run(b: Box) Void {
+  let mut own = Box(label: "x")
+  let seen = alias own
+  let text = copy b.label
+  consume(move own)
+}

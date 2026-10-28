@@ -1,0 +1,25 @@
+// execute: receiver|arg a|arg b|call
+// requires: runtime
+// covers: LANG-05-07
+// 5.7: the receiver of a method call is evaluated before its arguments, left to right, exactly once.
+import fortis.host { Host, Console, Capabilities }
+export class Probe {
+  export console: Shared[Console]
+  export func make(console: Shared[Console], label: StringView) Probe {
+    console.print(label)
+    return Probe(console: console.retain())
+  }
+  export func call(self, a: Int, b: Int) Void {
+    self.console.print("call")
+  }
+}
+func tick(console: Shared[Console], label: StringView, v: Int) Int {
+  console.print(label)
+  return v
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  Probe.make(alias console, "receiver").call(tick(console, "arg a", 1), tick(console, "arg b", 2))
+}

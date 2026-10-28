@@ -1,0 +1,11 @@
+// reject: E-TYP-130 (at the marked lines)
+// covers: LANG-05-09
+pure func page(size: Int<1..100> = 20, offset: Int<0..> = 0) Int => Int.saturatingAdd(size, offset)
+
+pure func calls() Int {
+  let a = page(size: 10, 5)                 // reject: E-TYP-130 — positional after named
+  let b = page(limit: 10)                   // reject: E-TYP-130 — no such parameter
+  let c = page(size: 10, size: 20)          // reject: E-TYP-130 — bound twice
+  let d = page(1, 2, 3)                     // reject: E-TYP-130 — too many arguments
+  return Int.saturatingAdd(Int.saturatingAdd(a, b), Int.saturatingAdd(c, d))
+}

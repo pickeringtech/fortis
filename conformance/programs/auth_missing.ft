@@ -1,0 +1,10 @@
+// reject: E-EFF-010 (at the marked line)
+// covers: LANG-11-07
+// A value that merely contains a capability is not an authority: Authority is nominal (9.5, 11.6).
+import fortis.host { Console }
+export class Logger {
+  export console: Console
+}
+func shout(l: Logger, msg: StringView) Void {
+  l.console.print(msg)                     // reject: E-EFF-010 — io without an Authority parameter
+}

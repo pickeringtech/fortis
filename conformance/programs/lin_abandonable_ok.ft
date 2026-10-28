@@ -1,0 +1,24 @@
+// accept
+// covers: LANG-06-09
+// An Abandonable linear local may be live at an `or fail` and an `await`: the unwind abandons it (12.4).
+export class Tx implements Abandonable {
+  witness: Must
+  export func begin() Tx => Tx(witness: Must.create())
+  export func commit(owned self) Void {
+    let Tx(witness: w) = move self
+    Must.discharge(move w)
+  }
+  func abandon(owned self) Void {
+    let Tx(witness: w) = move self
+    Must.discharge(move w)
+  }
+}
+try func step(n: Int) Int => n
+async try func fetch(n: Int) Int => n
+async try func run(n: Int) Int {
+  let tx = Tx.begin()
+  let a = step(n) or fail
+  let b = await fetch(n) or fail
+  move tx.commit()
+  return Int.saturatingAdd(a, b)
+}

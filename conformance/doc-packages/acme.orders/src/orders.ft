@@ -1,0 +1,12 @@
+// The order types the observation examples use (Language Reference 13).
+export enum CustomerTier derive Equatable, Codec {
+  Standard
+  Gold
+}
+
+export enum Region derive Equatable, Codec {
+  North
+  South
+}
+
+export type TransactionId = String<scalars: 1..64>

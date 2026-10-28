@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: shop.orders
+version: 1.0.0
+entry: main
+exports: [orders, pricing]
+dependencies:
+  fortis: "1.0"

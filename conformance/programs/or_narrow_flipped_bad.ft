@@ -1,0 +1,10 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// D-51.6: `||` does not narrow (LR 6.3, 6.8), in either operand. Here the method call is the left operand:
+// it runs first, with `p` still `Limit?`, so the call needs a narrowing that nothing gives it.
+export class Limit {
+  export most: Int
+  export pure func holds(self, n: Int) Bool => n <= self.most
+}
+
+export pure func flipped(p: Limit?, n: Int) Bool => p.holds(n) || p == null   // reject: E-TYP-040 — `||` did not narrow `p`

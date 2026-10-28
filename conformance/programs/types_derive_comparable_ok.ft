@@ -1,0 +1,5 @@
+// accept
+export class Version derive Equatable, Comparable {
+  export major: Int
+  export minor: Int
+}

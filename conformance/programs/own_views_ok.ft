@@ -1,0 +1,22 @@
+// accept
+// covers: LANG-07-06
+// 7.7, X-137: a loan lives in a local, a parameter or a `from` return; the standard views and cursors carry it.
+export class User {
+  export name: String
+  export age: Int
+}
+pure func labelOf(user: User) StringView from user => alias user.name
+pure func longest(users: List[User]) Int {
+  let mut best = 0
+  for u in users {
+    let label = labelOf(alias u)
+    if label.scalarCount() > best {
+      best = label.scalarCount()
+    }
+  }
+  return best
+}
+func run(u: User) Int {
+  let label = labelOf(alias u)
+  return Int.saturatingAdd(label.scalarCount(), u.age)
+}

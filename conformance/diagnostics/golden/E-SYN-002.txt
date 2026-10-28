@@ -1,0 +1,3 @@
+conformance/programs/syntax_keyword_binding.ft:4:7: error E-SYN-002 [LANG-03-04] (Syntax, violated): keyword 'view' used as an identifier
+    expected_tokens: ["lowerIdent"]
+    found_token: "view"

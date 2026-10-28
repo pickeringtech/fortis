@@ -1,0 +1,9 @@
+// DEL-45 fixture for C1.capability (io requires capability): I/O through a capability parameter.
+import fortis.host { Host, Console }
+func greet(console: Console) Void {
+  console.print("hi")
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  greet(caps.console)
+}

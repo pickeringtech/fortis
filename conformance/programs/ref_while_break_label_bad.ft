@@ -1,0 +1,12 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-05-03, LANG-06-02
+// D-72, labelled form: `break outer` inside a nested `loop` leaves the outer `while` with `i = 0`, so the negated
+// condition (`i >= 1`) does not hold after the loop. Both checkers accepted this module before the fix.
+export func f(i: Int<0..1>) Int {
+  outer: while i < 1 {
+    loop {
+      break outer
+    }
+  }
+  return 10 / i                              // reject: E-REF-002 — the loop may be left by `break outer` with i = 0
+}

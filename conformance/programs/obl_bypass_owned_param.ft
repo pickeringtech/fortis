@@ -1,0 +1,5 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-02
+func sink(o: owned Outcome[Int]) Int {     // reject: E-OBL-001 — the owned outcome is never consumed
+  return 0
+}

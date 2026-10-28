@@ -1,0 +1,48 @@
+// reject: E-OBL-007, E-OWN-001
+// covers: LANG-10-02, LANG-07-01
+// Projecting one field from a temporary drops the others at the end of the statement (7.9). A linear
+// field among them has no consumer. `move make().a` marks the function, which is not a place (7.2).
+export error Negative {
+  code: "rcc.negative"
+}
+
+try func load(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n
+}
+
+export class Two {
+  export a: Outcome[Int]
+  export b: Outcome[Int]
+}
+
+func make() Two {
+  return Two(a: load(1), b: load(-1))
+}
+
+recovers func peek() Int {
+  return make().a or recover 0 // reject: E-OBL-007
+}
+
+recovers func recordPeek() Int {
+  return { a: load(1), b: load(-1) }.a or recover 0 // reject: E-OBL-007
+}
+
+recovers func tuplePeek() Int {
+  return (load(1), load(-1)).0 or recover 0 // reject: E-OBL-007
+}
+
+recovers func moved() Int {
+  let x = move make().a or recover 0 // reject: E-OWN-001, E-OBL-007
+  return x
+}
+
+func maybe() Two? {
+  return present(make())
+}
+
+recovers func optPeek() Int {
+  return (maybe()?.a ?? load(0)) or recover 0 // reject: E-OBL-007
+}

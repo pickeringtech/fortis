@@ -1,0 +1,10 @@
+// accept
+export class Customer {
+  export name: String
+}
+
+export class Settings derive Default {
+  export retries: Int = 3
+  export name: String
+  export owner: Customer? 
+}

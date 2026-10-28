@@ -1,0 +1,52 @@
+// accept
+// covers: LANG-05-05
+export enum Kind {
+  Small
+  Large
+}
+
+func never() Never {
+  loop {
+  }
+}
+
+pure func pick(flag: Bool, n: Int) Int {
+  if flag {
+    return 1
+  } else {
+    return 2
+  }
+}
+
+pure func byKind(kind: Kind) Int {
+  match kind {
+    Small => {
+      return 1
+    }
+    Large => {
+      return 2
+    }
+  }
+}
+
+try recovers func checked(n: Int) Int {
+  if n < 0 {
+    fail Int.add(n, 1) catch e {
+      recover 0
+    }
+  }
+  return n
+}
+
+func diverge(n: Int) Int {
+  if n > 0 {
+    return n
+  }
+  never()
+}
+
+pure func viaLoop(n: Int) Int {
+  loop {
+    return n
+  }
+}

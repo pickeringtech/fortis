@@ -1,0 +1,14 @@
+// reject: E-OBL-007 (at the marked line)
+// covers: LANG-10-02
+try func half(n: Int) Int => n
+export class Job {
+  export name: String
+  export result: Outcome[Int]
+}
+export class Summary {
+  export name: String
+}
+func run(n: Int) Summary {
+  let job = Job(name: "x", result: half(n))
+  return Summary(...move job)              // reject: E-OBL-007 — the linear field `result` would be dropped
+}

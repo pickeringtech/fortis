@@ -1,0 +1,6 @@
+// reject: E-SYN-002 (at the marked line)
+// covers: LANG-03-04
+export pure func label(user: User) StringView from user {
+  let view = alias user.name             // reject: E-SYN-002 — `view` is a reserved head word
+  return view
+}

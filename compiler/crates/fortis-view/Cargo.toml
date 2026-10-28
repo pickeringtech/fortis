@@ -1,0 +1,10 @@
+[package]
+name = "fortis-view"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "`fortis view` (DEL-41): the reader of Fortis source for people and agents; structural queries; never writes"
+
+[dependencies]
+fortis-syntax = { path = "../fortis-syntax" }
+fortis-fmt = { path = "../fortis-fmt" }

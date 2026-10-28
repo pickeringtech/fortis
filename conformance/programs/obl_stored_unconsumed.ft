@@ -1,0 +1,9 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-02
+try func half(n: Int) Int => n
+export class Pending {
+  export result: Outcome[Int]
+}
+func run(n: Int) Void {
+  let p = Pending(result: half(n))          // reject: E-OBL-001 — the class holds a linear field and is dropped
+}

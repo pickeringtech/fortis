@@ -1,0 +1,9 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-02
+try func half(n: Int) Int => n
+func peek(o: Outcome[Int]) Int => 0
+func run(n: Int) Int {
+  let o = half(n)                          // reject: E-OBL-001 — an alias capture does not consume it
+  let look = fn[alias o]() Int => peek(o)
+  return look()
+}

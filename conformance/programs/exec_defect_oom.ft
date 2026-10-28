@@ -1,0 +1,9 @@
+// execute: before|defect:out_of_memory
+// requires: runtime
+// covers: LANG-10-06
+import fortis.host { Host }
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("before")
+  injectDefect("out_of_memory")
+}

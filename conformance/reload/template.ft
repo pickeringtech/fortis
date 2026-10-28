@@ -1,0 +1,260 @@
+// SP-07 workload (spikes/SP-07/design.md 11): three scopes whose state types are disjoint, `shop`, `meter` and
+// `billing`. conformance/reload/generate.py writes each version from this template: `{{V}}` is the version, and each
+// function body carries its version marker and coefficients as literals in the body, so a result says which version
+// of each function computed it. The edits of edits.json are textual replacements applied before the substitution.
+import fortis.host { Clock, Console, Supervisor }
+
+// ---- shop ------------------------------------------------------------------------------------------------------
+
+export class Item {
+  sku: String
+  cents: Int
+  export func tag(self) Int => self.cents
+}
+
+export class Job {
+  id: Int
+}
+
+export enum Mode {
+  Idle
+  Busy(job: Job)
+}
+
+export class Bag[T] {
+  items: Mutex[List[T]]
+}
+
+export class Config {
+  rate: Int
+  hooks: Bag[fn(Int) Int]
+}
+
+export class Receipt {
+  out: Shared[Console]
+  cents: Int
+  cleanup(editable self) Void {
+    self.out.print("receipt closed @{{V}}")
+  }
+}
+
+export interface Discount {
+  func apply(self, cents: Int) Int
+}
+
+export class Flat implements Discount {
+  off: Int
+  export func apply(self, cents: Int) Int => Int.wrappingSub(cents, Int.wrappingAdd(self.off, {{F}}))
+}
+
+export error Declined {
+  code: "shop.declined"
+  payload { marker: String, cents: Int }
+  message: "declined ${cents} ${marker}"
+}
+
+export class Audit {
+  out: Shared[Console]
+  name: String
+  cleanup(editable self) Void {
+    self.out.print("audit ${self.name} closed @{{V}}")
+  }
+}
+
+export class Shop {
+  total: AtomicInt
+  count: AtomicInt
+  items: List[Item]
+  rule: fn(Int) Int
+  bonus: fn(Int) Int
+  scale: fn(Int) Int
+  double: fn(Int) Int
+  up: fn(Int) fn(Int) Int
+  down: fn(Int) fn(Int) Int
+  discount: dynamic Discount
+  spawned: AtomicInt
+  rate: Int
+  later: Future[Int]
+  mode: Mode
+  audit: Audit
+}
+
+const base: Int = 100
+
+const limit: Int = base
+
+func shopMark() String => "shop@{{V}}"
+
+func price(cents: Int) Int => Int.wrappingAdd(Int.wrappingMul(cents, {{A}}), {{B}})
+
+func twice(c: Int) Int => Int.wrappingMul(c, 2)
+
+pure func common(n: Int) Int => Int.wrappingAdd(n, {{C}})
+
+func applyRule(f: fn(Int) Int, c: Int) Int => f(c)
+
+func pick(m: fn(Int) fn(Int) Int, x: Int) fn(Int) Int => m(x)
+
+func phantom[T](x: Int) Int => x
+
+async func later(shop: owned Shared[Shop], clock: Clock, pause: Int<0..>) Shared[Shop] {
+  await clock.sleep(Duration.milliseconds(pause))
+  let n = shop.spawned.fetchAdd(1)
+  return move shop
+}
+
+func firstOr[T](xs: List[T], fallback: T) T {
+  let n = xs.count()
+  return fallback
+}
+
+async func lateValue(seed: Int, r: owned Receipt) Int => Int.wrappingAdd(seed, {{L}})
+
+async func tally(cents: Int) Int => Int.wrappingMul(cents, {{T}})
+
+async func nap(clock: Clock, ms: Int<0..>) Int {
+  await clock.sleep(Duration.milliseconds(ms))
+  return Int.wrappingAdd(ms, {{V}})
+}
+
+export func openShop(console: owned Console, rate: Int) Shared[Shop] {
+  let hooks: List[fn(Int) Int] = List.default()
+  let cfg = Config(rate: rate, hooks: Bag(items: Mutex.create(move hooks)))
+  let rule = fn[move cfg](c: Int) Int => Int.wrappingAdd(Int.wrappingMul(c, cfg.rate), {{R}})
+  let bonus = fn[copy rate](c: Int) Int => Int.wrappingAdd(c, Int.wrappingMul(rate, 2))
+  let scale = fn[copy rate](c: Int) Int => Int.wrappingMul(c, Int.wrappingAdd(rate, {{S}}))
+  let up = fn[copy rate](x: Int) fn(Int) Int {
+    let inner = fn[copy rate](c: Int) Int => Int.wrappingAdd(c, rate)
+    return move inner
+  }
+  let down = fn[copy rate](x: Int) fn(Int) Int {
+    let inner = fn[copy rate](c: Int) Int => Int.wrappingSub(c, rate)
+    return move inner
+  }
+  let items = List.of(Item(sku: "a", cents: 3), Item(sku: "b", cents: 4))
+  let out = Shared.create(move console)
+  out.print("open shop @{{V}}")
+  return Shared.create(Shop(total: AtomicInt.create(0), count: AtomicInt.create(0), items: move items, rule: move rule, bonus: move bonus, scale: move scale, double: move twice, up: move up, down: move down, discount: Flat(off: 1), spawned: AtomicInt.create(0), rate: rate, later: lateValue(rate, Receipt(out: out.retain(), cents: 1)), mode: Mode.Idle, audit: Audit(out: move out, name: "shop")))
+}
+
+export async func checkout(shop: Shared[Shop], clock: Clock, console: Console, cents: Int, pause: Int<0..>) String {
+  defer {
+    console.print("checkout end @{{V}} ${cents}")
+  }
+  console.print("checkout start @{{V}} ${cents}")
+  let a = price(cents)
+  await clock.sleep(Duration.milliseconds(pause))
+  let b = applyRule(shop.rule, cents)
+  let c = applyRule(shop.bonus, cents)
+  let s = applyRule(shop.scale, cents)
+  let d = shop.discount.apply(cents)
+  let g = applyRule(shop.double, common(cents))
+  let prior = shop.total.fetchAdd(a)
+  let n = shop.count.fetchAdd(1)
+  let f = firstOr(shop.items, Item(sku: "z", cents: 0))
+  scope tasks {
+    let t = tasks.launch(tally(cents))
+    let e = await t
+    return "${shopMark()} a=${a} b=${b} c=${c} s=${s} d=${d} e=${e} g=${g} prior=${prior} n=${n} f=${f.cents}"
+  }
+}
+
+export async try func refund(shop: Shared[Shop], clock: Clock, cents: Int, pause: Int<0..>) String {
+  await clock.sleep(Duration.milliseconds(pause))
+  if cents > limit {
+    fail Declined(marker: "@{{V}}", cents: cents)
+  }
+  let prior = shop.total.fetchAdd(Int.wrappingSub(0, cents))
+  return "refund@{{V}} prior=${prior}"
+}
+
+// The state keeps its unstarted future (`later`), released with the state; a future reached through the Shared state
+// belongs to no one invocation, so `late` awaits one it owns (D-33, D-147: changed after SP-07 closed).
+export async func late(shop: Shared[Shop]) String {
+  let v = await lateValue(shop.rate, Receipt(out: shop.audit.out.retain(), cents: 1))
+  return "${shopMark()} late=${v}"
+}
+
+export async func fanout(shop: Shared[Shop], clock: Clock, pause: Int<0..>) String {
+  await clock.sleep(Duration.milliseconds(pause))
+  let pair = await join(nap(clock, pause), nap(clock, 1))
+  return "${shopMark()} fanout"
+}
+
+export func balance(shop: Shared[Shop]) String => "${shopMark()} total=${shop.total.load()} count=${shop.count.load()} spawned=${shop.spawned.load()}"
+
+export func quote(shop: Shared[Shop], cents: Int) String => "quote@{{V}} r=${applyRule(shop.rule, cents)} p=${phantom(cents)}"
+
+export func turn(shop: Shared[Shop], cents: Int) String => "turn@{{V}} up=${applyRule(pick(shop.up, 0), cents)} down=${applyRule(pick(shop.down, 0), cents)}"
+
+export async func spawn(shop: Shared[Shop], clock: Clock, supervisor: Supervisor, pause: Int<0..>) String {
+  scope tasks {
+    let t = tasks.launch(later(shop.retain(), clock, pause))
+    tasks.detach(move t, supervisor)
+  }
+  return "spawn@{{V}}"
+}
+
+export async func spawnDone(shop: Shared[Shop], clock: Clock, supervisor: Supervisor) String {
+  scope tasks {
+    let t = tasks.launch(later(shop.retain(), clock, 0))
+    await clock.sleep(Duration.milliseconds(1))
+    tasks.detach(move t, supervisor)
+  }
+  return "spawn@{{V}}"
+}
+
+export async func receipt(shop: Shared[Shop], clock: Clock, pause: Int<0..>) Receipt {
+  await clock.sleep(Duration.milliseconds(pause))
+  return Receipt(out: shop.audit.out.retain(), cents: 5)
+}
+
+export func owned_total(shop: owned Shared[Shop]) String => "${shopMark()} owned total=${shop.total.load()}"
+
+// ---- meter -----------------------------------------------------------------------------------------------------
+
+export class Meter {
+  hits: AtomicInt
+  audit: Audit
+}
+
+func meterMark() String => "meter@{{V}}"
+
+func weight(n: Int) Int => Int.wrappingAdd(Int.wrappingMul(n, {{W}}), common(n))
+
+export func openMeter(console: owned Console) Shared[Meter] {
+  let out = Shared.create(move console)
+  out.print("open meter @{{V}}")
+  return Shared.create(Meter(hits: AtomicInt.create(0), audit: Audit(out: move out, name: "meter")))
+}
+
+export async func hit(meter: Shared[Meter], clock: Clock, n: Int, pause: Int<0..>) String {
+  await clock.sleep(Duration.milliseconds(pause))
+  let w = weight(n)
+  let prior = meter.hits.fetchAdd(w)
+  return "${meterMark()} w=${w} prior=${prior}"
+}
+
+// ---- billing: a DI application context ----------------------------------------------------------------------------
+
+export class Gateway {
+  key: String
+  export func charge(self, cents: Int) String => "gw:${self.key}:${cents}@{{V}}"
+}
+
+export class Invoicer {
+  inject gateway: Shared[Gateway]
+  export func bill(self, cents: Int) String => "invoice@{{V}} ${self.gateway.charge(cents)}"
+}
+
+context Billing(key: owned String) {
+  provide Shared[Gateway] using instance Shared.create(Gateway(key: move key))
+  provide Invoicer
+}
+
+// the session finds a factory or handler by name whether or not it is exported; these name a generated class
+func openBilling(key: String) Shared[BillingApplication] {
+  return Shared.create(Billing.application(copy key))
+}
+
+func bill(desk: Shared[BillingApplication], cents: Int) String => "${desk.invoicer().bill(cents)}"

@@ -1,0 +1,12 @@
+// reject: E-ERR-001 (at the marked lines)
+// covers: LANG-10-01
+export error Odd {
+  code: "demo.odd"
+}
+try func half(n: Int) Int => n
+func run(n: Int) Int {
+  if n < 0 {
+    fail Odd()                             // reject: E-ERR-001 — fail outside a try function
+  }
+  return half(n) or fail                   // reject: E-ERR-001 — or fail outside a try function
+}

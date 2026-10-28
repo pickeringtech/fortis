@@ -1,0 +1,5 @@
+// reject: E-NAM-001
+// No local FileSystem and no host import: the field's members are still FileSystem's.
+import bad.facts.core.model { Box }
+
+func wrong(b: Box) Int => b.fs.nothere()    // reject: E-NAM-001 — FileSystem has no nothere

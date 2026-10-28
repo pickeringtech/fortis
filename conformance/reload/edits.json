@@ -1,0 +1,982 @@
+{
+  "schema": "fortis.reload-edits/v1",
+  "about": "The SP-07 edit catalogue (spikes/SP-07/design.md 11). Each edit is a list of textual replacements of template.ft. `changes` are the changes a reload from the base to the base with this edit alone, at the same version, must report: [identity pattern (fnmatch), kind]; every reported change must match a pattern and every pattern must match a change. `on_add` and `on_remove` are the scopes the reload must restart when the edit is turned on or off, with the rule (`state`, `dependency`, `di`, `entry` for a stop), and `old_readers` the scopes whose invocations on generations without the edit it must cancel (R2). `behaviour` names the formula changes the oracle applies. Written from the design's rules, not from the session's output.",
+  "edits": [
+    {
+      "name": "add-helper",
+      "about": "a new String helper used by balance",
+      "replace": [
+        [
+          "export func balance(shop: Shared[Shop]) String => \"${shopMark()} total=",
+          "func label(text: String) String => \"${text}!\"\n\nexport func balance(shop: Shared[Shop]) String => \"${label(shopMark())} total="
+        ]
+      ],
+      "changes": [
+        [
+          "main::function label",
+          "added"
+        ],
+        [
+          "main::function balance",
+          "body"
+        ]
+      ],
+      "on_add": {},
+      "on_remove": {
+        "shop": "dependency"
+      },
+      "soak": true,
+      "behaviour": [
+        "balance_bang"
+      ]
+    },
+    {
+      "name": "add-type",
+      "about": "a new type used transiently by owned_total",
+      "replace": [
+        [
+          "export class Config {",
+          "export class Note {\n  text: String\n}\n\nexport class Config {"
+        ],
+        [
+          "export func owned_total(shop: owned Shared[Shop]) String => \"${shopMark()} owned total=${shop.total.load()}\"",
+          "export func owned_total(shop: owned Shared[Shop]) String {\n  let note = Note(text: \"owned\")\n  return \"${shopMark()} ${note.text} total=${shop.total.load()}\"\n}"
+        ]
+      ],
+      "changes": [
+        [
+          "main::Note",
+          "added"
+        ],
+        [
+          "main::function owned_total",
+          "body"
+        ]
+      ],
+      "on_add": {},
+      "on_remove": {
+        "shop": "dependency"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "reorder-lambdas",
+      "about": "two lambdas with the same environment swap places: identities follow their bodies",
+      "replace": [
+        [
+          "  let bonus = fn[copy rate](c: Int) Int => Int.wrappingAdd(c, Int.wrappingMul(rate, 2))\n  let scale = fn[copy rate](c: Int) Int => Int.wrappingMul(c, Int.wrappingAdd(rate, {{S}}))\n",
+          "  let scale = fn[copy rate](c: Int) Int => Int.wrappingMul(c, Int.wrappingAdd(rate, {{S}}))\n  let bonus = fn[copy rate](c: Int) Int => Int.wrappingAdd(c, Int.wrappingMul(rate, 2))\n"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function openShop",
+          "body"
+        ]
+      ],
+      "on_add": {},
+      "on_remove": {},
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "shift-lines",
+      "about": "lines inserted above every declaration: nothing changes",
+      "replace": [
+        [
+          "import fortis.host { Clock, Console, Supervisor }\n",
+          "import fortis.host { Clock, Console, Supervisor }\n// shifted\n// shifted\n// shifted\n"
+        ]
+      ],
+      "changes": [],
+      "on_add": {},
+      "on_remove": {},
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "add-method",
+      "about": "a new method of a type the state holds",
+      "replace": [
+        [
+          "  export func apply(self, cents: Int) Int => Int.wrappingSub(cents, Int.wrappingAdd(self.off, {{F}}))\n}",
+          "  export func apply(self, cents: Int) Int => Int.wrappingSub(cents, Int.wrappingAdd(self.off, {{F}}))\n  export func describe(self) String => \"flat\"\n}"
+        ]
+      ],
+      "changes": [
+        [
+          "main::method Flat.describe",
+          "added"
+        ],
+        [
+          "main::Flat",
+          "added"
+        ]
+      ],
+      "on_add": {},
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "hooks-backflow",
+      "about": "a new function of the callback type the state's Mutex holds (R2)",
+      "replace": [
+        [
+          "func twice(c: Int) Int => Int.wrappingMul(c, 2)\n",
+          "func twice(c: Int) Int => Int.wrappingMul(c, 2)\n\nfunc boost(c: Int) Int => Int.wrappingAdd(c, 1)\n"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function boost",
+          "added"
+        ]
+      ],
+      "on_add": {},
+      "old_readers": [
+        "shop"
+      ],
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "double-lambda",
+      "about": "the factory stores a lambda where it stored the named function twice (R2; three generations with remove-twice)",
+      "replace": [
+        [
+          "double: move twice,",
+          "double: fn(c: Int) Int => Int.wrappingMul(c, 2),"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function openShop",
+          "body"
+        ],
+        [
+          "main::function openShop/λ@*",
+          "added"
+        ]
+      ],
+      "on_add": {},
+      "old_readers": [
+        "shop"
+      ],
+      "fresh_identity": true,
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": false,
+      "behaviour": []
+    },
+    {
+      "name": "remove-twice",
+      "about": "the named function the first generation stored is removed",
+      "requires": [
+        "double-lambda"
+      ],
+      "replace": [
+        [
+          "func twice(c: Int) Int => Int.wrappingMul(c, 2)\n\n",
+          ""
+        ]
+      ],
+      "changes": [
+        [
+          "main::function twice",
+          "removed"
+        ]
+      ],
+      "on_add": {
+        "shop": "state"
+      },
+      "on_remove": {},
+      "soak": false,
+      "behaviour": []
+    },
+    {
+      "name": "price-signature",
+      "about": "a helper of the callback type gains a parameter; its caller's IR passes the default",
+      "replace": [
+        [
+          "func price(cents: Int) Int => Int.wrappingAdd(Int.wrappingMul(cents, {{A}}), {{B}})",
+          "func price(cents: Int, tax: Int = 0) Int => Int.wrappingAdd(Int.wrappingAdd(Int.wrappingMul(cents, {{A}}), {{B}}), tax)"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function price",
+          "summary"
+        ],
+        [
+          "main::function checkout",
+          "body"
+        ]
+      ],
+      "on_add": {
+        "shop": "state"
+      },
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "item-layout",
+      "about": "a type the state holds gains a field",
+      "replace": [
+        [
+          "  sku: String\n  cents: Int\n  export func tag",
+          "  sku: String\n  cents: Int\n  qty: Int = 1\n  export func tag"
+        ]
+      ],
+      "changes": [
+        [
+          "main::Item",
+          "layout"
+        ],
+        [
+          "main::function openShop",
+          "body"
+        ],
+        [
+          "main::function checkout",
+          "body"
+        ]
+      ],
+      "on_add": {
+        "shop": "state"
+      },
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "meter-layout",
+      "about": "the meter's state type gains a field",
+      "replace": [
+        [
+          "export class Meter {\n  hits: AtomicInt\n",
+          "export class Meter {\n  hits: AtomicInt\n  misses: AtomicInt\n"
+        ],
+        [
+          "Meter(hits: AtomicInt.create(0), audit:",
+          "Meter(hits: AtomicInt.create(0), misses: AtomicInt.create(0), audit:"
+        ]
+      ],
+      "changes": [
+        [
+          "main::Meter",
+          "layout"
+        ],
+        [
+          "main::function openMeter",
+          "body"
+        ]
+      ],
+      "on_add": {
+        "meter": "state"
+      },
+      "on_remove": {
+        "meter": "state"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "config-layout",
+      "about": "a type only a stored closure's capture holds gains a field (hidden environment)",
+      "replace": [
+        [
+          "export class Config {\n  rate: Int\n",
+          "export class Config {\n  rate: Int\n  floor: Int = 0\n"
+        ]
+      ],
+      "changes": [
+        [
+          "main::Config",
+          "layout"
+        ],
+        [
+          "main::function openShop",
+          "body"
+        ]
+      ],
+      "on_add": {
+        "shop": "state"
+      },
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "rule-capture",
+      "about": "a stored lambda captures one more value",
+      "replace": [
+        [
+          "  let rule = fn[move cfg](c: Int) Int => Int.wrappingAdd(Int.wrappingMul(c, cfg.rate), {{R}})",
+          "  let bias = 1\n  let rule = fn[move cfg, copy bias](c: Int) Int => Int.wrappingAdd(Int.wrappingAdd(Int.wrappingMul(c, cfg.rate), {{R}}), bias)"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function openShop/λ1",
+          "environment"
+        ],
+        [
+          "main::function openShop",
+          "body"
+        ]
+      ],
+      "on_add": {
+        "shop": "state"
+      },
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": true,
+      "behaviour": [
+        "rule_bias"
+      ]
+    },
+    {
+      "name": "flat-not-discount",
+      "about": "the implementor the state holds as an interface stops implementing it",
+      "replace": [
+        [
+          "export class Flat implements Discount {",
+          "export class Pct implements Discount {\n  cut: Int\n  export func apply(self, cents: Int) Int => Int.wrappingSub(cents, self.cut)\n}\n\nexport class Flat {"
+        ],
+        [
+          "discount: Flat(off: 1),",
+          "discount: Pct(cut: 10),"
+        ]
+      ],
+      "changes": [
+        [
+          "main::Flat",
+          "removed"
+        ],
+        [
+          "main::Pct",
+          "added"
+        ],
+        [
+          "main::method Pct.apply",
+          "added"
+        ],
+        [
+          "main::function openShop",
+          "body"
+        ]
+      ],
+      "on_add": {
+        "shop": "state"
+      },
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": true,
+      "behaviour": [
+        "pct"
+      ]
+    },
+    {
+      "name": "generic-body",
+      "about": "a generic helper's body changes",
+      "replace": [
+        [
+          "  let n = xs.count()\n",
+          "  let n = Int.wrappingAdd(xs.count(), 1)\n"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function firstOr",
+          "generic-body"
+        ]
+      ],
+      "on_add": {
+        "shop": "dependency"
+      },
+      "on_remove": {
+        "shop": "dependency"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "limit-constant",
+      "about": "a constant a handler reads changes",
+      "replace": [
+        [
+          "const limit: Int = base",
+          "const limit: Int = 200"
+        ]
+      ],
+      "changes": [
+        [
+          "main::limit",
+          "constant"
+        ]
+      ],
+      "on_add": {
+        "shop": "dependency"
+      },
+      "on_remove": {
+        "shop": "dependency"
+      },
+      "soak": true,
+      "behaviour": [
+        "limit200"
+      ]
+    },
+    {
+      "name": "common-impure",
+      "about": "a helper two scopes use loses `pure`",
+      "replace": [
+        [
+          "pure func common(n: Int) Int",
+          "func common(n: Int) Int"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function common",
+          "summary"
+        ]
+      ],
+      "on_add": {
+        "shop": "state",
+        "meter": "dependency"
+      },
+      "on_remove": {
+        "shop": "state",
+        "meter": "dependency"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "remove-meter-mark",
+      "about": "a helper only the meter uses is removed and inlined",
+      "replace": [
+        [
+          "func meterMark() String => \"meter@{{V}}\"\n\n",
+          ""
+        ],
+        [
+          "  return \"${meterMark()} w=",
+          "  return \"meter@{{V}} w="
+        ]
+      ],
+      "changes": [
+        [
+          "main::function meterMark",
+          "removed"
+        ],
+        [
+          "main::function hit",
+          "body"
+        ]
+      ],
+      "on_add": {
+        "meter": "dependency"
+      },
+      "on_remove": {},
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "meter-factory-param",
+      "about": "the meter's factory needs an argument its recipe does not give (R4)",
+      "replace": [
+        [
+          "export func openMeter(console: owned Console) Shared[Meter] {",
+          "export func openMeter(console: owned Console, scale: Int) Shared[Meter] {"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function openMeter",
+          "summary"
+        ]
+      ],
+      "on_add": {
+        "meter": "entry"
+      },
+      "on_remove": {},
+      "soak": false,
+      "behaviour": []
+    },
+    {
+      "name": "billing-factory-removed",
+      "about": "the billing factory is renamed (R4)",
+      "replace": [
+        [
+          "func openBilling(key: String) Shared[BillingApplication] {",
+          "func openDesk(key: String) Shared[BillingApplication] {"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function openBilling",
+          "removed"
+        ],
+        [
+          "main::function openDesk",
+          "added"
+        ]
+      ],
+      "on_add": {
+        "billing": "entry"
+      },
+      "on_remove": {},
+      "soak": false,
+      "behaviour": []
+    },
+    {
+      "name": "di-instance",
+      "about": "a DI provider's construction changes; the generated construction body is all that differs",
+      "replace": [
+        [
+          "provide Shared[Gateway] using instance Shared.create(Gateway(key: move key))",
+          "provide Shared[Gateway] using instance Shared.create(Gateway(key: \"${key}!\"))"
+        ]
+      ],
+      "changes": [
+        [
+          "main::*",
+          "di"
+        ]
+      ],
+      "on_add": {
+        "billing": "di"
+      },
+      "on_remove": {
+        "billing": "di"
+      },
+      "soak": true,
+      "behaviour": [
+        "key_bang"
+      ]
+    },
+    {
+      "name": "di-provider",
+      "about": "a DI context gains a binding of a type of its own (a generated factory method and a held instance)",
+      "replace": [
+        [
+          "export class Invoicer {",
+          "export class Fee {\n  cents: Int\n}\n\nexport class Invoicer {"
+        ],
+        [
+          "  provide Invoicer\n",
+          "  provide Invoicer\n  provide Fee using instance Fee(cents: 5)\n"
+        ]
+      ],
+      "changes": [
+        [
+          "main::Fee",
+          "added"
+        ],
+        [
+          "main::*",
+          "di"
+        ]
+      ],
+      "on_add": {
+        "billing": "di"
+      },
+      "on_remove": {
+        "billing": "di"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "checkout-signature",
+      "about": "a handler gains a parameter with a default",
+      "replace": [
+        [
+          "export async func checkout(shop: Shared[Shop], clock: Clock, console: Console, cents: Int, pause: Int<0..>) String {",
+          "export async func checkout(shop: Shared[Shop], clock: Clock, console: Console, cents: Int, pause: Int<0..>, tip: Int = 0) String {"
+        ],
+        [
+          "  let a = price(cents)\n",
+          "  let a = Int.wrappingAdd(price(cents), tip)\n"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function checkout",
+          "summary"
+        ]
+      ],
+      "on_add": {
+        "shop": "dependency"
+      },
+      "on_remove": {
+        "shop": "dependency"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "late-value-signature",
+      "about": "the async function of the future the state holds gains a parameter; the factory's call and `late`'s pass the default",
+      "replace": [
+        [
+          "async func lateValue(seed: Int, r: owned Receipt) Int => Int.wrappingAdd(seed, {{L}})",
+          "async func lateValue(seed: Int, r: owned Receipt, extra: Int = 0) Int => Int.wrappingAdd(Int.wrappingAdd(seed, {{L}}), extra)"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function lateValue",
+          "summary"
+        ],
+        [
+          "main::function openShop",
+          "body"
+        ],
+        [
+          "main::function late",
+          "body"
+        ]
+      ],
+      "on_add": {
+        "shop": "state"
+      },
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "ambiguous-lambdas",
+      "about": "both lambdas with the same environment change body: they cannot be told apart from a reordering",
+      "replace": [
+        [
+          "Int.wrappingAdd(c, Int.wrappingMul(rate, 2))",
+          "Int.wrappingAdd(c, Int.wrappingMul(rate, 4))"
+        ],
+        [
+          "Int.wrappingMul(c, Int.wrappingAdd(rate, {{S}}))",
+          "Int.wrappingMul(c, Int.wrappingAdd(rate, Int.wrappingAdd({{S}}, 1)))"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function openShop/λ2",
+          "removed"
+        ],
+        [
+          "main::function openShop/λ3",
+          "removed"
+        ],
+        [
+          "main::function openShop/λ@*",
+          "added"
+        ],
+        [
+          "main::function openShop/λ@*",
+          "added"
+        ],
+        [
+          "main::function openShop",
+          "body"
+        ]
+      ],
+      "on_add": {
+        "shop": "state"
+      },
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": false,
+      "behaviour": [
+        "bonus4",
+        "scale1"
+      ]
+    },
+    {
+      "name": "reorder-fields",
+      "about": "two fields of a type the state holds swap places (construction is by field name, so no body changes)",
+      "replace": [
+        [
+          "  sku: String\n  cents: Int\n  export func tag",
+          "  cents: Int\n  sku: String\n  export func tag"
+        ]
+      ],
+      "changes": [
+        [
+          "main::Item",
+          "layout"
+        ]
+      ],
+      "on_add": {
+        "shop": "state"
+      },
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": false,
+      "behaviour": []
+    },
+    {
+      "name": "remove-item-method",
+      "about": "a type the state holds loses a method nothing calls",
+      "replace": [
+        [
+          "  export func tag(self) Int => self.cents\n",
+          ""
+        ]
+      ],
+      "changes": [
+        [
+          "main::method Item.tag",
+          "removed"
+        ],
+        [
+          "main::Item",
+          "removed"
+        ]
+      ],
+      "on_add": {
+        "shop": "state"
+      },
+      "on_remove": {},
+      "soak": false,
+      "behaviour": []
+    },
+    {
+      "name": "job-layout",
+      "about": "a type only a variant payload of the state reaches gains a field",
+      "replace": [
+        [
+          "export class Job {\n  id: Int\n}",
+          "export class Job {\n  id: Int\n  owner: String = \"\"\n}"
+        ]
+      ],
+      "changes": [
+        [
+          "main::Job",
+          "layout"
+        ]
+      ],
+      "on_add": {
+        "shop": "state"
+      },
+      "on_remove": {
+        "shop": "state"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "mixin-dispatch",
+      "about": "a method of a type the state holds is now provided by a mixin: mixins are expanded per class in the IR, so `Item.tag` stays Item's own function and only its summary changes (it is now pure); no `dispatch` change exists in today's IR",
+      "replace": [
+        [
+          "export class Item {\n  sku: String\n  cents: Int\n  export func tag(self) Int => self.cents\n}",
+          "export mixin Tagger {\n  requires pure func amount(self) Int\n  export pure func tag(self) Int => self.amount()\n}\n\nexport class Item with Tagger {\n  sku: String\n  cents: Int\n  export pure func amount(self) Int => self.cents\n}"
+        ]
+      ],
+      "changes": [
+        [
+          "main::Tagger",
+          "added"
+        ],
+        [
+          "main::Item",
+          "added"
+        ],
+        [
+          "main::method Item.amount",
+          "added"
+        ],
+        [
+          "main::method Item.tag",
+          "summary"
+        ]
+      ],
+      "on_add": {
+        "shop": "dependency"
+      },
+      "on_remove": {
+        "shop": "dependency"
+      },
+      "soak": false,
+      "behaviour": []
+    },
+    {
+      "name": "base-constant",
+      "about": "a constant another constant reads changes: Dep follows the initializer",
+      "replace": [
+        [
+          "const base: Int = 100",
+          "const base: Int = 200"
+        ]
+      ],
+      "changes": [
+        [
+          "main::base",
+          "constant"
+        ]
+      ],
+      "on_add": {
+        "shop": "dependency"
+      },
+      "on_remove": {
+        "shop": "dependency"
+      },
+      "soak": false,
+      "behaviour": [
+        "limit200"
+      ]
+    },
+    {
+      "name": "reorder-makers",
+      "about": "two lambdas that differ only in the lambdas they create swap places: identities follow their structure",
+      "replace": [
+        [
+          "  let up = fn[copy rate](x: Int) fn(Int) Int {\n    let inner = fn[copy rate](c: Int) Int => Int.wrappingAdd(c, rate)\n    return move inner\n  }\n  let down = fn[copy rate](x: Int) fn(Int) Int {\n    let inner = fn[copy rate](c: Int) Int => Int.wrappingSub(c, rate)\n    return move inner\n  }\n",
+          "  let down = fn[copy rate](x: Int) fn(Int) Int {\n    let inner = fn[copy rate](c: Int) Int => Int.wrappingSub(c, rate)\n    return move inner\n  }\n  let up = fn[copy rate](x: Int) fn(Int) Int {\n    let inner = fn[copy rate](c: Int) Int => Int.wrappingAdd(c, rate)\n    return move inner\n  }\n"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function openShop",
+          "body"
+        ]
+      ],
+      "on_add": {},
+      "on_remove": {},
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "phantom-body",
+      "about": "a generic function whose type parameter appears nowhere in its IR changes body: still a generic body",
+      "replace": [
+        [
+          "func phantom[T](x: Int) Int => x",
+          "func phantom[T](x: Int) Int => Int.wrappingAdd(x, 0)"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function phantom",
+          "generic-body"
+        ]
+      ],
+      "on_add": {
+        "shop": "dependency"
+      },
+      "on_remove": {
+        "shop": "dependency"
+      },
+      "soak": true,
+      "behaviour": []
+    },
+    {
+      "name": "shop-factory-refined",
+      "about": "the shop's factory refines its parameter so the recorded argument no longer fits (R4); the lambdas capturing `rate` change environment, and four share it, so they become removals and additions",
+      "replace": [
+        [
+          "export func openShop(console: owned Console, rate: Int) Shared[Shop] {",
+          "export func openShop(console: owned Console, rate: Int<10..>) Shared[Shop] {"
+        ]
+      ],
+      "changes": [
+        [
+          "main::function openShop",
+          "summary"
+        ],
+        [
+          "main::function openShop/λ2",
+          "removed"
+        ],
+        [
+          "main::function openShop/λ3",
+          "removed"
+        ],
+        [
+          "main::function openShop/λ4",
+          "removed"
+        ],
+        [
+          "main::function openShop/λ4/λ1",
+          "removed"
+        ],
+        [
+          "main::function openShop/λ5",
+          "removed"
+        ],
+        [
+          "main::function openShop/λ5/λ1",
+          "removed"
+        ],
+        [
+          "main::function openShop/λ@*",
+          "added"
+        ],
+        [
+          "main::function openShop/λ@*",
+          "added"
+        ],
+        [
+          "main::function openShop/λ@*",
+          "added"
+        ],
+        [
+          "main::function openShop/λ@*",
+          "added"
+        ],
+        [
+          "main::function openShop/λ@*",
+          "added"
+        ],
+        [
+          "main::function openShop/λ@*",
+          "added"
+        ]
+      ],
+      "on_add": {
+        "shop": "entry"
+      },
+      "on_remove": {},
+      "soak": false,
+      "behaviour": []
+    },
+    {
+      "name": "type-error",
+      "about": "a source the checker rejects",
+      "replace": [
+        [
+          "func shopMark() String => \"shop@{{V}}\"",
+          "func shopMark() String => 42"
+        ]
+      ],
+      "changes": null,
+      "on_add": {},
+      "on_remove": {},
+      "soak": false,
+      "rejected": true,
+      "behaviour": []
+    }
+  ]
+}

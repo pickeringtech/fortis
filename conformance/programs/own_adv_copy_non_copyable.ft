@@ -1,0 +1,13 @@
+// reject: E-OWN-002 (at the marked lines)
+// covers: LANG-07-08, LANG-07-01
+export class Config {
+  export limit: Int
+}
+func run(f: fn(Int) Int) Int {
+  let shared = Shared.create(Config(limit: 1))
+  let again = copy shared                  // reject: E-OWN-002 — Shared is not copyable
+  let weak = shared.downgrade()
+  let w2 = copy weak                       // reject: E-OWN-002
+  let g = copy f                           // reject: E-OWN-002 — closures are not copyable
+  return 0
+}

@@ -1,0 +1,30 @@
+// D-251: both unprefixed variants are accepted (LR 9.7) and run on the interpreter (prints 2|1); the VM and native
+// refuse `Green` ("type `Green` used as a value") and `List.of(Red)` ("type `Red` has no declaration").
+import fortis.host { Host }
+
+enum Light derive Equatable {
+  Red
+  Green
+}
+
+class Green {
+  export n: Int
+}
+
+pure func green() Light => Green
+
+pure func code(l: Light) Int {
+  return match l {
+    Red => 1
+    Green => 2
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${code(green())}")
+  let xs: List[Light] = List.of(Red)
+  for x in xs {
+    caps.console.print("${code(x)}")
+  }
+}

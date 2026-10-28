@@ -1,0 +1,4 @@
+// reject: E-OWN-012 (at the marked lines) — the read loan for buffer.length() ends in step 1; the editable loan activates in step 2
+update(editable buffer, buffer.length())
+// reject: E-OWN-012 — the second argument moves a place reserved by the first
+update(editable buffer, consume(move buffer))

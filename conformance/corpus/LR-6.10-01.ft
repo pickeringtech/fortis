@@ -1,0 +1,4 @@
+// illustrative
+export pure func largest[T](items: ListView[T]) T? where T implements Comparable, T implements Copyable {
+  …
+}

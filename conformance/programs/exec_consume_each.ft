@@ -1,0 +1,42 @@
+// execute: 4|2|1|refused demo.odd|filled 2 refused 1
+// requires: runtime
+// covers: LANG-10-02
+// consumeEach (10.7) consumes a list of outcomes in order, calling the callback once per element; the receiver is
+// moved with `move results.consumeEach(…)`; BytesView.get reads a byte in place or gives null past the end.
+import fortis.host { Host }
+export error Odd {
+  code: "demo.odd"
+}
+try func half(n: Int) Int {
+  if (Int.rem(n, 2) or fail) == 1 {
+    fail Odd()
+  }
+  return Int.div(n, 2) or fail
+}
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let out = alias caps.console
+  let data = String.from("ab").toBytes()
+  out.print("${Int.saturatingSub(data.byteCount(), 4)}")
+  out.print("${data.get(5) ?? 0}")
+  out.print("${(data.get(99) ?? 1)}")
+  let mut results: List[Outcome[Int]] = List.default()
+  editable results.push(half(4))
+  editable results.push(half(3))
+  editable results.push(half(8))
+  let mut filled = 0
+  let mut refused = 0
+  move results.consumeEach(fn mut[editable filled, editable refused, alias out](r: owned Outcome[Int]) Void {
+    match move r {
+      success(v) => {
+        filled = Int.saturatingAdd(filled, 1)
+      }
+      failure(f) => {
+        refused = Int.saturatingAdd(refused, 1)
+        out.print("refused ${f.code}")
+        report f
+      }
+    }
+  })
+  out.print("filled ${filled} refused ${refused}")
+}

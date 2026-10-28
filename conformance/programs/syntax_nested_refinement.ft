@@ -1,0 +1,6 @@
+// accept
+export class Limits[T] {
+  export const max: Int = 9
+}
+
+export type Small = Int<0..Limits[Int<0..9>].max>

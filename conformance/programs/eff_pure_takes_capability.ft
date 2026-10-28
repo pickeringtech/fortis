@@ -1,0 +1,35 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-11-06
+// D-145: a `pure` function may not take a capability parameter at all (11.5), whether or not its body uses it: `pure`
+// rules out the I/O a capability is for, and `pure` with `requires capability` is a contradiction. Both checkers
+// accepted this.
+import fortis.host { Host, Console }
+
+pure func ignore(c: Console) Int => 1     // reject: E-EFF-001 — a pure function takes the capability Console
+
+func loud(c: Console) Int {
+  c.print("loud")
+  return 1
+}
+
+export contract Pure {
+  pure
+}
+
+export contract Speaks {
+  requires capability Console
+}
+
+export contract Mute {
+  excludes capability Console
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let n = ignore(caps.console)
+  let m = loud(caps.console)
+  let f = pure fn(c: Console) Int => 1                    // reject: E-EFF-001 — nor a pure lambda
+  let g = Pure fn(c: Console) Int => 1                    // reject: E-EFF-001 — nor one a contract makes pure
+  let h = Speaks fn(c: Console) Int => 1
+  let k = Mute fn(c: Console) Int => 1                    // reject: E-EFF-001 — a lambda's parameters meet its contract
+}

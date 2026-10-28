@@ -1,0 +1,5 @@
+// reject: E-TYP-030 (at the marked line)
+// Structural types are local conveniences and may not appear in an exported signature (6.9).
+export pure func bounds(items: List[Int]) { low: Int, high: Int } {     // reject: E-TYP-030
+  return { low: 0, high: items.count() }
+}

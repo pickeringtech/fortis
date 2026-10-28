@@ -1,0 +1,12 @@
+// reject: E-NAM-034
+// The syntax layer accepts this head (LR 16); the checker rejects it, since the Web UI kit is not installed
+// (E-NAM-034; D-90, X-231).
+import fortis.web.components { SafeHtml }
+
+server component Badge(input: { label: String }) {
+  state { shown: Bool }
+
+  view {
+    <span>${input.label}</span>
+  }
+}

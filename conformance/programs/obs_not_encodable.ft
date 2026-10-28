@@ -1,0 +1,6 @@
+// reject: E-TYP-090 (at the marked line)
+// covers: LANG-13-01
+import fortis.host { Console }
+observation Bad {                          // reject: E-TYP-090 — an authority is not Encodable
+  console: Console                   required: all
+}

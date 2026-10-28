@@ -1,0 +1,27 @@
+// execute: 0|100|42|7
+// requires: runtime
+// covers: LANG-06-02
+import fortis.host { Host }
+
+pure func clamp(value: Int, low: Int<0..100>, high: Int<0..100>) Int<0..100> {
+  if value < low {
+    return low
+  }
+  if value > high {
+    return high
+  }
+  return value
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${clamp(-5, 0, 100)}")
+  caps.console.print("${clamp(500, 0, 100)}")
+  caps.console.print("${clamp(42, 0, 100)}")
+  let xs = List.of(7, 8, 9)
+  for i in 0..<xs.count() {
+    if i == 0 {
+      caps.console.print("${xs[i]}")
+    }
+  }
+}

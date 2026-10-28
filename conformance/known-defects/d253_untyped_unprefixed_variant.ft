@@ -1,0 +1,24 @@
+// D-253 reproduction. `let red = Red` has no expected type, and two enums declare `Red`, so LR 9.7 does not let
+// the prefix be left out. Both checkers reject it (E-NAM-001, LANG-04-05); the pinned fixture is
+// conformance/packages/bad.variant.ambiguous. This file is the original report, not a conformance fixture.
+import fortis.host { Host }
+
+enum Light {
+  Red
+  Green
+}
+
+enum Paint {
+  Red
+  Blue
+}
+
+pure func light(x: Light) Int => 1
+
+pure func paint(x: Paint) Int => 2
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let red = Red
+  caps.console.print("${light(red)} ${paint(red)}")
+}

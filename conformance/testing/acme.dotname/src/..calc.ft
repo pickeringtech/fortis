@@ -1,0 +1,11 @@
+// The file name begins with ".." but it is a file of src/, not a path that leaves src/. Both runners load the
+// enclosing package and resolve the sibling import.
+import acme.dotname.n { double }
+
+export pure func twice(x: Int) Int {
+  return double(x)
+}
+
+test "a file named with two leading dots imports its sibling" {
+  expect twice(4) == 8
+}

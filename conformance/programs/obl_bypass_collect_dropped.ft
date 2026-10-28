@@ -1,0 +1,8 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-02
+try func half(n: Int) Int => n
+func run(n: Int) Int {
+  let xs: List[Outcome[Int]] = List.of(half(n))
+  Outcome.collect(move xs)                 // reject: E-OBL-001 — the collected outcome is dropped
+  return 0
+}

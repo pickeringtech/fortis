@@ -1,0 +1,15 @@
+// accept
+export interface Shaped[T] {
+  pure func shape(self) T
+}
+
+class Box implements Shaped[fn() { value: Int }] {
+  value: Int
+
+  pure func shape(self) fn() { value: Int } {
+    let v = self.value                               // a field is captured through a local (LR 4.5, 8.3)
+    return fn[copy v]() { value: Int } => { value: v }
+  }
+
+  pure func where(self) Int => self.value            // method name: keyword permitted (LR 3.4)
+}

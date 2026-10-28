@@ -1,0 +1,13 @@
+# E-TEL-005: a hashed field as a dimension (an identifier never becomes a metric label)
+telemetry:
+  privacy:
+    transforms:
+      OrderProcessing:
+        email: hash
+  projections:
+    p:
+      source: OrderProcessing
+      dimensions: [region, email]   # expect: E-TEL-005
+      metrics:
+        - name: p.count
+          instrument: counter

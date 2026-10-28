@@ -1,0 +1,19 @@
+// accept
+// covers: LANG-09-06, LANG-07-07
+// 9.8: `match move` consumes the place. Every field may be bound, or a non-linear field may be discarded with `_`.
+export class Pair {
+  export first: String
+  export second: String
+}
+
+func both(p: owned Pair) String {
+  match move p {
+    Pair(first: a, second: b) => { return move a }
+  }
+}
+
+func rest(p: owned Pair) String {
+  match move p {
+    Pair(first: a, second: _) => { return move a }
+  }
+}

@@ -1,0 +1,39 @@
+// accept
+// covers: LANG-10-01, LANG-10-02
+// Every consuming operation of 10.2 and the accepted shapes of storage.
+export error Odd {
+  code: "demo.odd"
+}
+try func half(n: Int) Int => n
+func takeOutcome(o: owned Outcome[Int]) Int => 0
+func takeFailure(f: owned Failure) Void {
+}
+try recovers func forms(n: Int) Int {
+  let a = half(n) or fail
+  let b = half(n) or recover 0
+  let c = half(n) catch e {
+    report e
+    recover 1
+  }
+  let d = match half(n) {
+    success(v) => v
+    failure(f) => {
+      report f
+      give 2
+    }
+  }
+  let kept = half(n)
+  let e = takeOutcome(move kept)
+  let stored: List[Outcome[Int]] = List.of(half(n), half(n))
+  let all = Outcome.collect(move stored) or fail
+  let g = half(n) catch err {
+    takeFailure(move err)
+    recover 3
+  }
+  let late = half(n)
+  if n > 0 {
+    return late or fail
+  }
+  discard late or recover 0
+  return Int.saturatingAdd(a, Int.saturatingAdd(b, Int.saturatingAdd(c, Int.saturatingAdd(d, Int.saturatingAdd(e, Int.saturatingAdd(all.count(), g))))))
+}

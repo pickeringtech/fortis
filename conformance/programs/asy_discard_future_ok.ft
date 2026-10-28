@@ -1,0 +1,7 @@
+// accept
+// covers: LANG-12-03
+async func work(n: Int) Int => n
+func run(n: Int) Int {
+  discard work(n)
+  return n
+}

@@ -1,0 +1,20 @@
+// accept
+import acme.accounts { isAdult, loadAccount, CustomerId, Account }
+test "adult boundary" cases {
+  "below": { age: 17, expected: false }
+  "equal": { age: 18, expected: true }
+} as row {
+  expect isAdult(row.age) == row.expected
+}
+
+test "guest account on failure" {
+  let account = loadAccount(CustomerId(999)) catch e {
+    expect e.code == "accounts.not_found"
+    recover Account.guest()
+  }
+  expect account.isGuest()
+}
+
+property "reversing twice is identity" forall (items: List[Int<0..100>]) {
+  expect items.reversed().reversed() == items
+}

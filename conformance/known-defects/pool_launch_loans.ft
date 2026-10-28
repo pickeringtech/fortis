@@ -1,0 +1,49 @@
+// D-180 (docs/delivery/defects.json): both checkers accept loans that cross a pool launch or a detach, which LANG-12-05
+// forbids (12.5, 12.7; Appendix C.2: only Shareable environments without loans cross a pool launch): a bound future
+// that borrows a local, launched on the parallel pool; a method call that borrows its receiver, launched on the pool
+// (natively the receiver is then moved into the task, so the later read does not build); and a cooperative task that
+// borrows a block local, detached. Each should be rejected (E-ASY-003 or E-OWN-0xx).
+import fortis.host { Host, Capabilities, Console, Supervisor }
+
+async func size(s: String) Int => s.scalarCount()
+
+export class Word {
+  export s: String
+  export async func size(self) Int => self.s.scalarCount()
+}
+
+async func boundFuture() Int {
+  let s = String.from("abc")
+  scope tasks {
+    let f = size(s)
+    let t = tasks.launchParallel(move f)
+    return await t
+  }
+}
+
+async func receiver() Int {
+  let w = Word(s: String.from("abc"))
+  scope tasks {
+    let t = tasks.launchParallel(w.size())
+    let n = await t
+    return Int.wrappingAdd(n, w.s.scalarCount())
+  }
+}
+
+async func detached(sup: Supervisor) Int {
+  scope tasks {
+    let s = String.from("abc")
+    let t = tasks.launch(size(s))
+    tasks.detach(move t, sup)
+  }
+  return 0
+}
+
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: console, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let a = await boundFuture()
+  let b = await receiver()
+  let c = await detached(sup)
+  console.print("${a} ${b} ${c}")
+}

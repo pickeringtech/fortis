@@ -1,0 +1,8 @@
+[package]
+name = "fortis-runtime"
+description = "The Fortis core runtime implemented once (Programme 5.3): exact numeric semantics (Decimal, Duration, Timestamp, float formatting), text and failure values shared by the VM and native code"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]

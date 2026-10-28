@@ -1,0 +1,5 @@
+// accept
+let account = loadAccount(id) catch e {
+  report e
+  recover Account.guest()
+}

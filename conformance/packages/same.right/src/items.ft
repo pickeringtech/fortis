@@ -1,0 +1,20 @@
+// accept
+export error Missing {
+  code: "right.missing"
+  payload { count: Int }
+}
+
+export class Item {
+  export count: Int
+  export weight: Int
+  export pure func show(self) String => "right ${self.count} ${self.weight}"
+}
+
+export pure func describe(item: Item) String => "a right item weighing ${item.weight}"
+
+export try func find(count: Int) Item {
+  if count == 0 {
+    fail Missing(count: count)
+  }
+  return Item(count: count, weight: Int.wrappingMul(count, 3))
+}

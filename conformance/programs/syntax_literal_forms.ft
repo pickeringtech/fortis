@@ -1,0 +1,6 @@
+// reject: E-SYN-000 (at the marked line)
+const a = 1.5
+const b = 2e10
+const c = 19.99d
+const d = 250ms
+const e = 1f32                             // reject: E-SYN-000 — a float literal needs `.` or an exponent (LR 3.5)

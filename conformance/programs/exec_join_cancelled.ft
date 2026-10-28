@@ -1,0 +1,37 @@
+// execute: unwound 1|unwound 2|recovered -1
+// execute-trace: launch both#1|launch quick#2|suspend main|start both#1|launch nap#3|launch nap#4|suspend both#1|start quick#2|suspend quick#2|start nap#3|suspend nap#3|start nap#4|suspend nap#4|time 1ms|resume quick#2|complete quick#2|resume main|join quick#2|loans-end|cancel both#1|suspend main|resume both#1|cancel nap#3|cancel nap#4|suspend both#1|resume nap#3|cancelled nap#3|loans-end|defer|complete nap#3|resume both#1|suspend both#1|resume nap#4|cancelled nap#4|loans-end|defer|complete nap#4|resume both#1|cancelled both#1|complete both#1|resume main|join both#1
+// requires: runtime
+// covers: LANG-12-05
+// 12.5: the parent of a `join` is cancelled while both futures sleep; both observe the cancellation at their
+// await, unwind through their defers and complete before the parent leaves the join.
+import fortis.host { Host, Console, Clock }
+export error Bad {
+  code: "demo.bad"
+}
+async func nap(console: Console, clock: Clock, n: Int) Int {
+  defer { console.print("unwound ${n}") }
+  await clock.sleep(10ms)
+  return n
+}
+async func both(console: Console, clock: Clock) Int {
+  let pair = await join(nap(console, clock, 1), nap(console, clock, 2))
+  let (a, b) = move pair
+  return Int.wrappingAdd(a, b)
+}
+async try func quick(clock: Clock) Int {
+  await clock.sleep(1ms)
+  fail Bad()
+}
+async try func run(console: Console, clock: Clock) Int {
+  scope tasks {
+    let w = tasks.launch(both(console, clock))
+    let q = tasks.launch(quick(clock))
+    let x = await q or fail
+    return Int.wrappingAdd(x, await w)
+  }
+}
+export async recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let r = await run(caps.console, caps.clock) or recover -1
+  caps.console.print("recovered ${r}")
+}

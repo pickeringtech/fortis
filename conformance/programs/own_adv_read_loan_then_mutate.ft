@@ -1,0 +1,11 @@
+// reject: E-OWN-011 (at the marked line)
+// covers: LANG-07-05
+export class Counter {
+  export count: Int
+}
+func run() Int {
+  let mut c = Counter(count: 0)
+  let seen = alias c
+  c.count = 1                              // reject: E-OWN-011 — mutated while a read loan is held
+  return seen.count
+}

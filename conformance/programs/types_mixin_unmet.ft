@@ -1,0 +1,10 @@
+// reject: E-TYP-080 (at the marked line)
+// covers: LANG-09-04
+export mixin Summarised {
+  requires pure func title(self) String
+  export pure func summary(self) String => self.title()
+}
+
+export class Report with Summarised {      // reject: E-TYP-080 — Report has no title()
+  export name: String
+}

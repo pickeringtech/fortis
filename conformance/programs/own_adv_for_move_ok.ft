@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-07-05
+func run(xs: owned List[String]) Int {
+  let mut n = 0
+  for x in move xs {
+    n = Int.wrappingAdd(n, x.scalarCount())
+  }
+  return n
+}

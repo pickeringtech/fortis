@@ -1,0 +1,24 @@
+// execute: outer|inner|body|inner|outer
+// requires: runtime, DEL-21
+// covers: LANG-11-09
+// Hook order at run time (11.8): before hooks in application order, after hooks in reverse.
+import fortis.host { Host, Console }
+export aspect logged(label: StringView) {
+  needs console: Console
+  before {
+    console.print(label)
+  }
+  after(result: Int) {
+    console.print(label)
+  }
+}
+@logged("outer")
+@logged("inner")
+func work(console: Console, n: Int) Int {
+  console.print("body")
+  return n
+}
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  discard work(caps.console, 1)
+}

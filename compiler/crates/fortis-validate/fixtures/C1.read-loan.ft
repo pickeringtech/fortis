@@ -1,0 +1,11 @@
+// DEL-45 fixture for C1.read-loan (lexical loan end): a read loan held within the block that owns its place.
+export class Box {
+  export n: Int
+}
+export func main(args: List[String]) Void {
+  {
+    let b = Box(n: 1)
+    let r = alias b
+    discard r.n
+  }
+}

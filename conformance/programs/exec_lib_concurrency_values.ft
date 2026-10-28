@@ -1,0 +1,21 @@
+// execute: 5|7|true|false|locked
+// requires: runtime
+// covers: LANG-12-06
+// The atomic and mutex intrinsics on the single-threaded interpreter (12.7).
+import fortis.host { Host }
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let counter = AtomicInt.create(5)
+  let previous = counter.fetchAdd(2)
+  caps.console.print("${previous}")
+  caps.console.print("${counter.load()}")
+  let flag = AtomicBool.create(true)
+  caps.console.print("${flag.load()}")
+  flag.store(false)
+  caps.console.print("${flag.load()}")
+  let m = Mutex.create(1)
+  {
+    let g = m.lockBlocking() or fail
+    caps.console.print("locked")
+  }
+}

@@ -1,0 +1,14 @@
+// execute: through the alias|written
+// requires: runtime
+// covers: LANG-11-07, LANG-04-03
+// D-140: a core type reached through a module alias (`import fortis.host`, then `host.Host`, `host.Path`) is typed as
+// itself: the entry `main` creates the capabilities through it, and its operations are checked and run.
+import fortis.host
+
+export try func main(args: List[String]) Void {
+  let caps = host.Host.capabilities()
+  let p = host.Path.parse("notes.txt") or fail
+  caps.console.print("through the alias")
+  caps.fileSystem.writeAll(p, "written") or fail
+  caps.console.print(caps.fileSystem.readText(p) or fail)
+}

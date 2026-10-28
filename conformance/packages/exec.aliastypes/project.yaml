@@ -1,0 +1,9 @@
+schema: fortis.project/v1
+name: exec.aliastypes
+version: 1.0.0
+entry: app
+exports: []
+dependencies:
+  fortis: "1.0"
+  same.left: "1.0.0"
+  same.right: "1.0.0"

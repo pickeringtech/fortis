@@ -1,0 +1,16 @@
+// reject: E-OWN-001 (at the marked lines)
+// covers: LANG-07-01, LANG-07-03
+// An existing ownership-bearing place needs a marker; the checker never inserts a clone.
+export class User {
+  export name: String
+  export age: Int
+}
+
+func enqueue(user: owned User) Void {
+}
+
+func positions(user: User) User {
+  let other = user                          // reject: E-OWN-001 — assignment without a marker
+  enqueue(user)                             // reject: E-OWN-001 — owned parameter needs move or copy
+  return user                               // reject: E-OWN-001 — return without a marker
+}

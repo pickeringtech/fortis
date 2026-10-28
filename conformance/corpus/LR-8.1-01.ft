@@ -1,0 +1,4 @@
+// illustrative
+[@aspect(args) …]
+[export] [Contract …] [pure] [noalloc] [async] [try] [recovers] func name[TypeParams](params) ReturnType [editable|from …] [where …] { body }
+[export] [Contract …] [pure] [noalloc] [async] [try] [recovers] func name(params) ReturnType => expression

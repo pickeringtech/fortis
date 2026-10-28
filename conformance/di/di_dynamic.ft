@@ -1,0 +1,40 @@
+// execute: fresh stripe 3|shared adyen 4|shared adyen 5
+// covers: PLAT-03-01, PLAT-03-03
+// An interface is injected in an ownership form the consumer writes: an owned `dynamic I` (a fresh boxed value
+// per consumer) or a `Shared[dynamic I]` (one instance, retained per consumer). DI never changes the slot's type.
+import fortis.host { Host }
+
+export interface PaymentGateway {
+  func charge(self, cents: Int) String
+}
+
+export class StripeGateway implements PaymentGateway {
+  export func charge(self, cents: Int) String => "fresh stripe ${cents}"
+}
+
+export class AdyenGateway implements PaymentGateway {
+  export func charge(self, cents: Int) String => "shared adyen ${cents}"
+}
+
+export class Preview {
+  inject gateway: dynamic PaymentGateway
+}
+
+export class Checkout {
+  inject gateway: Shared[dynamic PaymentGateway]
+}
+
+context Production {
+  provide dynamic PaymentGateway using StripeGateway
+  provide Shared[dynamic PaymentGateway] using AdyenGateway { lifetime: application }
+  provide Preview
+  provide Checkout
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let app = Production.application()
+  caps.console.print(app.preview().gateway.charge(3))
+  caps.console.print(app.checkout().gateway.charge(4))
+  caps.console.print(app.checkout().gateway.charge(5))
+}

@@ -1,0 +1,6 @@
+// accept — S6: fn types in parameter and field positions
+export class Hooks {
+  export onDone: fn(Int) Void
+  export maybe: (fn(Int) Bool)?
+}
+pure func apply(f: fn(Int) Int, g: fn mut(Int) Void, h: fn once(Int) Int) Int => f(1)

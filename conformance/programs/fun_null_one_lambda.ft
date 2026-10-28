@@ -1,0 +1,17 @@
+// accept
+// covers: LANG-08-04
+// One lambda may fill a null closure binding, including across one arm of a join.
+func run(b: Bool) Int {
+  let mut f: (fn(Int) Int)? = null
+  f = pure noalloc fn(x: Int) Int => x
+  let mut g: (fn(Int) Int)? = null
+  if b {
+    g = pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1)
+  }
+  let mut held: (fn(Int) Int)? = pure noalloc fn(x: Int) Int => x
+  let moved = move held
+  held = move moved
+  discard f
+  discard g
+  return 0
+}

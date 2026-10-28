@@ -1,0 +1,16 @@
+// accept
+// Exported signatures over exported nominal types; a structural type stays inside the module.
+export class Ledger {
+  export entries: List[Int]
+}
+
+export pure func open() Ledger => Ledger(entries: List.of())
+
+pure func bounds(items: List[Int]) { low: Int, high: Int } {
+  return { low: 0, high: items.count() }
+}
+
+export pure func span(items: List[Int]) Int {
+  let b = bounds(items)
+  return Int.wrappingSub(b.high, b.low)
+}

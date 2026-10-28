@@ -1,0 +1,5 @@
+import cand.app.b
+
+func use() Int => b.hidden()
+
+func show() String => "v=${b.shown()}"

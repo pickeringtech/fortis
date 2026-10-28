@@ -1,0 +1,15 @@
+// accept
+let maybe: Invoice? = match Invoice.create(customer: id, currency: gbp, lines: move lines) {
+  success(invoice) => move invoice
+  failure(f) => match move f {
+    is EmptyInvoice => null                                  // discharged here: adds `recovers`
+    is CurrencyMismatch(expected: want, found: got) as mismatch => {
+      report mismatch                                             // consumed by the arm
+      give null
+    }
+    otherwise(other) => {
+      report other
+      give null
+    }
+  }
+}

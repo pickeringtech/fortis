@@ -1,0 +1,10 @@
+// reject: E-TYP-090 (at the marked line)
+export class Customer {
+  export name: String
+  export age: Int
+}
+
+export class Summary derive From[Customer] {   // reject: E-TYP-090 — Customer has no field `email`
+  export name: String
+  export email: String
+}

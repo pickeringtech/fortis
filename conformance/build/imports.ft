@@ -1,0 +1,16 @@
+// The same program twice (PLAT-01-04, PLAT-01-05): `plain.ft` imports nothing, `imports.ft` imports standard
+// modules it never uses. Importing performs no runtime work and an unused module is not linked, so the two
+// executables are byte-identical and run identically.
+import fortis.text { Text }
+import fortis.money { Money, Currency }
+import fortis.time
+import fortis.collections
+import fortis.numeric
+
+export func main(args: List[String]) Void {
+  let mut total = 0
+  for a in args {
+    total = Int.wrappingAdd(total, a.scalarCount())
+  }
+  discard total
+}

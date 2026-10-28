@@ -1,0 +1,4 @@
+// accept — S1: refinements in type position
+export type Percent = Int<0..100>
+pure func clamp(value: Int<0..100>, items: List[Int]<length: 0..10>) Int<0..100> => value
+pure func name(text: String<scalars: 1..64>) String<scalars: 1..64> => text

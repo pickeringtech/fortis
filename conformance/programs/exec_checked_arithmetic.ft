@@ -1,0 +1,19 @@
+// execute: 55|numeric.overflow
+// requires: runtime
+// covers: LANG-06-04
+import fortis.host { Host }
+
+export try recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut total = 0
+  for i in 1..10 {
+    total = Int.add(total, i) or fail
+  }
+  caps.console.print("${total}")
+  let big = 9223372036854775807
+  let overflow = Int.add(big, 1) catch e {
+    caps.console.print(e.code)
+    recover 0
+  }
+  discard overflow
+}

@@ -1,0 +1,15 @@
+// illustrative
+contract FastCalculation {
+  pure
+  noalloc
+}
+
+contract PublicApi {
+  excludes capability RawSql
+  forbids recovers
+}
+
+contract DatabaseOnly {
+  excludes capability Network
+  excludes capability Mail
+}

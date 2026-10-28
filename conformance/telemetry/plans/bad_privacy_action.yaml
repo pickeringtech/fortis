@@ -1,0 +1,6 @@
+# E-TEL-004: an unknown transform
+telemetry:
+  privacy:
+    transforms:
+      OrderProcessing:
+        email: encrypt   # expect: E-TEL-004

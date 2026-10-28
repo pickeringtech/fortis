@@ -1,0 +1,5 @@
+// reject: E-NAM-001 (at the marked line)
+// covers: LANG-04-06
+// A module checked on its own that exports a declaration named `main` has an entry point, and 4.6 requires that
+// entry point to be a function of one of the four forms (D-51.2). An exported constant is none of them.
+export const main: Int = 1                    // reject: E-NAM-001 — exported main is a const

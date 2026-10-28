@@ -1,0 +1,18 @@
+// reject: E-OWN-053 (at the marked lines)
+// covers: LANG-07-06
+// The same lookup without an origin: the returned view keeps a loan of `self` that the result type does not name.
+export class Item {
+  export sku: Int
+  export name: String
+}
+export class Shelf {
+  export items: List[Item]
+  export func nameOf(self, sku: Int) StringView? {           // reject: E-OWN-053 — the signature names no origin
+    for item in self.items {
+      if item.sku == sku {
+        return alias item.name                      // reject: E-OWN-053 — the returned view keeps a loan of self
+      }
+    }
+    return null
+  }
+}

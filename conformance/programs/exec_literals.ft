@@ -1,0 +1,20 @@
+// execute: 255|10|15|1000000|2000.0|3.0|1.5|19.99|10|250ms|2min|true
+// requires: runtime
+// covers: LANG-03-05
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${0xFF}")
+  caps.console.print("${0b1010}")
+  caps.console.print("${0o17}")
+  caps.console.print("${1_000_000}")
+  caps.console.print("${2e3}")
+  caps.console.print("${3.0f32}")
+  caps.console.print("${1.5}")
+  caps.console.print("${19.99d}")
+  caps.console.print("${10d}")
+  caps.console.print("${250ms}")
+  caps.console.print("${2min}")
+  caps.console.print("${true}")
+}

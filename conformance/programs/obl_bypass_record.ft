@@ -1,0 +1,7 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-02
+try func half(n: Int) Int => n
+func run(n: Int) Int {
+  let rec = { result: half(n), count: 1 }  // reject: E-OBL-001 — a record holding an outcome is linear and dropped
+  return rec.count
+}

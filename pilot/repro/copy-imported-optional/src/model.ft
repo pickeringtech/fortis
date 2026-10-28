@@ -1,0 +1,14 @@
+// A newtype over a refined String. Used in this module, it is Equatable, and a class holding it is Copyable
+// even inside an optional (`local` below is accepted).
+export type Code = String<scalars: 1..10>
+
+class Here derive Equatable {
+  export code: Code
+}
+
+test "local" {
+  let c = Code.validate(String.from("GBP")) or fail
+  let h: Here? = Here(code: copy c)
+  let h2 = copy h
+  expect h == h2
+}

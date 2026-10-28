@@ -1,0 +1,6 @@
+// accept
+enum TaskCompletion[T] {
+  Completed(value: T)
+  Cancelled(reason: Cancellation)
+  Defect(info: TaskDefect)
+}

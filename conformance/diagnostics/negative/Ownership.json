@@ -1,0 +1,16 @@
+{
+  "class": "Ownership",
+  "code": "E-OWN-001",
+  "column": 1,
+  "fields": {
+    "conflict": "<conflict>",
+    "loan_region": "<loan_region>",
+    "spans": "<spans>"
+  },
+  "file": "x.ft",
+  "line": 1,
+  "message": "negative record",
+  "rule": "-",
+  "severity": "error",
+  "status": "violated"
+}

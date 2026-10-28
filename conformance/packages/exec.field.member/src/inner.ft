@@ -1,0 +1,5 @@
+// accept
+export class Counter {
+  export n: Int
+  export pure func count(self) Int => self.n
+}

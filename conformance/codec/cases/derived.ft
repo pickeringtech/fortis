@@ -1,0 +1,115 @@
+// Ten derived codec types: each value is written as <name>.json and <name>.bin into the development
+// FileSystem and decoded back from both; every printed line must end "true true".
+import fortis.host { Host, Console, FileSystem, Path }
+import fortis.money { Money, Currency }
+export class Point derive Equatable, Codec {
+  export x: Int
+  export y: Int
+}
+export enum Colour derive Equatable, Codec {
+  Red
+  Green
+  Blue
+}
+export enum Shape derive Equatable, Codec {
+  Circle(radius: Decimal)
+  Rect(width: Int, height: Int)
+  Empty
+}
+export type Percent = Int<0..100>
+export type Name = String<scalars: 1..40>
+export class Pair[A, B] derive Equatable, Codec {
+  export first: A
+  export second: B
+}
+export class Account derive Equatable, Codec {
+  export name: Name
+  export nickname: String?
+  export visits: Int = 0
+}
+export class Inventory derive Codec {
+  export counts: Map[String, Int]
+  export tags: Set[String]
+}
+class Segment derive Codec {             // module-private: structural field types stay out of exported signatures (E-TYP-030)
+  export ends: (Point, Point)
+  export style: { label: String, weight: Float }
+}
+export class Order derive Codec {
+  export shapes: List[Shape]
+  export placed: Timestamp
+  export window: Duration
+  export total: Money
+  export discount: Percent?
+}
+try func save(fs: FileSystem, name: String, text: String, bytes: Bytes) Void {
+  let tp = Path.parse("${name}.json") or fail
+  fs.writeAll(tp, text) or fail
+  let bp = Path.parse("${name}.bin") or fail
+  let mut f = fs.create(bp) or fail
+  defer { editable f.close() }
+  editable f.writeAll(bytes) or fail
+}
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  roundTrips(caps.fileSystem, caps.console) or fail
+}
+try func roundTrips(fs: FileSystem, out: Console) Void {
+  let p = Point(x: -3, y: 4)
+  save(fs, "point", p.toText(), p.toBytes()) or fail
+  let p1 = Point.fromText(p.toText()) or fail
+  let p2 = Point.fromBytes(p.toBytes()) or fail
+  out.print("point ${p1 == p} ${p2 == p}")
+  let c = Colour.Green
+  save(fs, "colour", c.toText(), c.toBytes()) or fail
+  let c1 = Colour.fromText(c.toText()) or fail
+  let c2 = Colour.fromBytes(c.toBytes()) or fail
+  out.print("colour ${c1 == c} ${c2 == c}")
+  let s = Shape.Rect(width: 2, height: 5)
+  save(fs, "shape", s.toText(), s.toBytes()) or fail
+  let s1 = Shape.fromText(s.toText()) or fail
+  let s2 = Shape.fromBytes(s.toBytes()) or fail
+  out.print("shape ${s1 == s} ${s2 == s}")
+  let pc = Percent(85)
+  save(fs, "percent", pc.toText(), pc.toBytes()) or fail
+  let pc1 = Percent.fromText(pc.toText()) or fail
+  let pc2 = Percent.fromBytes(pc.toBytes()) or fail
+  out.print("percent ${pc1 == pc} ${pc2 == pc}")
+  let n = Name.validate("Ada") or fail
+  save(fs, "name", n.toText(), n.toBytes()) or fail
+  let n1 = Name.fromText(n.toText()) or fail
+  let n2 = Name.fromBytes(n.toBytes()) or fail
+  out.print("name ${n1 == n} ${n2 == n}")
+  let pr = Pair[String, Colour](first: "fill", second: Colour.Blue)
+  save(fs, "pair", pr.toText(), pr.toBytes()) or fail
+  let pr1 = Pair[String, Colour].fromText(pr.toText()) or fail
+  let pr2 = Pair[String, Colour].fromBytes(pr.toBytes()) or fail
+  out.print("pair ${pr1 == pr} ${pr2 == pr}")
+  let who = Account(name: copy n, nickname: null, visits: 3)
+  save(fs, "account", who.toText(), who.toBytes()) or fail
+  let who1 = Account.fromText(who.toText()) or fail
+  let who2 = Account.fromBytes(who.toBytes()) or fail
+  out.print("account ${who1 == who} ${who2 == who}")
+  let mut counts: Map[String, Int] = Map.default()
+  editable counts.set("pears", 4)
+  editable counts.set("apples", 9)
+  let mut tags: Set[String] = Set.default()
+  discard editable tags.add("fresh")
+  discard editable tags.add("local")
+  let inv = Inventory(counts: move counts, tags: move tags)
+  save(fs, "inventory", inv.toText(), inv.toBytes()) or fail
+  let inv1 = Inventory.fromText(inv.toText()) or fail
+  let inv2 = Inventory.fromBytes(inv.toBytes()) or fail
+  out.print("inventory ${inv1.toText() == inv.toText()} ${inv2.toText() == inv.toText()}")
+  let seg = Segment(ends: (Point(x: 0, y: 0), Point(x: 3, y: 4)), style: { label: "edge", weight: 0.5 })
+  save(fs, "segment", seg.toText(), seg.toBytes()) or fail
+  let seg1 = Segment.fromText(seg.toText()) or fail
+  let seg2 = Segment.fromBytes(seg.toBytes()) or fail
+  out.print("segment ${seg1.toText() == seg.toText()} ${seg2.toText() == seg.toText()}")
+  let placed = Timestamp.add(Timestamp.epoch(), Duration.seconds(86400)) or fail
+  let o = Order(shapes: List.of(Shape.Circle(radius: 1.25d), Shape.Empty), placed: placed, window: Duration.minutes(30), total: Money.of(Currency.EUR, 42.00d), discount: Percent(10))
+  save(fs, "order", o.toText(), o.toBytes()) or fail
+  let o1 = Order.fromText(o.toText()) or fail
+  let o2 = Order.fromBytes(o.toBytes()) or fail
+  out.print("order ${o1.toText() == o.toText()} ${o2.toBytes().byteCount() == o.toBytes().byteCount() && o2.toText() == o.toText()}")
+}

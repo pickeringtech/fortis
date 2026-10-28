@@ -1,0 +1,15 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-06-09
+// Abandonable exempts the unwind path only; a normal exit must still consume the value (12.4).
+export class Tx implements Abandonable {
+  witness: Must
+  export func begin() Tx => Tx(witness: Must.create())
+  func abandon(owned self) Void {
+    let Tx(witness: w) = move self
+    Must.discharge(move w)
+  }
+}
+try func run(n: Int) Int {
+  let tx = Tx.begin()                      // reject: E-OBL-001 — falls off the end unconsumed
+  return n
+}

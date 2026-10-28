@@ -1,0 +1,15 @@
+// execute: first|second|1-2|done
+// requires: runtime
+// covers: LANG-03-06
+// 3.6: interpolated expressions are evaluated once each, in order.
+import fortis.host { Host, Console }
+func tick(console: Console, label: StringView, v: Int) Int {
+  console.print(label)
+  return v
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let text = "${tick(caps.console, "first", 1)}-${tick(caps.console, "second", 2)}"
+  caps.console.print(text)
+  caps.console.print("done")
+}

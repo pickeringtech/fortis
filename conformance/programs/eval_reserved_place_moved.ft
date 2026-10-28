@@ -1,0 +1,18 @@
+// reject: E-OWN-012 (at the marked line)
+// covers: LANG-05-07
+// Arguments are evaluated left to right and reserve their places first (5.7): the second argument may not move the
+// place the first reserved as an exclusive loan.
+export class Buffer {
+  export items: List[Int]
+}
+
+func update(buffer: editable Buffer, n: Int) Void {
+  editable buffer.items.push(n)
+}
+
+func consume(buffer: owned Buffer) Int => buffer.items.count()
+
+func run() Void {
+  let mut buffer = Buffer(items: List.default())
+  update(editable buffer, consume(move buffer))   // reject: E-OWN-012 — moves a place the first argument reserved
+}

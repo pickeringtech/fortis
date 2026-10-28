@@ -1,0 +1,16 @@
+// reject: E-TYP-040, E-TYP-010 (at the marked lines)
+// covers: LANG-06-08
+pure func take(n: Int) Int => n
+
+try func load(n: Int) Int => n
+
+try func mix(maybe: Int?, flag: Bool) Int {
+  let a: Int = maybe                        // reject: E-TYP-040 — Int? does not convert to Int
+  let b: Bool = maybe                       // reject: E-TYP-040 — Int? is not a Bool
+  let c = take(load(1))                     // reject: E-TYP-040 — Outcome[Int] where Int is expected
+  if maybe {                                // reject: E-TYP-010 — an optional is not a condition
+    return 1
+  }
+  let d: Int? = flag                        // reject: E-TYP-040 — Bool is not Int?
+  return a
+}

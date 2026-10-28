@@ -1,0 +1,2 @@
+// PLAT-01-01: fortis.http 2.0 is not in the compatibility set 1.0, so the manifest is refused (E-NAM-031).
+export pure func answer() Int => 42

@@ -1,0 +1,24 @@
+// accept
+// covers: LANG-06-08, LANG-10-01
+// The arm of or_narrow_match_obligation_bad.ft with the failure consumed. The guard still narrows, so
+// `p.read()` is a `Cell` call, and `report` discharges the binding the pattern took (LR 6.8, 9.8, 10.1).
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+}
+
+try func make(n: Int) Int => n
+
+export func kept(n: Int, p: Cell?) Bool {
+  return match make(n) {
+    failure(f) when p != null => {
+      report f
+      give p.read()
+    }
+    success(_) => false
+    failure(f) => {
+      report f
+      give false
+    }
+  }
+}

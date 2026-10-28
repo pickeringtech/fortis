@@ -1,0 +1,14 @@
+// reject: E-OWN-010 (at the marked line)
+// covers: LANG-07-04, LANG-07-05
+export class Invoice {
+  export lines: List[Int]
+  export title: String
+  export func issue(editable self) Void {
+  }
+}
+
+func conflict(invoice: editable Invoice) Void {
+  let title = alias invoice.title
+  let count = alias invoice.lines
+  editable invoice.issue()                  // reject: E-OWN-010 — exclusive loan while read loans are active
+}

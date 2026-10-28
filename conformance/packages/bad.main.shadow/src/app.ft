@@ -1,0 +1,6 @@
+// reject: E-NAM-001
+// The package entry check uses the same 4.6 forms. A local List matches the signature's tokens and is not the
+// prelude's List (D-51.2).
+export class List[T] {}
+
+export func main(args: List[String]) Void {}

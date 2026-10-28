@@ -1,0 +1,18 @@
+// E-INT-001: run with FORTIS_FAULT="typer:function total", the checker fails inside `total`, as a checker defect
+// would. The batch command does not crash: it reports E-INT-001 with a minimised reproduction (the declarations
+// and lines the failure does not need removed) saved under build/fortis-int.
+export class Item {
+  export price: Int
+}
+
+pure func describe(item: Item) String => "item at ${item.price}"
+
+func total(items: List[Item]) Int {
+  let mut t = 0
+  for i in items {
+    t = Int.wrappingAdd(t, i.price)
+  }
+  return t
+}
+
+func unrelated(n: Int) Int => Int.wrappingMul(n, 2)

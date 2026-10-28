@@ -1,0 +1,49 @@
+// execute: slot:adyen|consumer:braintree|group:checkout|untargeted:stripe|untargeted:stripe
+// covers: PLAT-03-02
+// Selection (Platform 3.3) within one context: an exact-slot binding beats an exact-consumer binding, which beats
+// a group binding, which beats an untargeted one; the declaration order of the bindings does not matter.
+import fortis.host { Host }
+
+export class Gateway {
+  name: String
+}
+
+export class Refunds {
+  inject primary: Gateway
+  inject backup: Gateway
+}
+
+export class Payouts {
+  inject gateway: Gateway
+}
+
+export class Preview {
+  inject gateway: Gateway
+}
+
+export class Reports {
+  inject gateway: Gateway
+}
+
+context Production {
+  group Checkout = [Preview, Payouts.other]
+  provide Gateway using instance Gateway(name: "stripe")
+  provide Gateway using instance Gateway(name: "group:checkout") to Checkout
+  provide Gateway using instance Gateway(name: "consumer:braintree") to Payouts
+  provide Gateway using instance Gateway(name: "slot:adyen") to Refunds.primary
+  provide Refunds
+  provide Payouts
+  provide Preview
+  provide Reports
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let app = Production.application()
+  let r = app.refunds()
+  caps.console.print(r.primary.name)
+  caps.console.print(app.payouts().gateway.name)
+  caps.console.print(app.preview().gateway.name)
+  caps.console.print("untargeted:${r.backup.name}")
+  caps.console.print("untargeted:${app.reports().gateway.name}")
+}

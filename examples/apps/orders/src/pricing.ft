@@ -1,0 +1,42 @@
+// Prices in exact money arithmetic. A unit price is decoded as a Decimal and priced in pounds; a negative price is
+// a domain failure, not a silent wrap.
+import fortis.money { Money, Currency }
+
+export error InvalidPrice {
+  code: "pricing.invalid"
+  payload { quantity: Int }
+}
+
+export class Line derive Equatable, Codec {
+  export sku: String<scalars: 1..32>
+  export quantity: Int<1..1000>
+  export unitPrice: Decimal
+}
+
+// The line total: the unit price times the quantity, exactly.
+export pure try func lineTotal(line: Line) Money {
+  if line.unitPrice < 0d {
+    fail InvalidPrice(quantity: line.quantity)
+  }
+  return Money.multiply(Money.of(Currency.GBP, line.unitPrice), line.quantity) or fail
+}
+
+test "line totals are exact" {
+  let line = Line(sku: "tea", quantity: 3, unitPrice: 1.10d)
+  expect (lineTotal(line) or fail).amount == 3.30d
+}
+
+test "line totals by quantity" cases {
+  "one": { quantity: 1, expected: 1.10d }
+  "three": { quantity: 3, expected: 3.30d }
+  "ten": { quantity: 10, expected: 11.00d }
+} as row {
+  let line = Line(sku: "tea", quantity: row.quantity, unitPrice: 1.10d)
+  expect (lineTotal(line) or fail).amount == row.expected
+}
+
+property "a larger quantity never costs less" forall (quantity: Int<1..999>) {
+  let fewer = Line(sku: "tea", quantity: quantity, unitPrice: 2.50d)
+  let more = Line(sku: "tea", quantity: quantity + 1, unitPrice: 2.50d)
+  expect Money.greaterThan(lineTotal(more) or fail, lineTotal(fewer) or fail)
+}

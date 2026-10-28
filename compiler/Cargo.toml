@@ -1,0 +1,13 @@
+# The production frontend (Programme 5; DEL-31 onwards). The experimental lowering keeps its own crates.
+[workspace]
+resolver = "2"
+members = ["crates/fortis-syntax", "crates/fortis-diag", "crates/fortis-names", "crates/fortis-types", "crates/fortis-ir", "crates/fortis-mir", "crates/fortis-runtime", "crates/fortis-vm", "crates/fortis-validate", "crates/fortis-native", "crates/fortis-lower", "crates/fortis-fmt", "crates/fortis-view", "crates/fortis-di", "crates/fortisc", "query-db"]
+exclude = ["experimental-lowering"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[profile.release]
+debug = false

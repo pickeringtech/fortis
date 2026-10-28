@@ -1,0 +1,6 @@
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()             // reject: E-EFF-010 — outside the entry main
+  caps.console.print("a second set")         // reject: E-EFF-010 — I/O without an Authority parameter
+}

@@ -1,0 +1,14 @@
+// reject: E-EFF-010 (at the marked line)
+// covers: LANG-11-07
+// D-110: an aspect's hook is the aspect's code, woven into every function it is applied to; it may not create the
+// capabilities, even when it is applied to the entry `main` (11.6, 11.8).
+import fortis.host { Host }
+export aspect announced() {
+  before {
+    let caps = Host.capabilities()         // reject: E-EFF-010 — inside an aspect's hook
+    caps.console.print("starting")
+  }
+}
+@announced()
+export func main(args: List[String]) Void {
+}

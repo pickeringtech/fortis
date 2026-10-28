@@ -1,0 +1,7 @@
+// reject: E-NAM-004 (at the marked line)
+import vis.field.util { Thing }
+
+export func main(args: List[String]) Void {
+  let t = Thing.create()
+  let n = t.secret                        // reject: E-NAM-004 — secret is private to util
+}

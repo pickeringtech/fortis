@@ -1,0 +1,14 @@
+// reject: E-MAT-001 (at the marked line)
+// covers: LANG-09-05
+export enum Status {
+  Draft
+  Issued(at: Int)
+  Paid(at: Int)
+}
+
+pure func code(s: Status) Int {
+  return match s {                          // reject: E-MAT-001 — Paid is not covered
+    Draft => 0
+    Issued(at: t) => t
+  }
+}

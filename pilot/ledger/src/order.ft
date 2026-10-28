@@ -1,0 +1,159 @@
+// Stable sorting for any copyable element type, given a "comes before" function.
+// The standard library sorts only `ListView[Int]` (`fortis.collections.sorted`), so reports sort with this.
+//
+// The sort orders a list of indices and then copies the elements out of the caller's view. Comparing elements
+// read back from a local `List[T]` is rejected by both checkers (the `where` bound is lost for an annotated
+// local; pilot/repro/generic-bound-annotated-local.ft), so every element is read from the parameter instead.
+import fortis.numeric { min }
+import fortis.collections { sorted }
+
+// The elements of `items` in the order given by `precedes`, which must say whether its first argument comes
+// strictly before its second. Equal elements keep their original order (a stable bottom-up merge sort).
+export pure func sortedBy[T](items: ListView[T], precedes: pure fn(T, T) Bool) List[T] where T implements Copyable {
+  let n = items.count()
+  let mut order: List[Int] = List.default()
+  for i in 0..<n {
+    editable order.push(i)
+  }
+  let mut width = 1
+  while width < n {
+    let mut next: List[Int] = List.default()
+    let mut lo = 0
+    while lo < n {
+      let mid = min(Int.saturatingAdd(lo, width), n)
+      let hi = min(Int.saturatingAdd(lo, Int.saturatingMul(width, 2)), n)
+      let mut i = lo
+      let mut j = mid
+      while i < mid || j < hi {
+        let left = order.get(i) ?? 0
+        let right = order.get(j) ?? 0
+        let mut takeLeft = true
+        if j >= hi {
+          takeLeft = true
+        } else if i >= mid {
+          takeLeft = false
+        } else {
+          let a = items.get(left)
+          let b = items.get(right)
+          if a != null && b != null {
+            takeLeft = !precedes(b, a)
+          }
+        }
+        if takeLeft {
+          editable next.push(left)
+          i = Int.saturatingAdd(i, 1)
+        } else {
+          editable next.push(right)
+          j = Int.saturatingAdd(j, 1)
+        }
+      }
+      lo = hi
+    }
+    order = move next
+    width = Int.saturatingMul(width, 2)
+  }
+  let mut out: List[T] = List.default()
+  for k in order {
+    match items.get(k) {
+      present(item) => {
+        editable out.push(copy item)
+      }
+      null => {
+      }
+    }
+  }
+  return move out
+}
+
+// Strings in ascending order.
+export pure func sortedStrings(items: ListView[String]) List[String] {
+  return sortedBy(items, pure noalloc fn(a: String, b: String) Bool => a < b)
+}
+
+// True when the list holds the string.
+export pure func containsString(items: ListView[String], wanted: StringView) Bool {
+  for item in items {
+    if item == wanted {
+      return true
+    }
+  }
+  return false
+}
+
+// The strings without repetitions, in the order of first appearance.
+export pure func distinctStrings(items: ListView[String]) List[String] {
+  let mut seen: Set[String] = Set.default()
+  let mut out: List[String] = List.default()
+  for item in items {
+    if editable seen.add(copy item) {
+      editable out.push(copy item)
+    }
+  }
+  return move out
+}
+
+class Keyed {
+  export key: Int
+  export label: String
+}
+
+test "sorting strings" {
+  let fruit: List[String] = List.of("pear", "apple", "fig", "apple")
+  let ordered = sortedStrings(fruit)
+  expect ordered.count() == 4
+  expect (ordered.at(0) or fail) == "apple"
+  expect (ordered.at(1) or fail) == "apple"
+  expect (ordered.at(2) or fail) == "fig"
+  expect (ordered.at(3) or fail) == "pear"
+}
+
+test "sorting is stable" {
+  let items = List.of(Keyed(key: 2, label: "b1"), Keyed(key: 1, label: "a"), Keyed(key: 2, label: "b2"), Keyed(key: 0, label: "z"))
+  let ordered: List[Keyed] = sortedBy(items, pure noalloc fn(x: Keyed, y: Keyed) Bool => x.key < y.key)
+  let labels = ordered.map(pure fn(k: Keyed) String => copy k.label)
+  expect (labels.at(0) or fail) == "z"
+  expect (labels.at(1) or fail) == "a"
+  expect (labels.at(2) or fail) == "b1"
+  expect (labels.at(3) or fail) == "b2"
+}
+
+test "empty and single lists" {
+  let none: List[String] = List.default()
+  expect sortedStrings(none).count() == 0
+  let single: List[String] = List.of("x")
+  let one = sortedStrings(single)
+  expect (one.at(0) or fail) == "x"
+}
+
+test "membership and distinct" {
+  let items: List[String] = List.of("b", "a", "b", "c", "a")
+  expect containsString(items, "c")
+  expect !containsString(items, "d")
+  let distinct = distinctStrings(items)
+  expect distinct.count() == 3
+  expect (distinct.at(0) or fail) == "b"
+  expect (distinct.at(2) or fail) == "c"
+}
+
+property "sorted integers are in order and keep their count" forall (items: List[Int<-50..50>]) {
+  let plain = items.map(pure noalloc fn(x: Int<-50..50>) Int => x)
+  let ordered: List[Int] = sortedBy(plain, pure noalloc fn(a: Int, b: Int) Bool => a < b)
+  expect ordered.count() == items.count()
+  let n = ordered.count()
+  let mut inOrder = true
+  for i in 1..<n {
+    let previous = ordered.get(i - 1) ?? 0
+    let current = ordered.get(i) ?? 0
+    if current < previous {
+      inOrder = false
+    }
+  }
+  expect inOrder
+}
+
+property "sorting agrees with the library sort" forall (items: List[Int<-1000..1000>]) {
+  let plain = items.map(pure noalloc fn(x: Int<-1000..1000>) Int => x)
+  let mine: List[Int] = sortedBy(plain, pure noalloc fn(a: Int, b: Int) Bool => a < b)
+  let theirs = sorted(plain)
+  expect mine == theirs
+}

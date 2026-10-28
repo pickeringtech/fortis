@@ -1,0 +1,10 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-10-06
+// catch applies to outcomes only; there is nothing to catch on a plain call.
+pure func depth(n: Int) Int => n
+
+func guard(n: Int) Int {
+  return depth(n) catch e {                 // reject: E-TYP-040 — depth returns Int, not an Outcome
+    recover 0
+  }
+}

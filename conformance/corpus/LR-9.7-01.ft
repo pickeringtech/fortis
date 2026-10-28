@@ -1,0 +1,6 @@
+// accept
+export enum InvoiceStatus derive Equatable {
+  Draft
+  Issued(at: Timestamp)
+  Paid(at: Timestamp, reference: String)
+}

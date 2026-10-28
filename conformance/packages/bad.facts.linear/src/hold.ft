@@ -1,0 +1,19 @@
+// accept
+// Hold is linear because it stores an Outcome. Box is linear because it stores a Hold.
+// A module that imports only Box must still treat Box as linear (LANG-06-12, LANG-04-04).
+export class Hold {
+  value: Outcome[Int]
+  export pure func create(n: Int) Hold => Hold(value: Outcome.success(n))
+}
+export class Box {
+  hold: Hold
+  export pure func create(n: Int) Box => Box(hold: Hold.create(n))
+  export func finish(owned self) Int {
+    let Box(hold: h) = move self
+    let Hold(value: v) = move h
+    return match move v {
+      success(k) => k
+      failure(_) => 0
+    }
+  }
+}

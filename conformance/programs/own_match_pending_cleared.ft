@@ -1,0 +1,35 @@
+// reject: E-OWN-020, E-OWN-011 (at the marked lines)
+// covers: LANG-07-04, LANG-07-05
+// A marker in an aggregate element is settled when that element finishes. A later match arm must not
+// clear it (D-159 review): a `move` has already transferred the place, and an `alias` stays pending so
+// the binding still holds the loan.
+func afterTuple(b: Bool) Int {
+  let x = String.from("x")
+  let pair = (move x, match b {
+    true => String.from("y")
+    false => String.from("z")
+  })
+  discard pair
+  return x.scalarCount()                    // reject: E-OWN-020 — x was moved into the tuple
+}
+
+func afterRecord(b: Bool) Int {
+  let x = String.from("x")
+  let row = { left: move x, right: match b {
+    true => String.from("y")
+    false => String.from("z")
+  } }
+  discard row
+  return x.scalarCount()                    // reject: E-OWN-020 — x was moved into the record
+}
+
+func aliasHeld(b: Bool) String {
+  let x = String.from("x")
+  let held = (alias x, match b {
+    true => String.from("y")
+    false => String.from("z")
+  })
+  let stolen = move x                        // reject: E-OWN-011 — held still loans x
+  discard held
+  return move stolen
+}

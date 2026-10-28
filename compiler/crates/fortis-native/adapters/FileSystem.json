@@ -1,0 +1,191 @@
+{
+  "capability": "FileSystem",
+  "rule": "PROG-ARC-02",
+  "normative": "Language Reference 11.6, 15",
+  "adapter": "compiler/crates/fortis-native/src/host.rs",
+  "handle": {
+    "representation": "a Copy struct naming its root: the development root (FORTIS_DEV_ROOT, or a fresh temporary directory made on first use and removed when the run ends), a directory that lives for the program, or nothing (a confinement that refuses everything)",
+    "ownership": "a copy is the same confinement; `subtree` returns a narrower one and never widens",
+    "created_by": "Host.capabilities(), called once by main (11.6); every other handle of this type is derived from that one"
+  },
+  "operations": {
+    "readText": {
+      "ownership": {
+        "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+        "path": "a read loan for the call, not retained",
+        "result": "an owned String"
+      },
+      "effects": [
+        "alloc",
+        "block",
+        "fail",
+        "io"
+      ],
+      "failures": [
+        "fs.outside_root",
+        "fs.not_found",
+        "fs.not_a_file",
+        "fs.invalid_text"
+      ],
+      "allocation": "the file's contents; the failure value with its `path` field when it fails",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    },
+    "writeAll": {
+      "ownership": {
+        "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+        "path": "a read loan for the call, not retained",
+        "text": "a read loan for the call, not retained",
+        "result": "none"
+      },
+      "effects": [
+        "alloc",
+        "block",
+        "fail",
+        "io"
+      ],
+      "failures": [
+        "fs.outside_root",
+        "fs.not_found"
+      ],
+      "allocation": "the resolved path; the failure value when it fails",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    },
+    "readAll": {
+      "ownership": {
+        "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+        "path": "a read loan for the call, not retained",
+        "result": "owned Bytes"
+      },
+      "effects": [
+        "alloc",
+        "block",
+        "fail",
+        "io"
+      ],
+      "failures": [
+        "fs.outside_root",
+        "fs.not_found",
+        "fs.not_a_file"
+      ],
+      "allocation": "the file's bytes; the failure value when it fails",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    },
+    "open": {
+      "ownership": {
+        "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+        "path": "a read loan for the call, not retained",
+        "result": "an owned File holding an operating-system handle"
+      },
+      "effects": [
+        "alloc",
+        "block",
+        "fail",
+        "io"
+      ],
+      "failures": [
+        "fs.outside_root",
+        "fs.not_found"
+      ],
+      "allocation": "the File and the resolved path; the failure value when it fails",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    },
+    "create": {
+      "ownership": {
+        "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+        "path": "a read loan for the call, not retained",
+        "result": "an owned File holding an operating-system handle (created or truncated)"
+      },
+      "effects": [
+        "alloc",
+        "block",
+        "fail",
+        "io"
+      ],
+      "failures": [
+        "fs.outside_root",
+        "fs.not_found"
+      ],
+      "allocation": "the File and the resolved path; the failure value when it fails",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    },
+    "subtree": {
+      "ownership": {
+        "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+        "path": "a read loan for the call, not retained",
+        "result": "a new owned FileSystem handle"
+      },
+      "effects": [
+        "alloc",
+        "io"
+      ],
+      "failures": [],
+      "allocation": "the narrower root's text, living for the program; the directory is created",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    },
+    "File.readAll": {
+      "ownership": {
+        "receiver": "the File, an editable loan (the position advances)",
+        "result": "owned Bytes"
+      },
+      "effects": [
+        "alloc",
+        "block",
+        "fail"
+      ],
+      "failures": [
+        "fs.closed",
+        "fs.wrong_mode"
+      ],
+      "allocation": "the remaining bytes; an operating-system error on the open handle is a runtime_invariant defect, never an undeclared failure",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    },
+    "File.writeAll": {
+      "ownership": {
+        "receiver": "the File, an editable loan",
+        "data": "a read loan for the call, not retained",
+        "result": "none"
+      },
+      "effects": [
+        "block",
+        "fail"
+      ],
+      "failures": [
+        "fs.closed",
+        "fs.wrong_mode"
+      ],
+      "allocation": "none beyond the failure value; an operating-system error on the open handle is a runtime_invariant defect",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    },
+    "File.close": {
+      "ownership": {
+        "receiver": "the File, an editable loan",
+        "result": "none"
+      },
+      "effects": [],
+      "failures": [],
+      "allocation": "none; closing twice has no effect and dropping an open File closes it",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    },
+    "Path.parse": {
+      "ownership": {
+        "text": "a read loan for the call",
+        "result": "an owned Path"
+      },
+      "effects": [
+        "alloc",
+        "fail"
+      ],
+      "failures": [
+        "path.invalid"
+      ],
+      "allocation": "the path's text; the failure value with its `text` field when it fails",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    }
+  },
+  "violation": {
+    "fixture": "conformance/programs/exec_host_violations.ft",
+    "refused_by": "native",
+    "expect": "fs.outside_root",
+    "clause": "a path that is absolute or escapes the root fails; subtree never widens"
+  }
+}

@@ -1,0 +1,30 @@
+// execute: preview: fallback|checkout: direct
+// covers: PLAT-03-02
+// `provide Key to Target` without `using` binds the key's own class to that target.
+import fortis.host { Host }
+
+export class Gateway {
+  name: String = "direct"
+}
+
+export class Checkout {
+  inject gateway: Gateway
+}
+
+export class Preview {
+  inject gateway: Gateway
+}
+
+context Production {
+  provide Gateway using instance Gateway(name: "fallback") { lifetime: application }
+  provide Gateway to Checkout
+  provide Checkout
+  provide Preview
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let app = Production.application()
+  caps.console.print("preview: ${app.preview().gateway.name}")
+  caps.console.print("checkout: ${app.checkout().gateway.name}")
+}

@@ -1,0 +1,21 @@
+# E-TEL-005: a dropped lifecycle key
+telemetry:
+  privacy:
+    transforms:
+      Session:
+        session: drop
+  projections:
+    s:
+      source: Session
+      bind_at: lifecycle_start
+      metrics:
+        - name: s.open
+          instrument: updown
+          lifecycle:
+            key: session   # expect: E-TEL-005
+            start:
+              field: phase
+              equals: 1
+            end:
+              field: phase
+              equals: 2

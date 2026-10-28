@@ -1,0 +1,30 @@
+// The orders batch job: reads one canonical-text order per line from orders.txt through the FileSystem
+// capability, processes each, and prints a summary. Every order leaves an `OrderProcessed` record on standard
+// error; a malformed or invalid order is reported (a `runtime-failure` record) and skipped.
+import fortis.host { Host, Console, FileSystem, Path }
+import fortis.money { Money, Currency }
+import fortis.text { Text }
+import shop.orders.orders { Order, process }
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let text = caps.fileSystem.readText(Path.parse("orders.txt") or fail) or fail
+  let mut processed = 0
+  let mut failed = 0
+  let mut revenue = Money.zero(Currency.GBP)
+  for line in Text.words(text) {
+    let order = Order.fromText(line) catch problem {
+      failed = Int.wrappingAdd(failed, 1)
+      report problem
+      continue
+    }
+    let total = process(order) catch problem {
+      failed = Int.wrappingAdd(failed, 1)
+      report problem
+      continue
+    }
+    processed = Int.wrappingAdd(processed, 1)
+    revenue = Money.add(revenue, total) or fail
+  }
+  caps.console.print("processed ${processed} orders, ${failed} failed, revenue ${revenue.amount} GBP")
+}

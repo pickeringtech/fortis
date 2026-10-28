@@ -1,0 +1,9 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-03
+try func half(n: Int) Int => n
+recovers func run(n: Int) Int {
+  return half(n) catch e {
+    annotate(move e, "run")                // reject: E-OBL-001 — the annotated failure is dropped
+    recover 0
+  }
+}

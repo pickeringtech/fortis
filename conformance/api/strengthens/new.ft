@@ -1,0 +1,10 @@
+// API fixture: `area` now promises `pure` and `first` can no longer fail; both are strengthenings.
+export error Empty {
+  code: "api.empty"
+}
+
+export pure func area(width: Int, height: Int) Int => Int.wrappingMul(width, height)
+
+export func first(xs: List[Int]) Int {
+  return xs.count()
+}

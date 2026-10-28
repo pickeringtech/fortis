@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: ver.mid
+version: 0.1.0
+exports: [api]
+dependencies:
+  fortis: "1.0"
+  ver.lib: "1.4.0"

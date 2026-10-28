@@ -1,0 +1,12 @@
+// reject: E-EFF-001
+// D-111: the entry may be `recovers`, and must be when it reaches an unreported discharge (11.3): leaving the modifier
+// off is refused, in a package as in a single file.
+import fortis.host { Host }
+
+// a failure discharged without a report: the `recovers` effect (10.4)
+recovers func clamped(value: Int) Int<0..100> => Int<0..100>.validate(value) or recover 0
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${clamped(42)}")     // reject: E-EFF-001 — main discharges a failure without `recovers`
+}

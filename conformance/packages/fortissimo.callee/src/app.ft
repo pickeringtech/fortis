@@ -1,0 +1,21 @@
+// reject: E-EFF-001 (at the marked lines)
+// LANG-11-03 (D-137): eff.module.callee in a package whose name begins with `fortis`, which is not the standard
+// package: util's `f` and `Node.m` are another module's, so their labels carry the module and never meet this module's
+// own non-allocating `f` and `Node.m`.
+import fortissimo.callee.util as util
+
+noalloc func f() Int => 1
+
+class Node {
+  n: Int
+
+  noalloc func m(self) Int => 1
+}
+
+func local() Int => f()
+
+func localMethod() Int => Node(n: 1).m()
+
+noalloc func viaAlias() Int => util.f()            // reject: E-EFF-001 — util.f may allocate
+
+noalloc func viaMethod(n: util.Node) Int => n.m()  // reject: E-EFF-001 — util's Node.m may allocate

@@ -1,0 +1,11 @@
+// accept — S7: type-rooted primaries inside larger expressions
+export enum Kind {
+  Plain
+  Fancy
+}
+pure func run(k: Kind) Bool {
+  let same = k == Kind.Plain
+  let other = Kind.Fancy != k || k == Kind.Plain
+  let list = List.of(Kind.Plain, Kind.Fancy)
+  return same && other && list.count() == 2
+}

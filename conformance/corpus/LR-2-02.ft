@@ -1,0 +1,12 @@
+// accept — src/app.ft in package acme.invoicing-cli; project.yaml has `entry: app`
+import fortis.host { Host }
+import acme.billing.invoices { Invoice, Line, CustomerId }
+import fortis.money { Money, Currency }
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()               // the only source of I/O authority (section 11.6)
+  let lines = List.of(Line(description: "Consulting", quantity: 3, unitPrice: Money.of(Currency.GBP, 120d)))
+  let mut invoice = Invoice.create(customer: CustomerId(7), currency: Currency.GBP, lines: move lines) or fail
+  editable invoice.issue(Timestamp.epoch())
+  caps.console.print(invoice.render())
+}

@@ -1,0 +1,10 @@
+// DEL-45 fixture for C3.loans: read loans in a noalloc function.
+export class User {
+  export name: String
+}
+noalloc func same(u: User, v: User) Bool => u.name == v.name
+export func main(args: List[String]) Void {
+  let a = User(name: "a")
+  let b = User(name: "b")
+  discard same(a, b)
+}

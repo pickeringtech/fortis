@@ -1,0 +1,83 @@
+// Nominal identifiers and refined quantities (Language Reference 6.3, 6.9). Plain operators where the interval
+// domain proves the result, a checked API or `validate` where it cannot.
+export type SkuId = Int<1..999999>
+export type BinId = Int<1..999>
+
+export error OutOfStock {
+  code: "stock.insufficient"
+}
+
+// Both operands are at most 10000, so a plain `+` is proved to fit Int<0..20000>.
+export pure func combined(a: Int<0..10000>, b: Int<0..10000>) Int<0..20000> => a + b
+
+// Proved: a quantity times a unit price in cents stays inside Int<0..10000000000>.
+export pure func lineValue(quantity: Int<0..10000>, unitCents: Int<0..1000000>) Int<0..10000000000> => quantity * unitCents
+
+// The sum may leave the stock range: the result is validated at the boundary.
+export pure try func restocked(current: Int<0..10000>, added: Int<0..10000>) Int<0..10000> {
+  return Int<0..10000>.validate(current + added) or fail
+}
+
+// Taking more than is held is a domain failure; the difference is then in range, which `validate` confirms.
+export pure try func withdrawn(current: Int<0..10000>, taken: Int<0..10000>) Int<0..10000> {
+  if taken > current {
+    fail OutOfStock()
+  }
+  return Int<0..10000>.validate(current - taken) or fail
+}
+
+// An unbounded running total uses the checked API: overflow is a failure, never a wrap.
+export pure try func total(values: List[Int<0..10000000000>]) Int {
+  let mut sum = 0
+  for v in values {
+    sum = Int.add(sum, v) or fail
+  }
+  return sum
+}
+
+test "refined arithmetic at its boundaries" {
+  expect combined(10000, 10000) == 20000
+  expect combined(0, 0) == 0
+  expect lineValue(10000, 1000000) == 10000000000
+  expect (restocked(9999, 1) or fail) == 10000
+  expect (withdrawn(5, 5) or fail) == 0
+}
+
+test "a sum past the stock range fails its refinement" {
+  let r = restocked(10000, 1) catch e {
+    expect e.code == "refinement.out_of_range"
+    recover 0
+  }
+  expect r == 0
+}
+
+test "taking more than is held is a domain failure" {
+  let r = withdrawn(5, 6) catch e {
+    expect e.code == "stock.insufficient"
+    recover 0
+  }
+  expect r == 0
+}
+
+test "nominal identifiers are validated at the boundary" {
+  let low = SkuId.validate(0) catch e {
+    expect e.code == "refinement.out_of_range"
+    recover SkuId(1)
+  }
+  expect low == SkuId(1)
+  let high = BinId.validate(1000) catch e {
+    expect e.code == "refinement.out_of_range"
+    recover BinId(999)
+  }
+  expect high == BinId(999)
+  expect (SkuId.validate(999999) or fail) == SkuId(999999)
+}
+
+test "the checked API fails instead of wrapping" {
+  expect (total(List.of(1, 2, 3)) or fail) == 6
+  let r = Int.add(9223372036854775807, 1) catch e {
+    expect e.code == "numeric.overflow"
+    recover 0
+  }
+  expect r == 0
+}

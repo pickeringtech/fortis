@@ -1,0 +1,41 @@
+// execute: 6|failed demo.overflow|10|launched 3
+// requires: runtime
+// covers: LANG-11-03, LANG-10-04
+// `noalloc` async functions (SP-04-async): futures awaited inline on the success and failure paths allocate in no
+// phase. A cooperative launch allocates under the v1 runtime host, which declares no inline task storage (C.3,
+// X-125), so `launched` is an ordinary async function; eff_noalloc_launch.ft is the rejected `noalloc` form.
+import fortis.host { Host }
+export error Overflow {
+  code: "demo.overflow"
+}
+noalloc async func add(a: Int, b: Int) Int => Int.wrappingAdd(a, b)
+noalloc async func sum3(a: Int, b: Int, c: Int) Int {
+  let x = await add(a, b)
+  return await add(x, c)
+}
+noalloc async try func bounded(a: Int, b: Int) Int {
+  let s = await add(a, b)
+  if s > 100 {
+    fail Overflow()
+  }
+  return s
+}
+async func launched(n: Int) Int {
+  scope tasks {
+    let t = tasks.launch(add(n, 1))
+    return await t
+  }
+}
+export async recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let s = await sum3(1, 2, 3)
+  caps.console.print("${s}")
+  let big = await bounded(99, 2) catch e {
+    caps.console.print("failed ${e.code}")
+    recover 0
+  }
+  let ok = await bounded(4, 6) or recover big
+  caps.console.print("${ok}")
+  let l = await launched(2)
+  caps.console.print("launched ${l}")
+}

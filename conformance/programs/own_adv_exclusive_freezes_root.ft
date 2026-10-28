@@ -1,0 +1,12 @@
+// reject: E-OWN-010 (at the marked line)
+// covers: LANG-07-05
+export class Pair {
+  export left: String
+  export right: String
+}
+func run() Int {
+  let mut p = Pair(left: "a", right: "b")
+  let l = editable p.left
+  let r = alias p.right                    // reject: E-OWN-010 — an exclusive loan of a field path freezes the whole owner
+  return r.scalarCount()
+}

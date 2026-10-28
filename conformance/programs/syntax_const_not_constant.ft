@@ -1,0 +1,2 @@
+// reject: E-SYN-000 (at the marked line)
+const now = await clock.now()            // reject: E-SYN-000 — not a constant expression form

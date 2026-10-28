@@ -1,0 +1,57 @@
+// accept
+// Two enums of the module declare `Red`, and every use gives the expected type that picks its enum (9.7): a
+// `return` of the enum's type, an annotated `let`, an argument, a `match` and a function position. Where a
+// function type is expected the name denotes that variant's constructor; the result type picks the enum (D-253).
+enum Light {
+  Red
+  Green
+}
+
+enum Paint {
+  Red
+  Blue
+}
+
+enum Shade {
+  Red(n: Int)
+  Blank
+}
+
+enum Tint {
+  Red(n: Int)
+  Blank
+}
+
+pure func stop() Light {
+  return Red
+}
+
+pure func primary() Paint {
+  let p: Paint = Red
+  return p
+}
+
+pure func take(light: Light) Int => 1
+
+pure func pass() Int => take(Red)
+
+pure func fromMatch(light: Light) Int => match light {
+  Red => 1
+  Green => 2
+}
+
+pure func takeCtor(f: fn() Light) Int => 1
+
+pure func passCtor() Int => takeCtor(Red)
+
+pure func takePure(f: pure fn() Light) Int => 1
+
+pure func passPure() Int => takePure(Red)
+
+pure func takeShade(f: fn(Int) Shade) Int => 1
+
+pure func passShade() Int => takeShade(Red)
+
+pure func lights() List[Light] => List.of(Red)
+
+pure func spelled() List[Light] => List[Light].of(Red)

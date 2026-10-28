@@ -1,0 +1,12 @@
+// reject: E-NAM-001, E-TYP-040 (at the marked lines)
+// use imports only fb. Cee's members are Cee's, not whatever this module has declared under that name.
+import bad.facts.member.bridge { fb }
+
+export pure func read() Int => fb().n
+export pure func length() Int => fb().len()
+export pure func missing() Int => fb().nothere()   // reject: E-NAM-001 — Cee has no nothere
+export pure func sized() Int => fb().size()       // reject: E-NAM-001 — Cee has no size
+export class Cee {
+  export label: String
+}
+export pure func wrong() String => fb().n          // reject: E-TYP-040 — n is Int, not this module's Cee

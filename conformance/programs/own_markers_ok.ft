@@ -1,0 +1,23 @@
+// accept
+// covers: LANG-07-01
+// Every position of 7.5 written with its marker: copy, alias, editable argument, move to an owned parameter, a fresh value without one.
+export class User {
+  export name: String
+  export age: Int
+}
+
+func rename(user: editable User, name: String) Void {
+  user.name = copy name
+}
+
+func enqueue(user: owned User) Void {
+}
+
+func positions(name: String) Void {
+  let user = User(name: copy name, age: 30)
+  let mut independent = copy user
+  let seen = alias user
+  rename(editable independent, "Richard")
+  enqueue(move independent)
+  enqueue(User(name: "fresh", age: 1))
+}

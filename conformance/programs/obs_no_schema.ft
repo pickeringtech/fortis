@@ -1,0 +1,6 @@
+// reject: E-OBS-012 (at the marked line)
+// covers: LANG-13-01
+func process(n: Int) Int {
+  capture tier = n                         // reject: E-OBS-012 — no schema attached
+  return n
+}

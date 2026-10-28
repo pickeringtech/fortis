@@ -1,0 +1,1 @@
+{"verdict": "reject", "code": "E-TYP-040", "covers": ["LANG-06-01"], "at": ["bad.iface.alias/src/app.ft:6", "bad.iface.alias/src/shadow.ft:8", "bad.iface.alias/src/shadow.ft:11"]}

@@ -1,0 +1,6 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-01, LANG-05-08
+try func half(n: Int) Int => n
+func run(n: Int) Void {
+  discard half(n)                          // reject: E-OBL-001 — a linear value is never discarded
+}

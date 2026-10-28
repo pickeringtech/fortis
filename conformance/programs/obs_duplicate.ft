@@ -1,0 +1,11 @@
+// reject: E-OBS-010 (at the marked line)
+// covers: LANG-13-02
+observation Trace {
+  tier: Int                          required: all
+}
+@observe(Trace)
+func process(n: Int) Int {
+  capture tier = n
+  capture tier = Int.wrappingAdd(n, 1)     // reject: E-OBS-010 — captured twice on one path
+  return n
+}

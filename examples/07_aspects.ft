@@ -1,0 +1,49 @@
+// Aspects: declared behaviour around a function. Before hooks run in application order,
+// after hooks in reverse, failure handlers innermost first.
+// Run: bin/fortis run examples/07_aspects.ft
+import fortis.host { Host, Console }
+
+export error TooBig {
+  code: "demo.too_big"
+}
+
+export aspect logged(label: StringView) {
+  needs console: Console
+  before {
+    console.print("enter ${label}")
+  }
+  after(result: Int) {
+    console.print("leave ${label} with ${result}")
+  }
+}
+
+export aspect guarded(limit: Int) {
+  needs console: Console
+  before {
+    if limit > 100 {
+      fail TooBig()
+    }
+  }
+  on failure(f: Failure) Int {
+    console.print("handled ${f.code}")
+    report f
+    return -1
+  }
+}
+
+@logged("outer")
+@logged("inner")
+func compute(console: Console, n: Int) Int {
+  console.print("body ${n}")
+  return Int.wrappingMul(n, n)
+}
+
+@guarded(limit: 500)
+try func risky(console: Console, n: Int) Int => n
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("result ${compute(caps.console, 7)}")
+  let r = risky(caps.console, 1) or recover -2
+  caps.console.print("risky gave ${r}")
+}

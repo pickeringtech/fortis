@@ -1,0 +1,431 @@
+// Text scanning helpers for the journal parser: lines, trimming, splitting, padding and integers.
+// The standard library offers only scalar access (`scalarAt`, `slice`) and `Text.words`, so everything
+// line-oriented is built here on top of those two operations.
+
+// A line number in a source file; the first line is 1.
+export type LineNo = Int<1..>
+
+// One line of a source file, without its line terminator.
+export class SourceLine {
+  export number: LineNo
+  export text: String
+}
+
+// An integer was expected but the text holds something else.
+export error NotANumber {
+  code: "ledger.scan.not_a_number"
+  payload { position: Int }
+  message: "expected a digit at position ${position}"
+}
+
+// An integer was expected but the text is empty (or only a sign).
+export error EmptyNumber {
+  code: "ledger.scan.empty_number"
+}
+
+// True for the scalars that separate fields on a journal line.
+export pure func isBlankScalar(s: Scalar) Bool {
+  return s == Scalar.of(" ") || s == Scalar.of("\t") || s == Scalar.of("\r")
+}
+
+// True when every scalar of the text is blank (the empty text included).
+export pure try func isBlank(text: StringView) Bool {
+  let n = text.scalarCount()
+  for i in 0..<n {
+    let s = text.scalarAt(i) or fail
+    if !isBlankScalar(s) {
+      return false
+    }
+  }
+  return true
+}
+
+// The text without leading and trailing blanks, as a view of the same text.
+export pure try func trim(text: StringView) StringView from text {
+  let n = text.scalarCount()
+  let mut start = 0
+  while start < n {
+    let s = text.scalarAt(start) or fail
+    if !isBlankScalar(s) {
+      break
+    }
+    start = Int.add(start, 1) or fail
+  }
+  let mut end = n
+  while end > start {
+    let previous = Int.sub(end, 1) or fail
+    let s = text.scalarAt(previous) or fail
+    if !isBlankScalar(s) {
+      break
+    }
+    end = previous
+  }
+  return text.slice(start, end) or fail
+}
+
+// True when the text begins with the prefix.
+export pure try func startsWith(text: StringView, prefix: StringView) Bool {
+  let n = prefix.scalarCount()
+  if n > text.scalarCount() {
+    return false
+  }
+  let head = text.slice(0, n) or fail
+  return head == prefix
+}
+
+// True when the text ends with the suffix.
+export pure try func endsWith(text: StringView, suffix: StringView) Bool {
+  let n = suffix.scalarCount()
+  let total = text.scalarCount()
+  if n > total {
+    return false
+  }
+  let startAt = Int.sub(total, n) or fail
+  let tail = text.slice(startAt, total) or fail
+  return tail == suffix
+}
+
+// The position of the first occurrence of the scalar, or null.
+export pure try func indexOf(text: StringView, wanted: Scalar) Int? {
+  let n = text.scalarCount()
+  for i in 0..<n {
+    let s = text.scalarAt(i) or fail
+    if s == wanted {
+      return i
+    }
+  }
+  return null
+}
+
+// True when `part` occurs in the text.
+export pure try func containsText(text: StringView, part: StringView) Bool {
+  let n = text.scalarCount()
+  let m = part.scalarCount()
+  if m > n {
+    return false
+  }
+  let last = Int.sub(n, m) or fail
+  for start in 0..last {
+    let end = Int.add(start, m) or fail
+    let window = text.slice(start, end) or fail
+    if window == part {
+      return true
+    }
+  }
+  return false
+}
+
+// True when the text contains the scalar.
+export pure try func containsScalar(text: StringView, wanted: Scalar) Bool {
+  let at = indexOf(text, wanted) or fail
+  return at != null
+}
+
+// The lines of a text, numbered from 1. A final line feed does not start an empty last line, and a carriage
+// return before a line feed is dropped.
+export pure try func splitLines(text: StringView) List[SourceLine] {
+  let mut lines: List[SourceLine] = List.default()
+  let n = text.scalarCount()
+  let newline = Scalar.of("\n")
+  let mut start = 0
+  // A newtype's representation is private, so the count is kept as an Int and validated per line.
+  let mut count = 1
+  for i in 0..<n {
+    let s = text.scalarAt(i) or fail
+    if s == newline {
+      let raw = text.slice(start, i) or fail
+      let body = dropCarriageReturn(raw) or fail
+      let number = LineNo.validate(count) or fail
+      editable lines.push(SourceLine(number: number, text: String.from(body)))
+      count = Int.add(count, 1) or fail
+      start = Int.add(i, 1) or fail
+    }
+  }
+  if start < n {
+    let raw = text.slice(start, n) or fail
+    let body = dropCarriageReturn(raw) or fail
+    let number = LineNo.validate(count) or fail
+    editable lines.push(SourceLine(number: number, text: String.from(body)))
+  }
+  return move lines
+}
+
+// The text without one trailing carriage return.
+pure try func dropCarriageReturn(text: StringView) StringView from text {
+  let n = text.scalarCount()
+  if n == 0 {
+    return text.slice(0, 0) or fail
+  }
+  let lastAt = Int.sub(n, 1) or fail
+  let last = text.scalarAt(lastAt) or fail
+  if last == Scalar.of("\r") {
+    return text.slice(0, lastAt) or fail
+  }
+  return text.slice(0, n) or fail
+}
+
+// The pieces of a text between occurrences of a separator, each copied; `a,,b` gives three pieces.
+export pure try func splitOn(text: StringView, separator: Scalar) List[String] {
+  let mut pieces: List[String] = List.default()
+  let n = text.scalarCount()
+  let mut start = 0
+  for i in 0..<n {
+    let s = text.scalarAt(i) or fail
+    if s == separator {
+      let piece = text.slice(start, i) or fail
+      editable pieces.push(String.from(piece))
+      start = Int.add(i, 1) or fail
+    }
+  }
+  let rest = text.slice(start, n) or fail
+  editable pieces.push(String.from(rest))
+  return move pieces
+}
+
+// The text up to (not including) the first occurrence of the separator, or the whole text.
+export pure try func textBefore(text: StringView, separator: Scalar) StringView from text {
+  let at = indexOf(text, separator) or fail
+  if at == null {
+    return text.slice(0, text.scalarCount()) or fail
+  }
+  return text.slice(0, at) or fail
+}
+
+// The text after the first occurrence of the separator, or the empty text.
+export pure try func textAfter(text: StringView, separator: Scalar) StringView from text {
+  let n = text.scalarCount()
+  let at = indexOf(text, separator) or fail
+  if at == null {
+    return text.slice(n, n) or fail
+  }
+  let startAt = Int.add(at, 1) or fail
+  return text.slice(startAt, n) or fail
+}
+
+// A non-negative decimal integer made only of ASCII digits.
+export pure try func parseNatural(text: StringView) Int<0..> {
+  let n = text.scalarCount()
+  if n == 0 {
+    fail EmptyNumber()
+  }
+  let mut value = 0
+  for i in 0..<n {
+    let s = text.scalarAt(i) or fail
+    let d = Scalar.digitValue(s)
+    if d == null {
+      fail NotANumber(position: i)
+    }
+    value = Int.mul(value, 10) or fail
+    value = Int.add(value, d) or fail
+  }
+  return Int<0..>.validate(value) or fail
+}
+
+// A decimal integer with an optional leading `+` or `-`.
+export pure try func parseInteger(text: StringView) Int {
+  let n = text.scalarCount()
+  if n == 0 {
+    fail EmptyNumber()
+  }
+  let first = text.scalarAt(0) or fail
+  if first == Scalar.of("-") {
+    let digits = text.slice(1, n) or fail
+    let magnitude = parseNatural(digits) or fail
+    return Int.sub(0, magnitude) or fail
+  }
+  if first == Scalar.of("+") {
+    let digits = text.slice(1, n) or fail
+    return parseNatural(digits) or fail
+  }
+  return parseNatural(text) or fail
+}
+
+// The text padded with spaces on the right to at least `width` scalars.
+export pure func padRight(text: StringView, width: Int<0..1000>) String {
+  let mut out = Builder.create()
+  editable out.append(text)
+  let mut have = text.scalarCount()
+  while have < width {
+    editable out.append(" ")
+    have = Int.saturatingAdd(have, 1)
+  }
+  return out.finish()
+}
+
+// The text padded with spaces on the left to at least `width` scalars.
+export pure func padLeft(text: StringView, width: Int<0..1000>) String {
+  let mut out = Builder.create()
+  let mut have = text.scalarCount()
+  while have < width {
+    editable out.append(" ")
+    have = Int.saturatingAdd(have, 1)
+  }
+  editable out.append(text)
+  return out.finish()
+}
+
+// The text repeated `times` times.
+export pure func repeat(text: StringView, times: Int<0..1000>) String {
+  let mut out = Builder.create()
+  for i in 0..<times {
+    editable out.append(text)
+  }
+  return out.finish()
+}
+
+// A two-digit rendering of a number between 0 and 99, with a leading zero.
+export pure func twoDigits(n: Int<0..99>) String {
+  if n < 10 {
+    return "0${n}"
+  }
+  return "${n}"
+}
+
+test "blank scalars" {
+  expect isBlankScalar(Scalar.of(" "))
+  expect isBlankScalar(Scalar.of("\t"))
+  expect !isBlankScalar(Scalar.of("a"))
+  expect isBlank("") or fail
+  expect isBlank(" \t ") or fail
+  expect !(isBlank(" x ") or fail)
+}
+
+test "trim" cases {
+  "nothing to trim": { input: "abc", expected: "abc" }
+  "leading":         { input: "  abc", expected: "abc" }
+  "trailing":        { input: "abc \t", expected: "abc" }
+  "both":            { input: "\t a b \r", expected: "a b" }
+  "only blanks":     { input: "   ", expected: "" }
+  "empty":           { input: "", expected: "" }
+} as row {
+  let trimmed = trim(row.input) or fail
+  expect trimmed == row.expected
+}
+
+test "prefixes and suffixes" cases {
+  "prefix":         { text: "account x", affix: "account", starts: true, ends: false }
+  "suffix":         { text: "x GBP", affix: "GBP", starts: false, ends: true }
+  "whole":          { text: "abc", affix: "abc", starts: true, ends: true }
+  "longer affix":   { text: "ab", affix: "abc", starts: false, ends: false }
+  "empty affix":    { text: "ab", affix: "", starts: true, ends: true }
+} as row {
+  expect (startsWith(row.text, row.affix) or fail) == row.starts
+  expect (endsWith(row.text, row.affix) or fail) == row.ends
+}
+
+test "substrings" cases {
+  "middle":   { text: "line 3: error", part: "error", found: true }
+  "start":    { text: "abc", part: "ab", found: true }
+  "whole":    { text: "abc", part: "abc", found: true }
+  "empty":    { text: "abc", part: "", found: true }
+  "absent":   { text: "abc", part: "abd", found: false }
+  "too long": { text: "ab", part: "abc", found: false }
+} as row {
+  expect (containsText(row.text, row.part) or fail) == row.found
+}
+
+test "split lines" {
+  let lines = splitLines("first\nsecond\r\n\nfourth\n") or fail
+  expect lines.count() == 4
+  let first = lines.at(0) or fail
+  expect first.number == LineNo(1)
+  expect first.text == "first"
+  let second = lines.at(1) or fail
+  expect second.text == "second"
+  let third = lines.at(2) or fail
+  expect third.text == ""
+  let fourth = lines.at(3) or fail
+  expect fourth.number == LineNo(4)
+  expect fourth.text == "fourth"
+}
+
+test "split lines without a final newline" {
+  let lines = splitLines("a\nb") or fail
+  expect lines.count() == 2
+  let last = lines.at(1) or fail
+  expect last.text == "b"
+  let none = splitLines("") or fail
+  expect none.count() == 0
+}
+
+test "split on a separator" {
+  let pieces = splitOn("assets:bank:current", Scalar.of(":")) or fail
+  expect pieces.count() == 3
+  let middle = pieces.at(1) or fail
+  expect middle == "bank"
+  let empties = splitOn("a::b", Scalar.of(":")) or fail
+  expect empties.count() == 3
+  let single = splitOn("plain", Scalar.of(":")) or fail
+  expect single.count() == 1
+}
+
+test "before and after a separator" cases {
+  "found":     { text: "key=value", left: "key", right: "value" }
+  "missing":   { text: "keyvalue", left: "keyvalue", right: "" }
+  "at start":  { text: "=value", left: "", right: "value" }
+  "twice":     { text: "a=b=c", left: "a", right: "b=c" }
+} as row {
+  expect (textBefore(row.text, Scalar.of("=")) or fail) == row.left
+  expect (textAfter(row.text, Scalar.of("=")) or fail) == row.right
+}
+
+test "natural numbers" cases {
+  "zero":       { text: "0", expected: 0 }
+  "one digit":  { text: "7", expected: 7 }
+  "leading 0":  { text: "007", expected: 7 }
+  "large":      { text: "9223372036854775807", expected: 9223372036854775807 }
+} as row {
+  expect (parseNatural(row.text) or fail) == row.expected
+}
+
+test "malformed naturals" cases {
+  "empty":        { text: "", code: "ledger.scan.empty_number" }
+  "letter":       { text: "12a", code: "ledger.scan.not_a_number" }
+  "sign":         { text: "-1", code: "ledger.scan.not_a_number" }
+  "space":        { text: "1 2", code: "ledger.scan.not_a_number" }
+  "overflow":     { text: "9223372036854775808", code: "numeric.overflow" }
+} as row {
+  let value: Int = parseNatural(row.text) catch e {
+    expect e.code == row.code
+    recover -1
+  }
+  expect value == -1
+}
+
+test "signed integers" cases {
+  "plain":    { text: "42", expected: 42 }
+  "plus":     { text: "+42", expected: 42 }
+  "minus":    { text: "-42", expected: -42 }
+  "zero":     { text: "-0", expected: 0 }
+} as row {
+  expect (parseInteger(row.text) or fail) == row.expected
+}
+
+test "padding" {
+  expect padRight("ab", 4) == "ab  "
+  expect padLeft("ab", 4) == "  ab"
+  expect padLeft("abcdef", 4) == "abcdef"
+  expect repeat("-", 3) == "---"
+  expect repeat("ab", 0) == ""
+  expect twoDigits(7) == "07"
+  expect twoDigits(42) == "42"
+}
+
+property "integers survive printing and parsing" forall (n: Int<-1000000000..1000000000>) {
+  let text: String = "${n}"
+  expect (parseInteger(text) or fail) == n
+}
+
+property "padding reaches the width" forall (width: Int<0..40>) {
+  let padded = padRight("abc", width)
+  expect padded.scalarCount() >= width
+  expect padded.scalarCount() >= 3
+}
+
+property "trimming is idempotent" forall (spaces: Int<0..5>, more: Int<0..5>) {
+  let text: String = "${repeat(" ", spaces)}x y${repeat("\t", more)}"
+  let first = trim(alias text) or fail
+  let second = trim(alias first) or fail
+  expect first == second
+  expect first == "x y"
+}

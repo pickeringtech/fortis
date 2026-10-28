@@ -1,0 +1,46 @@
+{
+ "application": "A2",
+ "title": "Command-line tool: a word tally",
+ "programme": "Programme 14, application A2",
+ "chunk": "DEL-44",
+ "backend": "interpreter, vm, native",
+ "backends": ["interpreter", "vm", "native"],
+ "data": "data",
+ "env": {"TALLY_MIN": "4"},
+ "expected_stdout": "expected/run.out",
+ "expected_records": {"runtime-failure": {}, "observation-frame": []},
+ "runs": [
+  {"label": "missing input", "data": "data-missing", "env": {}, "expected_stdout": "expected/missing.out", "exit": 1,
+   "expected_failures": {"fs.not_found": 1}}
+ ],
+ "start_within_s": 2.0,
+ "expected_tests": {"passed": 29, "failed": 0},
+ "runtime_inventory": {"tasks": 4, "detached": 0, "tasks_by_executor": {"cooperative": 3, "parallel": 0, "blocking": 1}, "di_registry": false, "telemetry_exporters": 0},
+ "pool_threads": {"blocking": 1, "parallel": 0},
+ "allowed_imports": ["fortis.host", "fortis.text", "acme.tally."],
+ "negatives": false,
+ "min_failure_origins": 0,
+ "features": [
+  {"feature": "async try func main run by the core executor",
+   "source": [["src/main.ft", "^export async try func main\\(args: List\\[String\\]\\) Void"]], "run": ["^total 18 words in 3 files$"]},
+  {"feature": "FileSystem and Environment capability values from Host.capabilities()",
+   "source": [["src/main.ft", "let caps = Host\\.capabilities\\(\\)"], ["src/main.ft", "fileSystem: fs, environment: env"], ["src/main.ft", "env\\.get\\(\"TALLY_MIN\"\\)"], ["src/main.ft", "fs\\.readText\\("]],
+   "run": ["^minimum word length 4$"]},
+  {"feature": "synchronous defer",
+   "source": [["src/main.ft", "^  defer \\{"]], "run": ["^tally finished$"]},
+  {"feature": "scope with cooperative tasks",
+   "source": [["src/main.ft", "^  scope tasks \\{"], ["src/main.ft", "tasks\\.launch\\(count\\("], ["src/count.ft", "^export async func count\\("]],
+   "tests": ["words keeps those of at least the minimum length"], "run": ["^beta\\.txt: 7 words, longest fortis$"]},
+  {"feature": "one launchBlocking",
+   "source": [["src/main.ft", "tasks\\.launchBlocking\\(fn once\\[move fs\\]\\(\\) Outcome\\[Inputs\\] => readAll\\(fs\\)\\)"]]},
+  {"feature": "structured failures reported once at the entry boundary",
+   "source": [["src/main.ft", "let inputs = await reader or fail"], ["src/main.ft", "await tally\\(move fs, minimum\\) or fail"]]},
+  {"feature": "no parallel or blocking pool thread, DI registry or exporter unless requested",
+   "source": [["src/main.ft", "^import fortis\\.host \\{"]], "inventory": true}
+ ],
+ "mutants": [
+  {"file": "src/count.ft", "old": "    if w.scalarCount() >= minLength {", "new": "    if w.scalarCount() > minLength {", "killed_by": "test", "test": "words keeps those of at least the minimum length"},
+  {"file": "src/count.ft", "old": "    if w.scalarCount() > best.scalarCount() {", "new": "    if w.scalarCount() >= best.scalarCount() {", "killed_by": "test", "test": "longest prefers the first of equal length"},
+  {"file": "src/main.ft", "old": "    total = Int.wrappingAdd(total, t.words)", "new": "    total = Int.wrappingAdd(total, 1)", "killed_by": "run"}
+ ]
+}

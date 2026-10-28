@@ -1,0 +1,10 @@
+// reject: E-NAM-034 (at the marked line)
+// covers: PLAT-03-01
+// D-90 (X-231): the Dependency injection kit defines `context` without a `server`, `client` or `hybrid`
+// prefix and elaborates only that form, so a prefixed context is a head no installed kit validates.
+export class Pool {
+  size: Int = 1
+}
+server context Production {                                            // reject: E-NAM-034 — a prefixed context
+  provide Pool
+}

@@ -1,0 +1,93 @@
+// The test runner's modes (Language Reference 14; Programme 8.1 to 8.3; PROG-TST-01, PROG-TST-02; X-131), each with
+// a planted failure whose minimal input is known. conformance/tools/tests_check.py runs it.
+
+// the maximum of a list, wrongly starting from 0: a list of negatives fails
+pure func buggyMax(xs: List[Int<-50..50>]) Int {
+  let mut best = 0
+  for x in xs {
+    if x > best {
+      best = x
+    }
+  }
+  return best
+}
+
+pure func clampSum(xs: List[Int<0..100>], limit: Int<0..1000>) Int {
+  let mut t = 0
+  for x in xs {
+    t = Int.wrappingAdd(t, x)
+  }
+  if t > limit {
+    return limit
+  }
+  return t
+}
+
+// whether the values 1, 2, 3 appear consecutively: rare for random lists, reachable by coverage-guided mutation
+pure func hasRun(xs: List[Int<0..99>]) Bool {
+  let mut phase = 0
+  for x in xs {
+    if phase == 1 && x == 2 {
+      phase = 2
+    } else if phase == 2 && x == 3 {
+      return true
+    } else if x == 1 {
+      phase = 1
+    } else {
+      phase = 0
+    }
+  }
+  return false
+}
+
+// loops forever on a negative input: a hang the runner's execution budget turns into a finding
+pure func countdown(n: Int<-10..10>) Int {
+  let mut i = n
+  let mut steps = 0
+  while i != 0 {
+    i = Int.wrappingSub(i, 1)
+    steps = Int.wrappingAdd(steps, 1)
+  }
+  return steps
+}
+
+test "an example passes" {
+  expect clampSum(List.of(1, 2), 10) == 3
+}
+
+test "an example fails" {
+  expect clampSum(List.of(1, 2), 10) == 4
+}
+
+test "clamping by table" cases {
+  "under": { xs: List.of(1, 2), limit: 10, expected: 3 }
+  "over": { xs: List.of(60, 70), limit: 100, expected: 100 }
+  "wrong": { xs: List.of(5), limit: 10, expected: 6 }
+} as row {
+  expect clampSum(row.xs, row.limit) == row.expected
+}
+
+property "a clamped sum never exceeds the limit" forall (xs: List[Int<0..100>], limit: Int<0..1000>) {
+  expect clampSum(xs, limit) <= limit
+}
+
+property "the maximum is an element" forall (xs: List[Int<-50..50>]) {
+  if xs.count() > 0 {
+    let m = buggyMax(xs)
+    let mut found = false
+    for x in xs {
+      if x == m {
+        found = true
+      }
+    }
+    expect found
+  }
+}
+
+property "no run of 1, 2, 3" forall (xs: List[Int<0..99>]) {
+  expect !hasRun(xs)
+}
+
+property "countdown terminates" forall (n: Int<-10..10>) {
+  expect countdown(n) >= 0
+}

@@ -1,0 +1,19 @@
+// execute: big even|small|big odd
+// requires: runtime
+// covers: LANG-09-05
+import fortis.host { Host }
+
+pure func classify(n: Int) String {
+  return match n {
+    v when v > 10 && v % 2 == 0 => "big even"
+    v when v > 10 => "big odd"
+    _ => "small"
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print(classify(12))
+  caps.console.print(classify(3))
+  caps.console.print(classify(13))
+}

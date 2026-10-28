@@ -1,0 +1,11 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-08-04
+// Each lambda has its own closure type (8.2, 8.4). A binding whose type is that closure
+// holds only that one lambda; a second lambda needs `dynamic fn(...)`.
+func run() Int {
+  let mut bump = fn(x: Int) Int => x
+  bump = fn(x: Int) Int => Int.saturatingAdd(x, 1)             // reject: E-TYP-040 — a second lambda in one closure binding
+  let mut scaled: fn(Int) Int = fn(x: Int) Int => x
+  scaled = fn(x: Int) Int => Int.saturatingMul(x, 2)           // reject: E-TYP-040 — the annotated closure binding already holds one lambda
+  return 0
+}

@@ -1,0 +1,14 @@
+// reject: E-DI-002 (at the marked line)
+// covers: PLAT-03-02
+// Two bindings of equal specificity for one slot are an error; their order never decides (Platform 3.3).
+export class Gateway {
+  name: String
+}
+export class Checkout {
+  inject gateway: Gateway
+}
+context Production {
+  provide Gateway using instance Gateway(name: "a") to Checkout
+  provide Gateway using instance Gateway(name: "b") to Checkout     // reject: E-DI-002 — equally specific
+  provide Checkout
+}

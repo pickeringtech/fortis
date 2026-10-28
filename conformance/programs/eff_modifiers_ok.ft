@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-11-05, LANG-11-01
+try func half(n: Int) Int => n
+async try func fetch(n: Int) Int => n
+async recovers func suspends(n: Int) Int {
+  return await fetch(n) or recover 0
+}
+export recovers func discharges(n: Int) Int => half(n) or recover 0
+export try func propagates(n: Int) Int => half(n) or fail

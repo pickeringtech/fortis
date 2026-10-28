@@ -1,0 +1,3723 @@
+{
+ "comparison": "self-comparison",
+ "left": "reference",
+ "right": "reference",
+ "evidence_integrity": {
+  "commit": "6c73258",
+  "grammar_sha256": "781a69727391719697baec1998f8a0fa666606473bcecc0177c8b136b3fbe4c1",
+  "fixtures": {
+   "LR-2-01": "8224b635ce5d518df1c77d60ac13ad80eae2d209539efcf33b410c4c2d6577e7",
+   "LR-2-02": "f7508fe0af540fad8dd60434959246d09291aa0d80a1f954d7652289af2f5651",
+   "LR-4.3-01": "aff3216582e8dfd0cb6f1246b9d80b5f9fa43b5ea145202ebc8ad5d1e856576a",
+   "LR-5.3-02": "1e2a62f3200b774da4f964b061c2af3dd555c60b8fd068145df3c798d770d3f5",
+   "LR-6.3-01": "27501f0c13256ff979176283f3b29295ba09963a35029c7fc3cf07b081a77b79",
+   "LR-6.3-02": "0ac7f369bfa6692a773beceadb4401de7272debb04ce2c9cfda983626de46bd4",
+   "LR-6.3-03": "d6e3761d2fd7e92b8ccd2ef451652d47ea030cf6b9aef3db4f00d4b0cd028817",
+   "LR-7.3-01": "511e9cf84a9ff410c3a4b20999cc4c0edfcbed37c5bc200e252eee60d750c58b",
+   "LR-7.6-01": "375833ddad3b294fb2a9112f7c21d9f5c0e3cb8399f12a8e131f0cee3b063ec5",
+   "LR-7.6-02": "d2b4d3dc14c8d4f2e39355fc3f8262b7cc0897f15862a799aac0ae322f4e0b6c",
+   "LR-7.7-01": "413a74068b57d6d403e0ec796c7afcdda607ef2aaacd5eb7cbf1384251efab87",
+   "LR-9.5-01": "e62f984fb89d9e0978f9ef0fc4a9b15470be70260624f3c0ce62c618eb1ab197",
+   "LR-9.6-01": "46bbc20f64c4fe0bb8018fc5e750e7ee48e1e1a7d240c1fe04bae2e28b94f21b",
+   "LR-9.7-01": "86ef68722747897ec65850a2e582c124363c3e72f4916d89ef86ba5ca91549ef",
+   "LR-10.1-01": "97f0c695398eadc1c2ac787812524cc8b7742d62501680bebebd49532d51cbf8",
+   "LR-10.3-01": "ee3239344bb06707d67ee67740e1bb67bd458e4cb69c761206ee160d3d5ad4e8",
+   "LR-10.6-01": "e3e81bae95df4efc2679eb69302d1488ea2cb5a07823205650d9a268de235d74",
+   "LR-11.3-01": "63c8300ac942e4b629debb94a9af6dbe302e1648e8a96268b6d53648c5bfca8f",
+   "LR-11.5-01": "2dc84d76734247143dfeeb7c0ac20933d40141168fbdf8287b080ea623b61a1e",
+   "LR-11.8-01": "d355ececd1b63e9e6bc6a245a4f9af20b674a995c6294c929b82653c3cd4dde1",
+   "LR-12.1-02": "a156e018fe17baa1972d2983368e9d28b00326afc2d71cde576bb24d19672bd6",
+   "LR-12.5-01": "1a535e08d73ed2b07fdf033676a6ddd9aa0b0f771f53b7bef65d6fd257f293a1",
+   "LR-12.6-01": "80b9659e9fbcb67b155e6f25e94e33c1012f65b3388d6f1822887210d7dbed5c",
+   "LR-13-01": "d24f64484f8944961fce37ba8f5eae2bb984b521fec0dbcc894a56356d030bbe",
+   "LR-13-02": "c7e8375f90ae6763e2e3e6414a1eed79b9b76fbc060785472c7462ebccca7504",
+   "LR-14-01": "690b3e6da520b3b9066faf3749075d0331a5f2baf38df42fd5e094f4e0715e16",
+   "OV-2-01": "6d4cd7e1812d33bb9a8d368d9b24408f0932ed4ffe1cb3b1156b069919782fbf",
+   "PRG-accounts": "13752c879a287ec6c5644a7ff3f48b7be225b8d5bfdb9bd19d2e8751950e0f6c",
+   "PRG-arith_checked_ok": "97a7957cd04af0496be251dc9e02bc1e7ad2b1e4dea24becc52f64abdc49984d",
+   "PRG-arith_unproved": "bb52cf4b5455f7f8e07638285679704818a45afcb10f8e702547103635352537",
+   "PRG-async_transfer": "96a946f3528d34bc978c5941f98b4cfe2392350ae6dd516eb51ae6ce9f3e7baf",
+   "PRG-call_missing_arg": "a3e6531d1afa40b0c0388cbad84548d76776584df936c7b8f371cac847ad366b",
+   "PRG-call_named_bad": "116bdf9c747411d35725367bbbf3e220598b2707d02f6612175c2988229d43fa",
+   "PRG-call_named_ok": "635e5cfa91ce0e123c9b38b90f6c0864318769d95b4e4a20e9c62f97190ac7ae",
+   "PRG-cli_wordcount": "5dd1fdd4fc7fc3f0f9a2b72f988c1714e6eb6be1cf8dbf006f45b0860b19effb",
+   "PRG-codec_entries": "375819bfea6efb6b9a114bbae77eb0245e4b595b3a8f68a0db80eb1965c8892c",
+   "PRG-codec_report": "d02302765fa103d12e5375892c2ef189d443c300e87767cf0f6071a70de530eb",
+   "PRG-ctor_missing_field": "4cffe747ec1ee4dbc0fef9aa3e258c8012573ec7813fb864e587c00ba99079d1",
+   "PRG-ctor_ok": "fb7ffd67cf0571cd917bad3e785d2e1b78c16024869fc940efbfa78d447f8984",
+   "PRG-defect_catch_non_outcome": "b99bca3f9e170560538795706f26a38788355b222c4bdeab317d54a710ead92f",
+   "PRG-defect_not_failure_ok": "9277336ce8de212d53ca4248986ff8df5cee91618c7d75aafb15522259963988",
+   "PRG-exec_builder": "b21afea851b535896b57dd0bf6a7af6f87c9bb1c8145516b9b6baf9da4c71f7a",
+   "PRG-exec_checked_arithmetic": "2bdf0cf82650109ce8d87f13e92e6c3ace3fadbfe1b414db4c858b333a9dd317",
+   "PRG-exec_class_methods": "f1055581efcc18496b3f9afc2d29897a257bbbde2d90637db8bd8b17d0e6ae4e",
+   "PRG-exec_copy_independent": "b738600f137b85105acedcefff97d3a9bed55c613f41ea0780f2f89ef6de9d4f",
+   "PRG-exec_decimal_failures": "b88fa5094488b0285bfdd3aae7bbfc9821652655f941f1e8a9edeadd41b317f2",
+   "PRG-exec_decimal_scale": "7b202b7ca590a62c18405cb293ec5d9e2c5e3f96802cb22de2454039bd83fa5f",
+   "PRG-exec_default_args": "7217318d4edcf0fba0b5b2daf2036ffa4227434bf4fa3f1979d4806069293306",
+   "PRG-exec_defect_stack": "1759d0f644227be75a31fa43e3de8517dc3f20cb4a871b5ff124a1725c5ec00a",
+   "PRG-exec_drop_order": "eebc8cfc7ee1eda56653528001db9322d14c8711c9e0168f0b845e799b9c7fc7",
+   "PRG-exec_duration_arith": "c082093dbdfc4d0cdf405bda8cb4ef6123b93e36d2769747d3406b6d5713f24d",
+   "PRG-exec_duration_overflow": "34b890b12bbeb45955002ef5e91dc37eb15e54878a2744ad4204b06703665607",
+   "PRG-exec_enum_match": "155f217b23e15820f3866a02a647cef9d5787fcb82cc5cd7477cf87026060f9c",
+   "PRG-exec_failing_main": "09e80867c2c6c20e0c192f1ef8683e3c44b0a429f7540a4e3a357ac454402dee",
+   "PRG-exec_float_div_zero": "67739ba9e4f163ec0721828d54b9ef354b0b40856fd44b74acde0f9cd47babd5",
+   "PRG-exec_float_eq": "c4657b614b8b368a562dadaa4d60c536f5a73693c6e4e82bef3e6e40b2d34e47",
+   "PRG-exec_float_nan": "8c6cc356c612a105860b2f7520afd732bfb92018ea43406c2176ace240915d71",
+   "PRG-exec_float_total_order": "05ca5a6258555c10dedbc3c5a1d683df8098b6419f2e0bb3e8cdeb1507ef5459",
+   "PRG-exec_for_list": "2e41be9eb36ec9e1b66a41600cf22777eefecb8cc4d5c2d30ceed2a90c75762e",
+   "PRG-exec_from_view": "aa6bb7b9897204ddd26afd464e14c2765908d7acb62fb2c03350478af0b14919",
+   "PRG-exec_hello": "bd8c7e8ae7b1c1340d0c69070d592543cc3b3159c42a67a76a9819bf5a67e067",
+   "PRG-exec_if_else": "4032421129c75238c692022ddcd54e8519dfae121055fbc6b9b98d7d76d943bb",
+   "PRG-exec_int_div_rem": "fd2a597f36791144739555d8dfde8889df70a891fa6d188240b3b9bebf33159d",
+   "PRG-exec_int_shift": "8b28cf2f138da80ade178dd70b216a8bd8d31b579677d3a84100a5c8b04cd2b2",
+   "PRG-exec_interpolation_order": "507e81022878c8914c6c0978c4df6ecb01007c5b6d2be1cadb6639ee3f8a850f",
+   "PRG-exec_labels": "165ccda732cb2444cb0417859ac967ac29a447e08dda30a6e1bb53b9bee94ef9",
+   "PRG-exec_lambda": "d358a7aa66f0e1bafc84df4fa90daba11529a7ee0c72b7c5c67e3b0ae8ce3e7f",
+   "PRG-exec_list_ops": "e24184345b6e90f504f02061ddfbfb94ae3445b9f7fc749d0f4613d05980ea91",
+   "PRG-exec_literals": "3e884296a3581197d957ce9e4cffcec20d4fcf6ee19fd0c290146414c4eff6ac",
+   "PRG-exec_loan_block": "244ca5dc098499ea49c9b07d73fd9231feff6679631885ec1a6edb8a0097a1f7",
+   "PRG-exec_match_outcome": "4a8d89fd2cf564dffeabf45aca8fa8c11ba8474d72a5de255bd91b9ba1c299d8",
+   "PRG-exec_move_rebind": "cd42d79c122db844fb85677ce73bd32246963af4a7f72152748ac288149d585b",
+   "PRG-exec_nested_match_guard": "889950f2fd8e0fa5b4b21ab44f68ea553a9aacd4408b64b8e1b891db3137530d",
+   "PRG-exec_optional": "e731e47711311f102b92347bb8eec180cea299642b06c9537988662fda92fc2b",
+   "PRG-exec_outcome_catch": "69386401060f9962aab3276c4edb15f78ae783d424323b4ca9b35d226bca52cd",
+   "PRG-exec_outcome_collect": "ec85a47e3ad4db5e90607354ef01587ffbfc3dc3c7c173912a13bd221e7de0ee",
+   "PRG-exec_param_unchanged": "17561021f1956efeba279f5eb16b9135b7593bd99a73d3d02d50c8b6718cbcf9",
+   "PRG-exec_profile_unavailable": "ca5a065fb0f40468bbf13d2174267ee569d4065eae71333b7b5cca2d01e498e4",
+   "PRG-exec_recover": "e2c4c29021189f642c6ed43c17b30f1ea9aef0ef7b823926db2d844c2ba18862",
+   "PRG-exec_refine_narrow": "46ed57fd58be6d055b9a0cd0510649c517bdd7c9e40d0c7328f49f9a0f07a085",
+   "PRG-exec_refine_subtype": "b5734a437d746b1dd889c48f734065ba8d0c96cd122105b2631b0825b2792965",
+   "PRG-exec_refinement_validate": "409dad9dac0c2c82407938ca73aa8970a80e6193371854230e4596bfecdbfeff",
+   "PRG-exec_report": "14a08fdedf69d0ba78d1a9c4b9d7b34d0c45963e901d0831ee3a4797ea1c24ad",
+   "PRG-exec_scalar_text": "f26adf8d872542bce1f56bedbcf0c06ea698a8fbb11a03d24a2c7ee4df45d4f0",
+   "PRG-exec_shared_retain": "e566da05df8c8ccffceb9f023d8a739183c4e68554bd9ca40b70efece6321d06",
+   "PRG-exec_tuple_record": "a044f546de20fd2f2da55f59bcddefa19e15fe8bf7ca17c06cbda568d07f470b",
+   "PRG-exec_while_mut": "1d25f0689772f7bde9f8e257a51190ea7f9f77f730690c1e89e9084b3ee7596c",
+   "PRG-float_compare_ok": "db3e01189dfa3612ecd84f08bed839ebe341f740411c789c98794400098eed6f",
+   "PRG-flow_assign_immutable": "3ab6d247a0a81ed006e5b4c8c04f629bb027a08c7ddb3454aad0359c74ea2781",
+   "PRG-flow_assign_ok": "d16e98636a8956fafb0eda1628a968d65fb62c854105063ef0a1d75fda41fa49",
+   "PRG-flow_exits_ok": "0e005d36cdd0c06a3d9e5dfc7d84ca4f64bf4ab74adc1bd8897d26ddb7118964",
+   "PRG-flow_give_outside": "056b1a3bbcf02c0b6720a1a1a333b6b076866ded13ee2f09dd0a62968dcd3700",
+   "PRG-flow_if_expr_ok": "34866895f4e4818670763af3ebe73a803e5c485d263bf4b3d93e30f6d84c1b21",
+   "PRG-flow_missing_return": "04bc207df477dacefaf728ff47696b173c577990e18e051deb9b870bdb1afd61",
+   "PRG-head_ok": "492c2a8f4913f81e4a297d8fd0106fd1d44bce9a4537caf2ba8683129f259aff",
+   "PRG-lit_float_kinds": "5ba99680eaf12d4c226befdfa9d19aec048f8c85f425faa944d874ac811808d0",
+   "PRG-lit_in_range": "02f5795e6d525440bbcdd173f8d8aee79201da9a940f267fd86c0c45f810022f",
+   "PRG-lit_interp_not_displayable": "6a7029fba075b169ca61e8b60280e9b19cf549bd8911bd3688cfba37a8df878d",
+   "PRG-lit_interp_view": "74c46dbcab32f8749b7972dcf305a0da88ee93ca61dd0492d520649611c3fd8d",
+   "PRG-lit_kinds_ok": "604be5a555ac0db007ec6df2b3404afa64441deabc127ee231e841ebd327a7f4",
+   "PRG-lit_out_of_range": "c94f189a342c441fc952e5e356637fc298b327bdd354b5cd6d219580a3fcd17f",
+   "PRG-lit_string_ok": "eb239af602ad60c26a68bcf3eb7d900f90ae7eebd16c65f59f23851a2d2a289f",
+   "PRG-lit_view_ok": "f2a7ea696c461fc7957a856ab0c4b4eaacd34ad973ed76ecd7188f360025c54c",
+   "PRG-match_missing_variant": "6694ddf140f5851d8191f468a7e209801d2b5a451db7864fd1ce2da73615ab09",
+   "PRG-match_open_no_catchall": "2bd416de1f98782b79503b2a6f8f39b2cc5407a809999598f1116a8f4bfa0da8",
+   "PRG-match_otherwise_closed": "984d698c7d1838716e7b4d699e2141de200b88e4e05dcfdeba30bd1adef45385",
+   "PRG-match_patterns_ok": "5c8ea1a3104e0f703e133570219223f14b5e7609ec48e4f59b6345458090fa3c",
+   "PRG-names_undeclared": "7d0be5bbfcb20f8a698953d31be2aa012d635b18994dc229f3287d890a7271b8",
+   "PRG-names_unexported_member": "bc5222369d4635a181287cf056451e7fe9f9fe1bdae42f64c1739692b64cb01c",
+   "PRG-obl_consume_ok": "d4d5fc4ca35ac05d1adabd46f4679ed27c344fd736d5e7e76ba62121c26ad5ff",
+   "PRG-obl_container_dropped": "434f9c9bd4f5a11bd1dc441dc683c3ab6f6b14a3791f43c39f9cce69bef49de7",
+   "PRG-obl_container_ok": "e8d2cf3ae6dfea3e011f7663ae76af45fbc42790aca8382297b3ca068e712694",
+   "PRG-obl_dropped": "8d2c996bfa4021eaf81464e8a55a2648bf534437335ec1c154713441869736b5",
+   "PRG-obl_noalloc_alloc": "681a45e6a466202529001ef5643af12fd45284c0a7c30d3428522dc8e1b624f6",
+   "PRG-obl_noalloc_ok": "f5e6b1bba1ed3a98f59ce13713ef3ba8d2fd5019c2e2536c62b93734fe111893",
+   "PRG-obl_recover_undeclared": "d1bd8e25e19118befc7c0b35dddde08b92acff572d8c16e73947fcb72ee56d14",
+   "PRG-obl_recovers_ok": "1994d9976a416b7444a32ffeab5e447f03b81fd944eb309227e8be54387b7f2f",
+   "PRG-obl_report_ok": "fbb59ffcf8aedb5a23c5ff751f27cb525d5e56e62a47baff122dd6b3e06da117",
+   "PRG-obl_use_after_report": "975ca35f6052debc0c39700b6dae1d7e51dfd44ec13baef68d13f11ceba37d92",
+   "PRG-obl_wrapped_access": "37ed4d596c3f7abd412d73d2a55cf1a794af9af1d589da95832f99592c975ee8",
+   "PRG-opt_bad": "4d898801e313c541ca876caa7a349df5c066a544063753ea55a4a44b751face3",
+   "PRG-opt_ok": "06260e63b11d0720486dbeb20f6dd7c2e0464c1b77817aaa400d6881076cc2b1",
+   "PRG-own_cleanup_direct_call": "4da9a526e975cea98d49e79f8ad5a2131cf8e38843a2a7cd8047b751ce6f6317",
+   "PRG-own_cleanup_ok": "becb3e28920ca473d8eb005697badc941e178c8c8db05eed7fb04b04eb107109",
+   "PRG-own_conflicting_loan": "829768ad5c67eb0c1989ba68f5e932754f94c8de3a6ba8d9419386ca5d3314c9",
+   "PRG-own_escaping_loan": "ecd90173339e7fd9722a872d7a4e8c0db9a095ea587e88d40dc74223b872641b",
+   "PRG-own_explicit_copy_ok": "536461fa38fd558bce5279034c344ef7c0e31dc97156b088d2c35201f0e91628",
+   "PRG-own_from_ok": "5de16031eeb00373177ab687cdb5ec7844b7d9ad5130a9b835722cbe7a796b4b",
+   "PRG-own_lexical_loan_ok": "a7c30defb40b65e44c78a3f97db278b73219265d88dc85d4a4daef00fa268003",
+   "PRG-own_marker_missing": "ba51b4c208a18953294a36516573020e288b19bfd668a2dc7815ade7f52600c2",
+   "PRG-own_markers_ok": "0eaa325e375b65fd9ff02331e57fb49bb216a6607fae55154de777050abb160a",
+   "PRG-own_moves_ok": "132b8acb062e065a150c431b996b164b541063df9ec2d07a4d2db467b3671143",
+   "PRG-own_owner_while_loaned": "a0d1d53c1e243953e9c328090fbdc27ce1e39f9a5142e975ed8cf7892481664e",
+   "PRG-own_param_copy_ok": "b57eaff0cf00962296a3556949051e57a99430a5484f3ff35637838bff30b969",
+   "PRG-own_shape_ok": "f870f673d56a1471d12f95c6ad3972787b1b9a3aafad43290e734c693631d6fb",
+   "PRG-own_shape_unsupported": "74d3f15ae07f6f9f767740d8b612ec14756a25f955bb9cad75e6a67ff56ddd3d",
+   "PRG-own_two_origins": "9b4300e00f2ba8b38dd7de011932d06b7f11f9841e2dc6b37a39d49c16c9ab82",
+   "PRG-own_use_after_move": "79b35f918507eb8de89a1c9ad3292cd99762d3c73a7604a0a932ca7fd2401bb7",
+   "PRG-prec_ok": "edb63d0f46dbc69fb9f1c3692acee582e395c5ef62c453827991bfc8a9bc48d9",
+   "PRG-ref_arith_ok": "e8ba6ca15b7b2c8675528817072bc00c36e52016d5ee21cf9c5ac0bd1e6c293a",
+   "PRG-ref_arith_overflow": "d171ce34d1e145da4655cb172f7fea779d18a08b7a2cecd49f4db56245c7b942",
+   "PRG-ref_diverge_bad": "94d86ca534b23519dec192699d165603f1f1cb228cfbff95b939b266874337f5",
+   "PRG-ref_diverge_ok": "e6dacde93cece2e1df1e4fe66239d3eee7b1cb2f4575bd159b6f297e249daf33",
+   "PRG-ref_index_bad": "0f63597093fd0a3e324f5b750ef83c81dfbce5766bdb74515a73002844c5a4f7",
+   "PRG-ref_index_ok": "9bae033b4bf6f509b980101229c0c9ea76ed4d487a8cfac1dbe44de2d6204d2e",
+   "PRG-ref_invalidate_bad": "276faafb4bdb6d5df0862dac0897e6bdb22a5de4f7f4403f70cc13faeffb7714",
+   "PRG-ref_invalidate_ok": "31c424bd8c942cd5caec6c2b9e36f3d430a6fcdae4e7d3c9061a7d7296077e6b",
+   "PRG-ref_length_refine_bad": "d67944125d49c75bd3a91b4f1a614f1f9931312bd0d9e6320df6e855ea189275",
+   "PRG-ref_length_refine_ok": "e3c5584d3a464b02a172f0279c8cc20b8ce1900e77e08e99e997ef50783e7c86",
+   "PRG-ref_narrow_ok": "63347a47d9653960319dae88cdcd79184c30d33a497aba93a05608232c0bda00",
+   "PRG-ref_narrow_or_bad": "5ff9954795300af3d87c8dc67a9ebf8296a985ef7ceadb2981a6cfac0ae76d44",
+   "PRG-ref_null_narrow_bad": "623b6f1d04270aaebeedf18ab526a0416afc9bb3126704a2d5f7bfac1b9863a4",
+   "PRG-ref_null_narrow_ok": "b2e93b841650f93ccaa066c1471947bf290ab587ca8648d95180c8f4f39df6fd",
+   "PRG-ref_ranged_index_mut": "a10463ee8f3218106ddea0846b5c407b6f4ed05eccb5e4bbba699bfdff1cac49",
+   "PRG-ref_ranged_index_ok": "7b2ade29311dcb73929c6be2db9f412c68d79467357e666edb02d794d70e9be9",
+   "PRG-ref_remainder_bad": "1429ec9100f33261cde6ade5d3bcb2e4536ec92fed337bf6bab6df687e349d69",
+   "PRG-ref_remainder_ok": "f1160b45f1981e1f730ff3b21ba3f8abdb1a379be38bdcda5259f1442d126ca5",
+   "PRG-ref_statuses": "e3e44c46da697bac7ff580f472c01ddb4c2ebc570bbc45cbd765c7009c4f736e",
+   "PRG-ref_widen_pair_bad": "5ee11b14a2b8cb7137978f14f41197094e86d78e9392a754b2e6867486591b49",
+   "PRG-ref_widen_pair_ok": "2208762592b4281599511165ce136dbce5b47bd639c6245d02dbd9ba3091a468",
+   "PRG-refine_subtype_ok": "fc5a73b8808e8b26b14672f72a54818514d8d7c58e127a8ecd6c6adc06139e84",
+   "PRG-refine_widen_bad": "0fe9a926cb421b1a16d71161effbe5c870e28e935e789860a3b5e0e13f2ebf91",
+   "PRG-shared_copy_rejected": "3caa16f51cb4d726824f80a0b1aff6110a3d0645c11942bdf4264ff42dc8da92",
+   "PRG-shared_weak": "967065559149e2728928faaad8ea622261411041a9a3923d8612d039745abefe",
+   "PRG-syntax_argument_families": "e4692b29f615cf82bf83d9a07e72c00c560c6645accc7f86d1a95c53dd4db55c",
+   "PRG-syntax_bracket_continued_declaration": "25597776c3b6c3c8334f6ab71a842b50902f24f45063d7c690c001dd180dd06e",
+   "PRG-syntax_component_fn_param": "7e0525c1702682f0dac022ad0104f32353842106d092630c37e7332271756ff2",
+   "PRG-syntax_component_record_param": "2b0ad80946e39693ae4d212bcf793e367e936902db211841b7b424024284fc15",
+   "PRG-syntax_condition_families": "b7f136d8aee813688ffe98037caefc503521685f1fdea48b3e92a98004ae46b2",
+   "PRG-syntax_const_forms": "4f8b051c44dd5ca593eabb3d6413ee1480239f53cd9835d513202b4994cdf7cc",
+   "PRG-syntax_continued_declaration": "a4ae602cbb3501b3a2bb9e90a16f240f31cce7e0d3c991864c625e2f2f3fcf57",
+   "PRG-syntax_enum_comparison": "202515bab1b231e95a62ca3e8f6a49ea97dabf30e486f1e73c0ca60b31061e96",
+   "PRG-syntax_exponent_separator": "21b080178c8fa944cc2c38ecdff9e89caaaae1d100660493b103f5a3ea9c3130",
+   "PRG-syntax_exported_view": "498e5b8c0852d679fcd01d7fdbe247eee79f340a05a74e116f5af49977a6c1a4",
+   "PRG-syntax_fn_record_in_header": "59c0a32f0c2a829e4fb22b29a20e53557ac40d769c929a5e0968c2fab06665e7",
+   "PRG-syntax_generic_enum_comparison": "f3fcdd610670755b60cb9a9353155a24233a2970a4ec27fbfd30250947f6ac58",
+   "PRG-syntax_index_families": "deac5f4d2b1093b8c6be147c6ee5ad14a120b832ae5c87487d909894cf29637d",
+   "PRG-syntax_interpolated_bytes": "a26f9ae18a2a53d9486240c9c6bf20718596d6c7f1dd69d73f913c8afccdefec",
+   "PRG-syntax_interpolated_keyword_member": "92af9a4c9cb939020645d47fe65e30bf7a17bca332aa4dbfe031a045c897d56e",
+   "PRG-syntax_interpolated_lambda_await": "b07a7fa958f2e14cc65756f1826f4747e7bcd7267571f7fcc48aae89c4193792",
+   "PRG-syntax_interpolation_raw": "2f2342de6f611e0b34c4725d55312960fa4d7cb81bbcd007868a9edb99848fb5",
+   "PRG-syntax_member_keywords": "03fb4a6e4f301cf848d3c0240d4f17df44d00d9e8526608c20111da348fc51c5",
+   "PRG-syntax_nested_refinement": "9ae2c4bfed6f6643c43772d2d2b1c133fd180903e79859b7af138e3c2e81b83c",
+   "PRG-syntax_parenthesised_mix": "da7de7217830d7b2a73659a31fe16ceb28c11dde53062ee18f836ce62dab8964",
+   "PRG-syntax_record_in_header": "3908d6023a78e6748cc713fd2cff962aaba528d2be4fb01c0149c093029958b3",
+   "PRG-syntax_record_return_type": "54fc97054e38be6fabd3134fade1cc4c5e188c229047d46a1fe95ad15960d64f",
+   "PRG-type_mismatch": "dab2f688009291317fd00dabf6b42cb38fd5b7b4fd389bcb07a2a49b25502e95",
+   "PRG-types_class_ok": "1d3d07a17d529687cd2aa450266314f0a0d964ceb2075aea0f121bf0b66adf9e",
+   "PRG-types_coherence_ok": "18641394b4c2c92678d28196bb7fbd7fb2b2dc063e7ee4d5df0e8802ac391c4f",
+   "PRG-types_coherence_orphan": "76fb2aa60b4b34671dbc6ea8c6d2c44ffc17031fab18d3397a4383c08f659c9b",
+   "PRG-types_coherence_overlap": "4642184c236805fb2072ede693c1dfb1dcb90bb20a2095b8ba9f85c9d2f98b13",
+   "PRG-types_condition_bool": "44ac80a52877d8ee664c9d24f887aa9a3d297aeb6367acdfad54fabd08f8b727",
+   "PRG-types_derive_codec_bad": "409bf7b2a7b5cb77df79fab424914e7196aae5a43d6d6522dc6bcd8a543c5874",
+   "PRG-types_derive_codec_ok": "51f93c28453238d76bdcc02c8c03ff5d62237b6786bc9fae8759fa3ab1edbb83",
+   "PRG-types_derive_comparable_bad": "137ff0bb445d860deba94b602e5adab2eb82b5ec25fc41916c40b4da583b5cc4",
+   "PRG-types_derive_comparable_ok": "386982300aa1853874d7f932da18ea2a3b2ed5dc70958f27b8b557953e5faeb1",
+   "PRG-types_derive_default_bad": "4d38358ddbce26418340de940216f8b0f27ee6a5d66c51bdf511e586702f2caa",
+   "PRG-types_derive_default_ok": "12049c8ad7654c1e1598190076fa0a0e1a3f6bec2a057b9fd901006ceba4a270",
+   "PRG-types_derive_displayable_bad": "b9942f9317fe324be114c9f710a2b215c9ffd27ae7fc17b86745c6c8c62b33ca",
+   "PRG-types_derive_displayable_ok": "e19960ebbd561c13c7333d2b5c4b4ebc9405ef77ec4e66a18aa0bf0a4f8a0c7b",
+   "PRG-types_derive_equatable_bad": "b9c36a71052fb9de3fcd610a66d8a0f82883643a9b0e028f1eea9cccbd4454da",
+   "PRG-types_derive_equatable_ok": "f363f692a87f81949bc540635739de579e1b283f52e0e4ee8343f4364db1fa8b",
+   "PRG-types_derive_from_bad": "e5d53e90696e71728ec3722380a3483098458ac0b58c1ea8e4dd1bb1a7f561ed",
+   "PRG-types_derive_from_ok": "831ac0d127a9e901d558bc93ce2d8817412d6f619e1e732b400758c5032bee6a",
+   "PRG-types_derive_hand_method": "08d34c161fa0d506016bd5ddc28dc6260dfa844d01f692cc889b2b84d231863b",
+   "PRG-types_derive_hashable_bad": "35d038e4519f254c8e911711d838996352149a066d5057e2f2889ac8f933e221",
+   "PRG-types_derive_hashable_ok": "6df31c5657ff8ea1750d9fc8cd8c381b61a181e0149d340970a71d23311ad11a",
+   "PRG-types_duplicate_member": "cbd9860d78fd90d616d6935b8c96af7d9f9130a9b91d18855854294d2f8e0a9e",
+   "PRG-types_float_refinement": "bedade00dbbca12e19808b7d16fbec565e8b8f5b797408355139367edd68d3e0",
+   "PRG-types_impl_incompatible": "2c6ebc74534217b7d33ac891a40e91d342c78fdbd9949f260c7472dd8c904243",
+   "PRG-types_impl_ok": "c2c4424c07426ea912a76e00cfa5138d0ca80de92aeb9b8bef2a53282c3fceab",
+   "PRG-types_marker_bad": "2efb3c1f31d57d673036486ca745c2aefd9cbb9060e69b6637f5a0fffdad2646",
+   "PRG-types_marker_ok": "b8fe22aabcf5cdb4b8044b25509e255579d8dc33cc0c88927e7b307e69176a2f",
+   "PRG-types_mixin_conflict": "583c0d8307411a980f2bcf47a4e7c0926b1fb6811482500ce05c64e3d1261bd7",
+   "PRG-types_mixin_ok": "8e22704eb6f44992b03717da019bd4850af4c688fe0f7f6ecda6f166d40e4af1",
+   "PRG-types_mixin_unmet": "c6faab1e8acc24a90ff536b087083e8fbe75b6c0e241258e81d7bfd79154b983",
+   "PRG-types_nominal_interface": "20b144165b319366806d47841b2f1f40fcfc546512d83b850c67a5832858973b",
+   "PRG-types_nominal_newtype_bad": "9894105c1fbee3b870f52918115545916e1a93ce1cc5d2acc2b4b2454f5bd269",
+   "PRG-types_nominal_newtype_ok": "b1f011bb98d3cd3c309cf803c9b0d457fcbd64345e73debba63556b71aed8279",
+   "PRG-types_requires_cycle": "947ad9fee57c0ce694c03419119ce26f1b4e7266788be7d4de59c14426e10407",
+   "PRG-types_sets": "05fe972e27f9bdc8ecab2031ab4bd83ea43eb18fe3c1ddc722cc6c419e748817",
+   "PRG-types_trivial_bad": "c645be34b8e3cee7af47bccedceaa469b621361c5b009175757b557c97f628cc",
+   "PRG-types_trivial_ok": "6d00243deec5a2e6bb1882fe34a32207d6d01ac329dc9db0b3acf1ba1e82ebcb",
+   "PRG-validate_boundary_ok": "ab95160c859056515873e836760988ff962dbadc6b043358c953b642b717ebe6",
+   "PRG-validate_missing": "89ee1f775693ee4b7eec404ae5134a96eed97a00a1ed795a7933b638e59f6836",
+   "PRG-vis_bare_field": "d73a99f1e676ab15c5a2df2136a2971edf8266f2db754e9c51f5d3f1bd596d51",
+   "PRG-vis_condition_int": "7482858c2dbffd43478dc43e0979a77ab9befd017088a2c964a7666714fa74ec",
+   "PRG-vis_disjoint_scopes": "02f541d9cd9e3efe03a7226418daea6b8d9541d7929f31f2285c485d2f5c9895",
+   "PRG-vis_export_private_type": "f1a2a10eefc09318f5276d44f3528453abd4fbb310e1ecfea247961379c1a4e1",
+   "PRG-vis_export_record_sig": "63cbc89f2b4127ab712a3b304d69915bc01265d2741312ea4e9653470147e2cb",
+   "PRG-vis_export_sig_ok": "a1d8e0ba1431e042c3a7bf9b1258a594f5c8022085cb583f2b91bc7a21a44796",
+   "PRG-vis_self_field": "2fb2792f7a84bcf0226adc77d72b139d5c05b712eed22a0c9d8d8e0ab425af8b",
+   "PRG-vis_shadow_arm": "3303f4822fa32521a5e11ef5ded9010167633e0b341bcec4b4aec68629d16c5b",
+   "PRG-vis_shadow_block": "4c3205da1a1e57d578a82dbbd9278e897c1416f5b57e2ad5aec5e8ef154e794c",
+   "PRG-vis_shadow_lambda": "624a3bc023289700146e80509b617cff9679d70e96fcc1f986a03a6c8ca0bfed"
+  },
+  "left_observations_sha256": "b36b3b65a5b5465a0c01ebcfcc28a1fd167dd80af1cee75625a0ccbe06df0171",
+  "right_observations_sha256": "b36b3b65a5b5465a0c01ebcfcc28a1fd167dd80af1cee75625a0ccbe06df0171"
+ },
+ "execution_attestation": {
+  "command": "python3 -I conformance/tools/differential.py --left reference --right reference",
+  "python": "3.12.12",
+  "platform": "Linux-7.2.5-3-omarchy-x86_64-with-glibc2.44",
+  "cwd": ".",
+  "started": "2026-10-23T14:03:02.784553+00:00",
+  "finished": "2026-10-23T14:03:05.860612+00:00",
+  "network_blocked": true,
+  "subprocesses_blocked": true
+ },
+ "semantic_correctness": {
+  "fixtures": 235,
+  "agreeing": 235,
+  "disagreements": []
+ },
+ "observations": {
+  "left": {
+   "LR-2-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-2-02": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-4.3-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-5.3-02": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-6.3-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-6.3-02": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@5",
+     "E-REF-001@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "LR-6.3-03": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-7.3-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-7.6-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-7.6-02": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-7.7-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-9.5-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-9.6-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-9.7-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-10.1-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-10.3-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-10.6-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-11.3-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-11.5-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-11.8-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-12.1-02": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-12.5-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-12.6-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-13-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-13-02": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-14-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "OV-2-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-accounts": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-arith_checked_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-arith_unproved": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-002@5"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-async_transfer": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-call_missing_arg": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-050@5"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-call_named_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-130@6",
+     "E-TYP-130@7",
+     "E-TYP-130@8",
+     "E-TYP-130@9"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-call_named_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-cli_wordcount": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-codec_entries": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-codec_report": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ctor_missing_field": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-050@9",
+     "E-TYP-050@11",
+     "E-TYP-130@10",
+     "E-TYP-130@11"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ctor_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-defect_catch_non_outcome": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-defect_not_failure_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-exec_builder": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "a,b,c",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_checked_arithmetic": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "55|numeric.overflow",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_class_methods": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "0|3|9",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_copy_independent": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "1|2|1",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_decimal_failures": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "numeric.divide_by_zero|numeric.overflow|0.30",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_decimal_scale": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "20.00|3.000|0.3333333333333333333333333333|2.34|2.36|2.35|1.50|true|0.5",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_default_args": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "10|15|7",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_defect_stack": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "",
+    "trace": {
+     "reports": [],
+     "exit": "defect:stack_exhaustion"
+    }
+   },
+   "PRG-exec_drop_order": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "made 1|made 2|cleanup 2|cleanup 1|done",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_duration_arith": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "150s|90s|true|1s|1h|0s|90000000000",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_duration_overflow": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "numeric.overflow|numeric.overflow",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_enum_match": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "draft|paid 42|void: duplicate",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_failing_main": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "before",
+    "trace": {
+     "reports": [
+      "demo.boom"
+     ],
+     "exit": "fail:demo.boom"
+    }
+   },
+   "PRG-exec_float_div_zero": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "Infinity|-Infinity|NaN|true",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_float_eq": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "false|true|0.30000000000000004|0.3|2.0|true|-0.0",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_float_nan": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "NaN|false|false|false|true|true|true",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_float_total_order": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "true|true|true|false",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_for_list": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "3|6|9|count 3",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_from_view": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "ada|3",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_hello": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "hello, fortis",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_if_else": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "small|large|equal",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_int_div_rem": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "-3|-1|1|-9223372036854775808|9223372036854775807|-9223372036854775808",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_int_shift": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "4611686018427387904|numeric.shift_range|-4|4",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_interpolation_order": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "a b c|1 2 3",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_labels": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "1-1|1-2|2-1|done",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_lambda": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "6|3",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_list_ops": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "3|30|20|2|first 10|empty false",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_literals": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "255|10|15|1000000|2000.0|3.0|1.5|19.99|10|250ms|2min|true",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_loan_block": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "3|4",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_match_outcome": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "ok 4|failed demo.odd",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_move_rebind": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "a|b|2",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_nested_match_guard": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "big even|small|big odd",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_optional": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "7|present 3|absent",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_outcome_catch": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "5|shop.cart.empty|0",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_outcome_collect": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "2|demo.odd",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_param_unchanged": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "6|5",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_profile_unavailable": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "",
+    "trace": {
+     "reports": [],
+     "exit": "dynamic:profile not available: `Db` comes from fortis.data, which this kernel does not implement"
+    }
+   },
+   "PRG-exec_recover": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "2|0",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_refine_narrow": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "0|100|42|7",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_refine_subtype": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "42|142|refinement.out_of_range",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_refinement_validate": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "42|refinement.out_of_range",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_report": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "recovered|after",
+    "trace": {
+     "reports": [
+      "demo.glitch"
+     ],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_scalar_text": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "5|h|3",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_shared_retain": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "7|7|present 7",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_tuple_record": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "2 3|north 9",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_while_mut": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "1|2|4|8|16",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-float_compare_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_assign_immutable": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-002@6",
+     "E-NAM-002@13",
+     "E-NAM-002@14",
+     "E-NAM-002@15"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_assign_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_exits_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_give_outside": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-120@3",
+     "E-TYP-120@8",
+     "E-TYP-120@10",
+     "E-TYP-120@14"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_if_expr_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_missing_return": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-110@3",
+     "E-TYP-110@9",
+     "E-TYP-110@16"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-head_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_float_kinds": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@4",
+     "E-TYP-040@5",
+     "E-TYP-040@6",
+     "E-TYP-040@7",
+     "E-TYP-040@8"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_in_range": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_interp_not_displayable": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@8"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_interp_view": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_kinds_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_out_of_range": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@5",
+     "E-REF-001@6",
+     "E-REF-001@7",
+     "E-REF-001@8",
+     "E-REF-001@9",
+     "E-REF-001@10",
+     "E-REF-001@11",
+     "E-REF-001@12",
+     "E-REF-001@13",
+     "E-REF-001@14",
+     "E-REF-001@15",
+     "E-REF-001@16"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_string_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_view_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-match_missing_variant": {
+    "verdict": "reject",
+    "codes": [
+     "E-MAT-001@10"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-match_open_no_catchall": {
+    "verdict": "reject",
+    "codes": [
+     "E-MAT-001@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-match_otherwise_closed": {
+    "verdict": "reject",
+    "codes": [
+     "E-MAT-002@11",
+     "E-MAT-002@15"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-match_patterns_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-names_undeclared": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-001@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-names_unexported_member": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-001@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_consume_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_container_dropped": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_container_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_dropped": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_noalloc_alloc": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_noalloc_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_recover_undeclared": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_recovers_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_report_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_use_after_report": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_wrapped_access": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-opt_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-010@11",
+     "E-TYP-040@8",
+     "E-TYP-040@9",
+     "E-TYP-040@10",
+     "E-TYP-040@14"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-opt_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_cleanup_direct_call": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@12"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_cleanup_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_conflicting_loan": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_escaping_loan": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_explicit_copy_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_from_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_lexical_loan_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_marker_missing": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_markers_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_moves_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_owner_while_loaned": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_param_copy_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_shape_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_shape_unsupported": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_two_origins": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_use_after_move": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-prec_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_arith_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_arith_overflow": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-002@4",
+     "E-REF-002@5",
+     "E-REF-002@6",
+     "E-REF-002@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_diverge_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@12"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_diverge_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_index_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-002@4",
+     "E-REF-002@5",
+     "E-REF-002@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_index_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_invalidate_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@15"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_invalidate_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_length_refine_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-003@12",
+     "E-REF-003@13"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_length_refine_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_narrow_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_narrow_or_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@8"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_null_narrow_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_null_narrow_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_ranged_index_mut": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-002@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_ranged_index_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_remainder_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_remainder_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_statuses": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@5",
+     "E-REF-001@6",
+     "E-REF-001@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_widen_pair_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@7",
+     "E-REF-001@9"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_widen_pair_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-refine_subtype_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-refine_widen_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@7",
+     "E-REF-001@9"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-shared_copy_rejected": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-shared_weak": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_argument_families": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_bracket_continued_declaration": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_component_fn_param": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_component_record_param": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_condition_families": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_const_forms": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_continued_declaration": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_enum_comparison": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_exponent_separator": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_exported_view": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_fn_record_in_header": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_generic_enum_comparison": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_index_families": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_interpolated_bytes": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_interpolated_keyword_member": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_interpolated_lambda_await": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_interpolation_raw": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_member_keywords": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_nested_refinement": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_parenthesised_mix": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_record_in_header": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_record_return_type": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-type_mismatch": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@10",
+     "E-TYP-040@11",
+     "E-TYP-040@12",
+     "E-TYP-040@13",
+     "E-TYP-040@14"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_class_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_coherence_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_coherence_orphan": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-100@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_coherence_overlap": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-100@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_condition_bool": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_codec_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_codec_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_comparable_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_comparable_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_default_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_default_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_displayable_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_displayable_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_equatable_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_equatable_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_from_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_from_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_hand_method": {
+    "verdict": "reject",
+    "codes": [
+     "E-MIX-001@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_hashable_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_hashable_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_duplicate_member": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-070@5"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_float_refinement": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-020@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_impl_incompatible": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_impl_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_marker_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@10"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_marker_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_mixin_conflict": {
+    "verdict": "reject",
+    "codes": [
+     "E-MIX-001@11"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_mixin_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_mixin_unmet": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@8"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_nominal_interface": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@12"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_nominal_newtype_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@11"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_nominal_newtype_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_requires_cycle": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-060@2",
+     "E-TYP-060@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_sets": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_trivial_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-OWN-030@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_trivial_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-validate_boundary_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-validate_missing": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@5",
+     "E-REF-001@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_bare_field": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-001@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_condition_int": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-010@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_disjoint_scopes": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_export_private_type": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-030@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_export_record_sig": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-030@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_export_sig_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_self_field": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_shadow_arm": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-003@5"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_shadow_block": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-003@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_shadow_lambda": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-003@4"
+    ],
+    "output": null,
+    "trace": null
+   }
+  },
+  "right": {
+   "LR-2-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-2-02": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-4.3-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-5.3-02": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-6.3-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-6.3-02": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@5",
+     "E-REF-001@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "LR-6.3-03": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-7.3-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-7.6-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-7.6-02": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-7.7-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-9.5-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-9.6-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-9.7-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-10.1-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-10.3-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-10.6-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-11.3-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-11.5-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-11.8-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-12.1-02": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-12.5-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-12.6-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-13-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-13-02": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "LR-14-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "OV-2-01": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-accounts": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-arith_checked_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-arith_unproved": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-002@5"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-async_transfer": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-call_missing_arg": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-050@5"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-call_named_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-130@6",
+     "E-TYP-130@7",
+     "E-TYP-130@8",
+     "E-TYP-130@9"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-call_named_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-cli_wordcount": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-codec_entries": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-codec_report": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ctor_missing_field": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-050@9",
+     "E-TYP-050@11",
+     "E-TYP-130@10",
+     "E-TYP-130@11"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ctor_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-defect_catch_non_outcome": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-defect_not_failure_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-exec_builder": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "a,b,c",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_checked_arithmetic": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "55|numeric.overflow",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_class_methods": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "0|3|9",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_copy_independent": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "1|2|1",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_decimal_failures": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "numeric.divide_by_zero|numeric.overflow|0.30",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_decimal_scale": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "20.00|3.000|0.3333333333333333333333333333|2.34|2.36|2.35|1.50|true|0.5",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_default_args": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "10|15|7",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_defect_stack": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "",
+    "trace": {
+     "reports": [],
+     "exit": "defect:stack_exhaustion"
+    }
+   },
+   "PRG-exec_drop_order": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "made 1|made 2|cleanup 2|cleanup 1|done",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_duration_arith": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "150s|90s|true|1s|1h|0s|90000000000",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_duration_overflow": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "numeric.overflow|numeric.overflow",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_enum_match": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "draft|paid 42|void: duplicate",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_failing_main": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "before",
+    "trace": {
+     "reports": [
+      "demo.boom"
+     ],
+     "exit": "fail:demo.boom"
+    }
+   },
+   "PRG-exec_float_div_zero": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "Infinity|-Infinity|NaN|true",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_float_eq": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "false|true|0.30000000000000004|0.3|2.0|true|-0.0",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_float_nan": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "NaN|false|false|false|true|true|true",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_float_total_order": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "true|true|true|false",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_for_list": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "3|6|9|count 3",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_from_view": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "ada|3",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_hello": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "hello, fortis",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_if_else": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "small|large|equal",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_int_div_rem": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "-3|-1|1|-9223372036854775808|9223372036854775807|-9223372036854775808",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_int_shift": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "4611686018427387904|numeric.shift_range|-4|4",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_interpolation_order": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "a b c|1 2 3",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_labels": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "1-1|1-2|2-1|done",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_lambda": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "6|3",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_list_ops": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "3|30|20|2|first 10|empty false",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_literals": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "255|10|15|1000000|2000.0|3.0|1.5|19.99|10|250ms|2min|true",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_loan_block": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "3|4",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_match_outcome": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "ok 4|failed demo.odd",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_move_rebind": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "a|b|2",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_nested_match_guard": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "big even|small|big odd",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_optional": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "7|present 3|absent",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_outcome_catch": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "5|shop.cart.empty|0",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_outcome_collect": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "2|demo.odd",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_param_unchanged": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "6|5",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_profile_unavailable": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "",
+    "trace": {
+     "reports": [],
+     "exit": "dynamic:profile not available: `Db` comes from fortis.data, which this kernel does not implement"
+    }
+   },
+   "PRG-exec_recover": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "2|0",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_refine_narrow": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "0|100|42|7",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_refine_subtype": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "42|142|refinement.out_of_range",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_refinement_validate": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "42|refinement.out_of_range",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_report": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "recovered|after",
+    "trace": {
+     "reports": [
+      "demo.glitch"
+     ],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_scalar_text": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "5|h|3",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_shared_retain": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "7|7|present 7",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_tuple_record": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "2 3|north 9",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-exec_while_mut": {
+    "verdict": "accept",
+    "codes": [],
+    "output": "1|2|4|8|16",
+    "trace": {
+     "reports": [],
+     "exit": "ok"
+    }
+   },
+   "PRG-float_compare_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_assign_immutable": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-002@6",
+     "E-NAM-002@13",
+     "E-NAM-002@14",
+     "E-NAM-002@15"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_assign_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_exits_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_give_outside": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-120@3",
+     "E-TYP-120@8",
+     "E-TYP-120@10",
+     "E-TYP-120@14"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_if_expr_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-flow_missing_return": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-110@3",
+     "E-TYP-110@9",
+     "E-TYP-110@16"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-head_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_float_kinds": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@4",
+     "E-TYP-040@5",
+     "E-TYP-040@6",
+     "E-TYP-040@7",
+     "E-TYP-040@8"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_in_range": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_interp_not_displayable": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@8"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_interp_view": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_kinds_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_out_of_range": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@5",
+     "E-REF-001@6",
+     "E-REF-001@7",
+     "E-REF-001@8",
+     "E-REF-001@9",
+     "E-REF-001@10",
+     "E-REF-001@11",
+     "E-REF-001@12",
+     "E-REF-001@13",
+     "E-REF-001@14",
+     "E-REF-001@15",
+     "E-REF-001@16"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_string_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-lit_view_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-match_missing_variant": {
+    "verdict": "reject",
+    "codes": [
+     "E-MAT-001@10"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-match_open_no_catchall": {
+    "verdict": "reject",
+    "codes": [
+     "E-MAT-001@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-match_otherwise_closed": {
+    "verdict": "reject",
+    "codes": [
+     "E-MAT-002@11",
+     "E-MAT-002@15"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-match_patterns_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-names_undeclared": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-001@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-names_unexported_member": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-001@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_consume_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_container_dropped": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_container_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_dropped": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_noalloc_alloc": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_noalloc_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_recover_undeclared": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_recovers_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_report_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_use_after_report": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-obl_wrapped_access": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-opt_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-010@11",
+     "E-TYP-040@8",
+     "E-TYP-040@9",
+     "E-TYP-040@10",
+     "E-TYP-040@14"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-opt_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_cleanup_direct_call": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@12"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_cleanup_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_conflicting_loan": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_escaping_loan": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_explicit_copy_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_from_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_lexical_loan_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_marker_missing": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_markers_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_moves_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_owner_while_loaned": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_param_copy_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_shape_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_shape_unsupported": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_two_origins": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-own_use_after_move": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-prec_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_arith_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_arith_overflow": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-002@4",
+     "E-REF-002@5",
+     "E-REF-002@6",
+     "E-REF-002@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_diverge_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@12"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_diverge_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_index_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-002@4",
+     "E-REF-002@5",
+     "E-REF-002@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_index_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_invalidate_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@15"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_invalidate_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_length_refine_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-003@12",
+     "E-REF-003@13"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_length_refine_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_narrow_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_narrow_or_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@8"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_null_narrow_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_null_narrow_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_ranged_index_mut": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-002@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_ranged_index_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_remainder_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_remainder_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_statuses": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@5",
+     "E-REF-001@6",
+     "E-REF-001@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_widen_pair_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@7",
+     "E-REF-001@9"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-ref_widen_pair_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-refine_subtype_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-refine_widen_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@7",
+     "E-REF-001@9"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-shared_copy_rejected": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-shared_weak": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_argument_families": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_bracket_continued_declaration": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_component_fn_param": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_component_record_param": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_condition_families": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_const_forms": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_continued_declaration": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_enum_comparison": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_exponent_separator": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_exported_view": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_fn_record_in_header": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_generic_enum_comparison": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_index_families": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_interpolated_bytes": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_interpolated_keyword_member": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_interpolated_lambda_await": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_interpolation_raw": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_member_keywords": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_nested_refinement": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_parenthesised_mix": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_record_in_header": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-syntax_record_return_type": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-type_mismatch": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-040@10",
+     "E-TYP-040@11",
+     "E-TYP-040@12",
+     "E-TYP-040@13",
+     "E-TYP-040@14"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_class_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_coherence_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_coherence_orphan": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-100@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_coherence_overlap": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-100@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_condition_bool": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_codec_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_codec_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_comparable_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_comparable_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_default_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_default_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_displayable_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_displayable_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_equatable_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_equatable_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_from_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_from_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_hand_method": {
+    "verdict": "reject",
+    "codes": [
+     "E-MIX-001@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_hashable_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-090@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_derive_hashable_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_duplicate_member": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-070@5"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_float_refinement": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-020@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_impl_incompatible": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_impl_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_marker_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@10"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_marker_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_mixin_conflict": {
+    "verdict": "reject",
+    "codes": [
+     "E-MIX-001@11"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_mixin_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_mixin_unmet": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@8"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_nominal_interface": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@12"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_nominal_newtype_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-080@11"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_nominal_newtype_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_requires_cycle": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-060@2",
+     "E-TYP-060@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_sets": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_trivial_bad": {
+    "verdict": "reject",
+    "codes": [
+     "E-OWN-030@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-types_trivial_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-validate_boundary_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-validate_missing": {
+    "verdict": "reject",
+    "codes": [
+     "E-REF-001@5",
+     "E-REF-001@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_bare_field": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-001@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_condition_int": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-010@4"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_disjoint_scopes": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_export_private_type": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-030@7"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_export_record_sig": {
+    "verdict": "reject",
+    "codes": [
+     "E-TYP-030@3"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_export_sig_ok": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_self_field": {
+    "verdict": "accept",
+    "codes": [],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_shadow_arm": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-003@5"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_shadow_block": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-003@6"
+    ],
+    "output": null,
+    "trace": null
+   },
+   "PRG-vis_shadow_lambda": {
+    "verdict": "reject",
+    "codes": [
+     "E-NAM-003@4"
+    ],
+    "output": null,
+    "trace": null
+   }
+  }
+ }
+}

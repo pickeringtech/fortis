@@ -1,0 +1,15 @@
+// reject: E-DI-010 (at the marked line)
+// covers: PLAT-03-01
+// A group declared twice would make selection depend on which declaration comes first; it is refused.
+export class Gateway {
+  name: String
+}
+export class Checkout {
+  inject gateway: Gateway
+}
+context Production {
+  group Paying = [Checkout]
+  group Paying = [Refunds]                                            // reject: E-DI-010 — declared twice
+  provide Gateway using instance Gateway(name: "a") to Paying
+  provide Checkout
+}

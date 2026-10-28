@@ -1,0 +1,18 @@
+// Signature module for `fortis.text` (Language Reference 6.6). `Builder` and `Scalar` are also
+// reachable through the prelude so that interpolation and `Displayable` can name them.
+export class Builder {
+  export trusted pure func create() Builder
+  export trusted func append(editable self, text: StringView) Void
+  export trusted func appendLine(editable self, text: StringView) Void
+  export trusted func appendScalar(editable self, s: Scalar) Void
+  export trusted pure func finish(self) String
+}
+export class Scalar {
+  export trusted pure func of(text: StringView) Scalar
+  export trusted pure func digitValue(s: Scalar) Int<0..9>?
+  export trusted pure func hexValue(s: Scalar) Int<0..15>?
+}
+export trusted pure func graphemes(text: StringView) Int
+export class Text {
+  export trusted pure func words(text: StringView) List[String]
+}

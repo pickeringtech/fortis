@@ -1,0 +1,14 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// `when p == null` puts the present fact on the false state, which this arm does not see (LR 6.8).
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+}
+
+export pure func flipped(n: Int, p: Cell?) Bool {
+  return match n {
+    1 when p == null => p.read()              // reject: E-TYP-040 — `== null` did not narrow `p`
+    otherwise => false
+  }
+}

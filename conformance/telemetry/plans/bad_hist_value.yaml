@@ -1,0 +1,9 @@
+# E-TEL-001: a histogram over a field that is not numeric
+telemetry:
+  projections:
+    p:
+      source: OrderProcessing
+      metrics:
+        - name: p.tier
+          instrument: histogram
+          value: tier   # expect: E-TEL-001

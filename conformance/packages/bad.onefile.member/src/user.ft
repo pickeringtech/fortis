@@ -1,0 +1,5 @@
+// reject: E-NAM-001 (at the marked line)
+// A module checked on its own inside a package is judged in the package's context (D-51.8): the import of a
+// member the imported module does not export is the record the package check gives, from `fortis check` and
+// `fortisc check` on this file as well as from the package check.
+import bad.onefile.member.util { ceiling }   // reject: E-NAM-001 — util exports no ceiling

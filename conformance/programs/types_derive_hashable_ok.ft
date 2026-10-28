@@ -1,0 +1,5 @@
+// accept
+export class Key derive Equatable, Hashable {
+  export name: String
+  export index: Int
+}

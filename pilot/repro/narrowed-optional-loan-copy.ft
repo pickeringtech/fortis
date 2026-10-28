@@ -1,0 +1,25 @@
+// Repro (FRICTION entry 23): after `if x == null { return … }`, an optional *loan* (`List.get` returns
+// `(alias T from self)?`) is not narrowed for `copy`. Both checkers reject line 12 with E-OWN-002
+// "`copy last`: alias String from self? is not Copyable" (the message names `self`, not `items`), although the guide (Types, "Optional values") says
+// that after `if n == null { return … }` the place "is a `T` for the rest of the block". The `match` form in
+// `viaMatch` is accepted.
+
+pure func viaNarrowing(items: List[String]) String {
+  let last = items.get(0)
+  if last == null {
+    return "none"
+  }
+  return copy last
+}
+
+pure func viaMatch(items: List[String]) String {
+  return match items.get(0) {
+    present(last) => copy last
+    null => "none"
+  }
+}
+
+test "first" {
+  let items: List[String] = List.of("a")
+  expect viaNarrowing(items) == viaMatch(items)
+}

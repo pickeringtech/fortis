@@ -1,0 +1,19 @@
+# The published compatibility set of the standard packages (Platform Specification 1.5; PLAT-01-01).
+# Kits are versioned separately and tested only together within a set: a project's dependency on a standard
+# package must name one of these at the set's version, or the manifest is refused (E-NAM-031). The lockfile pins
+# this file with the standard library (fortis.lock `stdlib`).
+schema: fortis.compatibility/v1
+set: "1.0"
+packages:
+  fortis: "1.0"
+  fortis.codec: "1.0"
+  fortis.runtime: "1.0"
+  fortis.di: "1.0"
+  fortis.data: "1.0"
+  fortis.telemetry: "1.0"
+  fortis.security: "1.0"
+  fortis.config: "1.0"
+  fortis.packages: "1.0"
+  fortis.http: "1.0"
+  fortis.web: "1.0"
+  fortis.desktop: "1.0"

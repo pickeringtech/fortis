@@ -1,0 +1,7 @@
+pure func double(n: Int) Int => Int.wrappingAdd(n, n)
+
+test "doubling" cases {
+  "negative": { n: -4, expected: -8 }
+} as row {
+  expect double(row.n) == row.expected
+}

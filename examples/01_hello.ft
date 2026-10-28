@@ -1,0 +1,12 @@
+// Hello: capabilities come from main, output goes through the Console capability.
+// Run: bin/fortis run examples/01_hello.ft
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("hello from Fortis")
+  caps.console.print("arguments: ${args.count()}")
+  for i in 1..3 {
+    caps.console.print("tick ${i}")
+  }
+}

@@ -1,0 +1,29 @@
+// The accounts the ownership examples use (Language Reference 7.6, 7.7), and customers' accounts for the outcome
+// and test examples (10.1, 14): no account is stored, so every lookup fails.
+export class User {
+  export name: String
+  export age: Int
+}
+
+export type CustomerId = Int<1..>
+
+export error AccountNotFound {
+  code: "accounts.not_found"
+}
+
+export class Account {
+  export name: String
+  export anonymous: Bool
+  export pure func guest() Account => Account(name: "guest", anonymous: true)
+  export pure func isGuest(self) Bool => self.anonymous
+}
+
+export pure try func loadAccount(id: CustomerId) Account {
+  fail AccountNotFound()
+}
+
+export pure func save(account: Account) Void {
+  discard account.name
+}
+
+export pure func isAdult(age: Int) Bool => age >= 18

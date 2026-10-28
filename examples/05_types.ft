@@ -1,0 +1,48 @@
+// Types: refinements proved or validated, newtypes, enums with payloads, exhaustive match.
+// Run: bin/fortis run examples/05_types.ft
+import fortis.host { Host }
+
+export type Age = Int<0..150>
+
+export enum Shape {
+  Circle(radius: Int)
+  Rect(width: Int, height: Int)
+  Point
+  export func area(self) Int => match self {
+    Circle(radius: r) => Int.wrappingMul(3, Int.wrappingMul(r, r))
+    Rect(width: w, height: h) => Int.wrappingMul(w, h)
+    Point => 0
+  }
+  export func label(self) String => match self {
+    Circle(radius: r) => "circle r=${r}"
+    Rect(width: w, height: h) => "rect ${w}x${h}"
+    Point => "point"
+  }
+}
+
+// `Age(18)` is a literal the checker proves in range; a newtype only compares with itself.
+func classify(age: Age) String {
+  if age < Age(18) {
+    return "minor"
+  }
+  return "adult"
+}
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let shapes = List.of(Shape.Circle(radius: 2), Shape.Rect(width: 3, height: 4), Shape.Point)
+  for s in shapes {
+    caps.console.print("${s.label()} has area ${s.area()}")
+  }
+  let checked = Age.validate(42) catch e {
+    recover Age(0)
+  }
+  caps.console.print("42 is a ${classify(checked)}")
+  match Age.validate(200) {
+    success(a) => caps.console.print("accepted ${a}")
+    failure(f) => {
+      caps.console.print("rejected 200")
+      report f
+    }
+  }
+}

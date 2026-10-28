@@ -1,0 +1,14 @@
+// reject: E-EFF-001 (at the marked lines)
+// covers: LANG-11-01, LANG-11-02
+// D-23: writing through a guard writes storage shared between tasks (`mutate`, 11.1), and copying the value out may
+// allocate, so neither may hide behind a `pure` or `noalloc` claim.
+pure func store(g: MutexGuard[Int]) Void {
+  g.set(3)                                   // reject: E-EFF-001 — a write to shared storage (mutate)
+}
+
+noalloc func read(g: MutexGuard[String]) String {
+  return g.get()                             // reject: E-EFF-001 — the copy may allocate
+}
+
+export func main(args: List[String]) Void {
+}

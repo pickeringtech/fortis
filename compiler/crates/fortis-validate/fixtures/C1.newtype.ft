@@ -1,0 +1,6 @@
+// DEL-45 fixture for C1.newtype (refinement invariant): a refined newtype built from a constant within its refinement.
+export type Percent = Int<0..100>
+export func main(args: List[String]) Void {
+  let p = Percent(42)
+  discard p
+}

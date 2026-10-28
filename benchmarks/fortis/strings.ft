@@ -1,0 +1,12 @@
+// Text: two million interpolated strings, their total length in scalars.
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut total = 0
+  for i in 0..<2_000_000 {
+    let line = "item ${i} of ${2000000}: ok"
+    total = Int.wrappingAdd(total, line.scalarCount())
+  }
+  caps.console.print("${total}")
+}

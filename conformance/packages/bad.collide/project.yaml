@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: bad.collide
+version: 0.1.0
+exports: [m]
+dependencies:
+  fortis: "1.0"
+  acme.util: "1.0.0"

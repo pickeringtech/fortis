@@ -1,0 +1,3 @@
+{"verdict": "reject", "code": "E-NAM-001", "covers": ["LANG-04-05"], "records": [
+  {"file": "model.ft", "line": 15, "column": 13, "code": "E-NAM-001", "message": "`Red` is ambiguous: Light and Paint declare it as a variant; write `Light.Red` or `Paint.Red`", "candidates": ["Light.Red", "Paint.Red"]}
+]}

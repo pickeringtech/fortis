@@ -1,0 +1,32 @@
+// execute: before|mapped demo.denied|0
+// requires: runtime
+// covers: LANG-11-09
+// 11.8: a failure from the body goes to the last-applied handler; a handler that returns completes the function.
+import fortis.host { Host, Console }
+export error Denied {
+  code: "demo.denied"
+}
+export aspect guarded() {
+  needs console: Console
+  before {
+    console.print("before")
+  }
+  on failure(f: Failure) Int {
+    console.print("mapped ${f.code}")
+    report f
+    return 0
+  }
+}
+try func inner(n: Int) Int {
+  if n > 1 {
+    fail Denied()
+  }
+  return n
+}
+@guarded()
+try func work(console: Console, n: Int) Int => inner(n) or fail
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let v = work(caps.console, 5) or recover -1
+  caps.console.print("${v}")
+}

@@ -1,0 +1,32 @@
+// execute: quick|recovered -1
+// execute-trace: launch quick#1|launch late#2|suspend main|start quick#1|complete quick#1|resume main|join quick#1|loans-end|cancel late#2|suspend main|cancelled late#2|complete late#2|resume main|join late#2
+// reports: task-lifecycle:state=not_started
+// requires: runtime
+// covers: LANG-12-03
+// A task cancelled before its first poll never runs (the parent resumes first when its awaited task completes,
+// so `late` is still ready when `or fail` leaves the scope): a not_started record (12.3, 13).
+import fortis.host { Host, Console }
+export error Bad {
+  code: "demo.bad"
+}
+async try func quick(console: Console) Int {
+  console.print("quick")
+  fail Bad()
+}
+async func late(console: Console) Int {
+  console.print("late ran")
+  return 1
+}
+async try func run(console: Console) Int {
+  scope tasks {
+    let first = tasks.launch(quick(console))
+    let second = tasks.launch(late(console))
+    let x = await first or fail
+    return Int.wrappingAdd(x, await second)
+  }
+}
+export async recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let r = await run(caps.console) or recover -1
+  caps.console.print("recovered ${r}")
+}

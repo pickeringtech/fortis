@@ -1,0 +1,26 @@
+// execute: fetch a|fetch b|sum 3
+// execute-trace: launch fetch#1|launch fetch#2|suspend main|start fetch#1|complete fetch#1|resume main|join fetch#1|suspend main|start fetch#2|complete fetch#2|resume main|join fetch#2|loans-end
+// requires: runtime
+// covers: LANG-12-04, LANG-07-04
+// 12.5: two cooperative tasks hold read loans of `console` and `net`; the scope joins both before its block ends.
+import fortis.host { Host, Console }
+export class Net {
+  export base: Int
+}
+async try func fetch(console: Console, net: Net, label: StringView, n: Int) Int {
+  console.print("fetch ${label}")
+  return Int.wrappingAdd(net.base, n)
+}
+async try func fetchBoth(console: Console, net: Net) Int {
+  scope tasks {
+    let first = tasks.launch(fetch(console, net, "a", 1))
+    let second = tasks.launch(fetch(console, net, "b", 2))
+    return Int.wrappingAdd(await first or fail, await second or fail)
+  }
+}
+export async try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let net = Net(base: 0)
+  let sum = await fetchBoth(caps.console, net) or fail
+  caps.console.print("sum ${sum}")
+}

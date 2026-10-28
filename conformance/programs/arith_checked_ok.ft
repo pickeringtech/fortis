@@ -1,0 +1,10 @@
+// accept
+// covers: LANG-06-04
+// The checked, wrapping and saturating families are total named operations on every integer type (6.4).
+try func total(a: Int, b: Int) Int {
+  let sum = Int.add(a, b) or fail
+  let product = Int.mul(sum, 2) or fail
+  let wrapped = Int.wrappingAdd(a, b)
+  let clamped = Int.saturatingMul(a, b)
+  return product
+}

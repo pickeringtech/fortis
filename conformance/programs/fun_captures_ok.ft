@@ -1,0 +1,31 @@
+// accept
+// covers: LANG-08-02, LANG-08-03
+// Capture rules per kind (8.2, 8.3): fn reads, fn mut mutates, fn once moves out.
+import fortis.text
+export class Box {
+  export label: String
+}
+func keep(b: owned Box) Void {
+}
+func run(prefix: String, threshold: Int, box: owned Box, other: owned Box) Int {
+  let greet = fn[alias prefix](name: StringView) Int => Int.saturatingAdd(prefix.scalarCount(), name.scalarCount())
+  let bare = fn[threshold](x: Int) Bool => x > threshold
+  let copied = fn[copy prefix](n: Int) Int => Int.saturatingAdd(prefix.scalarCount(), n)
+  let owned_read = fn[move box](n: Int) Int => Int.saturatingAdd(box.label.scalarCount(), n)
+  let mut counter = 0
+  let mut bump = fn mut[editable counter]() Void {
+    counter = Int.saturatingAdd(counter, 1)
+  }
+  editable bump()
+  let mut tally = 0
+  let mut acc = fn mut[move tally](n: Int) Int {
+    tally = Int.saturatingAdd(tally, n)
+    return tally
+  }
+  let t = editable acc(2)
+  let finish = fn once[move other]() Void {
+    keep(move other)
+  }
+  move finish()
+  return Int.saturatingAdd(greet("x"), Int.saturatingAdd(copied(1), Int.saturatingAdd(owned_read(1), t)))
+}

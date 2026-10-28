@@ -1,0 +1,9 @@
+schema: fortis.project/v1
+name: ver.mismatch
+version: 0.1.0
+entry: app
+exports: []
+dependencies:
+  fortis: "1.0"
+  ver.lib: "2.0.0"
+  ver.mid: "0.1.0"

@@ -1,0 +1,5 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-01
+try func half(n: Int) Int => n
+func peek(o: Outcome[Int]) Int => 0
+func run(n: Int) Int => peek(half(n))      // reject: E-OBL-001 — the outcome is only loaned for the call and then dropped

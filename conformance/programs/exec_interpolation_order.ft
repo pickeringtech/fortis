@@ -1,0 +1,24 @@
+// execute: a b c|1 2 3
+// requires: runtime
+// covers: LANG-03-06
+import fortis.host { Host }
+
+export class Log {
+  export seen: List[Int]
+
+  export func mark(editable self, n: Int) String {
+    editable self.seen.push(n)
+    return match n {
+      1 => "a"
+      2 => "b"
+      _ => "c"
+    }
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut log = Log(seen: List.default())
+  caps.console.print("${editable log.mark(1)} ${editable log.mark(2)} ${editable log.mark(3)}")
+  caps.console.print("${log.seen.get(0) ?? 0} ${log.seen.get(1) ?? 0} ${log.seen.get(2) ?? 0}")
+}

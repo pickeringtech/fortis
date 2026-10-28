@@ -1,0 +1,3 @@
+import cycle.newtype.qp.q { Small }
+
+export func take(x: Small) Small => x

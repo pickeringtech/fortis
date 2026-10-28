@@ -1,0 +1,29 @@
+// D-250: `...move w` consumes the whole of `w`; the field the target lacks (`extra`) is dropped at the spread
+// (LR 9.2), so its cleanup runs and this program ends in the cleanup's defect. The interpreter does; the VM never
+// runs the cleanup (it prints `a` and exits 0); native runs it through Rust's drop of the spread's remainder, but
+// its executor trace has no `drop Noisy` event for it.
+import fortis.host { Host }
+
+class Noisy {
+  export id: Int
+
+  cleanup(editable self) Void {
+    injectDefect("contract_violation")
+  }
+}
+
+class Wide {
+  export name: String
+  export extra: Noisy
+}
+
+class Narrow {
+  export name: String
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let w = Wide(name: "a", extra: Noisy(id: 1))
+  let n = Narrow(...move w)
+  caps.console.print(n.name)
+}

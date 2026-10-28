@@ -1,0 +1,8 @@
+// reject: E-OBL-001 (at the marked line)
+// use imports Box and not Hold. Dropping a Box is still dropping the Outcome it contains.
+import bad.facts.linear.hold { Box }
+
+func keep(b: owned Box) Int => move b.finish()
+func leave(b: owned Box) Void {
+  let dropped = move b                       // reject: E-OBL-001 — Box is linear in the module that declares it
+}

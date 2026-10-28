@@ -1,0 +1,7 @@
+// accept
+// Cee is declared here. A module that never imports Cee still sees these members (LANG-04-04).
+export class Cee {
+  export n: Int
+  export pure func len(self) Int => self.n
+  export pure func make(k: Int) Cee => Cee(n: k)
+}

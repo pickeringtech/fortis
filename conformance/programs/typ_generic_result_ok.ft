@@ -1,0 +1,31 @@
+// accept
+// covers: LANG-06-01
+// The same generics, with arguments that are the expected type. One constructor and one
+// lambda still fill a declared function element.
+class Box[T] {
+  value: T
+}
+
+enum Light {
+  Wrap(n: Int)
+}
+
+func box[T](a: T) List[T] where T implements Copyable {
+  return List.of(copy a)
+}
+
+func make[T](value: T) Box[T] where T implements Copyable {
+  return Box(value: copy value)
+}
+
+func good() Int {
+  let xs: List[Int] = box(1)
+  let b: Box[Bool] = make(true)
+  let lights: List[Light] = List.of(Light.Wrap(n: 1))
+  let ctor: List[fn(Int) Light] = List.of(Light.Wrap)
+  let one: List[fn(Int) Int] = List.of(pure noalloc fn(x: Int) Int => x)
+  discard b
+  discard ctor
+  discard one
+  return Int.saturatingAdd(xs.count(), lights.count())
+}

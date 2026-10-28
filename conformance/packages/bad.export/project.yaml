@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: bad.export
+version: 0.1.0
+exports: [m]
+dependencies:
+  fortis: "1.0"
+  acme.billing: "1.4.0"

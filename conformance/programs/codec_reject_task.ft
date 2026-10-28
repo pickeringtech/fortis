@@ -1,0 +1,7 @@
+// reject: E-TYP-090 (at the marked line)
+// covers: LANG-06-10
+// DEL-29 exclusion 7 of 7: a task handle names running work in one process.
+export class Worker derive Encodable {      // reject: E-TYP-090
+  export id: Int
+  export handle: Task[Int]
+}

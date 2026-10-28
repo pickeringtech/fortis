@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: acme.orders
+version: 1.0.0
+root: orders
+exports: [orders]
+dependencies:
+  fortis: "1.0"

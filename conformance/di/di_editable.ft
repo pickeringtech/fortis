@@ -1,0 +1,32 @@
+// execute: ticket 1|ticket 2|ticket 3
+// covers: PLAT-03-03
+// A factory that takes a held instance exclusively (`editable`) is called from a generated method whose receiver is
+// `editable self`, so the caller writes `editable app.ticket()`, and within a level's constructor the held local is
+// `let mut`; the core checks both like any code.
+import fortis.host { Host }
+
+export class Counter {
+  next: Int = 0
+}
+
+export class Ticket {
+  serial: Int
+}
+
+export func issue(counter: editable Counter) Ticket {
+  counter.next = Int.wrappingAdd(counter.next, 1)
+  return Ticket(serial: counter.next)
+}
+
+context Production {
+  provide Counter using Counter { lifetime: application }
+  provide Ticket using factory issue
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut app = Production.application()
+  caps.console.print("ticket ${editable app.ticket().serial}")
+  caps.console.print("ticket ${editable app.ticket().serial}")
+  caps.console.print("ticket ${editable app.ticket().serial}")
+}

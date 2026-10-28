@@ -1,0 +1,9 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-12-02
+try func flush(n: Int) Int => n
+func run(n: Int) Int {
+  defer {
+    flush(n)                               // reject: E-OBL-001 — the outcome must be consumed inside the defer
+  }
+  return n
+}

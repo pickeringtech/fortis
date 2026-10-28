@@ -1,0 +1,14 @@
+// accept — S5: a marker before a receiver with a method call
+export class Counter {
+  export count: Int
+  export func bump(editable self) Void {
+    self.count = Int.wrappingAdd(self.count, 1)
+  }
+  export func finish(owned self) Int => self.count
+}
+func run(c: editable Counter) Int {
+  editable c.bump()
+  let mut own = Counter(count: 0)
+  editable own.bump()
+  return move own.finish()
+}

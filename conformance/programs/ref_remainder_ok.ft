@@ -1,0 +1,8 @@
+// accept
+// covers: LANG-06-02
+pure func rem(a: Int<0..>, b: Int<..0>, d: Int<1..10>, e: Int<-10..-1>) Int {
+  let x: Int<0..9> = a % d
+  let y: Int<-9..0> = b % d
+  let z: Int<0..9> = a % e
+  return x
+}

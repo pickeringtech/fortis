@@ -1,0 +1,26 @@
+// execute: supervisor input kept: 4
+// covers: PLAT-03-06
+// With live provenance, `application` takes the Supervisor under a name no input has, here beside an input that is
+// itself called `supervisor`.
+import fortis.host { Host, Supervisor, Capabilities }
+import fortis.di.provenance
+
+export class Limit {
+  value: Int
+}
+
+export class Policy {
+  inject limit: Limit
+}
+
+context Production(supervisor: Int) {
+  provide Limit using instance Limit(value: supervisor)
+  provide Policy
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: console, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let app = Production.application(4, sup)
+  console.print("supervisor input kept: ${app.policy().limit.value}")
+}

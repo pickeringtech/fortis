@@ -1,0 +1,35 @@
+// reject: E-REF-002, E-TYP-110 (at the marked lines)
+// covers: LANG-05-05, LANG-06-02
+// D-76, an early `give`: an arm or branch that gives on one path can still reach its end on another. A statement arm
+// that does so joins its end state (here `d = 0` when `take` is false); in expression position a path that reaches the
+// end without `give` is E-TYP-110 (5.5), as it is for a block with no `give` at all.
+export func arm(take: Bool) Int {
+  let mut d: Int<0..1> = 0
+  match 0 {
+    _ => {
+      if take {
+        d = 1
+        give 0
+      }
+    }
+  }
+  return 1 / d                               // reject: E-REF-002 — `f(false)` reaches here with `d == 0`
+}
+
+export func valued(take: Bool) Int {
+  let x = match 0 {
+    _ => {                                   // reject: E-TYP-110 — the arm reaches its end when `take` is false
+      if take {
+        give 1
+      }
+    }
+  }
+  let y = if take {                          // reject: E-TYP-110 — the branch reaches its end when `x` is 0
+    if x > 0 {
+      give 2
+    }
+  } else {
+    give 3
+  }
+  return x + y
+}

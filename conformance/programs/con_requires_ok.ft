@@ -1,0 +1,7 @@
+// accept
+// covers: LANG-11-06
+import fortis.host { Clock }
+contract Timed {
+  requires capability Clock
+}
+Timed func tick(clock: Clock, n: Int) Int => n

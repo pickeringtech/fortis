@@ -1,0 +1,29 @@
+// accept
+// covers: LANG-10-01
+// An Outcome is consumed by or fail, or recover, catch, or match with a failure arm (10.2).
+export error Odd {
+  code: "demo.odd"
+}
+
+try func half(n: Int) Int {
+  if n % 2 == 1 {
+    fail Odd()
+  }
+  return n / 2
+}
+
+try recovers func all(n: Int) Int {
+  let a = half(n) or fail
+  let b = half(n) or recover 0
+  let c = half(n) catch e {
+    recover 1
+  }
+  let d = match half(n) {
+    success(v) => v
+    failure(f) => {
+      report f
+      give 2
+    }
+  }
+  return Int.saturatingAdd(Int.saturatingAdd(a, b), Int.saturatingAdd(c, d))
+}

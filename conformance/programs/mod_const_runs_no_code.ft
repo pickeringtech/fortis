@@ -1,0 +1,6 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-04-02
+// Importing a module runs no code, so a module-level constant is a constant expression, never a call (4.1, 4.2).
+pure func compute() Int => 3
+
+const answer: Int = compute()              // reject: E-SYN-000 — a call would run at import

@@ -1,0 +1,11 @@
+// A nested module: its path under src/ is util/extra.ft, so its module path is util.extra. Its test calls
+// the sibling module through the package import. A nested file is a module of the enclosing package too.
+import acme.modtest.numbers { double }
+
+export pure func twice(x: Int) Int {
+  return double(x)
+}
+
+test "a nested module calls the sibling" {
+  expect twice(4) == 8
+}

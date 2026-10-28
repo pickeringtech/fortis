@@ -1,0 +1,7 @@
+// reject: E-OWN-051 (at the marked line)
+// covers: LANG-08-02
+func counter() fn() Int {
+  let base = String.from("x")
+  let f = fn[alias base]() Int => base.scalarCount()
+  return move f                                    // reject: E-OWN-051 — the closure holds a loan of a local
+}

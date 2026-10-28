@@ -1,0 +1,14 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// No null test: an editable call does not narrow its optional receiver (LR 6.8).
+export class Cell {
+  export n: Int
+  export func change(editable self) Void {
+    self.n = 1
+  }
+}
+
+export func bare(p: editable Cell?) Bool {
+  editable p.change()                         // reject: E-TYP-040 — `p` is still Cell?
+  return true
+}

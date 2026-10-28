@@ -1,0 +1,13 @@
+// reject: E-OWN-051 (at the marked line)
+// covers: LANG-07-06
+export class User {
+  export name: String
+  export pure func guest() User => User(name: "guest")
+}
+pure func displayName(user: User) StringView from user {
+  return alias user.name
+}
+func run() Int {
+  let name = displayName(User.guest())     // reject: E-OWN-051 — the result would keep a loan of a temporary
+  return name.scalarCount()
+}

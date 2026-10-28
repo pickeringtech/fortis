@@ -1,0 +1,12 @@
+// reject: E-TYP-080 (at the marked line)
+// A marker interface is implemented only by declaration.
+export interface Audited {}
+
+export mixin Logged {
+  requires Audited
+  export pure func tag(self) String => "audited"
+}
+
+export class Ledger with Logged {          // reject: E-TYP-080 — Ledger does not declare Audited
+  export name: String
+}

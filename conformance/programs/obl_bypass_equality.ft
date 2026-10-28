@@ -1,0 +1,4 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+try func half(n: Int) Int => n
+func run(n: Int) Bool => half(n) == half(n)   // reject: E-TYP-040 — outcomes are not Equatable

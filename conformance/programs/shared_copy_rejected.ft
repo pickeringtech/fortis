@@ -1,0 +1,9 @@
+// reject: E-OWN-002 (at the marked line)
+// covers: LANG-07-08
+export class Node {
+  export label: String
+}
+
+export pure func dup(root: Shared[Node]) Shared[Node] {
+  return copy root                           // reject: E-OWN-002 — `copy` of a non-copyable place; the operation is retain()
+}

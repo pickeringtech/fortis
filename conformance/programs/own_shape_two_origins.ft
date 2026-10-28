@@ -1,0 +1,9 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-07-09
+// C.2: a loan returned `from` two parameters has no single origin; return an owned value or split the function.
+func pick(a: String, b: String, first: Bool) StringView from a, b {   // reject: E-SYN-000 — a loan names one origin
+  if first {
+    return alias a
+  }
+  return alias b
+}

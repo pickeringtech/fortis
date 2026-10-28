@@ -1,0 +1,22 @@
+// execute: 3
+// reports: observation-frame:tier=1,total=3
+// requires: runtime
+// covers: LANG-13-01
+// 13: capture snapshots the value at the statement; later mutation of the place cannot change the frame.
+import fortis.host { Host }
+observation Trace {
+  tier: Int                          required: all
+  total: Int                         required: all
+}
+@observe(Trace)
+func work(start: Int) Int {
+  let mut n = start
+  capture tier = n
+  n = Int.wrappingAdd(n, 2)
+  capture total = n
+  return n
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${work(1)}")
+}

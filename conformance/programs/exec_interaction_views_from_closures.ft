@@ -1,0 +1,22 @@
+// execute: fortis|5|reads
+// requires: runtime
+// covers: LANG-07-06, LANG-08-02, LANG-06-07
+// Programme 16, interaction views + `from` + closures: a view returned `from` its parameter is held by a binding
+// (`alias line`), and closures capture the view and its owner by read loan and run while the owner lives.
+import fortis.host { Host }
+
+pure try func prefix(text: StringView, n: Int<0..>) StringView from text => text.slice(0, n) or fail
+
+pure try func middle(text: StringView, start: Int<0..>, end: Int<0..>) StringView from text => text.slice(start, end) or fail
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let line = String.from("fortis reads like prose")
+  let word = prefix(alias line, 6) or fail
+  caps.console.print("${word}")
+  let measure = fn[alias word]() Int => word.scalarCount()
+  caps.console.print("${Int.wrappingSub(measure(), 1)}")
+  let second = try fn[alias line]() StringView from line => middle(alias line, 7, 12) or fail
+  let s = second() or fail
+  caps.console.print("${s}")
+}

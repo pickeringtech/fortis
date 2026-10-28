@@ -1,0 +1,4 @@
+// illustrative — lexer regression only: a refinement whose last token is a refinement closes with two REF_CLOSE
+// tokens, not a shift operator. The program is not semantically valid (a type is not an integer bound, LR 6.3),
+// so it is not an accept fixture; the semantic case is syntax_nested_refinement.ft.
+export type Nested = Int<0..Int<1..2>>

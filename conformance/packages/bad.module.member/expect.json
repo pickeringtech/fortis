@@ -1,0 +1,15 @@
+{"verdict": "reject", "code": "E-NAM-001", "covers": ["LANG-04-03"], "records": [
+  {"file": "app.ft", "line": 37, "column": 11, "code": "E-NAM-001", "message": "`util` names the module bad.module.member.util, which is not a value: name a member as `util.member`", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 21, "column": 16, "code": "E-NAM-001", "message": "bad.module.member.util declares no maximum", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 42, "column": 16, "code": "E-NAM-001", "message": "`util` names the module bad.module.member.util, which is not a value: name a member as `util.member`", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 54, "column": 16, "code": "E-NAM-001", "message": "`util` names the module bad.module.member.util, which is not a value: name a member as `util.member`", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 13, "column": 17, "code": "E-NAM-001", "message": "bad.module.member.util declares no floor", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 47, "column": 17, "code": "E-NAM-001", "message": "`util` names the module bad.module.member.util, which is not a value: name a member as `util.member`", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 51, "column": 20, "code": "E-NAM-001", "message": "`util` names the module bad.module.member.util, which is not a value: name a member as `util.member`", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 34, "column": 24, "code": "E-NAM-001", "message": "`util` names the module bad.module.member.util, which is not a value: name a member as `util.member`", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 10, "column": 27, "code": "E-NAM-001", "message": "bad.module.member.util declares no ceiling", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 18, "column": 28, "code": "E-NAM-001", "message": "bad.module.member.util declares no clampTo", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 27, "column": 30, "code": "E-NAM-001", "message": "bad.module.member.util declares no start", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 25, "column": 32, "code": "E-NAM-001", "message": "bad.module.member.util declares no minimum", "candidates": ["clamp", "limit"]},
+  {"file": "app.ft", "line": 30, "column": 33, "code": "E-NAM-001", "message": "bad.module.member.util declares no middle", "candidates": ["clamp", "limit"]}
+]}

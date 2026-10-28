@@ -1,0 +1,15 @@
+// reject: E-EFF-030 (at the marked line)
+// covers: LANG-11-03
+// A noalloc function whose attached observation record captures an allocating field is rejected at the policy site (11.4).
+export class Order {
+  export id: Int
+  export label: String<scalars: 0..64>
+}
+observation OrderTrace {
+  label: String<scalars: 0..64>      required: all
+}
+@observe(OrderTrace)                       // reject: E-EFF-030 — the schema captures a String: an allocating record
+export noalloc func total(order: Order) Int {
+  capture label = order.label
+  return order.id
+}

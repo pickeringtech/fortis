@@ -1,0 +1,11 @@
+import cyc.app.a { Ay, ayOf, take }
+
+export type Small = Int<0..10>
+
+export class Bee {
+  export n: Int
+}
+
+export func beeOf(a: Ay) Bee => Bee(n: a.n)
+
+func big() Int => take(50)

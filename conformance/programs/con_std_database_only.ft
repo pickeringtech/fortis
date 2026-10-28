@@ -1,0 +1,10 @@
+// accept
+// covers: LANG-11-06
+// Platform 12: DatabaseOnly expands to `excludes capability Network`, `excludes capability Mail`.
+import fortis.host { Network }
+export class Mail implements Authority {}
+contract DatabaseOnly {
+  excludes capability Network
+  excludes capability Mail
+}
+DatabaseOnly func query(rows: Int) Int => rows

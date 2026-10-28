@@ -1,0 +1,14 @@
+// accept
+// covers: LANG-09-06
+// 9.8: a borrowing match of an enum is a read loan. A payload field may be named or written `_`, and neither form consumes the enum.
+export enum Choice {
+  Two(a: String, b: String)
+  Empty
+}
+
+func lengthOf(c: Choice) Int {
+  return match c {
+    Two(a: a, b: _) => a.scalarCount()
+    Empty => 0
+  }
+}

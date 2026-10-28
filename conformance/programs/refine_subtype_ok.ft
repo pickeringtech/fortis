@@ -1,0 +1,10 @@
+// accept
+// covers: LANG-06-02
+// A refinement is a structural subtype of its base and of any refinement whose range contains it (6.3).
+pure func wide(value: Int<0..100>) Int => value
+
+pure func narrow(value: Int<0..50>) Int {
+  let asWide: Int<0..100> = value
+  let plain: Int = value
+  return Int.saturatingAdd(wide(value), Int.saturatingAdd(asWide, plain))
+}

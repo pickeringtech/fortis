@@ -1,0 +1,13 @@
+// reject: E-TYP-040 (at the marked line)
+// LANG-04-04 (D-35, D-38): p and q import each other, and p's `take` takes q's newtype `Small`. c, checked first,
+// enters the cycle at p here and at q in cycle.newtype.qp, whose only difference is the order of these two imports.
+// c's own `Small` is a different type from q's (6.9) whichever member the check enters first.
+import cycle.newtype.pq.p { take }
+import cycle.newtype.pq.q { Bee }
+
+type Small = Int<0..10>
+
+func mine(s: Small) Int {
+  discard take(s)                       // reject: E-TYP-040 — c's Small is not q's Small
+  return Bee(n: 0).n
+}

@@ -1,0 +1,7 @@
+export error Boom {
+  code: "demo.boom"
+}
+
+export try func boom() Int {
+  fail Boom()
+}

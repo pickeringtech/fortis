@@ -1,0 +1,38 @@
+// reject: E-REF-002 (at the marked lines)
+// covers: LANG-06-02, LANG-12-01
+// An interpolation hole is an expression evaluated where its string is (3.6): a deferred body that writes `c` inside one
+// writes it, so its literal `c.v = 1` does not hold after the block (D-75), a hole holding a string with a brace
+// included (D-161).
+export class Cell {
+  export v: Int<0..1>
+}
+
+func reset(c: editable Cell) Int {
+  c.v = 0
+  return 0
+}
+
+func reset_named(c: editable Cell, s: StringView) Int {
+  c.v = 0
+  return 0
+}
+
+export func f(c: editable Cell) Int {
+  {
+    defer {
+      c.v = 1
+      let s = "${reset(editable c)}"
+    }
+  }
+  return 1 / c.v                             // reject: E-REF-002 — the hole's call sets `c.v` to 0 after `c.v = 1`
+}
+
+export func g(c: editable Cell) Int {
+  {
+    defer {
+      c.v = 1
+      let s = "${reset_named(editable c, "}")}"
+    }
+  }
+  return 1 / c.v                             // reject: E-REF-002 — the same, the hole holding `"}"`
+}

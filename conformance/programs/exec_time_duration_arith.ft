@@ -1,0 +1,19 @@
+// execute: 90s|1h|90min|0s|150ms|2min
+// requires: runtime
+// covers: LANG-06-04
+// 15: Duration arithmetic on the signed 64-bit nanosecond count; display in the largest exact unit.
+import fortis.host { Host }
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let a = Duration.add(Duration.minutes(1), Duration.seconds(30)) or fail
+  caps.console.print("${a}")
+  let b = Duration.sub(Duration.hours(2), Duration.minutes(60)) or fail
+  caps.console.print("${b}")
+  let c = Duration.multiply(a, 60) or fail
+  caps.console.print("${c}")
+  let d = Duration.sub(a, a) or fail
+  caps.console.print("${d}")
+  caps.console.print("${Duration.milliseconds(150)}")
+  let e = Duration.multiply(Duration.seconds(40), 3) or fail
+  caps.console.print("${e}")
+}

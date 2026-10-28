@@ -1,0 +1,43 @@
+// D-183 (docs/delivery/defects.json): natively a function that returns a future does not build (E0277: `Future<i64>`
+// is not a future); the interpreter and the VM run this program and print `quick|recovered -1`, naming the task
+// `late` in its `not_started` lifecycle record and frame. Once it builds, a launch of a future that is neither a direct
+// call nor a local one made is named `work` natively (here the direct call `pending(...)` would name it `pending`),
+// so the task's name and its observation schema must travel with the future.
+import fortis.host { Host, Console }
+
+export error Bad {
+  code: "demo.bad"
+}
+
+observation Work {
+  step: Int required: none
+}
+
+async try func quick(console: Console) Int {
+  console.print("quick")
+  fail Bad()
+}
+
+@observe(Work)
+async func late(console: Console) Int {
+  capture step = 2
+  console.print("late ran")
+  return 1
+}
+
+func pending(console: Console) Future[Int] => late(console)
+
+async try func run(console: Console) Int {
+  scope tasks {
+    let first = tasks.launch(quick(console))
+    let second = tasks.launch(pending(console))
+    let x = await first or fail
+    return Int.wrappingAdd(x, await second)
+  }
+}
+
+export async recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let r = await run(caps.console) or recover -1
+  caps.console.print("recovered ${r}")
+}

@@ -1,0 +1,14 @@
+// LANG-04-04 (D-38): y names z's `Cee` through an alias import (`z.Cee`) and z imports y, so y and z form an import
+// cycle. x, checked first, enters the cycle at y here and at z in cycle.order.zy, whose only difference is the order
+// of these two imports. A type written through an alias is that module's type, whichever member the check enters
+// first: `fb()` is z's `Cee` in x, in y and in z's own `probe`.
+import fortis.host { Host }
+import cycle.order.yz.y { fb }
+import cycle.order.yz.z { Cee, probe }
+
+func same() Cee => fb()
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${fb().n} ${same().n} ${probe().n}")
+}

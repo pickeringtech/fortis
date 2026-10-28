@@ -1,0 +1,12 @@
+// DEL-45 fixture for C1.observation (definite assignment): the required frame field is captured on every exit.
+observation Work {
+  items: Int                         required: all
+}
+@observe(Work)
+func process(n: Int) Int {
+  capture items = n
+  return n
+}
+export func main(args: List[String]) Void {
+  discard process(3)
+}

@@ -1,0 +1,9 @@
+// reject: E-TYP-160 (at the marked lines)
+// covers: LANG-06-11
+// 6.10: type arguments are always inferred; a call whose arguments do not fix them, in a position with no expected
+// type, is rejected and repaired by annotating the receiving binding (X-128).
+func count() Int {
+  let mut seen = Map.default()            // reject: E-TYP-160 — Map[K, V] with K and V unfixed
+  let names = List.default()              // reject: E-TYP-160 — List[T] with T unfixed
+  return names.count()
+}

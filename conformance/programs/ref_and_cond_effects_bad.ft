@@ -1,0 +1,20 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-73, condition form: in the true branch of `c.v == 1 && reset(editable c)`, the first conjunct's narrowing
+// (`c.v == 1`) was kept although the second conjunct ran after it and set `c.v` to 0. Both checkers accepted this
+// module before the fix.
+export class Cell {
+  export v: Int<0..1>
+}
+
+func reset(c: editable Cell) Bool {
+  c.v = 0
+  return true
+}
+
+export func f(c: editable Cell) Int {
+  if c.v == 1 && reset(editable c) {
+    return 10 / c.v                          // reject: E-REF-002 — `reset` ran after the test and set `c.v` to 0
+  }
+  return 0
+}

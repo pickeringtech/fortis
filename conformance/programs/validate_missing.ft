@@ -1,0 +1,7 @@
+// reject: E-REF-001 (at the marked line)
+// covers: LANG-06-03
+// An unrefined value does not hold a refined type without validate (6.3).
+pure func parse(raw: Int) Int<1..> {
+  let id: Int<1..> = raw                    // reject: E-REF-001
+  return id
+}

@@ -1,0 +1,5 @@
+// accept
+import acme.accounts { User }
+export pure func displayName(user: User) StringView from user {
+  return alias user.name
+}

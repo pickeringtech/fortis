@@ -1,0 +1,14 @@
+{
+  "class": "Defer and async",
+  "code": "E-DEF-001",
+  "column": 1,
+  "fields": {
+    "rule_reference": "<rule_reference>"
+  },
+  "file": "x.ft",
+  "line": 1,
+  "message": "negative record",
+  "rule": "-",
+  "severity": "error",
+  "status": "violated"
+}

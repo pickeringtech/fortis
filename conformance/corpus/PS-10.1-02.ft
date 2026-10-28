@@ -1,0 +1,2 @@
+// illustrative
+let config: AppConfig = Config.load(caps.environment, caps.fileSystem, args) or fail

@@ -1,0 +1,30 @@
+// execute: 5|shop.cart.empty|0
+// requires: runtime
+// covers: LANG-10-01
+import fortis.host { Host }
+
+export error EmptyCart {
+  code: "shop.cart.empty"
+}
+
+try func total(items: ListView[Int]) Int {
+  if items.isEmpty() {
+    fail EmptyCart()
+  }
+  let mut sum = 0
+  for i in 0..<items.count() {
+    sum = Int.wrappingAdd(sum, items[i])
+  }
+  return sum
+}
+
+export try recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let first = total(List.of(2, 3)) or fail
+  caps.console.print("${first}")
+  let second = total(List.default()) catch e {
+    caps.console.print(e.code)
+    recover 0
+  }
+  caps.console.print("${second}")
+}

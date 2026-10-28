@@ -1,0 +1,9 @@
+// execute: hello, fortis
+// requires: runtime
+// covers: LANG-04-06
+import fortis.host { Host }
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("hello, fortis")
+}

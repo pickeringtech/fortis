@@ -1,0 +1,19 @@
+// accept
+// covers: LANG-07-06, LANG-09-06
+// Both `for` forms, the cursor they elaborate to, and the type of `next` (5.3).
+func total(xs: List[Int], ys: owned List[Int]) Int {
+  let mut sum = 0
+  for x in xs {
+    sum = Int.wrappingAdd(sum, x)
+  }
+  for y in move ys {
+    sum = Int.wrappingAdd(sum, y)
+  }
+  let mut cursor = alias xs.iterate()
+  let first = editable cursor.next()
+  let v = match first {
+    present(item) => item
+    null => 0
+  }
+  return Int.wrappingAdd(sum, v)
+}

@@ -1,0 +1,15 @@
+// execute: done
+// reports: observation-event:value=1|observation-event:value=2|observation-event:value=3
+// requires: runtime
+// covers: LANG-13-01
+import fortis.host { Host }
+observation Sample {
+  value: Int                         required: all
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  for item in List.of(1, 2, 3) {
+    record Sample(value: item)
+  }
+  caps.console.print("done")
+}

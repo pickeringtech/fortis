@@ -1,0 +1,7 @@
+// execute: 25 passed, 0 failed
+// tests: run
+// requires: runtime
+// covers: LANG-14-02
+property "reversing twice is identity" forall (items: List[Int<0..100>]) {
+  expect items.reversed().reversed() == items
+}

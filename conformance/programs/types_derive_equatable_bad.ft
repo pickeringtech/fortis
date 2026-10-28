@@ -1,0 +1,8 @@
+// reject: E-TYP-090 (at the marked line)
+export class Customer {
+  export name: String
+}
+
+export class Order derive Equatable {    // reject: E-TYP-090 — Customer does not implement Equatable
+  export customer: Customer
+}

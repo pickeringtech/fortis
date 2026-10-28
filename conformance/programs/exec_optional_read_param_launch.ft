@@ -1,0 +1,52 @@
+// execute: 3|0|3 abc|0|0
+// requires: runtime
+// covers: LANG-06-08
+// D-2: an optional read parameter of an async function launched on the parallel pool, with a present value and with
+// `null` (6.8, 12.5), and a named place launched cooperatively, which is lent and still there afterwards; a `null`
+// default lends nothing (X-251): the launch binds its arguments in the forms the parameters take.
+import fortis.host { Host }
+
+async func sized(s: String? = null) Int {
+  return match s {
+    present(t) => t.scalarCount()
+    null => 0
+  }
+}
+
+async func grouped(s: String? = (null)) Int {
+  return match s {
+    present(t) => t.scalarCount()
+    null => 0
+  }
+}
+
+async func size(s: String?) Int {
+  return match s {
+    present(t) => t.scalarCount()
+    null => 0
+  }
+}
+
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  scope tasks {
+    let a = tasks.launchParallel(size("abc"))
+    let b = tasks.launchParallel(size(null))
+    let x = await a
+    let y = await b
+    caps.console.print("${x}")
+    caps.console.print("${y}")
+  }
+  let s = String.from("abc")
+  scope tasks {
+    let t = tasks.launch(size(s))
+    let n = await t
+    caps.console.print("${n} ${s}")
+  }
+  let f = sized()
+  let z = await f
+  caps.console.print("${z}")
+  let g = grouped()
+  let gz = await g
+  caps.console.print("${gz}")
+}

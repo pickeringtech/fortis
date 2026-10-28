@@ -1,0 +1,35 @@
+// accept
+// A name one enum declares is unambiguous, so the prefix may be left out with no expected type (9.7, D-253).
+// `GBP` is declared by the imported `Currency` and by `Wallet`; a return and a function position pick `Currency`.
+import fortis.money { Currency }
+
+enum Ink {
+  Red
+  Black
+}
+
+enum Wallet {
+  GBP
+  EUR
+}
+
+pure func swatch() Int {
+  let red = Red
+  return 1
+}
+
+pure func pounds() Currency {
+  return GBP
+}
+
+pure func takeCode(f: fn() Currency) Int => 1
+
+pure func passCode() Int => takeCode(GBP)
+
+pure func takeInk(f: fn() Ink) Int => 1
+
+pure func passInk() Int => takeInk(Red)
+
+func id[T](f: pure fn() T) T => f()
+
+func passId() Ink => id(Red)

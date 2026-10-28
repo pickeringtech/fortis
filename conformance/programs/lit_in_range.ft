@@ -1,0 +1,24 @@
+// accept
+// covers: LANG-03-05
+// Boundary values of every built-in integer type, hexadecimal, binary and octal forms, digit separators.
+pure func ranges() Void {
+  let a: Int8 = -128
+  let b: Int8 = 127
+  let c: Int16 = 32767
+  let d: Int32 = -2147483648
+  let e: Int64 = 9223372036854775807
+  let f: UInt8 = 255
+  let g: UInt16 = 65535
+  let h: UInt32 = 4294967295
+  let i: UInt64 = 18446744073709551615
+  let j: Byte = 0xFF
+  let k: Int = 0b1010
+  let m: UInt = 0o17
+  let n: Int<0..100> = 100
+  let o: Int<-5..5> = -5
+  let p = 1_000_000
+}
+
+pure func scaled(value: Int<0..100>) Int<0..100> => value
+
+pure func useIt() Int<0..100> => scaled(42)

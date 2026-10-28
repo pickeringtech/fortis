@@ -1,0 +1,21 @@
+// execute: before|defect:runtime_invariant
+// execute-trace: launch broken#1|suspend main|start broken#1|complete broken#1|resume main|join broken#1
+// requires: runtime
+// covers: LANG-10-06
+// 10.8/12.5: a defect in a scope task terminates the whole scope tree up to its supervisor: here main.
+import fortis.host { Host, Console }
+async func broken(console: Console) Int {
+  injectDefect("runtime_invariant")
+}
+async func run(console: Console) Int {
+  scope tasks {
+    let t = tasks.launch(broken(console))
+    return await t
+  }
+}
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("before")
+  let v = await run(caps.console)
+  caps.console.print("after ${v}")
+}

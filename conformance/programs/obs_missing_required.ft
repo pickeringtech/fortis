@@ -1,0 +1,17 @@
+// reject: E-OBS-001 (at the marked line)
+// covers: LANG-13-02
+export error Bad {
+  code: "demo.bad"
+}
+observation Trace {
+  tier: Int                          required: all
+  reason: Int                        required: failure
+}
+@observe(Trace)
+try func process(n: Int) Int {
+  capture tier = n
+  if n < 0 {
+    fail Bad()                             // reject: E-OBS-001 — reason is required on failure exits
+  }
+  return n
+}

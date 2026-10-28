@@ -1,0 +1,8 @@
+// reject: E-TYP-060 (at the marked line)
+export interface Alpha requires Beta {     // reject: E-TYP-060
+  pure func a(self) Int
+}
+
+export interface Beta requires Alpha {
+  pure func b(self) Int
+}

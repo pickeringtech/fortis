@@ -1,0 +1,10 @@
+// reject: E-DI-010 (at the marked line)
+// covers: PLAT-03-01
+// D-90: an exported context is a Dependency injection head like any other, so it is elaborated and its body
+// validated; the kit's scan once missed a context with `export` before it, and the body was never read.
+export class Pool {
+  size: Int = 1
+}
+export context Production {
+  bind Pool                                                            // reject: E-DI-010 — not a DI schema v1 statement
+}

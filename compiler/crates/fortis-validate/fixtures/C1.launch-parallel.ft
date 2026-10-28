@@ -1,0 +1,9 @@
+// DEL-45 fixture for C1.launch-parallel: a future launched on a parallel pool owns what it holds (Shareable).
+async func work(label: String) Int => label.scalarCount()
+export async func main(args: List[String]) Void {
+  let label = String.from("x")
+  scope tasks {
+    let t = tasks.launchParallel(work(copy label))
+    discard await t
+  }
+}

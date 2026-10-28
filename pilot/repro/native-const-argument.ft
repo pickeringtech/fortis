@@ -1,0 +1,15 @@
+// Repro (FRICTION entry 45): a module `const` passed to a checked-integer intrinsic. Interpreter and VM print
+// "21"; the native build fails:
+//   bin/fortis build pilot/repro/native-const-argument.ft --out /tmp/x
+//   -> E-INT-002 "the Rust generated for main::function widen does not compile (error[E0308]: mismatched types)"
+// The generated Rust is `n.saturating_add(&const_main_extra())`: the constant is passed by reference.
+import fortis.host { Host }
+
+export const extra = 18
+
+pure func widen(n: Int) Int => Int.saturatingAdd(n, extra)
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${widen(3)}")
+}

@@ -1,0 +1,7 @@
+// reject: E-TYP-040 (at the marked lines)
+// LANG-06-01 (D-35): a newtype is nominal across an import cycle exactly as in one module (6.9: `type` is never a
+// transparent alias). These are the two rejections D-35 recorded, which are the language's: `Small` is not `Int`,
+// and a bare literal is not a `Small` (the construction is `Small(5)` or `Small.validate(n)`).
+import cycle.newtype.nominal.b { Small }
+
+export func take(x: Small) Int => x     // reject: E-TYP-040 — Small is not Int

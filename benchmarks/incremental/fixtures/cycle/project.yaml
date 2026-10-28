@@ -1,0 +1,5 @@
+schema: fortis.project/v1
+name: cyc.app
+version: 1.0.0
+dependencies:
+  fortis: "1.0"

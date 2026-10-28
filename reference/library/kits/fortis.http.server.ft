@@ -1,0 +1,48 @@
+// Kit signature fixture (DEL-06): names of `fortis.http.server` the corpus uses; not an inventory.
+export contract PublicApi {
+  excludes capability RawSql
+  forbids recovers
+}
+export class PublicProblem {
+  export trusted pure func from(receipt: Report) PublicProblem
+}
+export class Router {}
+export enum HttpMethod derive Equatable {
+  GET
+  POST
+  PUT
+  PATCH
+  DELETE
+}
+export error Forbidden {
+  code: "http.forbidden"
+}
+export class HttpStatus {}
+export class HttpLimits derive Default {}
+export aspect http[R](method: HttpMethod, path: StringView, responses: VariantMap[R, HttpStatus], auth: dynamic Authorisation? = null, fallback: (fn(PublicProblem) R)? = null, limits: HttpLimits = HttpLimits.default()) {
+  needs who: Identity
+  needs PublicApi
+  before {
+    if auth != null && !auth.grantedTo(who) {
+      fail Forbidden()
+    }
+  }
+  on failure(f: Failure) R {
+    if fallback == null {
+      fail move f
+    }
+    report annotate(move f, path) as receipt
+    return fallback(PublicProblem.from(receipt))
+  }
+  metadata
+}
+export aspect get[R](path: StringView, ...rest) = http[R](method: GET, path: path, ...rest)
+export aspect post[R](path: StringView, ...rest) = http[R](method: POST, path: path, ...rest)
+export interface Authorisation {
+  pure func grantedTo(self, who: Identity) Bool
+}
+export class Identity {
+  export accountId: Int
+  export trusted pure func hasRole(self, role: Role) Bool
+}
+export class Role {}

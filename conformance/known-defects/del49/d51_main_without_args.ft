@@ -1,0 +1,6 @@
+import fortis.host { Host }
+
+export func main() Void {
+  let caps = Host.capabilities()
+  caps.console.print("hi")
+}

@@ -1,0 +1,12 @@
+// reject: E-OWN-020 (at the marked line)
+// covers: LANG-10-03
+try func half(n: Int) Int => n
+
+func handle(n: Int) Int {
+  let v = half(n) catch e {
+    report e
+    report e                                // reject: E-OWN-020 — e was consumed by the first report
+    recover 0
+  }
+  return v
+}

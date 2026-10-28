@@ -1,0 +1,14 @@
+// accept
+// covers: LANG-10-04
+// A failure with a bounded payload satisfies noalloc (10.3).
+export error TooBig {
+  code: "demo.too_big"
+  payload { limit: Int }
+}
+
+export noalloc try func check(n: Int, limit: Int) Int {
+  if n > limit {
+    fail TooBig(limit: limit)
+  }
+  return n
+}

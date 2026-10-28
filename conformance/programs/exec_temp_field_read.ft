@@ -1,0 +1,41 @@
+// execute: made 1|cleanup 1|n 1|bye ada|got ada
+// execute-trace: drop Handle|drop Named
+// requires: runtime
+// covers: LANG-07-09
+// A trivial or copyable field read from a statement temporary is not moved out (7.4, 7.9). The temporary is
+// destroyed at the end of the statement, and its cleanup still sees the field.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export class Named {
+  export name: String
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("bye ${self.name}")
+  }
+}
+
+func run(console: Shared[Console]) Void {
+  let n = Handle.make(1, alias console).id
+  console.print("n ${n}")
+  let s = Named(name: "ada", console: console.retain()).name
+  console.print("got ${s}")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

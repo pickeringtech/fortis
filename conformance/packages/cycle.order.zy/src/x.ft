@@ -1,0 +1,13 @@
+// LANG-04-04 (D-38): cycle.order.yz with x's two imports in the other order, so the check enters the cycle of y and
+// z at z. Reordering one module's imports changes no module's records: `fb()` is z's `Cee` in x, in y and in z's own
+// `probe` (before D-38 was fixed, z's `probe` was rejected here: z.Cee is not Cee).
+import fortis.host { Host }
+import cycle.order.zy.z { Cee, probe }
+import cycle.order.zy.y { fb }
+
+func same() Cee => fb()
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${fb().n} ${same().n} ${probe().n}")
+}

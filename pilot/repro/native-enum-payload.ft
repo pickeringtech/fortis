@@ -1,0 +1,50 @@
+// Repro (FRICTION entry 43): a declared error with an enum-typed payload field, matched with `is`, passes both
+// checkers and runs on the interpreter and the VM ("kind 2"), but the native build fails:
+//   bin/fortis build pilot/repro/native-enum-payload.ft --out /tmp/x
+//   -> E-INT-002 "internal compiler defect: the Rust generated for main::function describe does not compile
+//      (error[E0308]: mismatched types)"
+// The generated Rust reads the payload with `__f.field("kind")` and passes it where the enum is expected.
+// Docs: agent/10-outcomes.md: "payload fields trivial or length-bounded `String`/`Bytes`"; an enum without
+// payloads is trivial (guide/06-types.md, "Trivial and copyable types").
+import fortis.host { Host }
+
+export enum Kind derive Equatable {
+  First
+  Second
+}
+
+export error Odd {
+  code: "repro.odd"
+  payload { kind: Kind }
+}
+
+pure func rank(kind: Kind) Int {
+  return match kind {
+    First => 1
+    Second => 2
+  }
+}
+
+pure try func check(n: Int) Int {
+  if n > 3 {
+    fail Odd(kind: Kind.Second)
+  }
+  return n
+}
+
+func describe(f: Failure) String {
+  return match f {
+    is Odd(kind: k) => "kind ${rank(k)}"
+    otherwise(other) => "other ${other.code}"
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let n = check(9) catch e {
+    caps.console.print(describe(e))
+    report e
+    recover 0
+  }
+  caps.console.print("${n}")
+}

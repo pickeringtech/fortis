@@ -1,0 +1,86 @@
+// execute: made 1|made 2|arm|cleanup 1|cleanup 2|defer|made 1|made 2|arm|cleanup 1|cleanup 2|defer|made 1|made 2|arm|cleanup 2|cleanup 1|defer|made 1|made 2|arm 1|cleanup 1|cleanup 2|defer
+// execute-trace: drop Handle|loans-end|defer|loans-end|defer|drop Handle|drop Handle|loans-end|defer|drop Handle|loans-end|defer
+// requires: runtime
+// covers: LANG-09-06, LANG-07-07
+// 9.8, 7.9: a consuming match that returns destroys the arm's bindings, then the fields matched by `_`, before the
+// enclosing `defer`. A wildcard-only match has no `drop` trace (the class declares no cleanup). Binding every
+// field stays reverse-init order, still before the defer.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export class Pair {
+  export first: Handle
+  export second: Handle
+}
+
+func pair(console: Shared[Console]) Pair => Pair(first: Handle.make(1, alias console), second: Handle.make(2, alias console))
+
+func returned(console: Shared[Console]) Void {
+  defer { console.print("defer") }
+  let p = pair(alias console)
+  match move p {
+    Pair(first: a, second: _) => {
+      console.print("arm")
+      return
+    }
+  }
+}
+
+func wildcardOnly(console: Shared[Console]) Void {
+  defer { console.print("defer") }
+  let p = pair(alias console)
+  match move p {
+    Pair(first: _, second: _) => {
+      console.print("arm")
+      return
+    }
+  }
+}
+
+func bothBound(console: Shared[Console]) Void {
+  defer { console.print("defer") }
+  let p = pair(alias console)
+  match move p {
+    Pair(first: a, second: b) => {
+      console.print("arm")
+      return
+    }
+  }
+}
+
+func guardReturns(console: Shared[Console]) Void {
+  defer { console.print("defer") }
+  let p = pair(alias console)
+  match move p {
+    Pair(first: a, second: _) when a.id == 1 => {
+      console.print("arm ${a.id}")
+      return
+    }
+    Pair(first: a, second: b) => { console.print("other") }
+  }
+}
+
+func run(console: Shared[Console]) Void {
+  returned(alias console)
+  wildcardOnly(alias console)
+  bothBound(alias console)
+  guardReturns(alias console)
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

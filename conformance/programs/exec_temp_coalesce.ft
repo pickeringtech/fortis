@@ -1,0 +1,51 @@
+// execute: made 1|held|cleanup 1|after some|made 3|held none|cleanup 3|made 1|cleanup 1|after discard|made 5|cleanup 5|after present
+// execute-trace: loans-end|drop Handle|loans-end|drop Handle|drop Handle|drop Handle
+// requires: runtime
+// covers: LANG-07-07
+// 5.7, 7.9: `??` and `present` forward one value. A binding owns that value, so it is not also a statement
+// temporary. The operand that is not selected is not evaluated. A forwarded value that nothing binds is a
+// temporary and is destroyed at the end of the statement.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+func maybe(console: Shared[Console]) Handle? {
+  return Handle.make(1, alias console)
+}
+
+func none() Handle? {
+  return null
+}
+
+func run(console: Shared[Console]) Void {
+  {
+    let h = maybe(console) ?? Handle.make(2, alias console)
+    console.print("held")
+  }
+  console.print("after some")
+  {
+    let h = none() ?? Handle.make(3, alias console)
+    console.print("held none")
+  }
+  discard maybe(console) ?? Handle.make(4, alias console)
+  console.print("after discard")
+  discard present(Handle.make(5, alias console))
+  console.print("after present")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

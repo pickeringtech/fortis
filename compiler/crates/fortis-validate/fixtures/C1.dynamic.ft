@@ -1,0 +1,13 @@
+// DEL-45 fixture for C1.dynamic (dynamic eligibility, allocation): a class implementing the interface, boxed.
+export interface Shape {
+  pure func area(self) Int
+}
+export class Square implements Shape {
+  export side: Int
+  export pure func area(self) Int => self.side
+}
+func measure(s: owned dynamic Shape) Int => s.area()
+export func main(args: List[String]) Void {
+  let sq = Square(side: 3)
+  discard measure(move sq)
+}

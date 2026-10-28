@@ -1,0 +1,19 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// The same leak through a field path. `d.p == null` proves the first arm's `d.p` is present; the second
+// arm's `d` is a different binding, so `d.p` is still `Cell?` (LR 6.8, 9.8).
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+}
+
+export class Holder {
+  export p: Cell?
+}
+
+pure func rebindField(q: (Holder, Holder)) Bool {
+  return match q {
+    (d, _) when d.p == null => false
+    (_, d) => d.p.read()                      // reject: E-TYP-040 — this `d.p` was not narrowed
+  }
+}

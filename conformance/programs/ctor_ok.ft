@@ -1,0 +1,20 @@
+// accept
+// covers: LANG-09-02
+export class Customer {
+  export name: String
+  export age: Int
+  export email: String
+}
+
+export class Summary {
+  export name: String
+  export age: Int
+  export tier: Int = 1
+}
+
+pure func build(c: Customer) Summary {
+  let s = Summary(...copy c)
+  let t = Summary(name: "x", age: 3)
+  let u = Summary(...copy c, tier: 2)
+  return move u
+}

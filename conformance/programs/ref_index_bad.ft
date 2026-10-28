@@ -1,0 +1,10 @@
+// reject: E-REF-002 (at the marked lines)
+// covers: LANG-06-02
+pure func pick(xs: ListView[Int], grid: Array[Int, 4], i: Int<0..>, j: Int<0..4>, k: Int) Int {
+  let a = grid[j]                            // reject: E-REF-002 — 4 is not below the length 4
+  let b = xs[i]                              // reject: E-REF-002 — no length fact
+  if k < xs.count() {
+    let c = xs[k]                            // reject: E-REF-002 — k is not proved non-negative
+  }
+  return a
+}

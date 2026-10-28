@@ -1,0 +1,25 @@
+// accept
+// covers: LANG-06-08
+// A `when` guard narrows in its arm the way an `if` condition narrows in its true branch (LR 6.8, 9.8).
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+}
+
+export class Holder {
+  export p: Cell?
+}
+
+export pure func viaMatch(n: Int, p: Cell?) Bool {
+  return match n {
+    1 when p != null => p.read()
+    otherwise => false
+  }
+}
+
+export pure func viaMatchField(n: Int, d: Holder) Bool {
+  return match n {
+    1 when d.p != null => d.p.read()
+    otherwise => false
+  }
+}

@@ -1,0 +1,9 @@
+// reject: E-TYP-040 (at the marked line)
+// D-21 (review): an interface reached through a module alias is an interface too: `gw.Gateway` as a parameter type is
+// refused like a bare `Gateway` (before, only a name the module imported directly was recognised).
+import bad.iface.alias.gateways as gw
+
+func pay(g: gw.Gateway) Bool => true
+
+export func main(args: List[String]) Void {
+}

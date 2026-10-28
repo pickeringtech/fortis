@@ -1,0 +1,39 @@
+// execute: drop 1|after 0|drop 2|held 3 0|drop 3
+// execute-trace: loans-end|drop N
+// requires: runtime
+// covers: LANG-09-06, LANG-07-07
+// 9.8, 7.9: a discarded field of a recursive class drops at the `let`, including a `next` that itself holds
+// cleanup. A field the pattern binds drops with that binding. The discarded part leaves no `drop` trace (D-331).
+import fortis.host { Host, Console, Capabilities }
+
+class N {
+  id: Int
+  console: Shared[Console]
+  cleanup(editable self) Void { self.console.print("drop ${self.id}") }
+}
+
+class Node {
+  value: Int
+  next: Node?
+  item: N
+}
+
+func item(console: Shared[Console]) Void {
+  let x = Node(value: 0, next: null, item: N(id: 1, console: console.retain()))
+  let Node(value: n, next: _, item: _) = move x
+  console.print("after ${n}")
+}
+
+func nested(console: Shared[Console]) Void {
+  let x = Node(value: 0, next: Node(value: 1, next: null, item: N(id: 2, console: console.retain())), item: N(id: 3, console: console.retain()))
+  let Node(value: n, next: _, item: k) = move x
+  console.print("held ${k.id} ${n}")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  item(console)
+  nested(console)
+}

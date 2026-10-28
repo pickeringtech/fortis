@@ -1,0 +1,13 @@
+// accept
+// covers: LANG-11-07
+// D-110: the rule is about `fortis.host`'s `Host`; a program's own class named `Host` is another type, and its
+// associated `capabilities` may be called anywhere (both checkers refused this before).
+class Host {
+  export pure func capabilities() Int => 10
+}
+
+pure func count() Int => Host.capabilities()
+
+export func main(args: List[String]) Void {
+  let n = count()
+}

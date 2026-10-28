@@ -1,0 +1,59 @@
+// execute: drop 1|end 0|held 2|drop 2|drop 4|held 3|drop 3|end both 5 6|drop 6|drop 5|drop 9|held field 8|drop 8
+// execute-trace: loans-end|drop N|loans-end|drop N|loans-end|drop N|drop N|loans-end|drop N
+// requires: runtime
+// covers: LANG-07-07
+// 7.9: a destructuring `let` drops every owning part it does not bind, at that statement. A bound part drops with
+// its binding. The discarded part is not a block local, so its cleanup is not a `drop N` trace event (D-305).
+import fortis.host { Host, Console, Capabilities }
+
+class N {
+  id: Int
+  console: Shared[Console]
+  cleanup(editable self) Void { self.console.print("drop ${self.id}") }
+}
+
+class Hold {
+  kept: N
+  gone: N
+}
+
+func discarded(console: Shared[Console]) Void {
+  let x = (N(id: 1, console: console.retain()), 0)
+  let (_, n) = move x
+  console.print("end ${n}")
+}
+
+func kept(console: Shared[Console]) Void {
+  let y = (N(id: 2, console: console.retain()), 0)
+  let (a, _) = move y
+  console.print("held ${a.id}")
+}
+
+func discardedSibling(console: Shared[Console]) Void {
+  let y = (N(id: 3, console: console.retain()), N(id: 4, console: console.retain()))
+  let (a, _) = move y
+  console.print("held ${a.id}")
+}
+
+func bothBound(console: Shared[Console]) Void {
+  let z = (N(id: 5, console: console.retain()), N(id: 6, console: console.retain()))
+  let (a, b) = move z
+  console.print("end both ${a.id} ${b.id}")
+}
+
+func fieldWild(console: Shared[Console]) Void {
+  let h = Hold(kept: N(id: 8, console: console.retain()), gone: N(id: 9, console: console.retain()))
+  let Hold(kept: k, gone: _) = move h
+  console.print("held field ${k.id}")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  discarded(console)
+  kept(console)
+  discardedSibling(console)
+  bothBound(console)
+  fieldWild(console)
+}

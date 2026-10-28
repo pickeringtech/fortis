@@ -1,0 +1,9 @@
+schema: fortis.project/v1
+name: exec.twoversions
+version: 1.0.0
+entry: app
+exports: []
+dependencies:
+  fortis: "1.0"
+  ver.greet: "2.0.0"
+  ver.greeter: "0.1.0"

@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: acme.cells
+version: 1.0.0
+root: cells
+exports: [cells]
+dependencies:
+  fortis: "1.0"

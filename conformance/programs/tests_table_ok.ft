@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-14-01, LANG-14-02
+pure func double(n: Int) Int => Int.wrappingAdd(n, n)
+test "doubling" cases {
+  "one": { n: 1, expected: 2 }
+  "two": { n: 2, expected: 4 }
+} as row {
+  expect double(row.n) == row.expected
+}
+test "plain" {
+  expect double(3) == 6
+}

@@ -1,0 +1,8 @@
+// illustrative
+[export] [trivial] class Name[TypeParams] [derive I1, I2] [implements I3, I4] [with M1, M2] {
+  [export] field: Type
+  [export] field: Type = constantDefault
+  [export] … func method([editable | owned] self, params) Ret { … }
+  [export] … func associated(params) Ret { … }
+  cleanup(editable self) Void { … }
+}

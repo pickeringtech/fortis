@@ -1,0 +1,12 @@
+[package]
+name = "fortis-mir"
+description = "The typed IR every Fortis backend consumes (Programme 5.2): a structured, resolved, explicitly typed program with moves, copies, loans, call modes, outcomes, cleanup and observation operations"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fortis-syntax = { path = "../fortis-syntax" }
+fortis-diag = { path = "../fortis-diag" }
+fortis-names = { path = "../fortis-names" }
+fortis-types = { path = "../fortis-types" }

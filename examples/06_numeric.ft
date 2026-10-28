@@ -1,0 +1,23 @@
+// Numeric: checked Int operations return outcomes; Decimal and Duration are exact.
+// Run: bin/fortis run examples/06_numeric.ft
+import fortis.host { Host }
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let big = 9_223_372_036_854_775_807
+  let overflow = Int.add(big, 1) catch e {
+    caps.console.print("checked add failed: ${e.code}")
+    recover 0
+  }
+  caps.console.print("wrapping: ${Int.wrappingAdd(big, 1)}")
+  caps.console.print("saturating: ${Int.saturatingAdd(big, 1)}")
+  let price = Decimal.mul(19.99d, 3d) or recover 0d
+  caps.console.print("price ${price}")
+  let third = Decimal.div(1d, 3d) catch e {
+    caps.console.print("inexact division: ${e.code}")
+    recover 0d
+  }
+  let span = Duration.add(90s, 1500ms) or recover 0s
+  caps.console.print("span ${span}")
+  caps.console.print("float ${1.5 * 4.0}")
+}

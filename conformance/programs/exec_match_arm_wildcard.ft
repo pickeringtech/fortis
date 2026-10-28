@@ -1,0 +1,39 @@
+// execute: arm|drop 1|after match|bound 2|drop 2|after match
+// execute-trace: drop N
+// requires: runtime
+// covers: LANG-09-06, LANG-07-07
+// 9.8, 7.9: in a `match move` with a wildcard arm and a binding arm, the arm that runs drops the value before
+// the next statement. A wildcard arm leaves no `drop` trace; the binding does (D-332).
+import fortis.host { Host, Console, Capabilities }
+
+class N {
+  id: Int
+  console: Shared[Console]
+  cleanup(editable self) Void { self.console.print("drop ${self.id}") }
+}
+
+func wild(console: Shared[Console]) Void {
+  let x = N(id: 1, console: console.retain())
+  match move x {
+    _ when true => { console.print("arm") }
+    a => { console.print("bound ${a.id}") }
+  }
+  console.print("after match")
+}
+
+func bound(console: Shared[Console]) Void {
+  let x = N(id: 2, console: console.retain())
+  match move x {
+    _ when false => { console.print("arm") }
+    a => { console.print("bound ${a.id}") }
+  }
+  console.print("after match")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  wild(console)
+  bound(console)
+}

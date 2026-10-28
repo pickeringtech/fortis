@@ -1,0 +1,32 @@
+// execute: closed a|set|replaced|closed b|done
+// requires: runtime
+// covers: LANG-12-06, LANG-07-09
+// D-23 (review): `guard.set(value)` drops the old value, running its cleanup, on every backend; `replace` hands the old
+// value to the caller, which drops it at the end of its block.
+import fortis.host { Host, Capabilities, Console }
+
+class Note {
+  export out: Shared[Console]
+  export name: String
+  export loud: Bool
+  cleanup(editable self) Void {
+    if self.loud {
+      self.out.print("closed ${self.name}")
+    }
+  }
+}
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, console: c, secretAccess: access, rawSql: sql) = move caps
+  let out = Shared.create(move c)
+  let m = Mutex.create(Note(out: out.retain(), name: "a", loud: true))
+  {
+    let g = m.lockBlocking() or fail
+    g.set(Note(out: out.retain(), name: "b", loud: true))
+    out.print("set")
+    let old = g.replace(Note(out: out.retain(), name: "c", loud: false))
+    out.print("replaced")
+  }
+  out.print("done")
+}

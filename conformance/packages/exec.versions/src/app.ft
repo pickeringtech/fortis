@@ -1,0 +1,15 @@
+// LANG-04-04: the version of ver.lib this package names (1.4.0) is the one ver.mid uses, so its Invoice is the
+// type ver.mid's Printer takes; a value of it flows through an implementation and prints.
+import fortis.host { Host }
+import ver.lib { Invoice }
+import ver.mid.api { Printer }
+
+export class Plain implements Printer {
+  export pure func print(self, invoice: Invoice) String => "invoice ${invoice.total}"
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let p = Plain()
+  caps.console.print(p.print(Invoice(total: 12)))
+}

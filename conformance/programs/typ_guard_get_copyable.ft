@@ -1,0 +1,27 @@
+// reject: E-TYP-090 (at the marked lines)
+// covers: LANG-06-10, LANG-12-06
+// D-23 (review): `MutexGuard[T].get` copies the value, so it needs `T implements Copyable` (6.10); a future, a shared handle
+// or a capability is not Copyable, and copying one out of a mutex would duplicate it. A callee's `where` bounds hold at
+// every call.
+import fortis.host { Console }
+
+async func work() Int => 1
+
+try func future(m: Mutex[Future[Int]]) Future[Int] {
+  let g = m.lockBlocking() or fail
+  return g.get()                                      // reject: E-TYP-090 — a Future is not Copyable
+}
+
+try func shared(m: Mutex[Shared[Int]]) Int {
+  let g = m.lockBlocking() or fail
+  let s = g.get()                                     // reject: E-TYP-090 — a Shared handle is not Copyable
+  return 1
+}
+
+try func capability(m: Mutex[Console]) Void {
+  let g = m.lockBlocking() or fail
+  let c = g.get()                                     // reject: E-TYP-090 — a capability is not Copyable
+}
+
+export func main(args: List[String]) Void {
+}

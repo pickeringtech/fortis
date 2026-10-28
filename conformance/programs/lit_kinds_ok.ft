@@ -1,0 +1,13 @@
+// accept
+pure func kinds() Void {
+  let a: Float32 = 1.5f32
+  let b: Float = 1.5
+  let c: Float = 2e10
+  let d: Decimal = 19.99d
+  let e: Decimal = 10d
+  let f: Duration = 250ms
+  let g: Duration = 2min
+  let h: Bool = true
+  let i: Int? = null
+  let j: Int? = 7
+}

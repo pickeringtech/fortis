@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: ver.greeter
+version: 0.1.0
+exports: [welcome]
+dependencies:
+  fortis: "1.0"
+  ver.greet: "1.0.0"

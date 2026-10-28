@@ -1,0 +1,49 @@
+// execute: end|made 1|idx 1|made 6|made 7|cleanup 7|chain 6|done|made 8|made 9|consume 8|cleanup 8|cleanup 9|after|made 3|made 4|made 5|consume 4|cleanup 4|cleanup 3|cleanup 5|nest|cleanup 6|cleanup 1|drop
+// execute-trace: drop Handle|drop Handle|loans-end|drop Handle|drop Handle|drop N
+// requires: runtime
+// covers: LANG-07-07
+// 7.9: a fully bound nested tuple keeps each element with the binding that took it, and drops them with
+// that binding. An element moved out of a temporary tuple is not destroyed with the tuple. The other
+// elements stay until the end of the statement, after the consumer, and then drop in order, including an
+// element nested inside a sibling tuple. A call that consumes the element runs before those drops.
+import fortis.host { Host, Console, Capabilities }
+
+class N {
+  console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("drop")
+  }
+}
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  export func consume(owned self) Void {
+    self.console.print("consume ${self.id}")
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  let nested = ((N(console: console.retain()), 0), 0)
+  let ((a, n), m) = move nested
+  console.print("end")
+  let h = (Handle.make(1, alias console), 4).0
+  console.print("idx ${h.id}")
+  let chain = (((Handle.make(6, alias console), Handle.make(7, alias console)), 0).0).0
+  console.print("chain ${chain.id}")
+  console.print("done")
+  (Handle.make(8, alias console), Handle.make(9, alias console)).0.consume()
+  console.print("after")
+  (((Handle.make(3, alias console), Handle.make(4, alias console)), Handle.make(5, alias console)).0).1.consume()
+  console.print("nest")
+}

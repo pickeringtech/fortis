@@ -1,0 +1,48 @@
+{
+  "capability": "Supervisor",
+  "rule": "PROG-ARC-02",
+  "normative": "Language Reference 11.6, 15",
+  "adapter": "compiler/crates/fortis-native/src/host.rs",
+  "handle": {
+    "representation": "a zero-sized Copy struct with a private constructor (Appendix C.1)",
+    "ownership": "carries no state, so a copy is the capability itself; a future that holds one owns it and may be detached",
+    "created_by": "Host.capabilities(), called once by main (11.6); every other handle of this type is derived from that one"
+  },
+  "operations": {
+    "Scope.detach": {
+      "ownership": {
+        "receiver": "the scope, a read loan",
+        "task": "the Task, moved: its join obligation transfers to the supervisor exactly once (a second detach is refused statically, E-OWN-020)",
+        "supervisor": "the handle by value (a Copy handle: copied, never consumed)",
+        "result": "none"
+      },
+      "effects": [],
+      "failures": [],
+      "allocation": "none for the transfer; the detached task's future was boxed at launch, since it owns what it holds and may outlive its scope",
+      "cancellation": "the detached task is no longer cancelled by its scope's exit; the transfer itself is not a cancellation point"
+    },
+    "program end": {
+      "ownership": {
+        "tasks": "every detached task, owned by the executor until it completes",
+        "result": "one TaskCompletion record per task"
+      },
+      "effects": [
+        "suspend"
+      ],
+      "failures": [],
+      "allocation": "none beyond the records: each task's future is dropped when it completes",
+      "cancellation": "the main task waits for each detached task in detach order and resumes first when the one it waits for completes; nothing cancels the wait, and a defect in a detached task ends the process (10.8)",
+      "kind": "runtime",
+      "waiting": {
+        "fixture": "conformance/programs/exec_host_supervisor_waiting.ft",
+        "states": "suspend main, the detached tasks run in detach order, resume main after each completes"
+      }
+    }
+  },
+  "violation": {
+    "fixture": "conformance/programs/host_supervisor_twice.ft",
+    "refused_by": "static",
+    "expect": "E-OWN-020",
+    "clause": "a task's join obligation transfers once"
+  }
+}

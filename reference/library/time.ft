@@ -1,0 +1,19 @@
+// Signature module for `fortis.time` (Language Reference 6.2, 15).
+export class Duration {
+  export trusted pure func days(n: Int<0..>) Duration
+  export trusted pure func hours(n: Int<0..>) Duration
+  export trusted pure func minutes(n: Int<0..>) Duration
+  export trusted pure func seconds(n: Int<0..>) Duration
+  export trusted pure func milliseconds(n: Int<0..>) Duration
+  export trusted pure try func add(a: Duration, b: Duration) Duration
+  export trusted pure try func sub(a: Duration, b: Duration) Duration
+  export trusted pure try func multiply(d: Duration, factor: Int) Duration
+  export trusted pure func nanoseconds(self) Int
+}
+export class Instant {}
+export class Timestamp {
+  export trusted pure func epoch() Timestamp
+  export trusted pure try func add(t: Timestamp, d: Duration) Timestamp
+  export trusted pure func after(a: Timestamp, b: Timestamp) Bool
+  export trusted pure func before(a: Timestamp, b: Timestamp) Bool
+}

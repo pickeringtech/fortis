@@ -1,0 +1,21 @@
+import fortis.host { Host }
+
+interface Describe {
+  pure func describe(self) String
+}
+
+class Temperature {
+  export celsius: Int
+}
+
+implement Describe for Temperature {
+  export pure func describe(self) String => "${self.celsius} C"
+}
+
+func show[T](x: T) String where T implements Describe => x.describe()
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let t = Temperature(celsius: 21)
+  caps.console.print(show(t))
+}

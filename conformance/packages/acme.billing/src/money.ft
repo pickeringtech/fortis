@@ -1,0 +1,5 @@
+// accept
+export type Pence = Int<0..>
+export class Amount {
+  export pence: Pence
+}

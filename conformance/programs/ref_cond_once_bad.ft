@@ -1,0 +1,17 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-73, effects applied once: the condition's `if` expression increments `d` once. Narrowing re-read the condition from
+// the state after it, so both checkers took `d = 2`, and proved `1 / (d - 1)`; at run time `d = 1`.
+export func f(take: Bool) Int {
+  let mut d: Int<0..4> = 0
+  if (if take {
+    d = d + 1
+    give true
+  } else {
+    d = d + 1
+    give false
+  }) {
+    return 1 / (d - 1)                       // reject: E-REF-002 — `d` is 1 here, so the divisor is 0
+  }
+  return 0
+}

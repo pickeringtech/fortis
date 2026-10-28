@@ -1,0 +1,9 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-09-01
+export class Base {
+  export name: String
+}
+
+export class Child extends Base {          // reject: E-SYN-000 — there is no inheritance
+  export extra: Int
+}

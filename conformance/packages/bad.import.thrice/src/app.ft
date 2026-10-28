@@ -1,0 +1,8 @@
+// reject: E-NAM-001 (at the marked line)
+// Importing one name three times is the same error as twice (4.3). The record's candidate stays the first
+// import's module; the second binding does not replace it (D-51.4).
+import fortis.text as t
+import fortis.numeric as t                  // reject: E-NAM-001 — candidate is fortis.text
+import fortis.money as t                    // reject: E-NAM-001 — candidate is still fortis.text
+
+export pure func f() Int => 1

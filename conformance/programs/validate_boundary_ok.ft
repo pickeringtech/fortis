@@ -1,0 +1,11 @@
+// accept
+// covers: LANG-06-03
+// validate is the explicit fallible conversion into a refined or nominal type (6.3).
+export type UserId = Int<1..>
+
+try func parse(raw: Int) UserId {
+  let id = UserId.validate(raw) or fail
+  return id
+}
+
+try func percent(raw: Int) Int<0..100> => Int<0..100>.validate(raw) or fail

@@ -1,0 +1,3 @@
+// reject: E-TYP-020 (at the marked line)
+// covers: LANG-06-05
+export type Ratio = Float<0..1>            // reject: E-TYP-020 — float refinements are not supported

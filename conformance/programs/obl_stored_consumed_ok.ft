@@ -1,0 +1,11 @@
+// accept
+// covers: LANG-10-02
+try func half(n: Int) Int => n
+export class Pending {
+  export result: Outcome[Int]
+}
+try func run(n: Int) Int {
+  let p = Pending(result: half(n))
+  let Pending(result: r) = move p
+  return r or fail
+}

@@ -1,0 +1,24 @@
+// execute: 2|0
+// requires: runtime
+// covers: LANG-10-05
+import fortis.host { Host }
+
+export error Odd {
+  code: "demo.odd"
+}
+
+try func half(n: Int) Int {
+  let r = Int.rem(n, 2) or fail
+  if r == 1 {
+    fail Odd()
+  }
+  return Int.div(n, 2) or fail
+}
+
+recovers func safeHalf(n: Int) Int => half(n) or recover 0
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${safeHalf(4)}")
+  caps.console.print("${safeHalf(3)}")
+}

@@ -1,0 +1,21 @@
+// execute: a|b|2
+// requires: runtime
+// covers: LANG-07-04
+import fortis.host { Host }
+
+export class Box {
+  export label: String
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut box = Box(label: "a")
+  let taken = move box
+  caps.console.print(taken.label)
+  box = Box(label: "b")
+  caps.console.print(box.label)
+  let mut count = 0
+  count = count + 1
+  count = count + 1
+  caps.console.print("${count}")
+}

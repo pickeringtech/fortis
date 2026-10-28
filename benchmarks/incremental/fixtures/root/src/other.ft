@@ -1,0 +1,5 @@
+import acme.tools { Helper, take }
+
+func use() Int => take(3)
+
+func hello() String => Helper(name: "a").name

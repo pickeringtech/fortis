@@ -1,0 +1,27 @@
+// accept
+// covers: LANG-07-04
+// A pattern binding is fresh on every run of its pattern, so moving it inside a loop body is accepted on every
+// iteration (the checker re-types a loop body; a stale "moved" state from the previous pass is not a use after move).
+try func check(n: Int) Int => n
+func looped() Failure {
+  let mut failures: List[Failure] = List.default()
+  for i in List.of(1, 3) {
+    match check(i) {
+      success(v) => {
+        discard v
+      }
+      failure(f) => {
+        editable failures.push(move f)
+      }
+    }
+  }
+  return Failures.aggregate(move failures)
+}
+func looped_let() List[List[Int]] {
+  let mut xs: List[List[Int]] = List.default()
+  for i in List.of(1, 3) {
+    let inner = List.of(i)
+    editable xs.push(move inner)
+  }
+  return move xs
+}

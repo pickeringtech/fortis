@@ -1,0 +1,10 @@
+// reject: E-OWN-020 (at the marked line)
+// covers: LANG-07-04
+export class Box {
+  export label: String
+}
+func take(b: owned Box) Bool => true
+func run() Bool {
+  let x = Box(label: "a")
+  return take(move x) || take(move x)      // reject: E-OWN-020 — the second move is on a reachable path (5.7)
+}

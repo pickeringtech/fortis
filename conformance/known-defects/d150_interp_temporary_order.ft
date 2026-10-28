@@ -1,0 +1,28 @@
+// Repro (D-150, LR 7.9, 3.6): a temporary made inside an interpolation is destroyed at the end of the whole
+// statement, in reverse creation order — after the statement's call has run.
+//   bin/fortis run conformance/known-defects/d150_interp_temporary_order.ft  -> a x b|end          (never destroys it: D-150.1, the interpreter's half, P11)
+//   fortisc vm conformance/known-defects/d150_interp_temporary_order.ft      -> a x b|end          (never destroys it: D-150.1, the VM's half, P12)
+//   fortisc native conformance/known-defects/d150_interp_temporary_order.ft  -> a x b|drop x|end   (the LR's order: D-150.2, the native half, fixed in P18)
+// Before the native half was fixed, native destroyed the temporary before the print ran: drop x|a x b|end.
+// No observable parity fixture can be added while D-150.1 is open: the three backends still disagree on
+// whether a statement's temporary is destroyed at all. The native order is pinned by the cargo test
+// `temporaries_live_to_the_end_of_the_enclosing_statement` in compiler/crates/fortis-native/src/show.rs.
+import fortis.host { Host, Console, Capabilities }
+
+export class Temp {
+  console: Shared[Console]
+  label: String
+  cleanup(editable self) Void {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: String) Temp => Temp(console: console.retain(), label: copy label)
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  console.print("a ${make(console, "x").label} b")
+  console.print("end")
+}

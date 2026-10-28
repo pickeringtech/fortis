@@ -1,0 +1,6 @@
+conformance/programs/syntax_logical_then_coalesce.ft:4:17: error E-SYN-004 [LANG-05-06] (Syntax, violated): operator '??' mixes operator families in one unparenthesised expression
+    expected_tokens: ["parentheses around one operand"]
+    found_token: "??"
+    correction: parenthesise the left operand
+      conformance/programs/syntax_logical_then_coalesce.ft:4:10-4:10 -> "("
+      conformance/programs/syntax_logical_then_coalesce.ft:4:17-4:17 -> ") "

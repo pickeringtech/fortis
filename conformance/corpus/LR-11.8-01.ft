@@ -1,0 +1,28 @@
+// accept
+import fortis.http.server { HttpMethod, HttpStatus, HttpLimits, PublicProblem, Forbidden }
+import fortis.security { Authorisation, Identity }
+export aspect http[R](
+  method: HttpMethod,
+  path: StringView,
+  responses: VariantMap[R, HttpStatus],
+  auth: dynamic Authorisation? = null,
+  fallback: (fn(PublicProblem) R)? = null,
+  limits: HttpLimits = HttpLimits.default(),
+) {
+  needs who: Identity                               // minted per request by the server adapter; never a request field
+  before {
+    if auth != null && !auth.grantedTo(who) {
+      fail Forbidden()
+    }
+  }
+  on failure(f: Failure) R {
+    if fallback == null {
+      fail move f                                     // no mapping: propagate
+    }
+    report annotate(move f, path) as receipt          // mapping: report once, then respond
+    return fallback(PublicProblem.from(receipt))
+  }
+  metadata
+}
+
+export aspect get[R](path: StringView, ...rest) = http[R](method: GET, path: path, ...rest)

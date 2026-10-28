@@ -1,0 +1,34 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-06-01
+// D-21: an interface is not a type a value can have (9.5): it is used through `dynamic I`, `Shared[dynamic I]` or a
+// type parameter bounded by it. A field, parameter or result declared with the bare interface was accepted, and every
+// construction or call then refused with E-TYP-040; the declaration itself is refused now, naming the forms.
+export interface PaymentGateway {
+  func charge(self, cents: Int) Bool
+}
+
+export class Stripe implements PaymentGateway {
+  export key: Int
+  func charge(self, cents: Int) Bool => cents > 0
+}
+
+export class Checkout {                          // reject: E-TYP-040 — field `gateway` has the interface type
+  export gateway: PaymentGateway
+}
+
+func pay(g: PaymentGateway) Bool => true         // reject: E-TYP-040 — parameter `g` has the interface type
+
+func pick(n: Int) PaymentGateway? => null        // reject: E-TYP-040 — the result has the interface type
+
+export class Kept {
+  export gateway: dynamic PaymentGateway
+  export shared: Shared[dynamic PaymentGateway]
+}
+
+func charged[G](g: G) Bool where G implements PaymentGateway => g.charge(5)
+
+export func main(args: List[String]) Void {
+  let lambda = fn(g: PaymentGateway) Int => 1             // reject: E-TYP-040 — a lambda's parameter
+  let ok = charged(Stripe(key: 1))
+  let k = Kept(gateway: Stripe(key: 2), shared: Shared.create(Stripe(key: 3)))
+}

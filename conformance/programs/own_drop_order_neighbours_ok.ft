@@ -1,0 +1,37 @@
+// accept
+// covers: LANG-09-06, LANG-07-07
+// Neighbours that bind the part: a generic wrapper's type parameter, a recursive class's fields, a `match move`
+// binding, and both elements of a tuple.
+class Hold[T] {
+  item: T
+}
+
+class Node {
+  value: Int
+  next: Node?
+  item: String
+}
+
+func keepItem(h: owned Hold[String]) String {
+  let Hold(item: s) = move h
+  return move s
+}
+
+func keepNode(n: owned Node) Int {
+  let Node(value: v, next: rest, item: s) = move n
+  discard rest
+  discard s
+  return v
+}
+
+func keepMatch(s: owned String) Int {
+  return match move s {
+    t => t.scalarCount()
+  }
+}
+
+func keepTuple(pair: owned (Int, String)) Int {
+  let (n, s) = move pair
+  discard s
+  return n
+}

@@ -1,0 +1,11 @@
+// execute: fail:demo.boom
+// requires: runtime
+// covers: LANG-04-06, LANG-10-06
+// A failing `try main` reports once and the process exits 1 (LR 4.6).
+export error Boom {
+  code: "demo.boom"
+}
+
+export try func main(args: List[String]) Void {
+  fail Boom()
+}

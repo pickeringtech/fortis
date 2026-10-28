@@ -1,0 +1,5 @@
+// reject: E-OBS-012 (at the marked line)
+// covers: LANG-13-03
+observation Trace {                        // reject: E-OBS-012 — a String field must declare a bound
+  label: String                      required: all
+}

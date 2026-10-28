@@ -1,0 +1,8 @@
+// accept
+export pure func hello(name: StringView) String => "hello 2 ${name}"
+
+export class Badge {
+  export id: Int
+  export tier: Int
+  export pure func show(self) String => "badge ${self.id}/${self.tier}"
+}

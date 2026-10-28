@@ -1,0 +1,300 @@
+// Calendar dates for the journal: parsing `YYYY-MM-DD`, calendar validation, ordering and day counts.
+import pilot.ledger.scan { twoDigits }
+
+// The text is not of the form YYYY-MM-DD.
+export error DateSyntax {
+  code: "ledger.date.syntax"
+  payload { position: Int }
+  message: "a date is written YYYY-MM-DD; the problem is at position ${position}"
+}
+
+// The fields are well formed but name no day of the calendar (month 13, 31 April, 29 February 2026).
+export error DateRange {
+  code: "ledger.date.range"
+  payload { year: Int, month: Int, day: Int }
+  message: "${year}-${month}-${day} is not a day of the calendar"
+}
+
+// The smallest and largest day numbers: 0001-01-01 and 9999-12-31, counted from 0000-03-01.
+export const firstDayNumber = 306
+export const lastDayNumber = 3652364
+
+// A day of the proleptic Gregorian calendar between the years 1 and 9999.
+// The ordering is written by hand (`isBefore`, `compareTo`): a derived `Comparable` is accepted by the checkers
+// but `<` on it fails at run time on both backends (pilot/FRICTION.md).
+export trivial class Date derive Equatable, Hashable {
+  export year: Int<1..9999>
+  export month: Int<1..12>
+  export day: Int<1..31>
+
+  // True when this date is strictly earlier than `other`.
+  export pure func isBefore(self, other: Date) Bool {
+    if self.year != other.year {
+      return self.year < other.year
+    }
+    if self.month != other.month {
+      return self.month < other.month
+    }
+    return self.day < other.day
+  }
+
+  // True when this date is strictly later than `other`.
+  export pure func isAfter(self, other: Date) Bool => other.isBefore(self)
+
+  // -1, 0 or 1 as this date is before, equal to or after `other`.
+  export pure func compareTo(self, other: Date) Int<-1..1> {
+    if self.isBefore(other) {
+      return -1
+    }
+    if other.isBefore(self) {
+      return 1
+    }
+    return 0
+  }
+
+  // True when the date lies in the inclusive range [first, last].
+  export pure func within(self, first: Date, last: Date) Bool {
+    return !self.isBefore(first) && !last.isBefore(self)
+  }
+
+  // A date from its three fields, checked against the calendar.
+  export pure try func of(year: Int, month: Int, day: Int) Date {
+    if year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 {
+      fail DateRange(year: year, month: month, day: day)
+    }
+    let y = Int<1..9999>.validate(year) or fail
+    let m = Int<1..12>.validate(month) or fail
+    if day > daysInMonth(y, m) {
+      fail DateRange(year: year, month: month, day: day)
+    }
+    let d = Int<1..31>.validate(day) or fail
+    return Date(year: y, month: m, day: d)
+  }
+
+  // A date written `YYYY-MM-DD`, with exactly four, two and two digits.
+  export pure try func parse(text: StringView) Date {
+    if text.scalarCount() != 10 {
+      fail DateSyntax(position: 0)
+    }
+    let firstDash = text.scalarAt(4) or fail
+    if firstDash != Scalar.of("-") {
+      fail DateSyntax(position: 4)
+    }
+    let secondDash = text.scalarAt(7) or fail
+    if secondDash != Scalar.of("-") {
+      fail DateSyntax(position: 7)
+    }
+    let year = digitsAt(text, 0, 4) or fail
+    let month = digitsAt(text, 5, 7) or fail
+    let day = digitsAt(text, 8, 10) or fail
+    return Date.of(year, month, day) or fail
+  }
+
+  // The ISO form, `YYYY-MM-DD`.
+  export pure func iso(self) String {
+    let mut out = Builder.create()
+    if self.year < 1000 {
+      editable out.append("0")
+    }
+    if self.year < 100 {
+      editable out.append("0")
+    }
+    if self.year < 10 {
+      editable out.append("0")
+    }
+    editable out.append("${self.year}-${twoDigits(self.month)}-${twoDigits(self.day)}")
+    return out.finish()
+  }
+
+  // The number of days since 0000-03-01 (the start of a 400-year cycle), so that day numbers are never
+  // negative for the years this type admits.
+  export pure func dayNumber(self) Int {
+    let shifted = if self.month <= 2 { give self.year - 1 } else { give self.year }
+    let era = shifted / 400
+    let yearOfEra = shifted - era * 400
+    let monthFromMarch = if self.month > 2 { give self.month - 3 } else { give self.month + 9 }
+    let dayOfYear = (153 * monthFromMarch + 2) / 5 + self.day - 1
+    let dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear
+    return era * 146097 + dayOfEra
+  }
+
+  // The date with the given day number (the inverse of `dayNumber`).
+  export pure try func fromDayNumber(number: Int<306..3652364>) Date {
+    let era = number / 146097
+    let dayOfEra = number - era * 146097
+    let yearOfEra = (dayOfEra - dayOfEra / 1460 + dayOfEra / 36524 - dayOfEra / 146096) / 365
+    let dayOfYear = dayOfEra - (365 * yearOfEra + yearOfEra / 4 - yearOfEra / 100)
+    let monthFromMarch = (5 * dayOfYear + 2) / 153
+    let day = dayOfYear - (153 * monthFromMarch + 2) / 5 + 1
+    let month = if monthFromMarch < 10 { give monthFromMarch + 3 } else { give monthFromMarch - 9 }
+    let shifted = yearOfEra + era * 400
+    let year = if month <= 2 { give shifted + 1 } else { give shifted }
+    return Date.of(year, month, day) or fail
+  }
+
+  // The number of days from this date to `later` (negative when `later` is earlier).
+  export pure func daysUntil(self, later: Date) Int => Int.saturatingSub(later.dayNumber(), self.dayNumber())
+}
+
+// Dates are shown with `date.iso()`: a hand-written Displayable is accepted by the checkers but ignored by
+// interpolation on both backends (pilot/FRICTION.md), so no `implement Displayable for Date` is declared.
+
+// The earlier of two dates.
+export pure func earlier(a: Date, b: Date) Date {
+  if b.isBefore(a) {
+    return b
+  }
+  return a
+}
+
+// The later of two dates.
+export pure func later(a: Date, b: Date) Date {
+  if a.isBefore(b) {
+    return b
+  }
+  return a
+}
+
+// True for the leap years of the Gregorian calendar.
+export pure func isLeapYear(year: Int<1..9999>) Bool {
+  if year % 400 == 0 {
+    return true
+  }
+  if year % 100 == 0 {
+    return false
+  }
+  return year % 4 == 0
+}
+
+// The number of days in a month of a year.
+export pure func daysInMonth(year: Int<1..9999>, month: Int<1..12>) Int<28..31> {
+  if month == 2 {
+    if isLeapYear(year) {
+      return 29
+    }
+    return 28
+  }
+  if month == 4 || month == 6 || month == 9 || month == 11 {
+    return 30
+  }
+  return 31
+}
+
+// The decimal value of the digits between two scalar offsets.
+pure try func digitsAt(text: StringView, start: Int, end: Int) Int {
+  let mut value = 0
+  let mut i = start
+  while i < end {
+    let s = text.scalarAt(i) or fail
+    let d = Scalar.digitValue(s)
+    if d == null {
+      fail DateSyntax(position: i)
+    }
+    value = Int.mul(value, 10) or fail
+    value = Int.add(value, d) or fail
+    i = Int.add(i, 1) or fail
+  }
+  return value
+}
+
+test "leap years" cases {
+  "ordinary":        { year: 2026, leap: false }
+  "divisible by 4":  { year: 2024, leap: true }
+  "century":         { year: 1900, leap: false }
+  "400 years":       { year: 2000, leap: true }
+} as row {
+  expect isLeapYear(row.year) == row.leap
+}
+
+test "days in a month" cases {
+  "january":          { year: 2026, month: 1, days: 31 }
+  "april":            { year: 2026, month: 4, days: 30 }
+  "february":         { year: 2026, month: 2, days: 28 }
+  "leap february":    { year: 2024, month: 2, days: 29 }
+  "december":         { year: 2026, month: 12, days: 31 }
+} as row {
+  expect daysInMonth(row.year, row.month) == row.days
+}
+
+test "parse good dates" cases {
+  "new year":   { text: "2026-01-01", year: 2026, month: 1, day: 1 }
+  "leap day":   { text: "2024-02-29", year: 2024, month: 2, day: 29 }
+  "year end":   { text: "1999-12-31", year: 1999, month: 12, day: 31 }
+  "early":      { text: "0001-01-01", year: 1, month: 1, day: 1 }
+} as row {
+  let d = Date.parse(row.text) or fail
+  expect d.year == row.year
+  expect d.month == row.month
+  expect d.day == row.day
+  expect d.iso() == row.text
+}
+
+test "parse bad dates" cases {
+  "short":          { text: "2026-1-01", code: "ledger.date.syntax" }
+  "slashes":        { text: "2026/01/01", code: "ledger.date.syntax" }
+  "letters":        { text: "2026-0a-01", code: "ledger.date.syntax" }
+  "month 13":       { text: "2026-13-01", code: "ledger.date.range" }
+  "day 0":          { text: "2026-01-00", code: "ledger.date.range" }
+  "31 april":       { text: "2026-04-31", code: "ledger.date.range" }
+  "not leap":       { text: "2026-02-29", code: "ledger.date.range" }
+  "year 0":         { text: "0000-01-01", code: "ledger.date.range" }
+  "empty":          { text: "", code: "ledger.date.syntax" }
+} as row {
+  let ok = Date.parse(row.text) catch e {
+    expect e.code == row.code
+    recover Date.of(1, 1, 1) or fail
+  }
+  expect ok == (Date.of(1, 1, 1) or fail)
+}
+
+test "dates order chronologically" {
+  let a = Date.parse("2025-12-31") or fail
+  let b = Date.parse("2026-01-01") or fail
+  let c = Date.parse("2026-01-02") or fail
+  expect a.isBefore(b)
+  expect b.isBefore(c)
+  expect !c.isBefore(a)
+  expect c.isAfter(a)
+  expect a.compareTo(b) == -1
+  expect b.compareTo(b) == 0
+  expect c.compareTo(b) == 1
+  expect b.within(a, c)
+  expect !a.within(b, c)
+  expect earlier(c, a) == a
+  expect later(a, c) == c
+  expect a.daysUntil(c) == 2
+  expect c.daysUntil(a) == -2
+}
+
+test "dates display in ISO form" {
+  let d = Date.of(2026, 3, 9) or fail
+  expect d.iso() == "2026-03-09"
+  let early = Date.of(12, 1, 1) or fail
+  expect early.iso() == "0012-01-01"
+}
+
+test "day number bounds" {
+  let first = Date.of(1, 1, 1) or fail
+  let last = Date.of(9999, 12, 31) or fail
+  expect first.dayNumber() == firstDayNumber
+  expect last.dayNumber() == lastDayNumber
+}
+
+property "day numbers round-trip" forall (n: Int<306..3652364>) {
+  let d = Date.fromDayNumber(n) or fail
+  expect d.dayNumber() == n
+}
+
+property "the order of dates is the order of their day numbers" forall (y1: Int<1..9999>, m1: Int<1..12>, d1: Int<1..28>, y2: Int<1..9999>, m2: Int<1..12>, d2: Int<1..28>) {
+  let a = Date.of(y1, m1, d1) or fail
+  let b = Date.of(y2, m2, d2) or fail
+  expect a.isBefore(b) == (a.dayNumber() < b.dayNumber())
+  expect (a == b) == (a.dayNumber() == b.dayNumber())
+}
+
+property "consecutive day numbers are consecutive days" forall (n: Int<306..3652363>) {
+  let today = Date.fromDayNumber(n) or fail
+  let tomorrow = Date.fromDayNumber(n + 1) or fail
+  expect today.isBefore(tomorrow)
+  expect today.daysUntil(tomorrow) == 1
+}

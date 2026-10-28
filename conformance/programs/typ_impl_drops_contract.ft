@@ -1,0 +1,36 @@
+// reject: E-TYP-080 (at the marked lines)
+// covers: LANG-09-03, LANG-11-06
+// D-61: a contract on an interface member is a set of modifiers and clauses (11.5), and binds every implementation as a
+// written modifier does (11.2): the implementation must claim each modifier it expands to, rule out each effect it
+// forbids, and exclude each capability it excludes, written or through a contract of its own.
+import fortis.host { Network }
+
+export contract Quick {
+  pure
+  noalloc
+}
+
+export contract Settled {
+  forbids nondet
+  excludes capability Network
+}
+
+export interface Scorer {
+  Quick func score(self, x: Int) Int
+  Settled func settle(self, x: Int) Int
+}
+
+export class Plain implements Scorer {         // reject: E-TYP-080 — drops the claims of Quick and of Settled
+  export bias: Int
+  func score(self, x: Int) Int => x
+  func settle(self, x: Int) Int => x
+}
+
+export class Kept implements Scorer {
+  export bias: Int
+  Quick func score(self, x: Int) Int => x
+  Settled func settle(self, x: Int) Int => x
+}
+
+export func main(args: List[String]) Void {
+}

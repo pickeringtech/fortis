@@ -1,0 +1,11 @@
+// Tight integer loops: a mixing checksum over 0 ..< 500 million.
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut acc = 0
+  for i in 0..<500_000_000 {
+    acc = Int.wrappingAdd(Int.wrappingMul(acc, 31), i)
+  }
+  caps.console.print("${acc}")
+}

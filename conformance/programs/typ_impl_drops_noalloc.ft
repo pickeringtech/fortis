@@ -1,0 +1,20 @@
+// reject: E-TYP-080 (at the marked line)
+// covers: LANG-09-03, LANG-11-03
+// D-61: an interface member's `noalloc` binds every implementation (11.2); a caller through the interface or `dynamic`
+// relies on it, so an implementation that does not claim it (and here allocates) is refused.
+export interface Measured {
+  noalloc func size(self) Int
+}
+
+export class Box implements Measured {            // reject: E-TYP-080 — Box.size drops `noalloc`
+  export items: List[Int]
+  func size(self) Int {
+    let fresh = List.of(1, 2, 3)
+    return fresh.count()
+  }
+}
+
+noalloc func measure(s: dynamic Measured) Int => s.size()
+
+export func main(args: List[String]) Void {
+}

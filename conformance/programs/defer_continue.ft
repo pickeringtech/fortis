@@ -1,0 +1,10 @@
+// reject: E-DEF-001 (at the marked line)
+// covers: LANG-12-01
+func run(items: List[Int]) Int {
+  for item in items {
+    defer {
+      continue                             // reject: E-DEF-001
+    }
+  }
+  return 0
+}

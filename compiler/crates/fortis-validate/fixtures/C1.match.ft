@@ -1,0 +1,16 @@
+// DEL-45 fixture for C1.match (ownership of bindings): a match over a borrowed value reads its bindings.
+export enum Shape {
+  Circle(label: String)
+  Dot
+}
+export func main(args: List[String]) Void {
+  let s = Shape.Circle(label: "c")
+  match s {
+    Circle(label: l) => {
+      let k = l.scalarCount()
+      discard k
+    }
+    Dot => {
+    }
+  }
+}

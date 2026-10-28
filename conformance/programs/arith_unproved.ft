@@ -1,0 +1,6 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-04
+// Integer operators are proof-required; two unrefined Ints can overflow (6.4).
+pure func total(a: Int, b: Int) Int {
+  return a + b                              // reject: E-REF-002
+}

@@ -1,0 +1,8 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-01
+// `vals.limit` is the same constant: the alias spelling is checked on the initialiser's type too.
+import bad.imported.const.vals as vals
+
+func take() Void {
+  let s: String = vals.limit             // reject: E-TYP-040
+}

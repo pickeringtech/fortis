@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: acme.stock
+version: 1.0.0
+entry: main
+exports: [ids, feed, ledger]
+dependencies:
+  fortis: "1.0"

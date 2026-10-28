@@ -1,0 +1,28 @@
+// execute: tick|status 0|done 0
+// execute-trace: launch work#1 on blocking|launch tick#2|suspend main|start work#1|complete work#1|start tick#2|complete tick#2|resume main|join tick#2|join work#1|loans-end
+// requires: runtime
+// covers: LANG-11-07, LANG-12-03
+// 15, 12.4: `Process.run` waits for the program (the `block` effect), so async code runs it as work on the
+// blocking pool, which owns the capability it was given; the cooperative task runs on while it waits (DEL-47).
+import fortis.host { Host, Capabilities, Process, Console }
+async func tick(console: Console) Void {
+  console.print("tick")
+}
+async func run(process: owned Process, console: Console) Int {
+  scope tasks {
+    let w = tasks.launchBlocking(fn once[move process]() Int {
+      return process.run("true", List.default()) or recover 1
+    })
+    let t = tasks.launch(tick(console))
+    await t
+    let status = await w
+    console.print("status ${status}")
+    return status
+  }
+}
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(process: proc, console: console, fileSystem: fs, network: net, clock: clock, random: rnd, environment: envc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let s = await run(move proc, console)
+  console.print("done ${s}")
+}

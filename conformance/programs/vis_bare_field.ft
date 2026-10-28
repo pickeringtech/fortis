@@ -1,0 +1,8 @@
+// reject: E-NAM-001 (at the marked line)
+// A bare field name is not in scope inside a method: fields are reached through a receiver (4.5).
+export class Counter {
+  count: Int
+  export pure func current(self) Int {
+    return count                        // reject: E-NAM-001 — `count` is `self.count`
+  }
+}

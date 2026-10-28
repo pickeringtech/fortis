@@ -1,0 +1,7 @@
+// DEL-45 fixture for C1.async: a future is a linear value, consumed exactly once (here, awaited).
+async func work(n: Int) Int => n
+export async func main(args: List[String]) Void {
+  let f = work(1)
+  let v = await move f
+  discard v
+}

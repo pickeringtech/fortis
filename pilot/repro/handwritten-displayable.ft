@@ -1,0 +1,32 @@
+// Repro (FRICTION entry 13): a hand-written Displayable implementation is not used by interpolation.
+// Docs: guide/06-types.md, "The built-in interfaces and derive": `Displayable` gives `${value}`;
+// agent/09-classes.md: implementing is `implements I` with every member, or `implement I for T { … }`.
+// Expected output: "named x" then "tagged y". Both checkers accept the program. Observed:
+//   bin/fortis run -> "<display>" then "Tagged(tag: y)"
+//   fortisc vm     -> "observed: Named(name: x)|Tagged(tag: y)"
+import fortis.host { Host }
+
+class Named implements Displayable {
+  export name: String
+  export pure func display(self, into: editable Builder) Void {
+    editable into.append("named ${self.name}")
+  }
+}
+
+class Tagged {
+  export tag: String
+}
+
+implement Displayable for Tagged {
+  pure func display(self, into: editable Builder) Void {
+    editable into.append("tagged ${self.tag}")
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let n = Named(name: "x")
+  caps.console.print("${n}")
+  let t = Tagged(tag: "y")
+  caps.console.print("${t}")
+}

@@ -1,0 +1,27 @@
+{
+ "cases": {
+  "builtins": {
+   "values": 27,
+   "round_trips": 27,
+   "files": 54,
+   "matched_golden": 54,
+   "frozen_now": []
+  },
+  "derived": {
+   "values": 10,
+   "round_trips": 10,
+   "files": 20,
+   "matched_golden": 20,
+   "frozen_now": []
+  }
+ },
+ "determinism": {
+  "runs": 100,
+  "distinct_outputs": 1,
+  "digests": {
+   "5f89cbf8b7be8ce8e59b9dd93ffb2e8d684de385b637348a0eb99dd7d62b45e8": 100
+  },
+  "control_distinct_orders_of_a_hash_set": 10
+ },
+ "problems": []
+}

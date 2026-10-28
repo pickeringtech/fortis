@@ -1,0 +1,46 @@
+// execute: copy 3|bare 7|end
+// reports: runtime-failure:code=demo.dropped,reported_by=cleanup|runtime-failure:code=demo.dropped,reported_by=cleanup|runtime-failure:code=demo.dropped,reported_by=cleanup
+// requires: runtime
+// covers: LANG-07-07
+// 7.9 (X-250; D-30): a `copy` capture is the closure's own value, destroyed with the closure. A copyable class can
+// hold no handle to print through, so its cleanup reports instead: one report for the closure's copy, one for the
+// original, and one for the record whose bare capture copied a trivial value (which runs no cleanup).
+import fortis.host { Host, Console }
+
+export error Dropped {
+  code: "demo.dropped"
+}
+
+try func signal() Void {
+  fail Dropped()
+}
+
+export class Tag {
+  label: String
+  cleanup(editable self) Void {
+    signal() catch e {
+      report e
+      recover Void
+    }
+  }
+}
+
+func copyCapture(console: Console) Void {
+  let t = Tag(label: String.from("tag"))
+  let f = fn[copy t]() Int => t.label.scalarCount()
+  console.print("copy ${f()}")
+}
+
+func bareCapture(console: Console) Void {
+  let n = 7
+  let t = Tag(label: String.from("bare"))
+  let f = fn[n]() Int => n
+  console.print("bare ${f()}")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  copyCapture(caps.console)
+  bareCapture(caps.console)
+  caps.console.print("end")
+}

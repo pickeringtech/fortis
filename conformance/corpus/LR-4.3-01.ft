@@ -1,0 +1,5 @@
+// accept
+import acme.billing.invoices                 // package acme.billing, module invoices; binds the alias `invoices`
+import acme.billing.invoices as inv          // binds the alias `inv`
+import acme.billing.invoices { Invoice, Line } // binds the named members directly
+import fortis.text                           // binds `text`

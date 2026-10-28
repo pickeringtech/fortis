@@ -1,0 +1,9 @@
+schema: fortis.project/v1
+name: acme.app
+version: 0.1.0
+entry: app
+exports: []
+dependencies:
+  fortis: "1.0"
+  acme.billing: "1.4.0"
+  acme.util: "2.0.0"

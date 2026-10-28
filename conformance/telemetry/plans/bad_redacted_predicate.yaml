@@ -1,0 +1,15 @@
+# E-TEL-005: a redacted field compared by value
+telemetry:
+  privacy:
+    transforms:
+      OrderProcessing:
+        note: redact
+  projections:
+    p:
+      source: OrderProcessing
+      where:
+        field: note   # expect: E-TEL-005
+        equals: "x"
+      metrics:
+        - name: p.count
+          instrument: counter

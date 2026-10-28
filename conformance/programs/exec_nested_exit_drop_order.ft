@@ -1,0 +1,31 @@
+// execute: inner|cleanup 2|defer outer|cleanup 1|done
+// requires: runtime
+// covers: LANG-05-02, LANG-07-07
+// An early exit from a nested block (5.1, 7.9, 12.1, 12.2): the inner block exits first and its live locals
+// are destroyed (cleanup 2), then the outer block's deferred block runs and its live local is destroyed
+// (cleanup 1). D-181: native ran the outer `defer` before the inner block's locals were destroyed.
+import fortis.host { Host, Console, Capabilities }
+export class Res {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+func run(console: Shared[Console], deep: Bool) Void {
+  let a = Res(id: 1, console: console.retain())
+  defer { console.print("defer outer") }
+  if deep {
+    let b = Res(id: 2, console: console.retain())
+    console.print("inner")
+    return
+  }
+  console.print("flat")
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console, true)
+  console.print("done")
+}

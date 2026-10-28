@@ -1,0 +1,13 @@
+// accept
+// covers: LANG-06-02
+// Indexing proofs: a length fact from `i < p.count()`, an Array[T, N] with a bounded index, a ranged loop (6.7).
+pure func pick(xs: ListView[Int], grid: Array[Int, 4], i: Int<0..>, j: Int<0..3>) Int {
+  let mut out = grid[j]
+  if i < xs.count() {
+    out = xs[i]
+  }
+  for k in 0..<xs.count() {
+    out = xs[k]
+  }
+  return out
+}

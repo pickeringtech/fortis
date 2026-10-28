@@ -1,0 +1,27 @@
+// D-184 (docs/delivery/defects.json): a task launched from a closure's call is named differently on every backend,
+// so the executor traces disagree although the output agrees (`closure 3`): the interpreter names it `lambda#1`, the
+// VM `lambda@<line>:<column>#1`, native `work#1`. (Natively the launch owns the call's temporary, X-251, also for an
+// optional parameter and an editable closure's call: all three print `closure 3|optional 4|editable 3`.)
+import fortis.host { Host }
+
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let measure = async fn(s: String) Int => s.scalarCount()
+  scope tasks {
+    let m = tasks.launch(measure(String.from("abc")))
+    let mn = await m
+    caps.console.print("closure ${mn}")
+    let optional = async fn(s: String?) Int => (s ?? "").scalarCount()
+    let o = tasks.launch(optional(String.from("abcd")))
+    let ol = await o
+    caps.console.print("optional ${ol}")
+    let counter = 0
+    let mut tally = async fn mut[move counter](s: String) Int {
+      counter = Int.wrappingAdd(counter, s.scalarCount())
+      return counter
+    }
+    let te = tasks.launch(editable tally(String.from("abc")))
+    let tn = await te
+    caps.console.print("editable ${tn}")
+  }
+}

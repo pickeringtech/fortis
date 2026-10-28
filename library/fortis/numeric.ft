@@ -1,0 +1,22 @@
+// `fortis.numeric` implementation (DEL-26). Signatures equal `reference/library/numeric.ft`.
+export pure func abs(value: Int) Int<0..> {
+  if value >= 0 {
+    return value
+  }
+  if value == -9223372036854775807 - 1 {
+    return 9223372036854775807              // |Int.min| saturates to Int.max
+  }
+  return 0 - value
+}
+export pure func min(a: Int, b: Int) Int {
+  if a <= b {
+    return a
+  }
+  return b
+}
+export pure func max(a: Int, b: Int) Int {
+  if a >= b {
+    return a
+  }
+  return b
+}

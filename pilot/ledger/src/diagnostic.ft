@@ -1,0 +1,225 @@
+// Problems found in a journal. Each is tied to the line it is about, and a line is reported at most once: the
+// first problem found on a line is kept, so a malformed line never produces a cascade of follow-on reports.
+import pilot.ledger.scan { LineNo }
+import pilot.ledger.order { sortedBy }
+
+// Every kind of problem the parser and the validator report.
+export enum Problem derive Equatable {
+  MalformedDate
+  InvalidDate
+  MalformedAmount
+  TooPrecise
+  BadCommodityCode
+  BadAccountName
+  UnknownDirective
+  MalformedDirective
+  MalformedHeader
+  MalformedPosting
+  PostingOutsideTransaction
+  DuplicateCommodity
+  DuplicateAccount
+  UndeclaredAccount
+  UnknownCommodity
+  Unbalanced
+  TwoElidedPostings
+  NothingToInfer
+  TooFewPostings
+  DateOutOfOrder
+  Overflow
+  Unexpected
+}
+
+// How serious a problem is: an error removes the transaction from the reports; a warning keeps it.
+export enum Severity derive Equatable {
+  Error
+  Warning
+}
+
+// The stable code of a problem, as printed: `date.malformed`.
+export pure func problemCode(problem: Problem) StringView from static {
+  return match problem {
+    MalformedDate => "date.malformed"
+    InvalidDate => "date.invalid"
+    MalformedAmount => "amount.malformed"
+    TooPrecise => "amount.too_precise"
+    BadCommodityCode => "commodity.bad_code"
+    BadAccountName => "account.bad_name"
+    UnknownDirective => "directive.unknown"
+    MalformedDirective => "directive.malformed"
+    MalformedHeader => "transaction.malformed"
+    MalformedPosting => "posting.malformed"
+    PostingOutsideTransaction => "posting.outside_transaction"
+    DuplicateCommodity => "commodity.duplicate"
+    DuplicateAccount => "account.duplicate"
+    UndeclaredAccount => "account.undeclared"
+    UnknownCommodity => "commodity.unknown"
+    Unbalanced => "transaction.unbalanced"
+    TwoElidedPostings => "transaction.two_elided"
+    NothingToInfer => "transaction.nothing_to_infer"
+    TooFewPostings => "transaction.too_few_postings"
+    DateOutOfOrder => "date.out_of_order"
+    Overflow => "amount.overflow"
+    Unexpected => "unexpected"
+  }
+}
+
+// The severity of each kind of problem.
+export pure func severityOf(problem: Problem) Severity {
+  return match problem {
+    DateOutOfOrder => Severity.Warning
+    DuplicateCommodity => Severity.Warning
+    DuplicateAccount => Severity.Warning
+    MalformedDate => Severity.Error
+    InvalidDate => Severity.Error
+    MalformedAmount => Severity.Error
+    TooPrecise => Severity.Error
+    BadCommodityCode => Severity.Error
+    BadAccountName => Severity.Error
+    UnknownDirective => Severity.Error
+    MalformedDirective => Severity.Error
+    MalformedHeader => Severity.Error
+    MalformedPosting => Severity.Error
+    PostingOutsideTransaction => Severity.Error
+    UndeclaredAccount => Severity.Error
+    UnknownCommodity => Severity.Error
+    Unbalanced => Severity.Error
+    TwoElidedPostings => Severity.Error
+    NothingToInfer => Severity.Error
+    TooFewPostings => Severity.Error
+    Overflow => Severity.Error
+    Unexpected => Severity.Error
+  }
+}
+
+// One problem on one line.
+export class Diagnostic {
+  export line: LineNo
+  export problem: Problem
+  export detail: String
+
+  // The printed form: `line 12: error amount.malformed: "12.3.4" is not an amount`.
+  export pure func render(self) String {
+    let level = match severityOf(self.problem) {
+      Error => "error"
+      Warning => "warning"
+    }
+    return "line ${self.line}: ${level} ${problemCode(self.problem)}: ${self.detail}"
+  }
+
+  export pure func isError(self) Bool => severityOf(self.problem) == Severity.Error
+}
+
+// The problems of one journal, at most one per line.
+export class Diagnostics {
+  items: List[Diagnostic]
+  reported: Set[LineNo]
+
+  export pure func empty() Diagnostics => Diagnostics(items: List.default(), reported: Set.default())
+
+  // Records a problem; returns false, and records nothing, when the line already has one.
+  export pure func note(editable self, line: LineNo, problem: Problem, detail: owned String) Bool {
+    if !(editable self.reported.add(line)) {
+      return false
+    }
+    editable self.items.push(Diagnostic(line: line, problem: problem, detail: move detail))
+    return true
+  }
+
+  // True when a problem was recorded for the line.
+  export pure func hasLine(self, line: LineNo) Bool => self.reported.contains(line)
+
+  export pure func count(self) Int => self.items.count()
+
+  // The number of problems that are errors.
+  export pure func errorCount(self) Int => self.items.countWhere(fn(d: Diagnostic) Bool => d.isError())
+
+  // The number of problems that are warnings.
+  export pure func warningCount(self) Int => self.items.countWhere(fn(d: Diagnostic) Bool => !d.isError())
+
+  // The problems in line order.
+  export pure func inLineOrder(self) List[Diagnostic] {
+    return sortedBy(self.items, fn(a: Diagnostic, b: Diagnostic) Bool => a.line < b.line)
+  }
+
+  // Adds every problem of another collection whose line has none yet.
+  export pure func merge(editable self, other: Diagnostics) Void {
+    for d in other.items {
+      discard editable self.note(d.line, d.problem, copy d.detail)
+    }
+  }
+}
+
+// Consumes the failures of a sink without reporting them and returns how many there were. Discarding
+// failures is the `recovers` effect, so only tests use this; the program reports its failures instead.
+export pure recovers func settle(sink: owned List[Failure]) Int {
+  let mut count = 0
+  move sink.consumeEach(fn mut[editable count](f: owned Failure) Void {
+    let lost: Outcome[Int] = Outcome.failure(move f)
+    let one = move lost or recover 1
+    count = Int.saturatingAdd(count, one)
+  })
+  return count
+}
+
+test "codes and severities" cases {
+  "malformed date": { problem: Problem.MalformedDate, code: "date.malformed", serious: true }
+  "unbalanced":     { problem: Problem.Unbalanced, code: "transaction.unbalanced", serious: true }
+  "out of order":   { problem: Problem.DateOutOfOrder, code: "date.out_of_order", serious: false }
+  "duplicate":      { problem: Problem.DuplicateAccount, code: "account.duplicate", serious: false }
+} as row {
+  expect problemCode(row.problem) == row.code
+  expect (severityOf(row.problem) == Severity.Error) == row.serious
+}
+
+test "one problem per line, the first wins" {
+  let mut found = Diagnostics.empty()
+  expect editable found.note(LineNo(3), Problem.MalformedAmount, "first")
+  expect !(editable found.note(LineNo(3), Problem.Unbalanced, "second"))
+  expect editable found.note(LineNo(1), Problem.DateOutOfOrder, "third")
+  expect found.count() == 2
+  expect found.hasLine(LineNo(3))
+  expect !found.hasLine(LineNo(2))
+  expect found.errorCount() == 1
+  expect found.warningCount() == 1
+}
+
+test "problems come out in line order" {
+  let mut found = Diagnostics.empty()
+  discard editable found.note(LineNo(9), Problem.Unbalanced, "nine")
+  discard editable found.note(LineNo(2), Problem.MalformedDate, "two")
+  discard editable found.note(LineNo(5), Problem.TooFewPostings, "five")
+  let ordered = found.inLineOrder()
+  expect (ordered.at(0) or fail).line == LineNo(2)
+  expect (ordered.at(1) or fail).line == LineNo(5)
+  expect (ordered.at(2) or fail).line == LineNo(9)
+}
+
+test "rendering" {
+  let d = Diagnostic(line: LineNo(12), problem: Problem.MalformedAmount, detail: "\"12.3.4\" is not an amount")
+  expect d.render() == "line 12: error amount.malformed: \"12.3.4\" is not an amount"
+  let w = Diagnostic(line: LineNo(4), problem: Problem.DateOutOfOrder, detail: "earlier than line 2")
+  expect w.render() == "line 4: warning date.out_of_order: earlier than line 2"
+}
+
+test "merging keeps the first problem of a line" {
+  let mut first = Diagnostics.empty()
+  discard editable first.note(LineNo(1), Problem.MalformedDate, "a")
+  let mut second = Diagnostics.empty()
+  discard editable second.note(LineNo(1), Problem.Unbalanced, "b")
+  discard editable second.note(LineNo(2), Problem.Unbalanced, "c")
+  editable first.merge(second)
+  expect first.count() == 2
+  let ordered = first.inLineOrder()
+  expect (ordered.at(0) or fail).problem == Problem.MalformedDate
+}
+
+property "a line is reported at most once" forall (lines: List[Int<1..20>]) {
+  let mut found = Diagnostics.empty()
+  let mut distinct: Set[Int] = Set.default()
+  for n in lines {
+    let line = LineNo.validate(n) or fail
+    discard editable found.note(line, Problem.MalformedPosting, "x")
+    discard editable distinct.add(n)
+  }
+  expect found.count() == distinct.count()
+}

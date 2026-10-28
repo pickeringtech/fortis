@@ -1,0 +1,11 @@
+// accept
+// Fields are accessed through `self` inside a method and through a loan outside (4.4, 4.5).
+export class Counter {
+  count: Int
+  export pure func current(self) Int {
+    return self.count
+  }
+  export pure func create() Counter => Counter(count: 0)
+}
+
+pure func readIt(c: Counter) Int => c.count

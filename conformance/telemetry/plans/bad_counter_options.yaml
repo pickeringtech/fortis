@@ -1,0 +1,9 @@
+# E-TEL-004: an option the instrument does not take
+telemetry:
+  projections:
+    p:
+      source: OrderProcessing
+      metrics:
+        - name: p.count
+          instrument: counter
+          buckets: [1, 2]   # expect: E-TEL-004

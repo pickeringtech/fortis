@@ -1,0 +1,5 @@
+export class Node {
+  export count: Int
+}
+
+export func weigh(n: Node) Int => n.count

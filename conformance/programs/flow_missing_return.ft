@@ -1,0 +1,22 @@
+// reject: E-TYP-110 (at the marked lines)
+// covers: LANG-05-05
+pure func noElse(flag: Bool) Int {          // reject: E-TYP-110
+  if flag {
+    return 1
+  }
+}
+
+pure func afterWhile(n: Int) Int {         // reject: E-TYP-110
+  let mut i = 0
+  while i < n {
+    i = Int.wrappingAdd(i, 1)
+  }
+}
+
+pure func breaksOut(n: Int) Int {          // reject: E-TYP-110
+  loop {
+    if n > 0 {
+      break
+    }
+  }
+}

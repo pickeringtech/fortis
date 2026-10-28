@@ -1,0 +1,4 @@
+// reject: E-TYP-150 (at the marked line)
+// covers: LANG-11-09
+@nothing()                                 // reject: E-TYP-150 — not a declared aspect
+func work(n: Int) Int => n

@@ -1,0 +1,7 @@
+// reject: E-OWN-053 (at the marked line)
+// covers: LANG-07-09
+// C.2: a class that stores a loan has no lowering in v1 (X-137); own, copy, hold a Shared, or pass per call.
+export class Cursor {                      // reject: E-OWN-053 — a field stores a view of something else
+  export rest: StringView
+  export position: Int
+}

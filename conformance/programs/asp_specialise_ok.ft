@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-11-09, LANG-11-08
+import fortis.host { Console }
+export aspect logged(label: StringView, level: Int = 1) {
+  needs console: Console
+  before {
+    console.print(label)
+  }
+}
+export aspect quick(label: StringView, ...rest) = logged(label: label, ...rest)
+@quick("go", level: 2)
+func work(console: Console, n: Int) Int => n

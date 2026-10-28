@@ -1,0 +1,15 @@
+// reject: E-TYP-080 (at the class)
+// D-61 (review): a contract on an interface member is the contract its declaring module names; the implementing module
+// need not import it for the claim to bind (before, importing only `Measured` dropped `Lean`'s `noalloc`).
+import bad.contract.import.shapes { Measured }
+
+export class Box implements Measured {
+  export items: List[Int]
+  func size(self) Int {
+    let fresh = List.of(1, 2, 3)
+    return fresh.count()
+  }
+}
+
+export func main(args: List[String]) Void {
+}

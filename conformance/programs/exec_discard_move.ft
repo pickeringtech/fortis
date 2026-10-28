@@ -1,0 +1,51 @@
+// execute: made 1|made 2|built|cleanup 1|cleanup 2|after|made 1|made 2|built|cleanup 1|cleanup 2|done
+// requires: runtime
+// covers: LANG-07-07
+// 7.9: `discard move t` destroys `t` at the discard, including an enum whose payload is a tuple of values that
+// themselves own cleanup. A local that simply falls out of its function is destroyed there too, fields in
+// declaration order, and neither case traces `drop` (the enum declares no cleanup).
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export enum Tree {
+  Tip(item: Handle)
+  Nest(child: (Tree, Handle))
+}
+
+func tree(console: Shared[Console]) Tree => Tree.Nest(child: (Tree.Tip(item: Handle.make(1, alias console)), Handle.make(2, alias console)))
+
+func discarded(console: Shared[Console]) Void {
+  let t = tree(alias console)
+  console.print("built")
+  discard move t
+  console.print("after")
+}
+
+func ended(console: Shared[Console]) Void {
+  let t = tree(alias console)
+  console.print("built")
+}
+
+func run(console: Shared[Console]) Void {
+  discarded(alias console)
+  ended(alias console)
+  console.print("done")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

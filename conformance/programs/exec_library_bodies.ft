@@ -1,0 +1,51 @@
+// execute: [] [14] [25,9,81,0,81,4,64]|[] [] [5,9,9,2]|0 1 4|[] [7] [-8,2,9,0,9,-3,5] [-8,2,9,0,9,-3,5]|[] [7,5,-3,9,0,9,2,-8] [5,-3,9,0,9,2,-8,7]|[] [7] [-8,-3,0,2,5,9,9]|<pear><apple> <apple><fig><pear> <pear><fig><apple><pear><apple> 1|[4,3,5] 3
+// requires: runtime
+// covers: LANG-06-07
+// The list functions whose native bodies are hand-written Rust (X-119): each over empty, single and
+// several items, with trivial and owning element types. The native harness also builds this program
+// with the bodies lowered from library/fortis and requires the same output.
+import fortis.host { Host }
+import fortis.collections { sorted }
+
+func show(xs: ListView[Int]) String {
+  let mut out = "["
+  let mut i = 0
+  while i < xs.count() {
+    if i > 0 {
+      out = "${out},"
+    }
+    out = "${out}${xs.get(i) ?? 0}"
+    i = Int.wrappingAdd(i, 1)
+  }
+  return "${out}]"
+}
+
+func words(xs: ListView[String]) String {
+  let mut out = String.empty()
+  let mut i = 0
+  while i < xs.count() {
+    out = "${out}<${xs.get(i) ?? ""}>"
+    i = Int.wrappingAdd(i, 1)
+  }
+  return move out
+}
+
+func backwards(xs: ListView[Int]) List[Int] => xs.reversed()
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let none: List[Int] = List.default()
+  let one = List.of(7)
+  let many = List.of(5, -3, 9, 0, 9, 2, -8)
+  let names = List.of(String.from("pear"), String.from("fig"), String.from("apple"))
+  caps.console.print("${show(none.map(fn(x: Int) Int => Int.wrappingMul(x, 2)))} ${show(one.map(fn(x: Int) Int => Int.wrappingMul(x, 2)))} ${show(many.map(fn(x: Int) Int => Int.wrappingMul(x, x)))}")
+  caps.console.print("${show(none.filter(fn(x: Int) Bool => x > 0))} ${show(one.filter(fn(x: Int) Bool => x > 7))} ${show(many.filter(fn(x: Int) Bool => x > 0))}")
+  caps.console.print("${none.countWhere(fn(x: Int) Bool => x > 0)} ${one.countWhere(fn(x: Int) Bool => x == 7)} ${many.countWhere(fn(x: Int) Bool => x % 3 == 0)}")
+  caps.console.print("${show(none.reversed())} ${show(one.reversed())} ${show(many.reversed())} ${show(backwards(many))}")
+  caps.console.print("${show(none.concat(none))} ${show(one.concat(many))} ${show(many.concat(one))}")
+  caps.console.print("${show(sorted(none))} ${show(sorted(one))} ${show(sorted(many))}")
+  let long = names.filter(fn(w: String) Bool => w.scalarCount() > 3)
+  caps.console.print("${words(long)} ${words(names.reversed())} ${words(names.concat(long))} ${names.countWhere(fn(w: String) Bool => w.byteCount() == 3)}")
+  let lengths = names.map(fn(w: String) Int => w.scalarCount())
+  caps.console.print("${show(lengths)} ${names.count()}")
+}

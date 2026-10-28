@@ -1,0 +1,10 @@
+// accept
+import acme.cells { Cell }
+func project(c: editable Cell) editable Cell from c {
+  return editable c
+}
+
+func bump(cell: editable Cell) Void {
+  let result = project(editable cell)  // cell is suspended while result lives
+  result.value = 1                     // accept
+}

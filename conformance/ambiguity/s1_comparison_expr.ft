@@ -1,0 +1,6 @@
+// accept — S1: comparisons in expression position
+pure func less(a: Int, b: Int, c: Int) Bool {
+  let x = a < b
+  let y = b > c && a <= c
+  return x || y
+}

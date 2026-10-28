@@ -1,0 +1,18 @@
+// execute: fail:demo.odd
+// reports: runtime-failure:demo.odd
+// requires: runtime
+// covers: LANG-10-06
+// A failing `try main` writes exactly one runtime-failure record and exits 1 (10.6, PROG-DIA-07).
+export error Odd {
+  code: "demo.odd"
+  payload { value: Int }
+}
+try func check(n: Int) Int {
+  if n % 2 == 1 {
+    fail Odd(value: n)
+  }
+  return n
+}
+export try func main(args: List[String]) Void {
+  discard check(3) or fail
+}

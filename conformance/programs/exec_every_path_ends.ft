@@ -1,0 +1,43 @@
+// execute: negative|zero|positive|caught demo.bad
+// requires: runtime
+// covers: LANG-05-05
+// Every path of a non-Void function ends in `return` or `fail` (5.5).
+import fortis.host { Host }
+
+export error Bad {
+  code: "demo.bad"
+}
+
+pure func sign(n: Int) String {
+  if n < 0 {
+    return "negative"
+  } else if n == 0 {
+    return "zero"
+  }
+  return "positive"
+}
+
+try func checked(n: Int) Int {
+  if n > 10 {
+    fail Bad()
+  }
+  return n
+}
+
+recovers func run(n: Int) String {
+  let v = checked(n) catch e {
+    recover -1
+  }
+  if v < 0 {
+    return "caught demo.bad"
+  }
+  return "${v}"
+}
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print(sign(-5))
+  caps.console.print(sign(0))
+  caps.console.print(sign(9))
+  caps.console.print(run(11))
+}

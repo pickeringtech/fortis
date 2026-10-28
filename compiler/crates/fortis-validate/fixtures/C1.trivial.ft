@@ -1,0 +1,9 @@
+// DEL-45 fixture for C1.trivial (the trivial table): a trivial class of trivial fields.
+export trivial class Point {
+  export x: Int
+  export y: Int
+}
+export func main(args: List[String]) Void {
+  let p = Point(x: 1, y: 2)
+  discard p.x
+}

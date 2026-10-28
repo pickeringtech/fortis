@@ -1,0 +1,14 @@
+// Recursive calls: fib(36) with wrapping arithmetic.
+import fortis.host { Host }
+
+pure func fib(n: Int) Int {
+  if n < 2 {
+    return n
+  }
+  return Int.wrappingAdd(fib(Int.wrappingSub(n, 1)), fib(Int.wrappingSub(n, 2)))
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${fib(36)}")
+}

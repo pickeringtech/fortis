@@ -1,0 +1,6 @@
+// reject: E-TYP-040 (at the marked line)
+// An interpolated literal allocates a String and is not a view (3.5).
+pure func label(count: Int) Int {
+  let v: StringView = "count ${count}"      // reject: E-TYP-040
+  return v.scalarCount()
+}

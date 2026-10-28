@@ -1,0 +1,8 @@
+// reject: E-OWN-053 (at the marked line)
+// covers: LANG-07-06
+export class User {
+  export name: String
+}
+pure func displayName(user: User) StringView {     // reject: E-OWN-053 — a view result names its origin with `from`
+  return alias user.name
+}

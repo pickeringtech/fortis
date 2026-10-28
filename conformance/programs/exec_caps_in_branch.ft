@@ -1,0 +1,13 @@
+// execute: no arguments
+// requires: runtime
+// covers: LANG-11-07
+// D-110: the rule is one direct call in the entry `main`'s own body, outside every loop, lambda and hook; a branch is
+// part of that body.
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  if args.isEmpty() {
+    let caps = Host.capabilities()
+    caps.console.print("no arguments")
+  }
+}

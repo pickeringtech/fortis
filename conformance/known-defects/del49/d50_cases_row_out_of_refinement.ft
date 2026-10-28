@@ -1,0 +1,8 @@
+pure func percent(part: Int<0..100>) Int => part
+
+test "percent" cases {
+  "low": { part: 0, expected: 0 }
+  "too high": { part: 150, expected: 150 }
+} as row {
+  expect percent(row.part) == row.expected
+}

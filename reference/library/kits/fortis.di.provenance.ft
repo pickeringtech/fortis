@@ -1,0 +1,2 @@
+// Kit signature fixture (DEL-06; Platform 3.5). Importing this package turns on live provenance: the generated
+// scope classes record creation, reuse and disposal events (fortis-di); the package exports nothing.

@@ -1,0 +1,54 @@
+// execute: opened 3|charged 5 via eu|charged 7 via eu|refused:demo.closed
+// covers: PLAT-03-01, PLAT-03-03
+// `using factory`: a factory's parameters are filled like slots, an authority by a loan for the call; a `try`
+// factory makes every generated function that calls it `try`, so a failing construction reaches the caller as a
+// failure and the scope's already-built instances are dropped in reverse order.
+import fortis.host { Host, Console, Capabilities }
+
+export error Closed {
+  code: "demo.closed"
+}
+
+export class Region {
+  name: String
+}
+
+export class Gateway {
+  region: String
+  limit: Int
+  export func charge(self, cents: Int) String => "charged ${cents} via ${self.region}"
+}
+
+export try func openGateway(region: Region, console: Shared[Console], limit: Int) Gateway {
+  if limit == 0 {
+    fail Closed()
+  }
+  console.print("opened ${limit}")
+  return Gateway(region: copy region.name, limit: limit)
+}
+
+export class Checkout {
+  inject gateway: Shared[Gateway]
+  export func pay(self, cents: Int) String => self.gateway.charge(cents)
+}
+
+context Live(console: owned Shared[Console], limit: Int) {
+  provide Region using instance Region(name: "eu")
+  provide Shared[Console] using instance move console
+  provide Int using instance limit
+  provide Shared[Gateway] using factory openGateway { lifetime: application }
+  provide Checkout
+}
+
+export try recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  let app = Live.application(console.retain(), 3) or fail
+  console.print(app.checkout().pay(5))
+  console.print(app.checkout().pay(7))
+  let closed = Live.application(console.retain(), 0) catch e {
+    console.print("refused:${e.code}")
+    return
+  }
+}

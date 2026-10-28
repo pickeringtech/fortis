@@ -1,0 +1,9 @@
+{"verdict": "reject", "code": "E-FUN-011", "codes": ["E-FUN-011", "E-NAM-001"], "covers": ["LANG-08-03"], "records": [
+  {"file": "app.ft", "line": 27, "column": 39, "code": "E-NAM-001", "message": "bad.capture.module.util declares no missing", "candidates": ["clamp"]},
+  {"file": "app.ft", "line": 32, "column": 39, "code": "E-NAM-001", "message": "bad.capture.module.util declares no gone", "candidates": ["clamp"]},
+  {"file": "app.ft", "line": 17, "column": 14, "code": "E-FUN-011", "message": "`limit` is a module-level name, not a local or parameter: it is not a capture (8.3)", "candidates": null},
+  {"file": "app.ft", "line": 22, "column": 14, "code": "E-FUN-011", "message": "`helper` is a module-level name, not a local or parameter: it is not a capture (8.3)", "candidates": null},
+  {"file": "app.ft", "line": 12, "column": 19, "code": "E-FUN-011", "message": "`util` is a module-level name, not a local or parameter: it is not a capture (8.3)", "candidates": null},
+  {"file": "app.ft", "line": 27, "column": 19, "code": "E-FUN-011", "message": "`util` is a module-level name, not a local or parameter: it is not a capture (8.3)", "candidates": null},
+  {"file": "app.ft", "line": 32, "column": 19, "code": "E-FUN-011", "message": "`util` is a module-level name, not a local or parameter: it is not a capture (8.3)", "candidates": null}
+]}

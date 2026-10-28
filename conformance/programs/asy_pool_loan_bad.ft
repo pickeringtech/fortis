@@ -1,0 +1,16 @@
+// reject: E-ASY-003 (at the marked lines)
+// covers: LANG-12-05
+// 12.5/12.7: loans never cross a pool launch, neither as a future argument nor as a closure capture.
+export class Buffer {
+  export used: Int
+}
+async func scan(b: Buffer) Int => b.used
+async func run() Int {
+  let buf = Buffer(used: 1)
+  let mut count = 0
+  scope tasks {
+    let a = tasks.launchParallel(scan(buf))          // reject: E-ASY-003 — buf is passed by loan
+    let b = tasks.launchBlocking(fn once[editable count]() Int => count)   // reject: E-ASY-003 — an editable capture crosses the launch
+    return Int.wrappingAdd(await a, await b)
+  }
+}

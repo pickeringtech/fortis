@@ -1,0 +1,17 @@
+import fortis.host { Host }
+
+interface Shape {
+  pure func area(self) Int
+}
+
+class Square implements Shape {
+  export side: Int
+  export pure func area(self) Int => self.side
+}
+
+pure func areaOf[T](s: T) Int where T implements Shape => s.area()
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${areaOf(Square(side: 3))}")
+}

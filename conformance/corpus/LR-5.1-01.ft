@@ -1,0 +1,8 @@
+// reject: E-NAM-001, E-NAM-002 (at the marked lines)
+let a = 1
+let mut b = a          // trivial copy, no marker
+b = b + 1              // proof: a is 1, b is 2, no overflow
+// reject: E-NAM-001 — `c` is not declared
+c = 3
+// reject: E-NAM-002 — `a` is immutable
+a = 2

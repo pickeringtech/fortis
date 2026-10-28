@@ -1,0 +1,17 @@
+// accept
+// covers: LANG-07-05
+export enum Shape {
+  Circle(radius: Int)
+  Square(side: Int)
+}
+export class Holder {
+  export shape: Shape
+}
+func run(h: editable Holder) Int {
+  let r = match h.shape {
+    Circle(radius: x) => x
+    Square(side: s) => s
+  }
+  h.shape = Shape.Circle(radius: r)
+  return r
+}

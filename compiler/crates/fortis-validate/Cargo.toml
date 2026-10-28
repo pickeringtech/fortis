@@ -1,0 +1,11 @@
+[package]
+name = "fortis-validate"
+description = "The shared IR validator (DEL-45; PROG-ARC-01, PROG-CMP-07): one check per Appendix C.1 lowering row and C.3 allocation pattern, run before any backend consumes the typed IR"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fortis-mir = { path = "../fortis-mir" }
+fortis-types = { path = "../fortis-types" }
+fortis-diag = { path = "../fortis-diag" }

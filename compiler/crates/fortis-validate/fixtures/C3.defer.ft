@@ -1,0 +1,12 @@
+// DEL-45 fixture for C3.defer: a deferred block is on the whitelist when its body is (here, arithmetic only).
+noalloc func total(a: Int, b: Int) Int {
+  let mut sum = 0
+  defer {
+    sum = Int.wrappingAdd(sum, 1)
+  }
+  sum = Int.wrappingAdd(a, b)
+  return sum
+}
+export func main(args: List[String]) Void {
+  discard total(1, 2)
+}

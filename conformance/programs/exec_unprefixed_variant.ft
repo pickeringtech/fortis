@@ -1,0 +1,116 @@
+// execute: true true true true|1 100|true true true|1 1 20|stop|1|2|20|0 2 true
+// requires: runtime
+// covers: LANG-09-07
+// The `Enum.` prefix of a variant may be left out wherever the expected type is that enum (9.7): a `return`, a
+// `match` arm's value, an annotated `let`, an argument and a field initialiser. The value is the variant itself, so
+// it compares equal to the prefixed form and matches its arm, also when two enums declare a variant of that name,
+// inside a collection, and for a core library enum (`Ordering`).
+// The interpreter once read an unprefixed variant as a type reference (D-53).
+import fortis.host { Host }
+
+enum Light derive Equatable {
+  Red
+  Amber
+  Green
+
+  export pure func code(self) Int {
+    return match self {
+      Red => 1
+      Amber => 2
+      Green => 3
+    }
+  }
+}
+
+enum Paint derive Equatable {
+  Red
+  Blue
+
+  export pure func shade(self) Int {
+    return match self {
+      Red => 20
+      Blue => 30
+    }
+  }
+}
+
+enum Coin derive Equatable {
+  Penny
+  Pound
+
+  export pure func pence(self) Int {
+    return match self {
+      Penny => 1
+      Pound => 100
+    }
+  }
+}
+
+class Lamp {
+  export light: Light
+}
+
+pure func viaReturn() Light {
+  return Red
+}
+
+pure func viaArm(flag: Bool) Light {
+  return match flag {
+    true => Amber
+    false => Green
+  }
+}
+
+pure func viaLet() Paint {
+  let x: Paint = Red
+  return x
+}
+
+pure func same(a: Light, b: Light) Bool => a == b
+
+pure func coin(big: Bool) Coin {
+  if big {
+    return Pound
+  }
+  return Penny
+}
+
+pure func ordering() Ordering => Less
+
+pure func rank(o: Ordering) Int {
+  return match o {
+    Less => 0
+    Equal => 1
+    Greater => 2
+  }
+}
+
+pure func advice(l: Light) String {
+  return match l {
+    Red => "stop"
+    Amber => "wait"
+    Green => "go"
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${viaReturn() == Light.Red} ${viaArm(true) == Light.Amber} ${viaArm(false) == Light.Green} ${viaLet() == Paint.Red}")
+  caps.console.print("${coin(false).pence()} ${coin(true).pence()}")
+  let lamp = Lamp(light: Red)
+  caps.console.print("${lamp.light == Light.Red} ${same(Red, Light.Red)} ${lamp.light != Light.Green}")
+  caps.console.print("${viaReturn().code()} ${lamp.light.code()} ${viaLet().shade()}")
+  caps.console.print(advice(Red))
+  let mut lights: List[Light] = List.default()
+  editable lights.push(Red)
+  editable lights.push(Amber)
+  let mut paints: List[Paint] = List.default()
+  editable paints.push(Red)
+  for l in lights {
+    caps.console.print("${l.code()}")
+  }
+  for p in paints {
+    caps.console.print("${p.shade()}")
+  }
+  caps.console.print("${rank(ordering())} ${rank(Ordering.Greater)} ${ordering() == Ordering.Less}")
+}

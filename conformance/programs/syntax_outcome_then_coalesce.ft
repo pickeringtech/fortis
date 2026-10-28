@@ -1,0 +1,4 @@
+// reject: E-SYN-000 (at the marked line)
+export try func load(id: Int) Int {
+  return fetch(id) or fail ?? 0           // reject: E-SYN-000 — not a sentence: `or fail` ends the expression (LR 5.6)
+}

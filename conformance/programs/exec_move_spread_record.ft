@@ -1,0 +1,37 @@
+// execute: made 1|made 2|cleanup 1|cleanup 2|a
+// execute-trace: drop Handle|drop Handle
+// requires: runtime
+// covers: LANG-07-07
+// 9.2, 7.9: `...move` of a record drops the record's fields the target lacks, in the record's written order,
+// and their cleanup runs. The record is not a class, and the drop is the same one. `zeta` is written before
+// `extra`, so the dropped fields are not alphabetical.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export class Narrow {
+  export name: String
+}
+
+func run(console: Shared[Console]) Void {
+  let r = { name: "a", zeta: Handle.make(1, alias console), extra: Handle.make(2, alias console) }
+  let n = Narrow(...move r)
+  console.print(n.name)
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

@@ -1,0 +1,17 @@
+export error Missing {
+  code: "store.missing"
+  payload { key: Int }
+}
+
+pure func made() Outcome[Int] {
+  let f: Failure = Missing(key: 9)
+  return Outcome.failure(move f)
+}
+
+pure func direct() Outcome[Int] => Outcome.failure(Missing(key: 9))
+
+recovers func value() Int => made() or recover 0
+
+test "made" {
+  expect value() == 0
+}

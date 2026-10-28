@@ -1,0 +1,20 @@
+# E-TEL-003: an up-down projection without bind_at: lifecycle_start
+telemetry:
+  projections:
+    s:
+      source: Session
+      where:
+        field: tier
+        in: [Business]
+      dimensions: [tier]
+      metrics:
+        - name: s.open   # expect: E-TEL-003
+          instrument: updown
+          lifecycle:
+            key: session
+            start:
+              field: phase
+              equals: 1
+            end:
+              field: phase
+              equals: 2

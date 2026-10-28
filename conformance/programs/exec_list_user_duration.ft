@@ -1,0 +1,17 @@
+// execute: 1
+// requires: runtime
+// covers: LANG-04-03
+// `List[Duration].default` is the core list of this program's `Duration`, not `rt::Duration` (D-142).
+import fortis.host { Host }
+
+class Duration {
+  export n: Int
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let f: fn() List[Duration] = List[Duration].default
+  let mut xs = f()
+  editable xs.push(Duration(n: 7))
+  caps.console.print("${xs.count()}")
+}

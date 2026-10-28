@@ -1,0 +1,54 @@
+// execute: 7|too_big|empty|cleanup|3
+// requires: runtime
+// covers: LANG-10-04
+// The native allocator probe runs every noalloc function here on its success, failure and cleanup paths and
+// aborts on any allocation; the interpreter prints the same observable results. `retain` of a Shared handle
+// allocates nothing (7.8), so `stamp` may claim noalloc while its ticket holds the console.
+import fortis.host { Host, Console, Capabilities }
+export error TooBig {
+  code: "demo.too_big"
+  payload { value: Int, limit: Int }
+}
+export error Empty {
+  code: "demo.empty"
+}
+export class Ticket {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("cleanup")          // a literal: the cleanup allocates nothing, so stamp may claim noalloc (11.3)
+  }
+}
+export noalloc try func clamp(n: Int, limit: Int) Int {
+  if n > limit {
+    fail TooBig(value: n, limit: limit)
+  }
+  if n == 0 {
+    fail Empty()
+  }
+  return n
+}
+export noalloc try func stamp(console: Shared[Console], n: Int) Int {
+  let t = Ticket(id: n, console: console.retain())
+  if n < 0 {
+    fail TooBig(value: n, limit: 0)
+  }
+  return t.id
+}
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  let ok = clamp(7, 100) or recover -1
+  console.print("${ok}")
+  let big = clamp(500, 100) catch e {
+    console.print("too_big")
+    recover -1
+  }
+  let none = clamp(0, 100) catch e {
+    console.print("empty")
+    recover -1
+  }
+  let stamped = stamp(console, 3) or recover -1
+  console.print("${stamped}")
+}

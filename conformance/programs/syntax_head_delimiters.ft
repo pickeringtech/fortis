@@ -1,0 +1,4 @@
+// reject: E-SYN-000 (at the marked line)
+application Demo {
+  provide ( ]                            // reject: E-SYN-000 — head bodies are balanced token sequences
+}

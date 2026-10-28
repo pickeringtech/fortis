@@ -1,0 +1,4 @@
+// reject: E-SYN-001 (at the marked line)
+import fortis.web.components { SafeHtml }
+
+server component Counter { state { n: Int } view { ; } }   // reject: E-SYN-001 — `view` does not start a statement after `}` on the same line

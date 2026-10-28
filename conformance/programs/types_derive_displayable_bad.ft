@@ -1,0 +1,8 @@
+// reject: E-TYP-090 (at the marked line)
+export class Customer {
+  export name: String
+}
+
+export class Badge derive Displayable {    // reject: E-TYP-090 — Customer is not Displayable
+  export owner: Customer
+}

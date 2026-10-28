@@ -1,0 +1,10 @@
+// accept
+import ver.lib { Invoice }
+import ver.mid.api { Printer }
+
+export class Plain implements Printer {
+  export pure func print(self, invoice: Invoice) String => "invoice"
+}
+
+export func main(args: List[String]) Void {
+}

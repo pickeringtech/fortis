@@ -1,0 +1,6 @@
+// accept — S4: single-line bodies and multi-line bodies are both sentences
+export class B { export x: Int }
+pure func h(b: B) Int { return b.x }
+pure func k(b: B) Int {
+  return b.x
+}

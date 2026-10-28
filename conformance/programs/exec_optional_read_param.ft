@@ -1,0 +1,151 @@
+// execute: sum 6|sum 6|head 1|none|label ab|label ab|label -|first 6|tag 1|depth 6|lambda 1|lambda 0|shape 1|shape 4|fallback 2 1|value 1 9|lazy 1|made|lazy 7|other 1 2|narrowed 2 0|generic 1 1|text 2 3|choose ab abc
+// requires: runtime
+// covers: LANG-06-08
+// D-2: a place that is not trivial, passed where an optional is read (6.8, present injection), is lent, not moved,
+// so it is still there afterwards: a class value, a string, a nested optional field, a temporary, `null`, an
+// optional parameter passed on, narrowed, copied, matched, coalesced with `??`, and read by a lambda and an
+// interface method.
+import fortis.host { Host, Console }
+
+export class Node {
+  export value: Int
+  export next: Node?
+}
+
+export class Tag {
+  export name: String
+}
+
+export interface Shape {
+  func size(self, n: Node?) Int
+}
+
+export class Square implements Shape {
+  export side: Int
+  export func size(self, n: Node?) Int {
+    if n != null {
+      return n.value
+    }
+    return self.side
+  }
+}
+
+pure func sum(n: Node?) Int {
+  return match n {
+    present(node) => Int.wrappingAdd(node.value, sum(node.next))
+    null => 0
+  }
+}
+
+pure func head(n: Node?) String {
+  if n != null {
+    return "head ${n.value}"
+  }
+  return "none"
+}
+
+pure func label(s: String?) String {
+  return match s {
+    present(t) => "label ${t}"
+    null => "label -"
+  }
+}
+
+pure func passOn(n: Node?) Int => sum(n)
+
+pure func fallback(s: String?) Int => (s ?? "x").scalarCount()
+
+pure func valueOr(n: Node?) Int => (n ?? Node(value: 9, next: null)).value
+
+export class Boxy {
+  export n: Int
+  export lock: Mutex[Int]
+}
+
+func makeBoxy(console: Console) Boxy {
+  console.print("made")
+  return Boxy(n: 7, lock: Mutex.create(0))
+}
+
+func lazy(b: Boxy?, console: Console) Int => (b ?? makeBoxy(console)).n
+
+func useBoxy(b: Boxy) Int => b.n
+
+func orOther(b: Boxy?, other: Boxy) Int => useBoxy(b ?? other)
+
+pure func length(s: String) Int => s.scalarCount()
+
+pure func maybeLength(s: String?) Int {
+  if s != null {
+    return length(s)
+  }
+  return 0
+}
+
+pure func readAny[T](x: T) Int => 1
+
+pure func viaGeneric(s: String?) Int => readAny(s)
+
+pure func textOr(s: String?, other: String) Int => (s ?? other).scalarCount()
+
+func choose(s: String?) String {
+  let other = String.from("abc")
+  return s ?? other
+}
+
+func tagCopy(t: Tag?) Tag? => copy t
+
+pure func make() Node? => Node(value: 1, next: Node(value: 2, next: Node(value: 3, next: null)))
+
+func first(n: Node?) Int {
+  if n != null {
+    return n.value
+  }
+  return 0
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let list = Node(value: 1, next: Node(value: 2, next: Node(value: 3, next: null)))
+  caps.console.print("sum ${sum(list)}")
+  caps.console.print("sum ${sum(list)}")
+  caps.console.print(head(list))
+  caps.console.print(head(null))
+  let name = String.from("ab")
+  caps.console.print(label(name))
+  caps.console.print(label(name))
+  caps.console.print(label(null))
+  caps.console.print("first ${passOn(list)}")
+  let tag = Tag(name: String.from("x"))
+  let copied = tagCopy(tag)
+  let shown = match copied {
+    present(t) => t.name.scalarCount()
+    null => 0
+  }
+  caps.console.print("tag ${shown}")
+  caps.console.print("depth ${sum(make())}")
+  let probe = fn(n: Node?) Int => first(n)
+  caps.console.print("lambda ${probe(list)}")
+  caps.console.print("lambda ${probe(null)}")
+  let s = Square(side: 4)
+  caps.console.print("shape ${s.size(list)}")
+  caps.console.print("shape ${s.size(null)}")
+  caps.console.print("fallback ${fallback(name)} ${fallback(null)}")
+  caps.console.print("value ${valueOr(list)} ${valueOr(null)}")
+  let boxy = Boxy(n: 1, lock: Mutex.create(0))
+  let given = lazy(boxy, caps.console)
+  caps.console.print("lazy ${given}")
+  let second = lazy(null, caps.console)
+  caps.console.print("lazy ${second}")
+  let other = Boxy(n: 2, lock: Mutex.create(0))
+  let o1 = orOther(boxy, other)
+  let o2 = orOther(null, other)
+  caps.console.print("other ${o1} ${o2}")
+  caps.console.print("narrowed ${maybeLength(name)} ${maybeLength(null)}")
+  caps.console.print("generic ${viaGeneric(name)} ${viaGeneric(null)}")
+  let fallbackText = String.from("abc")
+  caps.console.print("text ${textOr(name, fallbackText)} ${textOr(null, fallbackText)}")
+  let chosen = choose(name)
+  let fallen = choose(null)
+  caps.console.print("choose ${chosen} ${fallen}")
+}

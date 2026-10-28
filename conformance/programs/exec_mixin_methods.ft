@@ -1,0 +1,34 @@
+// execute: Invoice 7 (2 lines)|Order 3 (5 lines)
+// requires: runtime
+// covers: LANG-09-04
+// A mixin contributes methods built on the methods it requires; it adds no state (9.4).
+import fortis.host { Host }
+
+export mixin Summarised {
+  requires pure func title(self) String
+  requires pure func lineCount(self) Int
+
+  export pure func summary(self) String {
+    return "${self.title()} (${self.lineCount()} lines)"
+  }
+}
+
+export class Invoice with Summarised {
+  export id: Int
+  export lines: Int
+  export pure func title(self) String => "Invoice ${self.id}"
+  export pure func lineCount(self) Int => self.lines
+}
+
+export class Order with Summarised {
+  export id: Int
+  export lines: Int
+  export pure func title(self) String => "Order ${self.id}"
+  export pure func lineCount(self) Int => self.lines
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print(Invoice(id: 7, lines: 2).summary())
+  caps.console.print(Order(id: 3, lines: 5).summary())
+}

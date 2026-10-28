@@ -1,0 +1,18 @@
+// accept
+// covers: LANG-11-09
+export error Denied {
+  code: "demo.denied"
+}
+export aspect guard(limit: Int) {
+  before {
+    if limit > 10 {
+      fail Denied()
+    }
+  }
+  on failure(f: Failure) Int {
+    report f
+    return 0
+  }
+}
+@guard(limit: 20)
+func work(n: Int) Int => n

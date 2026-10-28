@@ -1,0 +1,6 @@
+// accept
+// This Cee is not Displayable. Another module's Cee that derives Displayable is a different type.
+export class Cee {
+  export n: Int
+  export pure func make() Cee => Cee(n: 1)
+}

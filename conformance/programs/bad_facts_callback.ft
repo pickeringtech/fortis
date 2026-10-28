@@ -1,0 +1,19 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-04-04
+// Callback parameters are compared with ordinary equality, which ignores origin. A parameter
+// whose type is the user's FileSystem is not a parameter of host.FileSystem.
+import fortis.host
+
+class FileSystem {
+  n: Int
+}
+
+func kept(f: owned fn(FileSystem) Void) fn(FileSystem) Void => move f
+func hostKept(f: owned fn(host.FileSystem) Void) fn(host.FileSystem) Void => move f
+
+func wrong(f: owned fn(FileSystem) Void) fn(host.FileSystem) Void => move f    // reject: E-TYP-040
+func listParam(f: owned fn(List[FileSystem]) Void) fn(List[host.FileSystem]) Void => move f    // reject: E-TYP-040
+func second(f: owned fn(Int, FileSystem) Void) fn(Int, host.FileSystem) Void => move f    // reject: E-TYP-040
+func nested(f: owned fn(fn(FileSystem) Void) Void) fn(fn(host.FileSystem) Void) Void => move f    // reject: E-TYP-040
+func optional(f: owned fn(FileSystem?) Void) fn(host.FileSystem?) Void => move f    // reject: E-TYP-040
+func listResult(f: owned fn() List[FileSystem]) fn() List[host.FileSystem] => move f    // reject: E-TYP-040 — the result element

@@ -1,0 +1,9 @@
+// Two `return`s of different lambdas from one non-dynamic function type.
+// LR 8.4's first paragraph types each return by signature; the heterogeneous-collection
+// sentence does not mention returns. Recorded only if both checkers still accept it.
+func make(b: Bool) fn(Int) Int {
+  if b {
+    return pure noalloc fn(x: Int) Int => x
+  }
+  return pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1)
+}

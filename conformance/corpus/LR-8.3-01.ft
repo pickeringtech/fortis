@@ -1,0 +1,12 @@
+// reject: E-OWN-011 (at the marked lines)
+let prefix = String.from("Hello")
+let greet = fn[alias prefix](name: StringView) String {
+  return "${prefix}, ${name}"
+}
+let mut counter = 0
+let mut bump = fn mut[editable counter]() Void {
+  counter = Int.saturatingAdd(counter, 1)
+}
+editable bump()             // calling a fn mut takes an exclusive loan of `bump`
+// reject: E-OWN-011 — counter is loaned exclusively by `bump` until the block ends
+let now = counter

@@ -1,0 +1,6 @@
+// One module stores the first lambda in Step.run.
+export class Step {
+  export run: fn(Int) Int
+}
+
+export func make() Step => Step(run: pure noalloc fn(x: Int) Int => x)  // reject: E-TYP-040 — another module already stored one lambda

@@ -1,0 +1,14 @@
+// reject: E-OBL-001, E-TYP-040 (at the marked lines)
+import acme.accounts { CustomerId, loadAccount, save }
+func a(id: CustomerId) Void {
+  loadAccount(id)                        // reject: E-OBL-001 — outcome dropped at end of block
+}
+
+func b(id: CustomerId) Void {
+  save(loadAccount(id))                  // reject: E-TYP-040 — save expects Account, got Outcome[Account]
+}
+
+try func c(id: CustomerId) Void {
+  let account = loadAccount(id) or fail  // accept
+  save(account)
+}

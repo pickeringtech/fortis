@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-08-04
+// A lambda literal whose inferred summary satisfies `pure` may be passed where `pure fn` is required (X-107),
+// including inside an expression-bodied function (the lambda's block is the lambda's, not the function's).
+func applyPure(f: pure fn(Int) Int) Int => f(1)
+pure func twice(n: Int) Int => applyPure(fn[n](x: Int) Int {
+  return Int.wrappingAdd(x, n)
+})
+pure func evens(items: List[Int]) List[Int] => items.filter(fn(x: Int) Bool => x % 2 == 0)

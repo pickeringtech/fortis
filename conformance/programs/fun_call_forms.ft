@@ -1,0 +1,24 @@
+// reject: E-OWN-001, E-OWN-020 (at the marked lines)
+// covers: LANG-08-02
+export class Box {
+  export label: String
+}
+func keep(b: owned Box) Void {
+}
+func run(box: owned Box) Void {
+  let mut counter = 0
+  let mut bump = fn mut[editable counter]() Void {
+    counter = Int.saturatingAdd(counter, 1)
+  }
+  bump()                                           // reject: E-OWN-001 — a fn mut is called `editable bump()`
+  let mut other = 0
+  let fixed = fn mut[editable other]() Void {
+    other = 0
+  }
+  editable fixed()                                 // reject: E-OWN-001 — the binding holding a fn mut must be let mut
+  let finish = fn once[move box]() Void {
+    keep(move box)
+  }
+  move finish()
+  move finish()                                    // reject: E-OWN-020 — a fn once is consumed by its call
+}

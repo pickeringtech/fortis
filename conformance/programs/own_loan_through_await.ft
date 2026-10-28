@@ -1,0 +1,11 @@
+// reject: E-OWN-051 (at the marked line)
+// covers: LANG-07-04
+// A future holds the loans of its arguments (7.3): it cannot outlive a local it borrows.
+export class Buffer {
+  export used: Int
+}
+async func scan(b: Buffer) Int => b.used
+func make() Future[Int] {
+  let local = Buffer(used: 1)
+  return scan(local)                       // reject: E-OWN-051 — the future keeps a loan of `local`
+}

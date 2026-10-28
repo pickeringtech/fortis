@@ -1,0 +1,10 @@
+// DEL-45 fixture for C1.defer: a deferred block uses only places initialised where it is registered.
+import fortis.host { Host }
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let n = 3
+  defer {
+    caps.console.print("done ${n}")
+  }
+  caps.console.print("work")
+}

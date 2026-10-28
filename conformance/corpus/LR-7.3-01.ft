@@ -1,0 +1,12 @@
+// reject: E-OWN-011 (at the marked line)
+class Cell {
+  export value: Int
+}
+func inspect(c: Cell) Int => c.value
+
+func use(c: editable Cell) Void {
+  discard inspect(c)         // accept: read child of the exclusive parent, ends when inspect returns
+  let r = editable c         // exclusive child held by r: c is suspended until the block ends
+  r.value = 1
+  discard c.value            // reject: E-OWN-011 — c is suspended while r is live
+}

@@ -1,0 +1,10 @@
+// D-111 (the user's decision, 26 Oct 2026): a package's entry `main` may be `recovers` (4.6), as a single file's may.
+// `recovers` is imported through calls (11.3), so a `main` that calls a `recovers` function must declare it; before
+// the decision the resolver refused this entry with E-NAM-001 and dropping `recovers` was E-EFF-001.
+import fortis.host { Host }
+import exec.main.recovers.limits
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${limits.clamped(42)} ${limits.clamped(-7)}")
+}

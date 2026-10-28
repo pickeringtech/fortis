@@ -1,0 +1,15 @@
+// accept
+// covers: LANG-08-04
+func applyFn(f: fn(Int) Int) Int => f(1)
+func applyMut(f: editable fn mut(Int) Int) Int => editable f(1)
+func run() Int {
+  let plain = pure fn(x: Int) Int => x
+  let a = applyFn(plain)
+  let mut n = 0
+  let mut bump = fn mut[editable n](x: Int) Int {
+    n = x
+    return n
+  }
+  let b = applyMut(editable bump)
+  return Int.saturatingAdd(a, b)
+}

@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-09-06, LANG-07-07
+// 9.8, 7.9: `let Name(field: p, other: _) = move place` consumes the place. The binding owns its field and `_` discards a non-linear field.
+export class Pair {
+  export first: String
+  export second: String
+}
+
+func take(p: owned Pair) String {
+  let Pair(first: a, second: _) = move p
+  return move a
+}

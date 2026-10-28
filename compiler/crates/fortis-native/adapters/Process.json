@@ -1,0 +1,42 @@
+{
+  "capability": "Process",
+  "rule": "PROG-ARC-02",
+  "normative": "Language Reference 11.6, 15",
+  "adapter": "compiler/crates/fortis-native/src/host.rs",
+  "handle": {
+    "representation": "a zero-sized Copy struct with a private constructor (Appendix C.1)",
+    "ownership": "carries no state, so a copy is the capability itself; a future that holds one owns it and may be detached",
+    "created_by": "Host.capabilities(), called once by main (11.6); every other handle of this type is derived from that one"
+  },
+  "operations": {
+    "run": {
+      "ownership": {
+        "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+        "program": "a read loan for the call, not retained",
+        "arguments": "a read loan of the list for the call, not retained",
+        "result": "an Int exit status"
+      },
+      "effects": [
+        "alloc",
+        "block",
+        "fail",
+        "io"
+      ],
+      "failures": [
+        "process.denied"
+      ],
+      "allocation": "none on success; the failure value with its `program` field when refused",
+      "cancellation": "not a cancellation point: the call waits for the program to finish and holds its thread meanwhile (the `block` effect); async code runs it as blocking-pool work, which observes cancellation only at checkpoint() (12.4), while the cooperative tasks run on",
+      "waiting": {
+        "fixture": "conformance/programs/exec_host_process_waiting.ft",
+        "states": "the blocking work runs to completion on the blocking pool; the cooperative task runs after it and the scope joins both"
+      }
+    }
+  },
+  "violation": {
+    "fixture": "conformance/programs/exec_host_violations.ft",
+    "refused_by": "native",
+    "expect": "process.denied",
+    "clause": "starts no process; every program except true and false is refused"
+  }
+}

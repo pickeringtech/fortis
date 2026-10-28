@@ -1,0 +1,40 @@
+// reject: E-OWN-001, E-OWN-020 (at the marked lines)
+// covers: LANG-07-01, LANG-12-03
+// D-33: a future is linear and `await` consumes it (12.3), so it may be awaited only through a place that owns it,
+// once. A future reached through a read or editable loan, or through a Shared, belongs to someone else: awaiting it
+// would consume it for every other holder (the interpreter and the VM failed at a second await; native code could not
+// lower it). A second await is a use after move. Both checkers accepted all of these, and also a field moved out of a
+// loan.
+async func work() Int => 1
+
+class Holder {
+  export job: Future[Int]
+}
+
+async func viaShared(h: Shared[Holder]) Int => await h.job          // reject: E-OWN-001 — through a Shared
+
+async func viaLoan(h: Holder) Int => await h.job                    // reject: E-OWN-001 — through a read loan
+
+async func viaEditable(h: editable Holder) Int => await h.job       // reject: E-OWN-001 — through an editable loan
+
+func moveOut(h: Holder) Future[Int] => move h.job                   // reject: E-OWN-001 — a field moved out of a loan
+
+async func viaAlias(h: Shared[Holder]) Int {
+  let borrowed = alias h.job
+  return await borrowed                                              // reject: E-OWN-001 — through a local loan of it
+}
+
+async func twice() Int {
+  let f = work()
+  let a = await f
+  let b = await f                                                    // reject: E-OWN-020 — awaited again
+  return a
+}
+
+async func whole(h: owned Holder) Int {
+  let Holder(job: j) = move h
+  return await j
+}
+
+export func main(args: List[String]) Void {
+}

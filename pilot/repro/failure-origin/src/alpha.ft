@@ -1,0 +1,5 @@
+// Another module with an associated function also called `of`; it never fails.
+export class Box {
+  export n: Int
+  export pure func of(n: Int) Box => Box(n: n)
+}

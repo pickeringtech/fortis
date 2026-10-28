@@ -1,0 +1,17 @@
+import fortis.host { Host }
+
+class Wide {
+  export name: String
+  export extra: Int
+}
+
+class Narrow {
+  export name: String
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let w = Wide(name: "a", extra: 1)
+  let n = Narrow(...copy w)
+  caps.console.print(n.name)
+}

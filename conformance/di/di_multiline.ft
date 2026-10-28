@@ -1,0 +1,28 @@
+// execute: 3 limits, first 10, tax 20
+// covers: PLAT-03-01
+// An `inject` slot becomes a field where it is written, so a field that spans several lines next to it is left
+// whole (only the word `inject` leaves the slot's line).
+import fortis.host { Host }
+
+export class Rate {
+  percent: Int
+}
+
+export class Policy {
+  inject rate: Rate
+  limits: List[Int] = List.of(
+    10,
+    20,
+    30)
+  export func describe(self) String => "${self.limits.count()} limits, first ${self.limits.get(0) ?? 0}, tax ${self.rate.percent}"
+}
+
+context Production {
+  provide Rate using instance Rate(percent: 20)
+  provide Policy
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print(Production.application().policy().describe())
+}

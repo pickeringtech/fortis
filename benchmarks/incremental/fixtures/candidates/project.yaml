@@ -1,0 +1,5 @@
+schema: fortis.project/v1
+name: cand.app
+version: 1.0.0
+dependencies:
+  fortis: "1.0"

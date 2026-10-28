@@ -1,0 +1,4 @@
+// reject: E-SYN-000 (at the marked line)
+const a = 1_000_000
+const b = 0xFF_FF
+const c = 1_                              // reject: E-SYN-000 — `_` separates digit groups

@@ -1,0 +1,8 @@
+// reject: E-TYP-090 (at the marked line)
+// covers: LANG-06-10
+// DEL-29 exclusion 2 of 7: a capability (an Authority) is not data; Decodable would let input forge one.
+import fortis.host { Network }
+export class Job derive Codec {      // reject: E-TYP-090
+  export name: String
+  export network: Network
+}

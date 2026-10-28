@@ -1,0 +1,10 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-08-04
+// The expected result of `List.of` fills its type parameter before the arguments (6.10, D-253),
+// except when that parameter would become a function type (8.4). `List[fn(Int) Int]` must not
+// bind the element up front: the first lambda pins the closure, and the second conflicts.
+func run() Int {
+  let ys: List[fn(Int) Int] = List.of(fn(x: Int) Int => x, fn(x: Int) Int => Int.saturatingAdd(x, 1))   // reject: E-TYP-040 — expected closure type does not admit a second lambda
+  discard ys
+  return 0
+}

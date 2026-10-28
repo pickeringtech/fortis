@@ -1,0 +1,16 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-08-04
+// A spread that supplies a lambda pins that field. A later construction with another
+// lambda is a second closure in the same field.
+class Step {
+  export run: fn(Int) Int
+}
+
+func run() Int {
+  let r = { run: pure noalloc fn(x: Int) Int => x }
+  let s = Step(...move r)
+  let t = Step(run: pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1))  // reject: E-TYP-040 — the spread already stored one lambda
+  discard s
+  discard t
+  return 0
+}

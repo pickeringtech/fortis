@@ -1,0 +1,13 @@
+// accept — src/entries.ft in package acme.ledger
+// Deciding-cycle program 2, module one: a `derive Codec` type with the JSON format mixin, whose
+// exported fields are encoded from another module (codec_report.ft).
+import fortis.money { Money }
+import fortis.time { Timestamp }
+import fortis.codec.json { JsonSerialised }
+
+export class Entry derive Codec, Equatable with JsonSerialised {
+  export reference: String<scalars: 1..64>
+  export amount: Money
+  export postedAt: Timestamp
+  export note: String?                   // derive Codec requires every field exported (LR 6.10)
+}

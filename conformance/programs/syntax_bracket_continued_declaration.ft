@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-03-02
+export class Pair[T,
+  U] {
+  export first: T
+  export second: U
+
+  export pure func where(self) Int => 0
+}

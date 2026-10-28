@@ -1,0 +1,7 @@
+// accept
+export interface Renderable requires Displayable {
+  pure func render(self) String
+  func reset(editable self) Void
+  func create(name: String) Self    // associated: no self
+  const limit: Int                 // associated constant
+}

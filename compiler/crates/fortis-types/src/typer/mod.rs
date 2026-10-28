@@ -1,0 +1,1951 @@
+//! Statement and expression typing over declaration tables (DEL-07, DEL-11..DEL-25 analyses): a port of
+//! checker/typer.py. One walk per body threads types, interval facts, ownership state, the effect summary and open
+//! obligations; what a rule cannot decide is `Unknown` and produces no record (PROG-DIA-02).
+
+mod aspects;
+pub mod expr;
+mod patterns;
+mod stmts;
+
+use std::cell::RefCell;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::rc::Rc;
+
+use fortis_diag::Json;
+use fortis_syntax::lexer::{Kind, Token};
+use fortis_syntax::view::{C, N};
+
+use crate::decls::{Decl, DeclChecker, DeclRef, Sig};
+use crate::effects::{library_summary, Summary, AUTHORITIES};
+use crate::intervals::{self as iv, Facts, Interval};
+use crate::literals::{is_interp, is_strlit};
+use crate::owners::{overlaps, root_of, Loan, Owners};
+use crate::types::*;
+
+#[derive(Clone, Debug)]
+pub struct Binding {
+    pub ty: Type,
+    pub mutable: bool,
+    pub kind: String,
+    pub depth: i64,
+}
+
+pub struct EnvFrame {
+    parent: Option<Env>,
+    vars: RefCell<HashMap<String, Binding>>,
+}
+pub type Env = Rc<EnvFrame>;
+
+pub fn env_new(parent: Option<&Env>) -> Env {
+    Rc::new(EnvFrame { parent: parent.cloned(), vars: RefCell::new(HashMap::new()) })
+}
+pub fn env_lookup(env: &Env, n: &str) -> Option<Binding> {
+    let mut e = Some(env.clone());
+    while let Some(f) = e {
+        if let Some(b) = f.vars.borrow().get(n) {
+            return Some(b.clone());
+        }
+        e = f.parent.clone();
+    }
+    None
+}
+pub fn env_get(env: &Env, n: &str) -> Option<Type> {
+    env_lookup(env, n).map(|b| b.ty)
+}
+pub fn env_set(env: &Env, n: &str, t: Type, mutable: bool, kind: &str) {
+    env.vars.borrow_mut().insert(n.to_string(), Binding { ty: t, mutable, kind: kind.to_string(), depth: 0 });
+}
+/// Mutate the binding where it is found (the reference mutates the Binding object).
+pub fn env_update<F: FnOnce(&mut Binding)>(env: &Env, n: &str, f: F) {
+    let mut e = Some(env.clone());
+    while let Some(fr) = e {
+        if let Some(b) = fr.vars.borrow_mut().get_mut(n) {
+            f(b);
+            return;
+        }
+        e = fr.parent.clone();
+    }
+}
+pub fn env_local(env: &Env, n: &str) -> Option<Binding> {
+    env.vars.borrow().get(n).cloned()
+}
+
+pub const OPEN_SCRUTINEE: &[&str] = &["Int", "String", "StringView", "Failure", "Scalar", "Byte", "Decimal", "Duration", "Timestamp"];
+
+pub fn ftok<'a>(n: N<'a>) -> &'a Token {
+    n.first_token().expect("a node with a token")
+}
+pub fn ctok<'a>(c: C<'a>) -> &'a Token {
+    match c {
+        C::T(t) => t,
+        C::N(n) => ftok(n),
+    }
+}
+pub fn synth(text: &str, line: usize, col: usize) -> Token {
+    Token { kind: Kind::Punct, text: text.into(), line, col, interps: vec![], closes_type_args: false, holes: Default::default() }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct ClosureInfo {
+    pub kind: String,
+    pub captures: Vec<(String, String)>,
+    pub linear: bool,
+    pub eff: Option<Summary>,
+}
+
+/// A unit of a module's pass (`Typer::units`): a declaration by name, an implement block (its index and
+/// `Interface for Target`), a test or property (its index among the module's declarations and `test "name"`).
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Unit {
+    Decl(String),
+    Implement(usize, String),
+    Test(usize, String),
+}
+
+impl Unit {
+    /// The unit's stable ID.
+    pub fn id(&self) -> String {
+        match self {
+            Unit::Decl(n) => format!("decl {n}"),
+            Unit::Implement(_, s) => format!("implement {s}"),
+            Unit::Test(_, s) => s.clone(),
+        }
+    }
+}
+
+pub struct Typer<'a> {
+    pub dc: DeclChecker<'a>,
+    pub module: String,
+    pub package: String,
+    pub aliases: BTreeMap<String, String>,
+    pub self_type: Option<Type>,
+    pub self_mode: String,
+    pub ret_type: Option<Type>,
+    pub in_try: bool,
+    pub ctx: Vec<String>,
+    pub arm_types: Vec<Vec<(Type, Token)>>,
+    pub loop_labels: Vec<Option<String>>,
+    pub give_seen: Vec<bool>,
+    pub facts: Facts,
+    pub coll_path: Option<String>,
+    pub own: Owners,
+    pub depth: i64,
+    pub arg_mode: Option<String>,
+    pub receiver: Option<(String, String)>,
+    pub in_marker: bool,
+    pub pending: Option<(String, String, Token)>,
+    pub res_stack: Vec<Vec<(String, String)>>,
+    pub lambda_kind: Vec<String>,
+    pub last_closure: Option<ClosureInfo>,
+    pub last_closure_eff: Option<Summary>,
+    pub closures: BTreeMap<String, ClosureInfo>,
+    pub discharges: Vec<(usize, String)>,
+    pub eff: Summary,
+    pub fresh: BTreeSet<String>,
+    pub editable_params: BTreeSet<String>,
+    pub summaries: BTreeMap<String, Summary>,
+    /// the summary labels the pass looked up (an incremental check depends on exactly these, DEL-46)
+    pub requested: RefCell<BTreeSet<String>>,
+    pub current_label: String,
+    pub call_decl: Option<DeclRef<'a>>,
+    pub call_label: String,
+    pub final_pass: bool,
+    pub reported: BTreeSet<String>,
+    pub schema: Option<DeclRef<'a>>,
+    pub schema_unknown: bool,
+    pub current_aspects: Vec<N<'a>>,
+    pub caps_calls: usize,
+    /// the type parameters of the body being typed, and its owner's and its own `where` bounds with arguments (6.10)
+    pub tparams_in_scope: BTreeSet<String>,
+    pub where_in_scope: Vec<(String, NamedT)>,
+    /// a generic class's bounds, for the method call checked next (D-171)
+    pub pending_owner_where: Vec<(String, NamedT)>,
+    /// constants whose value is being typed (a cycle guard; D-149)
+    pub const_stack: BTreeSet<String>,
+    pub elaborations: Vec<String>,
+    pub defer_depth: i64,
+    /// the type of every expression node (and of each postfix step) of the final pass, when `record_types` is set:
+    /// the typed IR builder reads it (fortis-mir)
+    pub node_types: Option<HashMap<usize, Type>>,
+    /// the type a `give`/`recover` value joins, when known
+    pub branch_expected: Vec<Option<Type>>,
+    /// typing a branch value whose target type is known
+    pub branch_target: bool,
+    pub record_types: bool,
+    pub closure_info: HashMap<usize, ClosureInfo>,
+    pub guards: Vec<(String, i64, Token)>,
+    pub scope_depths: Vec<(String, i64)>,
+    pub deferred: Vec<(i64, BTreeSet<String>, Token)>,
+    /// (block depth, deferred block) registered in the blocks being walked (D-75)
+    pub defer_bodies: Vec<(i64, N<'a>)>,
+    /// (depth, states) per if-expression branch, match arm and catch block: the states at each `give`/`recover`, after
+    /// the cleanup they run (D-76)
+    pub exit_frames: Vec<(i64, Vec<Facts>)>,
+    /// (label, depth, states) per loop: the states at each `break` (D-72)
+    pub break_frames: Vec<(Option<String>, i64, Vec<Facts>)>,
+    /// the statements after the one being walked, in its block (D-75)
+    pub block_rest: Vec<N<'a>>,
+    /// every place whose facts were discarded, in order, for the module check (D-74, D-77)
+    pub inval_log: Vec<String>,
+    pub catch_bound: Vec<String>,
+    pub carried: Vec<Loan>,
+    /// temporaries an async call's future lends, until their statement ends (12.3; D-31)
+    pub carried_temps: Vec<(Token, usize)>,
+    /// calls being checked, innermost last: a temporary is recorded with the depth of the call it is lent to
+    pub call_depth: usize,
+    pub use_ok: bool,
+    /// expected type of the call about to be checked, consumed by it
+    pub pending_call_expected: Option<Type>,
+    /// expected type of a chain's last call, copied across at the call itself
+    pub result_expected: Option<Type>,
+    pub level_values: Vec<BTreeMap<String, (Option<N<'a>>, Env)>>,
+    /// the function IR of every body typed in the final pass (fortis-ir adds the control-flow graphs)
+    pub ir_out: Vec<crate::journal::FnIr>,
+    /// the head tokens of the function being typed (corrections insert modifiers before `func`)
+    pub head_toks: Vec<Token>,
+    /// the `fn` (and `mut`) tokens of the lambdas being typed (corrections strengthen a closure's kind)
+    pub lambda_toks: Vec<(Token, Option<Token>)>,
+    pub hole_trees: Vec<Rc<fortis_syntax::Parsed>>,
+}
+
+impl<'a> Typer<'a> {
+    pub fn new(dc: DeclChecker<'a>) -> Typer<'a> {
+        let module = dc.module_name.clone();
+        let package = dc.package.clone();
+        Typer {
+            dc,
+            module,
+            package,
+            aliases: BTreeMap::new(),
+            self_type: None,
+            self_mode: "self".into(),
+            ret_type: None,
+            in_try: false,
+            ctx: vec![],
+            arm_types: vec![],
+            loop_labels: vec![],
+            give_seen: vec![],
+            facts: Facts::default(),
+            coll_path: None,
+            own: Owners::default(),
+            depth: 0,
+            arg_mode: None,
+            receiver: None,
+            in_marker: false,
+            pending: None,
+            res_stack: vec![],
+            lambda_kind: vec![],
+            last_closure: None,
+            last_closure_eff: None,
+            closures: BTreeMap::new(),
+            discharges: vec![],
+            eff: Summary::default(),
+            fresh: BTreeSet::new(),
+            editable_params: BTreeSet::new(),
+            summaries: BTreeMap::new(),
+            requested: RefCell::new(BTreeSet::new()),
+            current_label: String::new(),
+            call_decl: None,
+            call_label: String::new(),
+            final_pass: true,
+            reported: BTreeSet::new(),
+            schema: None,
+            schema_unknown: false,
+            current_aspects: vec![],
+            caps_calls: 0,
+            tparams_in_scope: BTreeSet::new(),
+            where_in_scope: vec![],
+            pending_owner_where: vec![],
+            const_stack: BTreeSet::new(),
+            elaborations: vec![],
+            defer_depth: 0,
+            node_types: None,
+            branch_expected: Vec::new(),
+            branch_target: false,
+            record_types: false,
+            closure_info: HashMap::new(),
+            guards: vec![],
+            scope_depths: vec![],
+            deferred: vec![],
+            defer_bodies: vec![],
+            exit_frames: vec![],
+            break_frames: vec![],
+            block_rest: vec![],
+            inval_log: vec![],
+            catch_bound: vec![],
+            carried: vec![],
+            carried_temps: vec![],
+            call_depth: 0,
+            use_ok: true,
+            pending_call_expected: None,
+            result_expected: None,
+            level_values: vec![],
+            ir_out: vec![],
+            head_toks: vec![],
+            lambda_toks: vec![],
+            hole_trees: vec![],
+        }
+    }
+
+    // ---- records ----------------------------------------------------------------------
+    pub fn rec(&mut self, code: &str, msg: String, rule: &str, tok: &Token, fields: Json) {
+        self.dc.rec(code, msg, rule, Some(tok), fields, "violated");
+    }
+
+    pub fn typ(&mut self, code: &str, msg: String, tok: &Token, expected: &str, actual: &str, span: &str, rule: &str) {
+        self.rec(code, msg, rule, tok, DeclChecker::typ_fields(expected, actual, span));
+    }
+
+    pub fn rec_c(&mut self, code: &str, msg: String, rule: &str, tok: &Token, fields: Json, corr: Option<Json>) {
+        self.dc.rec_corr(code, msg, rule, Some(tok), fields, "violated", corr);
+    }
+
+    /// Insert text before a token: one edit of a correction.
+    pub fn insert_before(&self, kind: &str, t: &Token, text: &str) -> Json {
+        let f = self.dc.file.clone();
+        crate::decls::correction(kind, vec![crate::decls::edit(&f, t.line, t.col, t.col, text)])
+    }
+
+    /// A modifier inserted into the head of the function being typed, before the first of `before` it has.
+    pub fn insert_modifier(&self, kind: &str, word: &str, before: &[&str]) -> Option<Json> {
+        let t = self.head_toks.iter().find(|t| before.contains(&t.text.as_str()))?;
+        Some(self.insert_before(kind, t, &format!("{word} ")))
+    }
+
+    pub fn nam(name: &str, cands: Vec<String>) -> Json {
+        Json::obj([("name", Json::str(name)), ("candidates", Json::strs(cands))])
+    }
+
+    pub fn nrecords(&self) -> usize {
+        self.dc.records.len()
+    }
+    pub fn truncate_records(&mut self, n: usize) {
+        self.dc.records.truncate(n);
+    }
+
+    /// The declaration of a named type. A type is known by its identity (package@version and module, LANG-04-04),
+    /// computed in the module that declares it, not by a same-named declaration this module happens to import:
+    /// `import acme.left.items as left` enters `left.Item`, whose values have type `Item`.
+    pub fn decl_of(&self, t: &Type) -> Option<DeclRef<'a>> {
+        let t = strip(t);
+        match t {
+            Type::Refined { .. } | Type::Named(_) => self.dc.resolve_type(t, None),
+            _ => None,
+        }
+    }
+
+    /// Remember an unannotated constant's initialiser type (`module\0name`) for later uses and the IR builder.
+    pub fn note_inferred_const(&self, module: &str, name: &str, ty: &Type) {
+        if known(ty) {
+            self.dc.sess.inferred_consts.borrow_mut().insert(format!("{module}\0{name}"), ty.clone());
+        }
+    }
+
+    pub fn inferred_const(&self, module: &str, name: &str) -> Option<Type> {
+        self.dc.sess.inferred_consts.borrow().get(&format!("{module}\0{name}")).cloned()
+    }
+
+    pub fn foreign(&self, d: &Decl<'a>) -> bool {
+        d.module != self.module
+    }
+
+    // ---- visibility (4.4) -------------------------------------------------------------
+    pub fn member_visible(&self, d: &Decl<'a>, member: &str) -> bool {
+        if let Some(f) = d.fields.get(member) {
+            if f.1 {
+                return true;
+            }
+        } else if let Some(m) = d.methods.get(member) {
+            if m.exported {
+                return true;
+            }
+        } else {
+            return true;
+        }
+        for iface in &d.implements {
+            if let Some(id) = self.dc.resolve_named(iface, None) {
+                if id.methods.contains(member) || id.constants.contains(member) {
+                    return true;
+                }
+            }
+            if iface.name == "Abandonable" && member == "abandon" {
+                return true;
+            }
+        }
+        for mx in &d.mixins {
+            if let Some(md) = self.dc.resolve_named(mx, None) {
+                if md.methods.contains(&format!("requires:{member}")) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn check_member(&mut self, d: &Decl<'a>, member: &str, tok: &Token, what: &str) {
+        if self.foreign(d) && !self.member_visible(d, member) {
+            let mut cands: Vec<String> = d.fields.iter().filter(|(_, v)| v.1).map(|(k, _)| k.clone()).collect();
+            cands.sort();
+            let mut ms: Vec<String> = d.methods.iter().filter(|(_, s)| s.exported).map(|(k, _)| k.clone()).collect();
+            ms.sort();
+            cands.extend(ms);
+            self.rec(
+                "E-NAM-004",
+                format!("{what} `{member}` of {} is not exported; {} is declared in {}", d.name, d.name, d.module),
+                if what != "field" { "LANG-04-05" } else { "LANG-09-02" },
+                tok,
+                Self::nam(member, cands),
+            );
+        }
+    }
+
+    // ---- the interval domain (6.3) ------------------------------------------------------
+    pub fn path_of_place(&self, pl: N<'a>) -> String {
+        let ts = pl.direct_tokens();
+        let mut parts = vec![ts[0].text.clone()];
+        for k in pl.kids().into_iter().skip(1) {
+            match k {
+                C::N(n) if n.name() == "memberName" => parts.push(n.tokens()[0].text.clone()),
+                C::T(t) if t.kind == Kind::Int => parts.push(format!("[{}]", t.text)),
+                _ => {}
+            }
+        }
+        parts.join(".")
+    }
+
+    pub fn path_of_expr(&self, e: Option<N<'a>>) -> Option<String> {
+        let e = e?;
+        let n = e.name();
+        let kids = e.kids();
+        const PASS: &[&str] = &[
+            "constExpr", "expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "unaryExpr",
+            "exprStmt",
+        ];
+        if PASS.contains(&n) && kids.len() == 1 {
+            return match kids[0] {
+                C::N(k) => self.path_of_expr(Some(k)),
+                C::T(_) => None,
+            };
+        }
+        if n == "place" {
+            return Some(self.path_of_place(e));
+        }
+        if n == "markerExpr" && kids.len() == 2 {
+            return e.find("place").map(|p| self.path_of_place(p));
+        }
+        if n == "primaryExpr" {
+            if kids.len() == 1 {
+                if let C::T(t) = kids[0] {
+                    if t.kind == Kind::Lower || t.text == "self" {
+                        return Some(t.text.clone());
+                    }
+                }
+            }
+            if kids.len() == 3 && kids[0].text_is("(") {
+                return self.path_of_expr(kids[1].node());
+            }
+            return None;
+        }
+        if n == "postfixExpr" {
+            let mut root = self.path_of_expr(kids[0].node())?;
+            for pf in &kids[1..] {
+                let k = pf.node().map(|p| p.kids()).unwrap_or_default();
+                if !k.is_empty() && k[0].text_is(".") && k.len() > 1 && k[1].is("memberName") {
+                    root = format!("{root}.{}", k[1].node().unwrap().tokens()[0].text);
+                } else {
+                    return None;
+                }
+            }
+            return Some(root);
+        }
+        None
+    }
+
+    pub fn interval_of(&self, t: &Type) -> Option<Interval> {
+        int_bounds(strip(t))
+    }
+
+    pub fn fact_type(&self, path: Option<&str>, t: Type) -> Type {
+        let path = match path {
+            Some(p) => p,
+            None => return t,
+        };
+        let s = strip(&t).clone();
+        if let Type::Optional(i) = &s {
+            if self.facts.present.get(path) == Some(&true) {
+                return (**i).clone();
+            }
+        }
+        if let Some(&(lo, hi)) = self.facts.ints.get(path) {
+            if self.interval_of(&s).is_some() {
+                let base = match &s {
+                    Type::Refined { base, .. } => base.clone(),
+                    Type::Named(n) => n.clone(),
+                    _ => return t,
+                };
+                return refined(base, Some(lo), Some(hi), "range");
+            }
+        }
+        t
+    }
+
+    pub fn is_int(&self, t: &Type) -> bool {
+        self.interval_of(t).is_some()
+    }
+
+    pub fn ref_(&mut self, code: &str, msg: String, tok: &Token, status: &'static str, required: &str, proved: &str, widening: &str) {
+        self.rec(code, msg, "LANG-06-02", tok, Json::obj([("required_range", Json::str(required)), ("proved_interval", Json::str(proved)), ("widening_point", Json::str(widening))]));
+        if let Some(r) = self.dc.records.last_mut() {
+            r.status = status;
+        }
+    }
+
+    pub fn show_iv(i: Option<Interval>) -> String {
+        match i {
+            None => "?".into(),
+            Some((a, b)) => format!("[{a}, {b}]"),
+        }
+    }
+
+    pub fn set_fact(&mut self, path: Option<&str>, t: &Type) {
+        let path = match path {
+            Some(p) => p,
+            None => return,
+        };
+        self.inval_log.push(path.to_string());
+        self.facts.invalidate(path);
+        if let Some(i) = self.interval_of(t) {
+            self.facts.ints.insert(path.to_string(), i);
+        }
+    }
+
+    pub fn assigned_places(&self, block: N<'a>) -> BTreeSet<String> {
+        self.writes_in(block).into_iter().filter(|o| !o.is_empty()).collect()
+    }
+
+    /// Every place the node assigns or loans exclusively, in order and with repeats. A lambda body is a separate
+    /// activation and is not entered: the lambda writes outside itself only through its `editable` captures, which count
+    /// as writes where it is made; a marked use of a closure binding counts its `editable` captures as written there; an
+    /// interpolation hole is an expression evaluated where its string is (3.6), so its writes count there.
+    pub fn writes_in(&self, node: N<'a>) -> Vec<String> {
+        let mut out = Vec::new();
+        for c in node.kids() {
+            out.extend(self.writes_of(c));
+        }
+        out
+    }
+
+    /// The writes of one child: the node itself (see `writes_in`), then what it contains.
+    pub fn writes_of(&self, c: C<'a>) -> Vec<String> {
+        let mut out = Vec::new();
+        let c = match c {
+            C::T(tk) => {
+                if tk.kind == Kind::Str && tk.text.contains("${") {
+                    for (k, src) in expr::hole_sources(tk).into_iter().enumerate() {
+                        if let Some(p) = expr::hole_tree_at(tk, k, &src) {
+                            out.extend(self.writes_of(C::N(N::new(&p.root, &p.toks))));
+                        }
+                    }
+                }
+                return out;
+            }
+            C::N(n) => n,
+        };
+        {
+            match c.name() {
+                "lambda" => {
+                    if let Some(cl) = c.find("captureList") {
+                        for cap in cl.find_all("capture") {
+                            if let Some(pl) = cap.find("place") {
+                                if ftok(cap).text == "editable" {
+                                    out.push(self.path_of_place(pl));
+                                }
+                            }
+                        }
+                    }
+                    return out;
+                }
+                "assignStmt" => {
+                    if let Some(p) = c.find("place") {
+                        out.push(self.path_of_place(p));
+                    }
+                }
+                "markerExpr" => {
+                    if let Some(p) = self.marked_path(c) {
+                        if let Some(info) = self.closures.get(&root_of(&p)) {
+                            for (cp, cm) in &info.captures {
+                                if cm == "editable" {
+                                    out.push(cp.clone());
+                                }
+                            }
+                        }
+                        if c.tokens()[0].text == "editable" {
+                            out.push(p);
+                        }
+                    }
+                }
+                _ => {}
+            }
+            out.extend(self.writes_in(c));
+        }
+        out
+    }
+
+    /// The place a marker loans: in `editable p.m(...)` the greedy place took the method name, so the loaned place is the
+    /// receiver `p` (D-71: `editable xs.pop()` loans `xs`, not a place `xs.pop`).
+    pub fn marked_path(&self, m: N<'a>) -> Option<String> {
+        let pl = m.find("place")?;
+        let kids = m.kids();
+        let members: Vec<N<'a>> = pl.child_nodes("memberName");
+        if kids.len() > 2 && kids[2].text_is("(") && !members.is_empty() {
+            let mut parts = vec![pl.direct_tokens()[0].text.clone()];
+            for k in &members[..members.len() - 1] {
+                parts.push(k.tokens()[0].text.clone());
+            }
+            return Some(parts.join("."));
+        }
+        Some(self.path_of_place(pl))
+    }
+
+    /// A deferred body's effect on the facts where it runs (D-75): every place it assigns or loans exclusively loses its
+    /// facts, except that a place written once in the body, by a top-level `place = <integer literal>` (or its negation)
+    /// with no other write to it, a prefix of it or a field of it, holds the literal afterwards (the body has no exits,
+    /// E-DEF-001).
+    pub fn deferred_effects(&mut self, facts: &mut Facts, blk: N<'a>) {
+        let writes: Vec<String> = self.writes_in(blk).into_iter().filter(|w| !w.is_empty()).collect();
+        let places: BTreeSet<String> = writes.iter().cloned().collect();
+        for p in &places {
+            self.inval_log.push(p.clone());
+            facts.invalidate(p);
+        }
+        for st in blk.child_nodes("statement") {
+            let Some(C::N(inner)) = st.kid(0) else { continue };
+            if inner.name() != "assignStmt" {
+                continue;
+            }
+            let Some(pl) = inner.find("place") else { continue };
+            let path = self.path_of_place(pl);
+            let ets = inner.find("expr").map(|e| e.tokens()).unwrap_or_default();
+            // the literal holds only if this is the body's one write to the place, a prefix of it or a field of it
+            if path.is_empty() || writes.iter().filter(|q| iv::overlaps(q, &path)).count() != 1 || !inner.direct_tokens().iter().any(|t| t.text == "=") {
+                continue;
+            }
+            let negated = ets.len() == 2 && ets[0].text == "-";
+            let lit = if negated { &ets[1..] } else { &ets[..] };
+            if lit.len() == 1 && lit[0].kind == fortis_syntax::lexer::Kind::Int {
+                let mut i = self.interval_of(&crate::literals::literal_type(lit[0]));
+                if negated {
+                    i = i.and_then(|i| iv::arith("-", (0, 0), i, 64));
+                }
+                if let Some(i) = i {
+                    facts.ints.insert(path, i);
+                }
+            }
+        }
+    }
+
+    /// The state at an exit that leaves every block deeper than `depth`: their pending deferred bodies run (D-75).
+    pub fn cleanup_state(&mut self, depth: i64) -> Facts {
+        let mut s = self.facts.clone();
+        let bodies: Vec<(i64, N<'a>)> = self.defer_bodies.iter().rev().cloned().collect();
+        for (d, blk) in bodies {
+            if d > depth {
+                self.deferred_effects(&mut s, blk);
+            }
+        }
+        s
+    }
+
+    /// Type a condition and return (true state, false state, exact): the condition's effects are applied once, from the
+    /// state before it, and both states carry them (D-73).
+    pub fn condition_states(&mut self, cond: N<'a>, env: &Env) -> (Facts, Facts, bool) {
+        let pre = self.facts.clone();
+        self.condition(cond, env);
+        self.facts = pre;
+        self.narrow(cond, env)
+    }
+
+    /// (facts when true, facts when false, whether the false side is the exact negation).
+    pub fn narrow(&mut self, cond: N<'a>, env: &Env) -> (Facts, Facts, bool) {
+        let base = self.facts.clone();
+        let n = cond.name();
+        let kids = cond.kids();
+        const PASS: &[&str] = &[
+            "constExpr", "expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "unaryExpr",
+            "exprStmt",
+        ];
+        if PASS.contains(&n) && kids.len() == 1 {
+            if let C::N(k) = kids[0] {
+                return self.narrow(k, env);
+            }
+            return (base.clone(), base, false);
+        }
+        if n == "primaryExpr" && kids.len() == 3 && kids[0].text_is("(") {
+            return self.narrow(kids[1].node().unwrap(), env);
+        }
+        if n == "andExpr" && kids.len() > 1 {
+            // each conjunct is narrowed in the state where the earlier ones held, with its own effects; the expression is
+            // false when some conjunct is false, so the false state joins each conjunct's false state (D-73)
+            let mut t = base.clone();
+            let mut falses: Vec<Facts> = vec![];
+            for k in kids.iter().step_by(2) {
+                self.facts = t;
+                let (y, f, _) = self.narrow(k.node().unwrap(), env);
+                t = y;
+                falses.push(f);
+            }
+            self.facts = base;
+            return (t, Facts::join_all(&falses), false);
+        }
+        if (n == "equalityExpr" || n == "relationalExpr") && kids.len() == 3 {
+            let op = kids[1].tok().unwrap().text.clone();
+            let mut lp = self.path_of_expr(kids[0].node());
+            let rp = self.path_of_expr(kids[2].node());
+            let lt = self.infer_c(kids[0], env, None);
+            let mark = self.inval_log.len();
+            let rt = self.infer_c(kids[2], env, None);
+            // D-74, D-77: the left operand's value was read before the right operand ran; if the right operand discarded
+            // the left place's facts (a write, an editable loan), the comparison says nothing about its current value
+            if let Some(p) = &lp {
+                if self.inval_log[mark..].iter().any(|q| iv::overlaps(q, p)) {
+                    lp = None;
+                }
+            }
+            let cur = self.facts.clone(); // the state after both operands' effects
+            if n == "equalityExpr" {
+                for (p, t, other) in [(lp.clone(), strip(&lt).clone(), rt.clone()), (rp.clone(), strip(&rt).clone(), lt.clone())] {
+                    if let Some(p) = p {
+                        if t.is_optional() && *strip(&other) == null_t() {
+                            let (mut yes, mut no) = (cur.clone(), cur.clone());
+                            if op == "==" {
+                                no.present.insert(p, true);
+                            } else {
+                                yes.present.insert(p, true);
+                            }
+                            return (yes, no, true);
+                        }
+                    }
+                }
+            }
+            // length facts (6.7): the else branch of `i >= p.count()` gives `i < p`; the else branch of `i > p.count()`
+            // gives only `i <= p`, which does not permit indexing (D-70)
+            if n == "relationalExpr" && lp.is_some() && rp.is_none() && self.is_int(&lt) {
+                if let Some(cp) = self.count_receiver(kids[2].node().unwrap()) {
+                    let (mut yes, mut no) = (cur.clone(), cur.clone());
+                    if op == "<" {
+                        yes.below.insert(lp.clone().unwrap(), cp);
+                    } else if op == ">=" {
+                        no.below.insert(lp.clone().unwrap(), cp);
+                    }
+                    return (yes, no, true);
+                }
+            }
+            let (li, ri) = (self.interval_of(&lt), self.interval_of(&rt));
+            let (li, ri) = match (li, ri) {
+                (Some(a), Some(b)) => (a, b),
+                _ => return (cur.clone(), cur, false),
+            };
+            let (mut yes, mut no) = (cur.clone(), cur.clone());
+            let nop = iv::negate_op(&op);
+            if let Some(lp) = &lp {
+                if let Some(a) = iv::narrow(&op, li, ri) {
+                    yes.ints.insert(lp.clone(), a);
+                }
+                if let Some(b) = iv::narrow(nop, li, ri) {
+                    no.ints.insert(lp.clone(), b);
+                }
+            }
+            if let Some(rp) = &rp {
+                let fop = iv::flip_op(&op);
+                if let Some(a) = iv::narrow(fop, ri, li) {
+                    yes.ints.insert(rp.clone(), a);
+                }
+                if let Some(b) = iv::narrow(iv::negate_op(fop), ri, li) {
+                    no.ints.insert(rp.clone(), b);
+                }
+            }
+            return (yes, no, lp.is_some() || rp.is_some());
+        }
+        // no narrowing form: the condition still runs, so both branches see its effects (D-73); its diagnostics were
+        // reported when the condition was typed
+        let before = self.nrecords();
+        self.infer_c(C::N(cond), env, None);
+        self.truncate_records(before);
+        let cur = std::mem::replace(&mut self.facts, base);
+        (cur.clone(), cur, false)
+    }
+
+    /// The collection place of `p.count()`.
+    pub fn count_receiver(&self, e: N<'a>) -> Option<String> {
+        let pe = e.find("postfixExpr")?;
+        if e.ntokens() != pe.ntokens() {
+            return None;
+        }
+        let kids = pe.kids();
+        if kids.len() < 2 {
+            return None;
+        }
+        let last = kids.last().unwrap().node()?;
+        let mc = last.find("methodCall")?;
+        if mc.find("memberName")?.tokens()[0].text != "count" || mc.find("argList").is_some() {
+            return None;
+        }
+        if kids.len() == 2 {
+            return self.path_of_expr(kids[0].node());
+        }
+        let mut root = self.path_of_expr(kids[0].node())?;
+        for pf in &kids[1..kids.len() - 1] {
+            let k = pf.node().map(|p| p.kids()).unwrap_or_default();
+            if !k.is_empty() && k[0].text_is(".") && k.len() > 1 && k[1].is("memberName") {
+                root = format!("{root}.{}", k[1].node().unwrap().tokens()[0].text);
+            } else {
+                return None;
+            }
+        }
+        Some(root)
+    }
+
+    // ---- ownership (7.2-7.6, 5.7) ----------------------------------------------------------
+    pub fn own_err(&mut self, code: &str, msg: String, tok: &Token, place: &str, conflict: &str, rule: &str, region: &str) {
+        self.rec(code, msg, rule, tok, Json::obj([("place", Json::str(place)), ("conflict", Json::str(conflict)), ("spans", Json::str(place)), ("loan_region", Json::str(region))]));
+    }
+
+    pub fn is_bearing(&self, t: &Type) -> bool {
+        if t.is_loan() {
+            return false;
+        }
+        let s = strip(t);
+        if !known(s) || is_strlit(s) || is_interp(s) {
+            return false;
+        }
+        if let Type::Named(n) = s {
+            if ["StringView", "BytesView", "ListView"].contains(&n.name.as_str()) {
+                return false;
+            }
+        }
+        !self.dc.is_trivial(s)
+    }
+
+    pub fn binding_kind(&self, path: &str, env: &Env) -> Option<String> {
+        let r = root_of(path);
+        match env_lookup(env, &r) {
+            Some(b) => Some(b.kind),
+            None => {
+                if r == "self" {
+                    Some("self".into())
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    /// The status of the record just made (it was deduplicated away if the last record is another).
+    pub fn set_last_status(&mut self, status: &'static str) {
+        if let Some(r) = self.dc.records.last_mut() {
+            if r.code.starts_with("E-EFF") {
+                r.status = status;
+            }
+        }
+    }
+
+    pub fn eff_err(&mut self, code: &str, msg: String, tok: &Token, required: &str, effect: &str, witness: &str, rule: &str) {
+        self.rec(code, msg, rule, tok, Json::obj([("required_contract", Json::str(required)), ("violating_effect", Json::str(effect)), ("witness_path", Json::str(witness))]));
+    }
+
+    pub fn provenance(&self, path: &str, env: &Env) -> String {
+        let root = root_of(path);
+        if root == "self" {
+            return if self.self_mode == "editable self" { "footprint:self".into() } else { "none".into() };
+        }
+        if let Some(h) = self.own.holders.get(&root) {
+            let owner = h.borrow().owner.clone();
+            if root_of(&owner) != root {
+                return self.provenance(&owner, env);
+            }
+        }
+        let b = match env_lookup(env, &root) {
+            Some(b) => b,
+            None => return "none".into(),
+        };
+        if b.kind == "editable" {
+            return format!("footprint:{root}");
+        }
+        if b.kind.starts_with("capture-") {
+            return if b.kind == "capture-editable" { "mutate".into() } else { "fresh".into() };
+        }
+        if self.fresh.contains(&root) || ["mut", "let", "owned", "for", "pattern", "pattern-loan"].contains(&b.kind.as_str()) {
+            return "fresh".into();
+        }
+        "mutate".into()
+    }
+
+    pub fn note_write(&mut self, path: &str, tok: &Token, env: &Env) {
+        let prov = self.provenance(path, env);
+        if let Some(p) = prov.strip_prefix("footprint:") {
+            self.eff.footprint.insert(p.to_string());
+        } else if prov == "mutate" {
+            self.eff.add("mutate", "proved", Some(tok));
+        }
+    }
+
+    pub fn import_call(&mut self, callee: &Summary, tok: &Token, receiver_path: Option<String>, arg_places: &[(String, String)], env: &Env, is_async_callee: bool) {
+        let skip: &[&str] = if is_async_callee { &["suspend", "fail"] } else { &["fail"] };
+        self.eff.imports(callee, Some(tok), skip);
+        for fp in callee.footprint.clone() {
+            let place = if fp == "self" { receiver_path.clone() } else { arg_places.iter().find(|(p, _)| *p == fp).map(|(_, pl)| pl.clone()) };
+            if let Some(place) = place {
+                self.note_write(&place, tok, env);
+            }
+        }
+    }
+
+    /// The summary label of a call of function `d`: `function f` for the module's own function, which a unit of the
+    /// module may have summarised; qualified by its module for another module's, whose summary its modifiers give
+    /// (SP-12: the labels of two modules never meet).
+    pub fn function_label(&self, d: &DeclRef<'a>) -> String {
+        if d.module == self.module || crate::decls::is_standard(&d.module) || d.kind == "unknown" {
+            format!("function {}", d.name)
+        } else {
+            format!("function {}::{}", d.module, d.name)
+        }
+    }
+
+    /// As `function_label`, for method `m` of type `d`.
+    pub fn method_label(&self, d: &DeclRef<'a>, m: &str) -> String {
+        if d.module == self.module || crate::decls::is_standard(&d.module) || d.kind == "unknown" {
+            format!("method {}.{m}", d.name)
+        } else {
+            format!("method {}::{}.{m}", d.module, d.name)
+        }
+    }
+
+    pub fn callee_summary(&self, d: Option<&DeclRef<'a>>, sig: &Sig<'a>, label: &str) -> Summary {
+        if label == "closure" {
+            self.requested.borrow_mut().insert("closure".into());
+            return self.summaries.get("closure").cloned().unwrap_or_default();
+        }
+        if sig.body.is_none() || sig.has_mod("trusted") {
+            // the declaration the effect data names the operation by: the owning type of a method or associated
+            // function, else the free function itself (an alias call names it; otherwise its label does)
+            let owner = d.filter(|d| d.kind != "func");
+            let fd = d.filter(|d| d.kind == "func").cloned().or_else(|| {
+                if owner.is_some() {
+                    return None;
+                }
+                label.strip_prefix("function ").and_then(|n| self.dc.table.get(n)).cloned()
+            });
+            let home = owner.cloned().or(fd);
+            let auth = owner.map_or(false, |d| self.dc.implements_core_authority(d) || (AUTHORITIES.contains(&d.name.as_str()) && d.module.starts_with("fortis")));
+            let mut s = library_summary(home.as_ref().map(|h| h.module.as_str()), owner.map(|d| d.name.as_str()), &sig.name, &sig.modifiers, auth, sig.receiver.as_deref(), &self.authority_params(sig));
+            // a foreign `trusted` function of the program (not the standard library, whose summaries are tabled):
+            // what it does is behind a trust boundary except for the claims its signature writes (X-132)
+            let user = |d: &DeclRef<'a>| !crate::decls::is_standard(&d.module) && d.kind != "unknown";
+            let foreign = sig.has_mod("trusted")
+                && match d {
+                    Some(d) => user(d),
+                    None => label.strip_prefix("function ").map(|n| n.rsplit("::").next().unwrap_or(n)).and_then(|n| self.dc.table.get(n)).map_or(false, |f| f.kind == "func" && user(f)),
+                };
+            if foreign {
+                if !sig.has_mod("pure") {
+                    for e in ["io", "mutate", "nondet"] {
+                        s.add_uncertain(e, "trusted", "unknown", None);
+                    }
+                }
+                if !sig.has_mod("noalloc") {
+                    s.add_uncertain("alloc", "trusted", "unknown", None);
+                }
+            }
+            return s;
+        }
+        self.requested.borrow_mut().insert(label.to_string());
+        self.summaries.get(label).cloned().unwrap_or_else(|| Self::summary_from_modifiers(sig))
+    }
+
+    pub fn summary_from_modifiers(sig: &Sig<'a>) -> Summary {
+        let mut s = Summary::default();
+        if sig.has_mod("try") {
+            s.add("fail", "proved", None);
+        }
+        if sig.has_mod("async") {
+            s.add("suspend", "proved", None);
+        }
+        if sig.has_mod("recovers") {
+            s.add("recovers", "proved", None);
+        }
+        // a function value's effects are those its type permits: possible, not shown to happen (11.3; X-132)
+        if !sig.has_mod("pure") {
+            for e in ["io", "mutate", "nondet"] {
+                s.add_uncertain(e, "proved", "possible", None);
+            }
+        }
+        if !sig.has_mod("noalloc") {
+            s.add_uncertain("alloc", "proved", "possible", None);
+        }
+        s
+    }
+
+    pub fn expanded_mods(&self, sig: &Sig<'a>) -> BTreeSet<String> {
+        let mut mods: BTreeSet<String> = sig.modifiers.iter().cloned().collect();
+        for c in &sig.contracts {
+            if let Some(d) = self.dc.table.get(c) {
+                if d.kind == "contract" {
+                    if let Some(m) = d.items.get("modifiers") {
+                        mods.extend(m.iter().cloned());
+                    }
+                }
+            }
+        }
+        mods
+    }
+
+    /// A `Shared[A]` handle carries A's authority (11.6, X-137).
+    pub fn unshared<'t>(t: &'t Type) -> &'t Type {
+        match strip(t) {
+            Type::Named(n) if n.name == "Shared" && n.args.len() == 1 => strip(&n.args[0]),
+            s => s,
+        }
+    }
+
+    /// An Authority type (11.6), `Shared[A]` included, recognised by its declaration: a program's own class named like a
+    /// capability is not one (review of D-145); a type whose declaration is unknown keeps the name rule.
+    pub fn is_authority(&self, t: &Type) -> bool {
+        let s = Self::unshared(t);
+        match s {
+            Type::Named(n) => match self.decl_of(s) {
+                Some(d) if d.kind != "unknown" => self.dc.implements_core_authority(&d),
+                _ => AUTHORITIES.contains(&n.name.as_str()),
+            },
+            _ => false,
+        }
+    }
+
+    pub fn authority_params(&self, sig: &Sig<'a>) -> BTreeSet<String> {
+        let mut out = BTreeSet::new();
+        for (_, pt, _) in &sig.params {
+            if let Type::Named(n) = Self::unshared(pt) {
+                if self.is_authority(pt) {
+                    out.insert(n.name.clone());
+                }
+            }
+        }
+        out
+    }
+
+    /// The authorities a method's receiver of type `t` names (11.6; D-173): the receiver's own type when it is an
+    /// authority, else each field of its class whose type is an authority or a `Shared` of one, as X-137's owners hold a
+    /// `Shared[Console]`. A field of any other type names none: a `Capabilities` record names none, as a `Capabilities`
+    /// parameter names none.
+    pub fn receiver_authorities(&self, t: &Type) -> BTreeSet<String> {
+        let mut out = BTreeSet::new();
+        let s = Self::unshared(t);
+        let name = match s {
+            Type::Named(n) => n.name.clone(),
+            _ => return out,
+        };
+        if self.is_authority(s) {
+            out.insert(name);
+            return out;
+        }
+        if let Some(d) = self.decl_of(s) {
+            if d.kind == "class" {
+                for (_, (ft, _, _)) in d.fields.iter() {
+                    if let (true, Type::Named(f)) = (self.is_authority(ft), Self::unshared(ft)) {
+                        out.insert(f.name.clone());
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// The body being typed (labelled `label`) is the entry `main` (4.6): the function `main` of the entry module.
+    pub fn is_entry_main(&self, label: &str) -> bool {
+        label == "function main" && self.dc.entry_module.as_deref() == Some(self.module.as_str())
+    }
+
+    pub fn is_entry_main_decl(&self, d: &Decl<'a>) -> bool {
+        d.kind == "func" && d.name == "main" && self.dc.entry_module.as_deref() == Some(d.module.as_str())
+    }
+
+    /// The entry `main` is never referenced from Fortis code: only the runtime calls it, once, so the capabilities it
+    /// creates are created once (11.6, LANG-11-07).
+    pub fn entry_main_ref(&mut self, d: &Decl<'a>, tok: &Token) {
+        if self.is_entry_main_decl(d) {
+            let w = if self.current_label.is_empty() { "a declaration".to_string() } else { self.current_label.clone() };
+            self.eff_err(
+                "E-EFF-010",
+                "the entry `main` is referenced from Fortis code: only the runtime calls it, once, so the capabilities it creates are created once (11.6)".into(),
+                tok,
+                "no reference to the entry main",
+                "io",
+                &w,
+                "LANG-11-07",
+            );
+        }
+    }
+
+    /// `Host` of `fortis.host`, not a program's own class of that name.
+    pub fn is_host(d: &Decl<'a>) -> bool {
+        d.name == "Host" && d.kind == "class" && d.module == "fortis.host"
+    }
+
+    /// `Host.capabilities` (11.6, LANG-11-07): only a direct call in the entry `main`'s own body, at most once, outside
+    /// every loop (its condition included), lambda and aspect hook; never taken as a value.
+    pub fn capabilities_use(&mut self, tok: &Token, called: bool) {
+        let w = if self.current_label.is_empty() { "a declaration".to_string() } else { self.current_label.clone() };
+        if !called {
+            self.eff_err("E-EFF-010", "`Host.capabilities` is taken as a value: the capabilities are created only by a direct call in the entry `main` (11.6)".into(), tok, "a direct call in the entry main", "io", &w, "LANG-11-07");
+            return;
+        }
+        if !self.is_entry_main(&w) {
+            self.eff_err("E-EFF-010", "`Host.capabilities()` is called outside the entry `main` (11.6)".into(), tok, "the entry main only", "io", &w, "LANG-11-07");
+            return;
+        }
+        let has = |c: &str| self.ctx.iter().any(|x| x == c);
+        let inside = if has("lambda") {
+            Some("a lambda")
+        } else if has("hook") {
+            Some("an aspect's hook")
+        } else if has("loop") || has("whilecond") {
+            Some("a loop")
+        } else {
+            None
+        };
+        if let Some(inside) = inside {
+            self.eff_err(
+                "E-EFF-010",
+                format!("`Host.capabilities()` is called inside {inside}: the capabilities are created once, by a direct call in the entry `main`'s own body (11.6)"),
+                tok,
+                "a direct call in the entry main",
+                "io",
+                &w,
+                "LANG-11-07",
+            );
+            return;
+        }
+        self.caps_calls += 1;
+    }
+
+    pub fn check_contracts(&mut self, sig: &Sig<'a>, head_tok: &Token, label: &str) {
+        let params: BTreeSet<String> = sig.params.iter().filter_map(|(_, pt, _)| base_name(Self::unshared(pt)).map(|s| s.to_string())).collect();
+        for c in sig.contracts.clone() {
+            let d = match self.dc.table.get(&c) {
+                Some(d) if d.kind == "contract" => d.clone(),
+                _ => {
+                    let mut cands: Vec<String> = self.dc.table.decls.iter().filter(|(_, v)| v.kind == "contract").map(|(k, _)| k.clone()).collect();
+                    cands.sort();
+                    self.rec("E-NAM-001", format!("`{c}` is not a declared contract"), "LANG-11-06", head_tok, Self::nam(&c, cands));
+                    continue;
+                }
+            };
+            for f in d.items.get("forbids").cloned().unwrap_or_default() {
+                if self.eff.has(&f) {
+                    let site = self.eff.sites.get(&f).cloned().unwrap_or_else(|| head_tok.clone());
+                    self.eff_err("E-EFF-001", format!("{label} carries contract {c}, which forbids `{f}`, but its body has that effect"), &site, &c, &f, label, "LANG-11-06");
+                }
+            }
+            for a in d.items.get("requires").cloned().unwrap_or_default() {
+                if !params.contains(&a) {
+                    self.eff_err("E-EFF-001", format!("{label} carries contract {c}, which requires capability {a}, but takes no parameter of that type"), head_tok, &c, "io", label, "LANG-11-06");
+                }
+            }
+            for a in d.items.get("excludes").cloned().unwrap_or_default() {
+                if params.contains(&a) {
+                    self.eff_err("E-EFF-001", format!("{label} carries contract {c}, which excludes capability {a}, but takes a parameter of that type"), head_tok, &c, "io", label, "LANG-11-06");
+                } else if self.eff.authorities.contains(&a) {
+                    self.eff_err("E-EFF-001", format!("{label} carries contract {c}, which excludes capability {a}, but calls a function that requires it"), head_tok, &c, "io", label, "LANG-11-06");
+                }
+            }
+        }
+    }
+
+    pub fn check_claims(&mut self, sig: &Sig<'a>, head_tok: &Token, label: &str) {
+        let mods = self.expanded_mods(sig);
+        self.check_contracts(sig, head_tok, label);
+        let site = |s: &Self, e: &str| s.eff.sites.get(e).cloned().unwrap_or_else(|| head_tok.clone());
+        // the authority must be in this function's own signature (11.6): one a callee takes, reached through a value that
+        // is not an Authority (`caps.clock` of a Capabilities), does not count; a lambda acts under its enclosing
+        // function's (D-144)
+        let mut own = if label == "lambda" { self.eff.authorities.clone() } else { self.authority_params(sig) };
+        if label != "lambda" && sig.receiver.is_some() {
+            if let Some(st) = self.self_type.clone() {
+                own.extend(self.receiver_authorities(&st));
+            }
+        }
+        if self.eff.needs_auth && own.is_empty() && !self.is_entry_main(label) {
+            let t = site(self, "io");
+            self.eff_err(
+                "E-EFF-010",
+                format!("{label} performs I/O but takes no Authority value: a capability or per-activation authority must be a parameter (11.6)"),
+                &t,
+                "an Authority parameter",
+                "io",
+                label,
+                "LANG-11-07",
+            );
+        }
+        if self.is_entry_main(label) && self.caps_calls > 1 {
+            self.eff_err("E-EFF-010", "`Host.capabilities()` is called more than once in main: the capabilities are created once (11.6)".into(), head_tok, "one Host.capabilities() call", "io", label, "LANG-11-07");
+        }
+        if mods.contains("pure") && label != "lambda" {
+            // a `pure` function may not take a capability parameter at all (11.5): the claim rules out the I/O it is for (D-145)
+            for a in self.authority_params(sig) {
+                self.eff_err("E-EFF-001", format!("{label} is declared `pure` but takes the capability {a}: a pure function receives no authority (11.5)"), head_tok, "pure", "io", label, "LANG-11-06");
+            }
+        }
+        // the record's status says how certain the effect is (PROG-DIA-02, X-132)
+        let why = |status: &str| match status {
+            "unproved" => ": a callback's type permits it, so it may happen (write the claim in the function type)",
+            "unknown" => ": it comes through a foreign `trusted` function that does not claim its absence, so it is behind a trust boundary",
+            _ => "",
+        };
+        for effect in crate::effects::PURE_FORBIDS {
+            if mods.contains("pure") && self.eff.has(effect) {
+                let t = site(self, effect);
+                let status = self.eff.status(effect);
+                let verb = if status == "violated" { "has" } else { "may have" };
+                self.eff_err("E-EFF-001", format!("{label} is declared `pure` but its body {verb} the `{effect}` effect{}", why(status)), &t, "pure", effect, label, if *effect == "mutate" { "LANG-11-02" } else { "LANG-11-01" });
+                self.set_last_status(status);
+            }
+        }
+        if mods.contains("noalloc") && self.eff.has("alloc") {
+            let t = site(self, "alloc");
+            let status = self.eff.status("alloc");
+            let verb = if status == "violated" { "allocates" } else { "may allocate" };
+            self.eff_err("E-EFF-001", format!("{label} is declared `noalloc` but its body {verb}{}", why(status)), &t, "noalloc", "alloc", label, "LANG-11-03");
+            self.set_last_status(status);
+        }
+        let ef = |req: &str, eff: &str| Json::obj([("required_contract", Json::str(req)), ("violating_effect", Json::str(eff)), ("witness_path", Json::str(label))]);
+        if self.eff.has("suspend") && !mods.contains("async") {
+            let t = site(self, "suspend");
+            let c = if label != "lambda" { self.insert_modifier("declare the effect", "async", &["try", "recovers", "func"]) } else { None };
+            self.rec_c("E-EFF-001", format!("{label} suspends (`await`) but is not declared `async`"), "LANG-11-05", &t, ef("async", "suspend"), c);
+        }
+        if self.eff.has("recovers") && !mods.contains("recovers") && label != "lambda" {
+            let t = site(self, "recovers");
+            let c = self.insert_modifier("declare the effect", "recovers", &["func"]);
+            self.rec_c("E-EFF-001", format!("{label} discharges a failure without reporting it but is not declared `recovers`"), "LANG-10-05", &t, ef("recovers", "recovers"), c);
+        }
+        if self.eff.has("block") && mods.contains("async") {
+            let t = site(self, "block");
+            self.eff_err("E-EFF-020", format!("{label} is `async` but its body may block the executor's thread"), &t, "async", "block", label, "LANG-11-01");
+        }
+    }
+
+    // ---- obligations (10) -----------------------------------------------------------------
+    pub fn obl_err(&mut self, code: &str, msg: String, tok: &Token, origin: &str, path: &str, rule: &str) {
+        self.rec(code, msg, rule, tok, Json::obj([("obligation_origin", Json::str(origin)), ("unconsumed_path", Json::str(path))]));
+    }
+
+    pub fn is_linear(&self, t: &Type) -> bool {
+        if t.is_loan() {
+            return false;
+        }
+        let s = strip(t);
+        known(s) && self.dc.is_linear(s)
+    }
+
+    pub fn obligate(&mut self, path: &str, tok: &Token) {
+        let d = self.depth;
+        self.own.open_obligation(path, tok.clone(), d);
+    }
+
+    pub fn consume(&mut self, path: Option<String>, line: usize, how: &str) {
+        if let Some(p) = path {
+            self.own.close_obligation(&p, line, how);
+        }
+    }
+
+    pub fn report_open(&mut self, min_depth: i64, where_: &str) {
+        for (p, (tok, d)) in self.own.obligations.items.clone() {
+            if self.catch_bound.contains(&p) && min_depth == 0 {
+                self.discharges.push((tok.line, "catch left by return/fail/Never".into()));
+                self.eff.add("recovers", "proved", Some(&tok));
+                self.own.close_obligation(&p, tok.line, "discharged");
+                continue;
+            }
+            if d >= min_depth {
+                self.obl_err(
+                    "E-OBL-001",
+                    format!("the linear value in `{p}` is dropped {where_} without being consumed (or fail, or recover, catch, match, report, move)"),
+                    &tok,
+                    &format!("{}:{}", tok.line, tok.col),
+                    &p,
+                    "LANG-10-01",
+                );
+                self.own.forget(&p);
+            }
+        }
+    }
+
+    pub fn unwind_point(&mut self, tok: &Token, what: &str, env: &Env, keep: Option<&str>) {
+        for (p, (tok0, _)) in self.own.obligations.items.clone() {
+            if Some(p.as_str()) == keep || self.catch_bound.contains(&p) {
+                continue;
+            }
+            let t = if p.contains('.') { None } else { env_get(env, &p) };
+            if let Some(t) = &t {
+                if known(strip(t)) && self.dc.implements(strip(t), "Abandonable") {
+                    continue;
+                }
+            }
+            let origin = format!("{}:{}", tok0.line, tok0.col);
+            if what == "await" {
+                self.obl_err("E-OBL-005", format!("the linear value in `{p}` is live across `await`, a cancellation point, and its type is not Abandonable"), tok, &origin, &p, "LANG-06-09");
+            } else {
+                self.obl_err("E-OBL-005", format!("the linear value in `{p}` is live across `{what}`, which may unwind the function, and its type is not Abandonable"), tok, &origin, &p, "LANG-06-09");
+            }
+        }
+    }
+
+    pub fn report_half(&mut self) {
+        for (p, tok) in std::mem::take(&mut self.own.half) {
+            self.obl_err("E-OBL-001", format!("the linear value in `{p}` is consumed on one path only; every path must consume it"), &tok, &format!("{}:{}", tok.line, tok.col), &p, "LANG-10-01");
+        }
+    }
+
+    /// A conditional operand may not run: the right of `&&` / `||` / `??`, or an `or recover` / `catch`
+    /// handler (LR 5.7, 10.2). Join its ownership with the path that skips it and report a consume that
+    /// happened on only one of them (LR 7.4, 10.1). Reservations belong to the call being typed.
+    /// Reports immediately: `Owners::join` drops an earlier half, and a later `if` or `match` must not
+    /// be the only report or a second one.
+    pub fn join_conditional(&mut self, skip: &Owners) {
+        let reservations = self.own.reservations.clone();
+        self.own = skip.join(&self.own);
+        self.own.reservations = reservations;
+        self.report_half();
+    }
+
+    pub fn holder_chain(&self, path: &str) -> BTreeSet<String> {
+        let mut chain = BTreeSet::new();
+        let mut cur = Some(root_of(path));
+        while let Some(c) = cur {
+            if c.is_empty() || chain.contains(&c) {
+                break;
+            }
+            chain.insert(c.clone());
+            cur = match self.own.holders.get(&c) {
+                Some(h) => {
+                    let r = root_of(&h.borrow().owner);
+                    if r != c {
+                        Some(r)
+                    } else {
+                        None
+                    }
+                }
+                None => None,
+            };
+        }
+        chain
+    }
+
+    pub fn foreign_loans(&self, path: &str) -> Vec<Loan> {
+        let chain = self.holder_chain(path);
+        self.own.active(path).into_iter().filter(|l| l.borrow().holder.as_ref().map_or(false, |h| !chain.contains(h))).collect()
+    }
+
+    /// A use of a place: how in read | write | move | alias | editable | copy. Sets use_ok.
+    pub fn use_place(&mut self, path: Option<&str>, tok: &Token, how: &str, env: &Env) {
+        self.use_ok = true;
+        let path = match path {
+            Some(p) => p.to_string(),
+            None => return,
+        };
+        if self.own.is_moved(&path) && !(how == "write" && !path.contains('.')) {
+            self.own_err("E-OWN-020", format!("`{path}` was moved and is used again ({how})"), tok, &path, "use after move", "LANG-07-04", "");
+            self.use_ok = false;
+            return;
+        }
+        let kind = self.binding_kind(&path, env);
+        let kind_s = kind.clone().unwrap_or_default();
+        let lhold = |l: &Loan| -> (String, String, String) {
+            let d = l.borrow();
+            (d.holder.clone().unwrap_or_default(), d.owner.clone(), d.mode.clone())
+        };
+        if how == "read" || how == "copy" {
+            if let Some(l) = self.foreign_loans(&path).into_iter().find(|x| x.borrow().mode == "editable") {
+                let (h, o, _) = lhold(&l);
+                self.own_err("E-OWN-011", format!("`{path}` is suspended while `{h}` holds an exclusive loan of `{o}`"), tok, &path, &format!("exclusive loan held by {h}"), "LANG-07-05", &format!("until the end of {h}'s block"));
+                self.use_ok = false;
+            }
+            return;
+        }
+        if how == "alias" {
+            if let Some(l) = self.foreign_loans(&path).into_iter().find(|x| x.borrow().mode == "editable") {
+                let (h, o, _) = lhold(&l);
+                self.own_err(
+                    "E-OWN-010",
+                    format!("read loan of `{path}` while `{h}` holds an exclusive loan of `{o}`, which freezes the owner"),
+                    tok,
+                    &path,
+                    &format!("exclusive loan held by {h}"),
+                    "LANG-07-05",
+                    &format!("until the end of {h}'s block"),
+                );
+                self.use_ok = false;
+            }
+            return;
+        }
+        if how == "editable" {
+            let holder = self.own.holders.get(&root_of(&path)).cloned();
+            let mutable_root = ["mut", "editable", "capture-editable", "capture-move"].contains(&kind_s.as_str())
+                || holder.as_ref().map_or(false, |h| h.borrow().mode == "editable")
+                || (root_of(&path) == "self" && self.self_mode == "editable self");
+            if !mutable_root {
+                self.own_err("E-OWN-001", format!("`editable {path}` needs a root that is a `let mut`, an `editable` parameter or an exclusive loan"), tok, &path, "editable on an immutable root", "LANG-07-01", "");
+                self.use_ok = false;
+                return;
+            }
+            if let Some(l) = self.foreign_loans(&path).into_iter().next() {
+                let (h, o, m) = lhold(&l);
+                self.own_err("E-OWN-010", format!("exclusive loan of `{path}` while `{h}` holds a {m} loan of `{o}`"), tok, &path, &format!("{m} loan held by {h}"), "LANG-07-05", &format!("until the end of {h}'s block"));
+                self.use_ok = false;
+            }
+            return;
+        }
+        if how == "write" {
+            if let Some(l) = self.foreign_loans(&path).into_iter().next() {
+                let (h, o, m) = lhold(&l);
+                self.own_err("E-OWN-011", format!("`{path}` is assigned while `{h}` holds a {m} loan of `{o}`"), tok, &path, &format!("{m} loan held by {h}"), "LANG-07-05", &format!("until the end of {h}'s block"));
+                self.use_ok = false;
+                return;
+            }
+            if self.own.holders.contains(&root_of(&path)) && !path.contains('.') && !["param", "editable", "owned"].contains(&kind_s.as_str()) {
+                self.own_err("E-OWN-011", format!("`{path}` holds a loan and cannot be reassigned"), tok, &path, "loan-holding binding", "LANG-07-05", "");
+                self.use_ok = false;
+            }
+            return;
+        }
+        if how == "move" {
+            for (d_depth, roots, dtok) in self.deferred.clone() {
+                if roots.contains(&root_of(&path)) && d_depth <= self.depth {
+                    self.def_err(
+                        "E-DEF-002",
+                        format!("`{path}` is moved out after the defer at line {} names it; a deferred block's places must be initialised at every exit (12.1)", dtok.line),
+                        tok,
+                        &format!("move {path}"),
+                        "LANG-12-01",
+                    );
+                }
+            }
+            if path.contains('.') && !self.own.holders.contains(&root_of(&path)) && kind.is_some() {
+                self.own_err(
+                    "E-OWN-040",
+                    format!("partial move of `{path}` out of `{}`, which still owns the rest; move the whole binding or restructure", root_of(&path)),
+                    tok,
+                    &path,
+                    "partial move",
+                    "LANG-07-01",
+                    "",
+                );
+                self.use_ok = false;
+                return;
+            }
+            // a field of the loan too: the parameter owns nothing, so nothing in it can be moved out (D-33)
+            if (kind_s == "param" || kind_s == "editable") && self.own.holders.contains(&root_of(&path)) {
+                self.own_err("E-OWN-001", format!("`move {path}`: a plain or editable parameter holds a loan and owns nothing to move; take it `owned`"), tok, &path, "move of a loan-holding parameter", "LANG-07-06", "");
+                self.use_ok = false;
+                return;
+            }
+            if kind_s == "capture-move" && self.lambda_kind.last().map_or(false, |k| k != "fn once") {
+                let lk = self.lambda_kind.last().unwrap().clone();
+                let corr = self.lambda_toks.last().map(|(fnt, mutt)| {
+                    let f = self.dc.file.clone();
+                    let e = match mutt {
+                        Some(m) => crate::decls::edit(&f, m.line, m.col, crate::decls::tok_end(m), "once"),
+                        None => crate::decls::edit(&f, fnt.line, fnt.col, crate::decls::tok_end(fnt), "fn once"),
+                    };
+                    crate::decls::correction("strengthen the closure kind", vec![e])
+                });
+                self.rec_c(
+                    "E-FUN-010",
+                    format!("this `{lk}` lambda moves its capture `{}` out: declare it `fn once`", root_of(&path)),
+                    "LANG-08-02",
+                    tok,
+                    Json::obj([("violation", Json::str("move out of a capture")), ("capture_span", Json::str(root_of(&path))), ("use_span", Json::str(&path))]),
+                    corr,
+                );
+                self.use_ok = false;
+                return;
+            }
+            if kind_s == "capture-alias" || kind_s == "capture-editable" {
+                self.own_err("E-OWN-001", format!("`move {path}`: an `{}` capture is a loan and owns nothing to move", &kind_s[8..]), tok, &path, "move of a loan capture", "LANG-08-02", "");
+                self.use_ok = false;
+                return;
+            }
+            if (kind_s == "pattern-loan" || kind_s == "for") && self.own.holders.contains(&root_of(&path)) {
+                self.own_err(
+                    "E-OWN-001",
+                    format!("`move {path}`: a binding of `match p` or `for x in p` is a read loan; use `match move p` / `for x in move p` to own it (9.8)"),
+                    tok,
+                    &path,
+                    "move of a loaned binding",
+                    "LANG-09-06",
+                    "",
+                );
+                self.use_ok = false;
+                return;
+            }
+            if let Some(l) = self.foreign_loans(&path).into_iter().next() {
+                let (h, o, m) = lhold(&l);
+                self.own_err("E-OWN-011", format!("`{path}` is moved while `{h}` holds a {m} loan of `{o}`"), tok, &path, &format!("{m} loan held by {h}"), "LANG-07-05", &format!("until the end of {h}'s block"));
+                self.use_ok = false;
+            }
+        }
+    }
+
+    pub fn reserve(&mut self, path: &str, mode: &str, tok: &Token) {
+        if mode == "move" || mode == "editable" {
+            let mut all = self.own.reservations.clone();
+            for level in &self.res_stack {
+                all.extend(level.iter().cloned());
+            }
+            for (rp, rm) in all {
+                if overlaps(&rp, path) || overlaps(path, &rp) {
+                    self.own_err("E-OWN-012", format!("argument `{mode} {path}` breaks the reservation of `{rp}` ({rm}) taken by an earlier argument of this call"), tok, path, &format!("reservation of {rp}"), "LANG-07-04", "");
+                    return;
+                }
+            }
+        }
+        self.own.reservations.push((path.to_string(), mode.to_string()));
+    }
+
+    pub fn activate(&mut self, tok: &Token, carries: bool, _env: &Env) {
+        let res = std::mem::take(&mut self.own.reservations);
+        let mut added = Vec::new();
+        for (i, (path, mode)) in res.iter().enumerate() {
+            if mode == "move" {
+                self.own.move_(path);
+                continue;
+            }
+            let lmode = if mode == "editable" { "editable" } else { "alias" };
+            for (j, (other, omode)) in res.iter().enumerate() {
+                if j != i && (overlaps(other, path) || overlaps(path, other)) && (lmode == "editable" || omode == "editable" || omode == "move") {
+                    self.own_err("E-OWN-010", format!("the call takes a {lmode} loan of `{path}` and a {omode} of `{other}` at once"), tok, path, &format!("{omode} of {other}"), "LANG-07-05", "");
+                }
+            }
+            let d = self.depth;
+            added.push(self.own.add_loan(path, lmode, None, d, tok.line));
+        }
+        if !carries {
+            for l in &added {
+                self.own.remove_loan(l);
+            }
+        } else {
+            self.carried.extend(added);
+        }
+    }
+
+    pub fn result_carries(sig: &Sig<'a>) -> bool {
+        if sig.ret.is_loan() {
+            return true;
+        }
+        if let Type::Named(n) = strip(&sig.ret) {
+            if ["StringView", "BytesView", "ListView", "Future"].contains(&n.name.as_str()) {
+                return true;
+            }
+        }
+        sig.has_mod("async")
+    }
+
+    /// An argument that is a temporary of a type a read parameter lends (not a place, not a trivial value, not a
+    /// literal string, which is static): a future keeps the loan (12.3; D-31).
+    pub fn lends_temporary(&self, e: N<'a>, t: &Type) -> bool {
+        // a grouped `copy` is still a copy
+        let copied = e.find("markerExpr").is_some() && e.tokens().into_iter().find(|t| t.text != "(").map_or(false, |t| t.text == "copy");
+        if self.path_of_expr(Some(e)).is_some() && !copied {
+            return false;
+        }
+        self.is_bearing(t) || is_interp(strip(t))
+    }
+
+    pub fn check_arg_marker(&mut self, e: N<'a>, p_name: &str, mode: &str, t: &Type, tok: &Token, env: &Env) {
+        let path = match self.path_of_expr(Some(e)) {
+            Some(p) => p,
+            None => {
+                let lit = e.tokens();
+                let static_literal = lit.len() == 1 && lit[0].kind == Kind::Str && !lit[0].text.contains("${");
+                if mode == "from" && e.find("markerExpr").is_none() && !static_literal {
+                    self.own_err("E-OWN-051", format!("the result borrows from `{p_name}`, so its argument must be a place, not a temporary (7.6)"), tok, p_name, "loan of a temporary", "LANG-07-06", "");
+                }
+                return;
+            }
+        };
+        let mode = mode.strip_prefix("...").unwrap_or(mode);
+        if !self.is_bearing(t) {
+            if mode == "editable" && e.find("markerExpr").is_none() {
+                self.own_err("E-OWN-001", format!("argument `{p_name}` is an `editable` parameter: write `editable {path}`"), tok, &path, "editable marker required", "LANG-07-01", "");
+            }
+            return;
+        }
+        if e.find("markerExpr").is_some() && ["copy", "alias", "move", "editable"].contains(&e.tokens()[0].text.as_str()) {
+            return;
+        }
+        let fields = |c: &str| Json::obj([("place", Json::str(&path)), ("conflict", Json::str(c)), ("spans", Json::str(&path)), ("loan_region", Json::str(""))]);
+        match mode {
+            "owned" => {
+                // a plain or editable parameter holds a loan and owns nothing to move: copy it, when the type allows
+                let kind = self.binding_kind(&path, env).unwrap_or_default();
+                let loan_root = (kind == "param" || kind == "editable") && !path.contains('.');
+                let c = if !loan_root {
+                    Some(self.insert_before("add the marker", tok, "move "))
+                } else if self.dc.is_copyable(strip(t)) {
+                    Some(self.insert_before("add the marker", tok, "copy "))
+                } else {
+                    None
+                };
+                self.rec_c("E-OWN-001", format!("argument `{p_name}` is an `owned` parameter: write `move {path}` or `copy {path}`"), "LANG-07-01", tok, fields("move or copy required"), c)
+            }
+            "editable" => {
+                let c = self.insert_before("add the marker", tok, "editable ");
+                self.rec_c("E-OWN-001", format!("argument `{p_name}` is an `editable` parameter: write `editable {path}`"), "LANG-07-01", tok, fields("editable marker required"), Some(c))
+            }
+            "from" => {
+                let c = self.insert_before("add the marker", tok, "alias ");
+                self.rec_c("E-OWN-001", format!("the result borrows from `{p_name}`: write `alias {path}` (or `editable {path}`) so the kept loan shows at the call"), "LANG-07-06", tok, fields("alias marker required"), Some(c))
+            }
+            "loan" => {
+                let c = self.insert_before("add the marker", tok, "alias ");
+                self.rec_c("E-OWN-001", format!("`{p_name}` stores a loan: write `alias {path}` or `editable {path}`"), "LANG-07-06", tok, fields("alias marker required"), Some(c))
+            }
+            _ => self.reserve(&path, "alias", tok),
+        }
+    }
+
+    // ---- generics ---------------------------------------------------------------------
+    pub fn recv_subst(&self, recv: &Type, d: &Decl<'a>) -> BTreeMap<String, Type> {
+        let mut recv = strip(recv).clone();
+        if let Type::Refined { base, .. } = &recv {
+            recv = Type::Named(base.clone());
+        }
+        let mut m = BTreeMap::new();
+        m.insert("Self".to_string(), recv.clone());
+        if let Type::Named(n) = &recv {
+            for (p, a) in d.type_params.iter().zip(n.args.iter()) {
+                m.insert(p.clone(), a.clone());
+            }
+        }
+        m
+    }
+
+    pub fn unify(&self, pattern: &Type, actual: &Type, m: &mut BTreeMap<String, Type>) {
+        self.unify_pin(pattern, actual, m, true);
+    }
+
+    /// `pin_empty` is false when a pending lambda can constrain this type parameter: a declared function
+    /// (empty identity) must not pin it, so the lambda does (8.4). A lambda on a concrete `fn` parameter
+    /// does not. Optional and loan wrappers peel at this binding only. Recursion keeps the flag, so
+    /// `List[T]` against `List[fn]` refuses the same pin.
+    pub fn unify_pin(&self, pattern: &Type, actual: &Type, m: &mut BTreeMap<String, Type>, pin_empty: bool) {
+        if let Type::TypeParam(n) = pattern {
+            // an argument of the body's own type parameter fixes the callee's: `label(x)` with `x: U` binds T to U, whose
+            // bounds are then the body's (D-171)
+            let in_scope = matches!(actual, Type::TypeParam(a) if self.tparams_in_scope.contains(a));
+            if !m.contains_key(n) && (known(actual) || in_scope) {
+                let mut a = crate::literals::concrete(strip(actual));
+                if let Type::Refined { base, kind, .. } = &a {
+                    if kind == "exact" {
+                        a = Type::Named(base.clone());
+                    }
+                }
+                if !pin_empty && Self::empty_declared_fn(&a) {
+                    return;
+                }
+                m.insert(n.clone(), a);
+            }
+            return;
+        }
+        if let Type::Named(p) = pattern {
+            if m.contains_key(&p.name) && p.args.is_empty() {
+                return;
+            }
+        }
+        let actual = strip(actual);
+        match (pattern, actual) {
+            (Type::Named(p), Type::Named(a)) if p.name == a.name => {
+                for (pa, aa) in p.args.iter().zip(a.args.iter()) {
+                    self.unify_pin(pa, aa, m, pin_empty);
+                }
+            }
+            (Type::Optional(p), Type::Optional(a)) => self.unify_pin(p, a, m, pin_empty),
+            (Type::Loan { inner, .. }, _) => self.unify_pin(inner, actual, m, pin_empty),
+            (Type::Fn { params: pp, ret: pr, .. }, Type::Fn { params: ap, ret: ar, .. }) => {
+                for (x, y) in pp.iter().zip(ap.iter()) {
+                    self.unify_pin(x, y, m, pin_empty);
+                }
+                self.unify_pin(pr, ar, m, pin_empty);
+            }
+            (Type::Tuple(pi), Type::Tuple(ai)) => {
+                for (x, y) in pi.iter().zip(ai.iter()) {
+                    self.unify_pin(x, y, m, pin_empty);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn empty_declared_fn(t: &Type) -> bool {
+        let mut cur = strip(t);
+        loop {
+            match cur {
+                Type::Optional(inner) | Type::Loan { inner, .. } => cur = strip(inner),
+                Type::Fn { dynamic: false, identity, .. } if identity.is_empty() => return true,
+                _ => return false,
+            }
+        }
+    }
+
+    pub fn tparams_of(t: &Type) -> BTreeSet<String> {
+        let mut out = BTreeSet::new();
+        match t {
+            Type::TypeParam(n) => {
+                out.insert(n.clone());
+            }
+            Type::Named(n) => n.args.iter().for_each(|a| out.extend(Self::tparams_of(a))),
+            Type::Optional(i) => out.extend(Self::tparams_of(i)),
+            Type::Loan { inner, .. } => out.extend(Self::tparams_of(inner)),
+            Type::Refined { base, .. } => base.args.iter().for_each(|a| out.extend(Self::tparams_of(a))),
+            Type::Tuple(xs) => xs.iter().for_each(|x| out.extend(Self::tparams_of(x))),
+            Type::Fn { params, ret, .. } => {
+                params.iter().for_each(|x| out.extend(Self::tparams_of(x)));
+                out.extend(Self::tparams_of(ret));
+            }
+            Type::Record(fs) => fs.iter().for_each(|(_, x)| out.extend(Self::tparams_of(x))),
+            _ => {}
+        }
+        out
+    }
+
+    /// Does the bound `implements have` grant `implements want`: the same interface with the same arguments, or one it
+    /// requires (6.10).
+    pub fn grants(&self, have: &NamedT, want: &NamedT, seen: &[String]) -> bool {
+        if have.name == want.name {
+            return want.args.is_empty() || have.args == want.args;
+        }
+        if seen.contains(&have.name) {
+            return false;
+        }
+        let mut seen2 = seen.to_vec();
+        seen2.push(have.name.clone());
+        match self.dc.table.get(&have.name).cloned() {
+            Some(hd) if hd.kind == "interface" => {
+                // `J[Int] requires I[T]` grants I[Int]
+                let sub: BTreeMap<String, Type> = hd.type_params.iter().cloned().zip(have.args.iter().cloned()).collect();
+                hd.requires.iter().any(|r| match self.subst(&Type::Named(r.clone()), &sub) {
+                    Type::Named(rs) => self.grants(&rs, want, &seen2),
+                    _ => false,
+                })
+            }
+            _ => false,
+        }
+    }
+
+    /// Does `a` satisfy `implements want` (6.10)? None while a type variable of the call is unsolved. A type parameter of
+    /// the body being typed satisfies only what its `where` bounds grant; an applied interface needs a declared
+    /// implementation with the same arguments, and its own bounds hold for them (D-171).
+    pub fn bound_holds(&self, a: &Type, want: &NamedT) -> Option<bool> {
+        let wt = Type::Named(want.clone());
+        let mut free = Self::tparams_of(a);
+        free.extend(Self::tparams_of(&wt));
+        if matches!(a, Type::Unknown(_)) || free.iter().any(|p| !self.tparams_in_scope.contains(p)) {
+            return None;
+        }
+        if want.name == "Copyable" || want.name == "Shareable" {
+            return Some(self.dc.implements(a, &want.name));
+        }
+        if let Type::TypeParam(n) = a {
+            return Some(self.where_in_scope.iter().any(|(tp, b)| tp == n && self.grants(b, want, &[])));
+        }
+        if !self.dc.implements(a, &want.name) {
+            return Some(false);
+        }
+        if !want.args.is_empty() {
+            if let Some(idecl) = self.dc.table.get(&want.name).cloned() {
+                let sub: BTreeMap<String, Type> = idecl.type_params.iter().cloned().zip(want.args.iter().cloned()).collect();
+                for (tp2, b2) in idecl.where_.iter() {
+                    if let Some(x) = sub.get(tp2) {
+                        if let Type::Named(b2s) = self.subst(&Type::Named(b2.clone()), &sub) {
+                            if self.bound_holds(strip(x), &b2s) == Some(false) {
+                                return Some(false);
+                            }
+                        }
+                    }
+                }
+            }
+            if let Type::Named(an) = a {
+                let d = self.decl_of(a);
+                let mut declared: Vec<NamedT> = d.as_ref().map(|d| d.implements.clone()).unwrap_or_default();
+                declared.extend(self.dc.table.implement_blocks.iter().filter(|(_, tt, _, _)| tt.name == an.name).map(|(i, _, _, _)| i.clone()));
+                let same: Vec<&NamedT> = declared.iter().filter(|i| i.name == want.name).collect();
+                if !same.is_empty() {
+                    let sub: BTreeMap<String, Type> = d.as_ref().map(|d| d.type_params.iter().cloned().zip(an.args.iter().cloned()).collect()).unwrap_or_default();
+                    return Some(same.iter().any(|i| match self.subst(&Type::Named((*i).clone()), &sub) {
+                        Type::Named(s) => s.args == want.args,
+                        _ => false,
+                    }));
+                }
+            }
+        }
+        Some(true)
+    }
+
+    pub fn subst(&self, t: &Type, m: &BTreeMap<String, Type>) -> Type {
+        self.dc.subst(t, m)
+    }
+
+    pub fn result_of(&self, sig: &Sig<'a>, m: &BTreeMap<String, Type>) -> Type {
+        self.result_of_call(sig, m, false)
+    }
+
+    /// The result type of a call. An uninferred type argument is one the call leaves unbound; a parameter bound to
+    /// an enclosing generic's own parameter (a generic body) is not one, and neither is one an unknown argument
+    /// left unbound.
+    pub fn result_of_call(&self, sig: &Sig<'a>, m: &BTreeMap<String, Type>, unknown_args: bool) -> Type {
+        let mut r = self.subst(&sig.ret, m);
+        if has_free(&r) {
+            let mut names = BTreeSet::new();
+            free_names(&sig.ret, &mut names);
+            let unbound = names.iter().any(|n| !m.contains_key(n));
+            return unknown(if unbound && !unknown_args { "generic result" } else { "generic body" });
+        }
+        if sig.has_mod("try") {
+            r = named_args("Outcome", vec![r]);
+        }
+        if sig.has_mod("async") {
+            r = named_args("Future", vec![r]);
+        }
+        r
+    }
+
+    /// Whether a value of type `t` can carry a loan onward: a future, a task or a loan, also inside an optional, an
+    /// outcome or a tuple (D-31).
+    pub fn carries_onward(&self, t: &Type) -> bool {
+        if self.loan_carrying(t) {
+            return true;
+        }
+        match strip(t) {
+            Type::Optional(i) => self.carries_onward(i),
+            Type::Named(n) if n.name == "Future" || n.name == "Task" => true,
+            Type::Named(n) if n.name == "Outcome" && !n.args.is_empty() => self.carries_onward(&n.args[0]),
+            Type::Tuple(ts) => ts.iter().any(|x| self.carries_onward(x)),
+            _ => false,
+        }
+    }
+
+    pub fn loan_carrying(&self, t: &Type) -> bool {
+        if t.is_loan() {
+            return true;
+        }
+        match strip(t) {
+            Type::Optional(i) => self.loan_carrying(i),
+            Type::Named(n) => {
+                if ["StringView", "BytesView", "ListView"].contains(&n.name.as_str()) {
+                    return true;
+                }
+                self.decl_of(&Type::Named(n.clone())).map_or(false, |d| d.kind == "class" && d.lifetime.is_some())
+            }
+            _ => false,
+        }
+    }
+
+    pub fn check_result_origin(&mut self, sig: &Sig<'a>, label: &str, tok: &Token) {
+        if sig.has_mod("trusted") || sig.body.is_none() {
+            return;
+        }
+        let mut r = &sig.ret;
+        while let Type::Optional(i) = r {
+            if matches!(**i, Type::Loan { .. } | Type::Optional(_)) {
+                r = i;
+            } else {
+                break;
+            }
+        }
+        if r.is_loan() {
+            return;
+        }
+        if self.loan_carrying(r) {
+            let rs = r.show();
+            self.own_err("E-OWN-053", format!("{label} returns the loan-carrying type {rs} without naming its origin: write `{rs} from <parameter>`"), tok, label, "result without an origin", "LANG-07-06", "");
+        }
+    }
+
+    pub fn check_exported_sig(&mut self, sig: &Sig<'a>, label: &str, tok: &Token) {
+        let core = self.dc.package == "fortis";
+        for (pn, pt, _) in &sig.params {
+            self.check_type_exported(pt, &format!("{label}({pn})"), tok, core);
+        }
+        self.check_type_exported(&sig.ret, &format!("{label} result"), tok, core);
+    }
+
+    pub fn check_type_exported(&mut self, t: &Type, label: &str, tok: &Token, allow_structural: bool) {
+        match t {
+            Type::Tuple(_) | Type::Record(_) if !allow_structural => {
+                self.rec("E-TYP-030", format!("exported signature {label} uses a structural type {}", t.show()), "LANG-04-05", tok, DeclChecker::typ_fields("a nominal exported type", &t.show(), label));
+            }
+            Type::Named(n) => {
+                if n.name == "VariantMap" && !allow_structural {
+                    self.rec("E-TYP-030", format!("exported signature {label} uses a structural type {}", t.show()), "LANG-04-05", tok, DeclChecker::typ_fields("a nominal exported type", &t.show(), label));
+                    return;
+                }
+                if let Some(d) = self.dc.table.get(&n.name).cloned() {
+                    if d.module == self.module && !d.exported && ["class", "enum", "type", "interface", "error"].contains(&d.kind.as_str()) {
+                        self.rec("E-TYP-030", format!("exported signature {label} names non-exported type {}", n.name), "LANG-04-05", tok, DeclChecker::typ_fields("an exported type", &n.name, label));
+                    }
+                }
+                for a in &n.args {
+                    self.check_type_exported(a, label, tok, allow_structural);
+                }
+            }
+            Type::Optional(i) => self.check_type_exported(i, label, tok, allow_structural),
+            Type::Loan { inner, .. } => self.check_type_exported(inner, label, tok, allow_structural),
+            Type::Refined { base, .. } => self.check_type_exported(&base.as_type(), label, tok, allow_structural),
+            Type::Fn { params, ret, .. } => {
+                for p in params {
+                    self.check_type_exported(p, label, tok, allow_structural);
+                }
+                self.check_type_exported(ret, label, tok, allow_structural);
+            }
+            Type::Dynamic(i) => self.check_type_exported(&i.as_type(), label, tok, allow_structural),
+            _ => {}
+        }
+    }
+
+    pub fn def_err(&mut self, code: &str, msg: String, tok: &Token, statement: &str, rule: &str) {
+        self.rec(code, msg, rule, tok, Json::obj([("offending_statement", Json::str(statement)), ("rule_reference", Json::str("12.1"))]));
+    }
+}
+
+/// The type parameters a type mentions.
+pub fn free_names(t: &Type, out: &mut BTreeSet<String>) {
+    match t {
+        Type::TypeParam(n) => {
+            out.insert(n.clone());
+        }
+        Type::Named(n) => n.args.iter().for_each(|a| free_names(a, out)),
+        Type::Optional(i) => free_names(i, out),
+        Type::Loan { inner, .. } => free_names(inner, out),
+        Type::Tuple(items) => items.iter().for_each(|x| free_names(x, out)),
+        Type::Fn { params, ret, .. } => {
+            params.iter().for_each(|x| free_names(x, out));
+            free_names(ret, out);
+        }
+        Type::Record(fs) => fs.iter().for_each(|(_, x)| free_names(x, out)),
+        _ => {}
+    }
+}
+
+pub fn has_free(t: &Type) -> bool {
+    match t {
+        Type::TypeParam(_) => true,
+        Type::Named(n) => n.args.iter().any(has_free),
+        Type::Optional(i) => has_free(i),
+        Type::Loan { inner, .. } => has_free(inner),
+        Type::Tuple(items) => items.iter().any(has_free),
+        Type::Fn { params, ret, .. } => params.iter().any(has_free) || has_free(ret),
+        Type::Record(fs) => fs.iter().any(|(_, x)| has_free(x)),
+        _ => false,
+    }
+}
+
+

@@ -1,0 +1,48 @@
+// Tests: table rows bound with `as`, plain tests as try bodies, properties drawn from types.
+// Run: bin/fortis test examples/09_tests.ft
+export error Negative {
+  code: "demo.negative"
+}
+
+pure func double(n: Int) Int => Int.wrappingAdd(n, n)
+
+try func root(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  let mut r = 0
+  while Int.wrappingMul(Int.wrappingAdd(r, 1), Int.wrappingAdd(r, 1)) <= n {
+    r = Int.wrappingAdd(r, 1)
+  }
+  return r
+}
+
+test "doubling" cases {
+  "zero": { n: 0, expected: 0 }
+  "three": { n: 3, expected: 6 }
+  "negative": { n: -4, expected: -8 }
+} as row {
+  expect double(row.n) == row.expected
+}
+
+test "square roots" {
+  expect (root(16) or fail) == 4
+  expect (root(17) or fail) == 4
+  let r = root(-1) catch e {
+    expect e.code == "demo.negative"
+    recover 0
+  }
+  expect r == 0
+}
+
+test "deliberate failure" {
+  expect double(2) == 5
+}
+
+property "doubling is even" forall (n: Int<-1000..1000>) {
+  expect double(n) % 2 == 0
+}
+
+property "reversing twice is identity" forall (items: List[Int<0..100>]) {
+  expect items.reversed().reversed() == items
+}

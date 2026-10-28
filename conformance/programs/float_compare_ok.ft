@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-06-05
+// Float operators are total IEEE 754 operations; comparisons are allowed although floats implement no ordering interface (6.5).
+pure func compare(a: Float, b: Float, c: Float32, d: Float32) Bool {
+  let eq = a == b
+  let lt = a < b
+  let le = a <= b
+  let gt = c > d
+  let ge = c >= d
+  let ne = c != d
+  return eq || lt || le || gt || ge || ne
+}

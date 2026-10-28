@@ -1,0 +1,30 @@
+// execute: 3|4
+// requires: runtime
+// D-148 (docs/delivery/defects.json): natively, a value passed to a `dynamic I` parameter does not build (rustc E0277,
+// `Box<dyn Measured>: Measured` is not satisfied), nor does a method call through a type parameter bounded by I (E0599);
+// the checkers accept the program, and the interpreter and the VM print `3|4`.
+import fortis.host { Host }
+
+export interface Measured {
+  pure func size(self) Int
+}
+
+export class Pair implements Measured {
+  export left: Int
+  pure func size(self) Int => 3
+}
+
+export class Quad implements Measured {
+  export left: Int
+  pure func size(self) Int => 4
+}
+
+pure func measure(s: dynamic Measured) Int => s.size()
+
+pure func bounded[S](s: S) Int where S implements Measured => s.size()
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${measure(Pair(left: 1))}")
+  caps.console.print("${bounded(Quad(left: 1))}")
+}

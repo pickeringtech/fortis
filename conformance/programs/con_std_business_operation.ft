@@ -1,0 +1,18 @@
+// accept
+// covers: LANG-11-06
+// Platform 12: BusinessOperation expands like PublicApi; its observation schema is attached with @observe.
+import fortis.host { RawSql }
+contract BusinessOperation {
+  excludes capability RawSql
+  forbids recovers
+}
+observation Settlement {
+  outcome: Int                       required: all
+  denominator: Int                   required: all
+}
+@observe(Settlement)
+BusinessOperation try func settle(amount: Int) Int {
+  capture outcome = amount
+  capture denominator = 1
+  return amount
+}

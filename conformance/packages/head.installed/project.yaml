@@ -1,0 +1,6 @@
+schema: fortis.project/v1
+name: head.installed
+version: 1.0.0
+exports: []
+dependencies:
+  fortis: "1.0"

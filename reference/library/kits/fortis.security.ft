@@ -1,0 +1,12 @@
+// Kit signature fixture (DEL-06).
+export interface Authorisation {
+  pure func grantedTo(self, who: Identity) Bool
+}
+export class Identity {
+  export accountId: Int
+  export trusted pure func hasRole(self, role: Role) Bool
+}
+export enum Role derive Equatable {
+  Staff
+  Admin
+}

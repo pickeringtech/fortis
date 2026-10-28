@@ -1,0 +1,8 @@
+// reject: E-FUN-011 (at the marked lines)
+// covers: LANG-08-03
+func run(limit: Int, items: List[Int]) Int {
+  let total = items.count()
+  let f = fn(x: Int) Bool => x > limit             // reject: E-FUN-011 — limit is not in the capture list
+  let g = fn[limit](x: Int) Int => Int.saturatingAdd(x, total)   // reject: E-FUN-011 — total is not captured
+  return items.countWhere(f)
+}

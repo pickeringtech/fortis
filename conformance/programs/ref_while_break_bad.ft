@@ -1,0 +1,11 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-72 (Codex's design review, finding 5): the state after a `while` loop is the negated condition alone; the states
+// of `break` statements are not joined into it. Here the loop leaves by `break` with `i = 0`, but both checkers
+// take `i >= 1` after the loop, and `10 / i` divides by zero for `f(0)`.
+export pure func f(i: Int<0..1>) Int {
+  while i < 1 {
+    break
+  }
+  return 10 / i                              // reject: E-REF-002 — the divisor may be zero
+}

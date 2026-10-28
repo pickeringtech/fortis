@@ -1,0 +1,8 @@
+// reject: E-OWN-051 (at the marked line)
+// covers: LANG-07-06
+// An interpolated string is an allocated String, a temporary: a result borrowed from it would dangle.
+pure func head(text: StringView) StringView from text => text
+export func main(args: List[String]) Void {
+  let n = 3
+  let h = head("item ${n}")                          // reject: E-OWN-051
+}

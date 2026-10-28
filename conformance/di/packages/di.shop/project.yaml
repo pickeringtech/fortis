@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: di.shop
+version: 1.2.0
+entry: app
+exports: []
+dependencies:
+  fortis: "1.0"

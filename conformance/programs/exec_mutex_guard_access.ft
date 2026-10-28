@@ -1,0 +1,42 @@
+// execute: 1|41|83|2
+// requires: runtime
+// covers: LANG-12-06
+// D-23: a `MutexGuard[T]` is an exclusive loan of the protected value (12.7): `get` copies it, `set` replaces it and
+// `replace` swaps it out, so a `Mutex` holds shared mutable state; before, the guard had no members and every read or
+// write was refused.
+import fortis.host { Host }
+
+class Tally {
+  export hits: Int
+  export names: List[String]
+}
+
+try func bump(m: Mutex[Int]) Int {
+  let g = m.lockBlocking() or fail
+  g.set(Int.wrappingAdd(g.get(), 40))
+  return g.get()
+}
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let m = Mutex.create(1)
+  {
+    let g = m.lockBlocking() or fail
+    caps.console.print("${g.get()}")
+  }
+  let bumped = bump(m) or fail
+  caps.console.print("${bumped}")
+  {
+    let g = m.lockBlocking() or fail
+    let old = g.replace(42)
+    caps.console.print("${Int.wrappingAdd(old, g.get())}")
+  }
+  let t = Mutex.create(Tally(hits: 0, names: List.of(String.from("a"))))
+  {
+    let g = t.lockBlocking() or fail
+    let mut tally = g.replace(Tally(hits: 0, names: List.default()))
+    editable tally.names.push(String.from("b"))
+    caps.console.print("${tally.names.count()}")
+    g.set(move tally)
+  }
+}

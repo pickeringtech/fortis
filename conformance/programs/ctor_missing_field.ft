@@ -1,0 +1,13 @@
+// reject: E-TYP-050, E-TYP-130 (at the marked lines)
+// covers: LANG-09-02
+export class Summary {
+  export name: String
+  export age: Int
+}
+
+pure func build() Summary {
+  let a = Summary(name: "x")                // reject: E-TYP-050 — age is missing
+  let b = Summary(name: "x", age: 1, tier: 2)   // reject: E-TYP-130 — no field tier
+  let c = Summary("x", 1)                   // reject: E-TYP-130 — constructor arguments are named
+  return move a
+}

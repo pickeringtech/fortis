@@ -1,0 +1,20 @@
+// reject: E-MAT-001, E-REF-002 (at the marked lines)
+// covers: LANG-09-05, LANG-06-02
+// D-79, a class payload: `present(Cell(v: 0))` matches only a cell whose `v` is 0, so it does not cover `present`. For
+// `f(Cell(v: 1))` no arm runs, and the state after the match keeps `d = 0`.
+export class Cell {
+  export v: Int
+}
+
+export func f(c: owned Cell?) Int {
+  let mut d: Int<0..1> = 0
+  match move c {                             // reject: E-MAT-001 — `present` with a cell whose `v` is not 0
+    null => {
+      d = 1
+    }
+    present(Cell(v: 0)) => {
+      d = 1
+    }
+  }
+  return 1 / d                               // reject: E-REF-002 — no arm runs for `Cell(v: 1)`
+}

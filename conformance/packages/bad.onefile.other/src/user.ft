@@ -1,0 +1,6 @@
+// accept
+// This module's import names a member the other module exports. Checked on its own, it has no finding: the
+// sibling's name error is not a syntax error, so the check does not substitute one (D-51.8).
+import bad.onefile.other.util { limit }
+
+export pure func use() Int => limit()

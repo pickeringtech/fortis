@@ -1,0 +1,45 @@
+// execute: codec.invalid|codec.invalid|codec.invalid|codec.invalid|codec.invalid|codec.unknown_field|refinement.out_of_range|refinement.out_of_range|refinement.out_of_range|codec.invalid|codec.invalid|codec.invalid|codec.invalid|ok 40
+// requires: runtime
+// covers: LANG-06-10, LANG-06-03
+// DEL-29 criterion 3: malformed input fails `codec.invalid`, an undeclared key `codec.unknown_field`, and a value
+// outside a refinement or nominal type fails that type's validation, in both formats; a good input decodes.
+import fortis.host { Host }
+export type Percent = Int<0..100>
+export type Name = String<scalars: 1..8>
+export class Entry derive Codec {
+  export name: Name
+  export score: Percent
+  export tags: List[String]<length: 0..2>
+}
+recovers func code(input: StringView) String {
+  let e = Entry.fromText(input) catch err {
+    return String.from(err.code)
+  }
+  return "ok ${e.score}"
+}
+recovers func bytesCode(input: BytesView) String {
+  let e = Entry.fromBytes(input) catch err {
+    return String.from(err.code)
+  }
+  return "ok ${e.score}"
+}
+export try recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let out = alias caps.console
+  out.print(code("{\"name\":\"a\",\"score\":1"))                            // truncated
+  out.print(code("{\"name\":\"a\",\"score\":1,\"tags\":[]} x"))             // trailing text
+  out.print(code("{\"name\":\"a\",\"score\":\"1\",\"tags\":[]}"))           // wrong kind
+  out.print(code("{\"name\":\"a\",\"tags\":[]}"))                           // missing field
+  out.print(code("{\"name\":\"a\",\"score\":99999999999999999999,\"tags\":[]}"))   // does not fit Int
+  out.print(code("{\"name\":\"a\",\"score\":1,\"tags\":[],\"admin\":true}"))      // undeclared key
+  out.print(code("{\"name\":\"a\",\"score\":101,\"tags\":[]}"))             // Percent refinement
+  out.print(code("{\"name\":\"abcdefghij\",\"score\":1,\"tags\":[]}"))      // Name refinement
+  out.print(code("{\"name\":\"a\",\"score\":1,\"tags\":[\"x\",\"y\",\"z\"]}"))     // length refinement
+  let good = Entry.fromText("{\"name\":\"ann\",\"score\":40,\"tags\":[\"x\"]}") or fail
+  let bytes = good.toBytes()
+  out.print(bytesCode(String.from("x").toBytes()))                            // a String's bytes, not an Entry's
+  out.print(bytesCode(Percent(40).toBytes()))                               // an integer where a record is expected
+  out.print(bytesCode(bytes.toText().toBytes()))                           // the base64 text's bytes
+  out.print(code("[1,2]"))                                                  // an array for an object
+  out.print(bytesCode(bytes))
+}

@@ -1,0 +1,39 @@
+// accept
+// covers: LANG-06-11
+// 6.10: a generic call's type arguments are fixed by an annotated binding, a return type, a parameter type, the
+// success type a catch recovers to, or the type a match gives.
+export error Empty {
+  code: "demo.empty"
+}
+func total(xs: List[Int]) Int {
+  let mut sum = 0
+  for x in xs {
+    sum = Int.wrappingAdd(sum, x)
+  }
+  return sum
+}
+func fresh() Map[String, Int] {
+  return Map.default()
+}
+try func firstAll(xs: List[Int]) List[Int] {
+  if xs.count() == 0 {
+    fail Empty()
+  }
+  return copy xs
+}
+recovers func run(flag: Bool) Int {
+  let annotated: List[Int] = List.default()
+  let argument = total(List.default())
+  let recovered = firstAll(List.of(1, 2)) catch e {
+    recover List.default()
+  }
+  let chosen: List[Int] = match flag {
+    true => {
+      give List.default()
+    }
+    false => {
+      give List.of(3)
+    }
+  }
+  return Int.wrappingAdd(Int.wrappingAdd(annotated.count(), argument), Int.wrappingAdd(recovered.count(), chosen.count()))
+}

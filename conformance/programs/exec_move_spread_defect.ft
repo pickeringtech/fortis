@@ -1,0 +1,30 @@
+// execute: defect:contract_violation
+// execute-trace: drop Noisy
+// requires: runtime
+// covers: LANG-07-07
+// 9.2, 7.9: the field a `...move` spread drops runs its cleanup at the spread. A defect there terminates the
+// task before the statement's later work (D-250).
+import fortis.host { Host }
+
+class Noisy {
+  export id: Int
+  cleanup(editable self) Void {
+    injectDefect("contract_violation")
+  }
+}
+
+class Wide {
+  export name: String
+  export extra: Noisy
+}
+
+class Narrow {
+  export name: String
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let w = Wide(name: "a", extra: Noisy(id: 1))
+  let n = Narrow(...move w)
+  caps.console.print(n.name)
+}

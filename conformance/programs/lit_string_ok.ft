@@ -1,0 +1,12 @@
+// accept
+// Where a String is expected a literal converts implicitly (X-17); interpolation yields a String.
+export class Greeting {
+  export text: String
+}
+
+pure func name(count: Int) String {
+  let s: String = "plain"
+  let t: String = "count ${count}"
+  let g = Greeting(text: "fixed")
+  return move t
+}

@@ -1,0 +1,10 @@
+// reject: E-REF-001 (at the marked line)
+// covers: LANG-06-02
+// The loop header widens `total` to its declared range; the addition then exceeds it (6.3).
+pure func sumTo(n: Int<0..1000>) Int<0..500500> {
+  let mut total: Int<0..500500> = 0
+  for i in 0..n {
+    total = total + i                       // reject: E-REF-001
+  }
+  return total
+}

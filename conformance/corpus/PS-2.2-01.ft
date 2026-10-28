@@ -1,0 +1,5 @@
+// illustrative
+try func loadConfig(fs: FileSystem, path: Path) Config {
+  let text = fs.readText(path) or fail
+  return Config.parse(text) or fail
+}

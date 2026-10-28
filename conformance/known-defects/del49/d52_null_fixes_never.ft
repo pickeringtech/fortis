@@ -1,0 +1,12 @@
+// both checkers: E-TYP-040 on a valid call. `null` passed to a `T?` parameter fixes T to Never, so the second
+// argument (an Int) is rejected; LR 6.8/6.10: `null` is the absent case of any `T?` and T is fixed by `fallback`.
+pure func orElse[T](value: T?, fallback: T) T where T implements Copyable {
+  return match value {
+    present(v) => copy v
+    null => copy fallback
+  }
+}
+
+test "orElse" {
+  expect orElse(null, 3) == 3
+}

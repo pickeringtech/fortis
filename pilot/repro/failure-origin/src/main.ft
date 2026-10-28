@@ -1,0 +1,22 @@
+// Repro (FRICTION entry 40): the failure record of a declared error names the wrong module and an unrendered
+// message.
+//   bin/fortis run pilot/repro/failure-origin --format json   (standard error)
+//   -> {"annotations": [], ..., "code": "repro.bad_day", "message": "\"day ${day} does not exist\"",
+//       "origin": {"file": ".../pilot/repro/failure-origin/src/alpha.ft", "function": "of"}, "payload": {"day": "40"}, ...}
+// The failure was raised in zulu.ft (`Day.of`); alpha.ft only has another function called `of` (with the two
+// modules named the other way round, the origin is right: the first module with a function of that name wins).
+// The VM record has no file at all. The message
+// is the template, quoted, with its `${day}` not filled in. Docs: guide/10-outcomes.md "Declaring failures"
+// ("an origin (module, function and line)", "a display template ... rendered when the failure is displayed");
+// agent/records.md shows `"message": ""` for a declared error in its example record.
+import fortis.host { Host }
+import repro.origin.zulu { Day }
+import repro.origin.alpha { Box }
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let b = Box.of(1)
+  caps.console.print("box ${b.n}")
+  let d = Day.of(40) or fail
+  caps.console.print("day ${d.n}")
+}

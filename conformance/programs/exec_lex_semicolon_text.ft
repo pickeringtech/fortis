@@ -1,0 +1,12 @@
+// execute: a;b|//not a comment|3
+// requires: runtime
+// covers: LANG-03-01
+// A `;` inside a string or a comment is text, not a token; only one outside them is an error (3.1).
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("a;b")              // a comment may hold a ; too
+  caps.console.print("//not a comment")
+  caps.console.print("${Int.wrappingAdd(1, 2)}")
+}

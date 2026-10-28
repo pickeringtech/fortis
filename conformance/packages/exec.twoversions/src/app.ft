@@ -1,0 +1,13 @@
+// LANG-04-04 (X-136): ver.greet is linked at two versions, 2.0.0 by this package and 1.0.0 by ver.greeter. Each
+// version's functions and its Badge class (whose fields differ) run where they are named, on every backend.
+import fortis.host { Host }
+import ver.greet { hello, Badge }
+import ver.greeter.welcome { welcome, badge }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print(hello("ada"))
+  caps.console.print(welcome("ada"))
+  caps.console.print(Badge(id: 1, tier: 3).show())
+  caps.console.print(badge())
+}

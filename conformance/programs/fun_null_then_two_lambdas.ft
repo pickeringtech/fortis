@@ -1,0 +1,18 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-08-04
+// A null binding of a closure type takes its one lambda from the first assignment.
+// A second lambda, including the other arm of a join, needs `dynamic fn(...)`.
+func run(b: Bool) Int {
+  let mut f: (fn(Int) Int)? = null
+  f = pure noalloc fn(x: Int) Int => x
+  f = pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1)                 // reject: E-TYP-040 — the binding already holds one lambda
+  let mut g: (fn(Int) Int)? = null
+  if b {
+    g = pure noalloc fn(x: Int) Int => x
+  } else {
+    g = pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1)               // reject: E-TYP-040 — the other arm is a second lambda
+  }
+  discard f
+  discard g
+  return 0
+}

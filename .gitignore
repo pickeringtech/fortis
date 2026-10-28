@@ -1,0 +1,7 @@
+# build output at the repository root only (a `build` directory elsewhere is source: fortis-mir/src/build)
+/build/
+compiler/target/
+__pycache__/
+*.pyc
+# fuzz corpora `fortis test --fuzz` keeps beside a program (X-131)
+.fortis/

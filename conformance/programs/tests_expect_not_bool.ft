@@ -1,0 +1,6 @@
+// reject: E-TYP-010 (at the marked line)
+// covers: LANG-14-02
+pure func double(n: Int) Int => Int.wrappingAdd(n, n)
+test "doubling" {
+  expect double(2)                         // reject: E-TYP-010 — expect takes a Bool
+}

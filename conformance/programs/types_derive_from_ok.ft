@@ -1,0 +1,11 @@
+// accept
+export class Customer {
+  export name: String
+  export age: Int
+  export email: String
+}
+
+export class Summary derive From[Customer] {
+  export name: String
+  export age: Int
+}

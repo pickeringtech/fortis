@@ -1,0 +1,9 @@
+// reject: E-TYP-010 (at the marked line)
+// covers: LANG-06-08
+try func half(n: Int) Int => n
+func run(n: Int) Int {
+  if half(n) {                             // reject: E-TYP-010 — an outcome is not a Bool
+    return 1
+  }
+  return 0
+}

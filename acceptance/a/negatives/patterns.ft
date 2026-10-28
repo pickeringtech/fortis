@@ -1,0 +1,120 @@
+// base: src/main.ft
+// class: E-MAT
+// change: the failure arm removed from a match over an outcome
+// Application A: reads the stock and order feeds through the FileSystem capability, builds the ledger, applies
+// the orders and prints a summary. It imports no kit package: the language core and fortis.host only.
+import fortis.host { Host, Console, FileSystem, Path }
+import acme.stock.ids { SkuId, lineValue, total }
+import acme.stock.feed { Entry, entry, segment, segmentCount, lineCount, checksum, nameField }
+import acme.stock.ledger { Item, Ledger, Summary, close, pairTotal }
+
+observation Load {
+  version: 1
+  bytes: Int                          required: all
+  lines: Int                          required: success
+  accepted: Int                       required: success
+}
+
+// Parses every line of the stock feed into items; a malformed line is reported once and skipped. The name is
+// copied out of its view of the line into an owned string.
+@observe(Load)
+try func stockItems(text: StringView, out: Console) List[Item] {
+  capture bytes = text.byteCount()
+  let newline = Scalar.of("\n")
+  let n = segmentCount(text, newline) or fail
+  capture lines = n
+  let mut items: List[Item] = List.default()
+  for i in 0..<n {
+    let line = segment(text, newline, i) or fail
+    if line != "" {
+      let e = entry(line) catch problem {
+        out.print("skipped stock line ${Int.saturatingAdd(i, 1)}: ${problem.code}")
+        report problem
+        recover null
+      }
+      if e != null {
+        editable items.push(Item(sku: e.sku, name: String.from(nameField(line) or fail), quantity: e.quantity))
+      }
+    }
+  }
+  capture accepted = items.count()
+  return move items
+}
+
+// Parses the order feed; the fourth field (the customer) is not needed.
+try func orderEntries(text: StringView, out: Console) List[Entry] {
+  let newline = Scalar.of("\n")
+  let mut entries: List[Entry] = List.default()
+  for i in 0..<(segmentCount(text, newline) or fail) {
+    let line = segment(text, newline, i) or fail
+    if line != "" {
+      let e = entry(line) catch problem {
+        out.print("skipped order line ${Int.saturatingAdd(i, 1)}: ${problem.code}")
+        report problem
+        recover null
+      }
+      if e != null {
+        editable entries.push(move e)
+      }
+    }
+  }
+  return move entries
+}
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  run(caps.fileSystem, caps.console) or fail
+}
+
+try func run(fs: FileSystem, out: Console) Void {
+  defer {
+    out.print("run finished")
+  }
+  let stockPath = Path.parse("stock.txt") or fail
+  let ordersPath = Path.parse("orders.txt") or fail
+  let raw = fs.readAll(stockPath) or fail
+  out.print("stock feed: ${lineCount(raw)} lines, checksum ${checksum(raw)}")
+  let stockText = fs.readText(stockPath) or fail
+  let stock = stockItems(stockText, out) or fail
+  let mut ledger = Ledger.empty()
+  for item in move stock {
+    editable ledger.add(move item)
+  }
+  out.print("ledger: ${ledger.count()} items, ${ledger.countBelow(10)} below 10")
+  let first = SkuId.validate(1001) or fail
+  out.print("sku 1001 is ${ledger.nameOf(first) ?? "unknown"}")
+  // fn mut: the visitor accumulates into a captured counter
+  let mut units = 0
+  {
+    let mut tally = fn mut[editable units](item: Item) Void {
+      units = Int.saturatingAdd(units, item.quantity)
+    }
+    ledger.visit(editable tally)
+  }
+  out.print("units held: ${units}")
+  // linear outcomes: every result of the batch is consumed exactly once
+  let orders = orderEntries(fs.readText(ordersPath) or fail, out) or fail
+  let results = editable ledger.takeAll(orders)
+  let mut filled = 0
+  let mut refused = 0
+  move results.consumeEach(fn mut[editable filled, editable refused, alias out](r: owned Outcome[Int<0..10000>]) Void {
+    match move r {
+      success(left) => {
+        filled = Int.saturatingAdd(filled, 1)
+      }
+    }
+  })
+  out.print("orders: ${filled} filled, ${refused} refused")
+  // checked totals: a value per item, then an unbounded sum through the checked API
+  let mut values: List[Int<0..10000000000>] = List.default()
+  for item in ledger.items {
+    editable values.push(lineValue(item.quantity, 250))
+  }
+  out.print("stock value: ${total(values) or fail} cents")
+  // fn once: the closing step consumes the ledger it captured
+  let finish = fn once[move ledger]() Summary {
+    return close(move ledger)
+  }
+  let summary = move finish()
+  out.print("closed: ${summary.skus} skus, ${summary.units} units")
+}

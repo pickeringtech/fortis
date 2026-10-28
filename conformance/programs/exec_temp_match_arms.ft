@@ -1,0 +1,45 @@
+// execute: made 1|wild|cleanup 1|after wild|made 2|bound|cleanup 2|after bound
+// execute-trace: drop Handle
+// requires: runtime
+// covers: LANG-07-07
+// 7.9, 9.8: a match scrutinee temporary that no arm binds by value is destroyed at the end of the match
+// statement. An arm that binds part of it by value owns that part, so the binding's cleanup runs at the end
+// of the arm and the statement does not destroy it again.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export enum Choice {
+  One(h: Handle)
+  Empty
+}
+
+func run(console: Shared[Console]) Void {
+  match Choice.One(h: Handle.make(1, alias console)) {
+    One(h: _) => { console.print("wild") }
+    Empty => { console.print("empty") }
+  }
+  console.print("after wild")
+  match Choice.One(h: Handle.make(2, alias console)) {
+    One(h: h) => { console.print("bound") }
+    Empty => { console.print("empty") }
+  }
+  console.print("after bound")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

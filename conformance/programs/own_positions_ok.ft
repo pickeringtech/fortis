@@ -1,0 +1,47 @@
+// accept
+// covers: LANG-07-01
+// Every position of 7.5 written with its marker, and every position that needs none.
+export class User derive Equatable {
+  export name: String
+  export age: Int
+  export pure func label(self) StringView from self => alias self.name
+  export func rename(editable self, name: String) Void {
+    self.name = copy name
+  }
+  export func retire(owned self) Int => self.age
+}
+
+func keep(user: owned User) Void {
+}
+
+func look(user: User) Int => user.age
+
+func change(user: editable User) Void {
+  user.age = 1
+}
+
+func positions(name: String, count: Int) Int {
+  let user = User(name: copy name, age: count)       // field initialiser: copy; a trivial value needs none
+  let mut other = copy user                          // let: copy
+  let seen = alias user                              // let: alias
+  {
+    let mut held = editable other                    // let: editable (other is let mut); ends with this block
+    held.age = 2
+  }
+  let n = look(user)                                 // plain parameter: implicit read loan
+  change(editable other)                             // editable parameter
+  keep(move other)                                   // owned parameter: move
+  keep(copy user)                                    // owned parameter: copy
+  keep(User(name: "fresh", age: 1))                  // fresh value: no marker
+  let shown = user.label()                           // self receiver, kept loan on a view result
+  let same = user == seen                            // comparison operands: implicit read loans
+  let text = "${user.name}"                          // interpolation: implicit read loan
+  let mut third = User(name: "x", age: 3)
+  editable third.rename("y")                         // editable self receiver
+  let age = move third.retire()                      // owned self receiver
+  return Int.saturatingAdd(n, age)
+}
+
+func giveBack(user: owned User) User {
+  return move user                                   // return: move of an owned local/parameter
+}

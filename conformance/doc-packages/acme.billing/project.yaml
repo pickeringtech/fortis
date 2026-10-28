@@ -1,0 +1,6 @@
+schema: fortis.project/v1
+name: acme.billing
+version: 1.0.0
+exports: [invoices]
+dependencies:
+  fortis: "1.0"

@@ -1,0 +1,3 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-08-01
+export func nothing() { }                   // reject: E-SYN-000 — the success type must be written (Void)

@@ -1,0 +1,27 @@
+// execute: body|defer 2|defer 1|cleanup 2|cleanup 1|done
+// requires: runtime
+// covers: LANG-05-02, LANG-12-01
+// Block exit (5.1, 12.2): loans end, deferred blocks run in reverse registration order, then locals are
+// dropped in reverse initialisation order (each running its cleanup).
+import fortis.host { Host, Console, Capabilities }
+export class Res {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+func run(console: Shared[Console]) Void {
+  let a = Res(id: 1, console: console.retain())
+  defer { console.print("defer 1") }
+  let b = Res(id: 2, console: console.retain())
+  defer { console.print("defer 2") }
+  console.print("body")
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+  console.print("done")
+}

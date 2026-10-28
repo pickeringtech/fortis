@@ -1,0 +1,5 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-11-01
+// An unconstrained callback permits io/mutate/nondet, so a pure caller needs a `pure fn` parameter.
+pure func applyAny(f: fn(Int) Int) Int => f(1)      // reject: E-EFF-001 — the callback may have effects
+pure func applyPure(f: pure fn(Int) Int) Int => f(1)

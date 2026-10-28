@@ -1,0 +1,8 @@
+schema: fortis.project/v1
+name: bad.caps.dependency
+version: 0.1.0
+entry: app
+exports: []
+dependencies:
+  fortis: "1.0"
+  caps.minter: "1.0.0"

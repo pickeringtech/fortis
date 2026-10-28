@@ -1,0 +1,11 @@
+// The entry module: the manifest names it, and its own test calls the module under test, so the package's
+// modules import each other in a chain (app -> calc -> numbers).
+import acme.modtest.calc { quadruple }
+
+export func main(args: List[String]) Void {
+  // the test runners never run main; this package's fixture is its modules' tests
+}
+
+test "the entry's test calls the module under test" {
+  expect quadruple(3) == 12
+}

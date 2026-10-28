@@ -1,0 +1,4 @@
+// accept
+import bad.facts.member.model { Cee }
+
+export pure func fb() Cee => Cee.make(1)

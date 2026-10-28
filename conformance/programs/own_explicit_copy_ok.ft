@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-07-03
+// Duplication is written with copy; nothing is cloned behind the program (7.5, LANG-07-03).
+// Duplication is written; nothing is cloned behind the program's back.
+pure func twice(text: String) Int {
+  let first = copy text
+  let second = copy text
+  return Int.saturatingAdd(first.scalarCount(), second.scalarCount())
+}

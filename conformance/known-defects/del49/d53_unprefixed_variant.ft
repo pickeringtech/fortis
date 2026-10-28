@@ -1,0 +1,27 @@
+import fortis.host { Host }
+
+enum Light derive Equatable {
+  Red
+  Amber
+}
+
+pure func viaReturn() Light {
+  return Red
+}
+
+pure func viaArm(flag: Bool) Light {
+  return match flag {
+    true => Red
+    false => Amber
+  }
+}
+
+pure func viaLet() Light {
+  let x: Light = Red
+  return x
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${viaReturn() == Light.Red} ${viaArm(true) == Light.Red} ${viaLet() == Light.Red}")
+}

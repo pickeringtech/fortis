@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-11-06
+// Platform 12: PublicApi expands to `excludes capability RawSql`, `forbids recovers`; async/try are written by the function.
+import fortis.host { RawSql }
+contract PublicApi {
+  excludes capability RawSql
+  forbids recovers
+}
+PublicApi async try func lookup(id: Int) Int => id

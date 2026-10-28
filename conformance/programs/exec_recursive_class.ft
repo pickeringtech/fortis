@@ -1,0 +1,37 @@
+// execute: sum 6|depth 3|empty 0
+// requires: runtime
+// covers: LANG-09-06
+// A class may hold itself through an optional field (a linked list); matching `present(node)` binds a read loan of
+// the next node (9.8). Natively such a class is boxed, and field reads and writes are unchanged.
+import fortis.host { Host }
+
+export class Node {
+  export value: Int
+  export next: Node?
+}
+
+pure func sum(n: Node?) Int {
+  return match n {
+    present(node) => Int.wrappingAdd(node.value, sum(node.next))
+    null => 0
+  }
+}
+
+pure func depth(n: Node?) Int {
+  return match n {
+    present(node) => Int.wrappingAdd(1, depth(node.next))
+    null => 0
+  }
+}
+
+pure func total(list: Node) Int => Int.wrappingAdd(list.value, sum(list.next))
+
+pure func length(list: Node) Int => Int.wrappingAdd(1, depth(list.next))
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let list = Node(value: 1, next: Node(value: 2, next: Node(value: 3, next: null)))
+  caps.console.print("sum ${total(list)}")
+  caps.console.print("depth ${length(list)}")
+  caps.console.print("empty ${sum(null)}")
+}

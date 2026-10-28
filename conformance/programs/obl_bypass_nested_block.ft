@@ -1,0 +1,9 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-01
+try func half(n: Int) Int => n
+func run(n: Int) Int {
+  {
+    let o = half(n)                        // reject: E-OBL-001 — dropped at the end of the inner block
+  }
+  return 0
+}

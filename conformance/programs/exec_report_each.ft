@@ -1,0 +1,27 @@
+// execute: 0|0|done
+// reports: runtime-failure:demo.odd|runtime-failure:demo.odd
+// requires: runtime
+// covers: LANG-10-06
+// One record per `report`: two reported failures, two records; main succeeds.
+import fortis.host { Host }
+export error Odd {
+  code: "demo.odd"
+}
+try func check(n: Int) Int {
+  if n % 2 == 1 {
+    fail Odd()
+  }
+  return n
+}
+func quiet(n: Int) Int {
+  return check(n) catch e {
+    report e
+    recover 0
+  }
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${quiet(1)}")
+  caps.console.print("${quiet(3)}")
+  caps.console.print("done")
+}

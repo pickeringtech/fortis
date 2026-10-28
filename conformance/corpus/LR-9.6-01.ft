@@ -1,0 +1,6 @@
+// accept
+export mixin Summarised {
+  requires pure func title(self) String
+  requires pure func lineCount(self) Int
+  export pure func summary(self) String => "${self.title()} (${self.lineCount()} lines)"
+}

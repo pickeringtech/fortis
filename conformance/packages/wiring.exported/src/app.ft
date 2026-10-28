@@ -1,0 +1,14 @@
+// reject: E-DI-010 (at the marked line)
+// PLAT-03-01 (D-90): a package module is read as the production frontend reads it, elaborated when it uses the
+// Dependency injection kit, so an exported context's body is validated in both checkers.
+export class Pool {
+  size: Int = 1
+}
+
+export context Production {
+  bind Pool                             // reject: E-DI-010 — not a DI schema v1 statement
+}
+
+test "ordinary" {
+  expect 1 == 1
+}

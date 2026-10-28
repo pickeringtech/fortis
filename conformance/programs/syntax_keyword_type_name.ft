@@ -1,0 +1,5 @@
+// reject: E-SYN-002 (at the marked line)
+// covers: LANG-03-04
+export class Self {                       // reject: E-SYN-002
+  value: Int
+}

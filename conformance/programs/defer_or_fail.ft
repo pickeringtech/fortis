@@ -1,0 +1,9 @@
+// reject: E-DEF-001 (at the marked line)
+// covers: LANG-12-02
+try func flush(n: Int) Int => n
+try func run(n: Int) Int {
+  defer {
+    discard flush(n) or fail               // reject: E-DEF-001 — no outcome to propagate to
+  }
+  return n
+}

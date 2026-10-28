@@ -1,0 +1,21 @@
+// execute: done
+// reports: task-completion:outcome=Defect
+// requires: runtime
+// covers: LANG-10-06, LANG-12-04
+// 10.8: a out_of_memory defect in a detached task. The VM and the interpreter terminate the task and keep the process,
+// and its supervisor records TaskCompletion.Defect; native code aborts the process (DEL-40).
+import fortis.host { Host, Supervisor }
+async func broken() Int {
+  injectDefect("out_of_memory")
+}
+async func run(supervisor: Supervisor) Void {
+  scope tasks {
+    let t = tasks.launch(broken())
+    tasks.detach(move t, supervisor)
+  }
+}
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  await run(caps.supervisor)
+  caps.console.print("done")
+}

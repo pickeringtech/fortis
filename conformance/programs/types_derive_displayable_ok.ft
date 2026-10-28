@@ -1,0 +1,5 @@
+// accept
+export class Badge derive Displayable {
+  export label: String
+  export count: Int
+}

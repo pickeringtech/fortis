@@ -1,0 +1,10 @@
+// A file inside the package's directory but not under its src/: it is no module of the package, and the test
+// runners keep it standalone (the nearest project.yaml whose src/ holds a file decides).
+
+func triple(x: Int) Int {
+  return Int.wrappingMul(x, 3)
+}
+
+test "a standalone file's test" {
+  expect triple(3) == 9
+}

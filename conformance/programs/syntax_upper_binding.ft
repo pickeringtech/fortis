@@ -1,0 +1,8 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-03-03
+// The first character decides the category: an uppercase identifier names a type or variant, so it cannot be bound
+// as a value (3.3).
+func f() Int {
+  let Total = 1                            // reject: E-SYN-000 — an uppercase name is not a binding
+  return Total
+}

@@ -1,0 +1,9 @@
+// reject: E-ASY-001 (at the marked line)
+// covers: LANG-12-04
+async func work(n: Int) Int => n
+async func run(n: Int) Task[Int] {
+  scope tasks {
+    let t = tasks.launch(work(n))
+    return move t                          // reject: E-ASY-001 — a task is awaited inside its scope or detached
+  }
+}

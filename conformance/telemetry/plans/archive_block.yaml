@@ -1,0 +1,67 @@
+# main.yaml with an archive that fills at 200 records and blocks: the batch is not acknowledged until there is room.
+schema: fortis.project/v1
+telemetry:
+  privacy:
+    permitted_fields: all
+    transforms:
+      OrderProcessing:
+        email: hash
+        note: redact
+        card: drop
+  archive:
+    enabled: true
+    segment_records: 50
+    capacity_records: 200
+    on_full: block
+  projections:
+    orders_by_route:
+      source: OrderProcessing.v2
+      where:
+        all:
+          - field: region
+            in: [UK, IE, FR]
+          - field: email
+            present: true
+      dimensions: [region, tier, provider]
+      metrics:
+        - name: orders.count
+          instrument: counter
+        - name: orders.amount
+          instrument: histogram
+          value: amount
+          unit: "{cent}"
+          buckets: [500, 1000, 1500]
+      cardinality:
+        limit: 20
+        overflow: aggregate
+      export: operational.otlp
+    orders_by_tier:
+      source: OrderProcessing
+      where:
+        not:
+          field: tier
+          equals: Basic
+      dimensions: [region, tier]
+      metrics:
+        - name: orders.premium
+          instrument: counter
+      export: operational.otlp
+    open_sessions:
+      source: Session
+      bind_at: lifecycle_start
+      where:
+        field: tier
+        in: [Business, Enterprise]
+      dimensions: [tier]
+      metrics:
+        - name: sessions.open
+          instrument: updown
+          lifecycle:
+            key: session
+            start:
+              field: phase
+              equals: 1
+            end:
+              field: phase
+              equals: 2
+      export: operational.otlp

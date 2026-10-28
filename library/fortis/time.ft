@@ -1,0 +1,33 @@
+// `fortis.time` implementation (DEL-27). Signatures equal `reference/library/time.ft`; the nominal types are the
+// prelude's (an import re-introduces the same type).
+export class Duration {
+  // intrinsic: n * 86400 * 10^9 nanoseconds; O(1) (n bounded by the 64-bit count)
+  export trusted pure func days(n: Int<0..>) Duration
+  // intrinsic: n * 3600 * 10^9 nanoseconds; O(1)
+  export trusted pure func hours(n: Int<0..>) Duration
+  // intrinsic: n * 60 * 10^9 nanoseconds; O(1)
+  export trusted pure func minutes(n: Int<0..>) Duration
+  // intrinsic: n * 10^9 nanoseconds; O(1)
+  export trusted pure func seconds(n: Int<0..>) Duration
+  // intrinsic: n * 10^6 nanoseconds; O(1)
+  export trusted pure func milliseconds(n: Int<0..>) Duration
+  // intrinsic: sum of the signed 64-bit nanosecond counts; fails `numeric.overflow`; O(1)
+  export trusted pure try func add(a: Duration, b: Duration) Duration
+  // intrinsic: difference of the nanosecond counts; fails `numeric.overflow`; O(1)
+  export trusted pure try func sub(a: Duration, b: Duration) Duration
+  // intrinsic: the count times factor; fails `numeric.overflow`; O(1)
+  export trusted pure try func multiply(d: Duration, factor: Int) Duration
+  // intrinsic: the signed 64-bit nanosecond count; O(1)
+  export trusted pure func nanoseconds(self) Int
+}
+export class Instant {}
+export class Timestamp {
+  // intrinsic: 1970-01-01T00:00:00Z as a signed 64-bit nanosecond count of 0; O(1)
+  export trusted pure func epoch() Timestamp
+  // intrinsic: t + d in nanoseconds since the epoch; fails `numeric.overflow`; O(1)
+  export trusted pure try func add(t: Timestamp, d: Duration) Timestamp
+  // intrinsic: a is strictly later than b; O(1)
+  export trusted pure func after(a: Timestamp, b: Timestamp) Bool
+  // intrinsic: a is strictly earlier than b; O(1)
+  export trusted pure func before(a: Timestamp, b: Timestamp) Bool
+}

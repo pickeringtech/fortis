@@ -1,0 +1,185 @@
+{
+ "schema": "fortis.contracts/v1",
+ "application": "a2",
+ "rule": "PROG-FND-05",
+ "build_manifest": "build/release-record/a2.build.json",
+ "built": true,
+ "guarantees": [
+  {
+   "declaration": "words",
+   "file": "acceptance/a2/src/count.ft",
+   "line": 12,
+   "head": "pure func words(text: StringView, minLength: Int) List[String]",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "longest",
+   "file": "acceptance/a2/src/count.ft",
+   "line": 23,
+   "head": "pure func longest(ws: ListView[String]) String",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "count",
+   "file": "acceptance/a2/src/count.ft",
+   "line": 34,
+   "head": "async func count(name: owned String, text: owned String, minLength: Int) Tally",
+   "guarantees": [
+    {
+     "kind": "async",
+     "checker": "the core executor's contract (12.3) and the loan checker across suspension points",
+     "scope": "the function and the tasks it launches"
+    },
+    {
+     "kind": "owned",
+     "checker": "ownership checker: the argument is moved and the caller cannot use it again (7.1, E-OWN)",
+     "scope": "the call"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "readAll",
+   "file": "acceptance/a2/src/main.ft",
+   "line": 36,
+   "head": "try func readAll(fs: FileSystem) Inputs",
+   "guarantees": [
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "tally",
+   "file": "acceptance/a2/src/main.ft",
+   "line": 49,
+   "head": "async try func tally(fs: owned FileSystem, minimum: Int) List[Tally]",
+   "guarantees": [
+    {
+     "kind": "async",
+     "checker": "the core executor's contract (12.3) and the loan checker across suspension points",
+     "scope": "the function and the tasks it launches"
+    },
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    },
+    {
+     "kind": "owned",
+     "checker": "ownership checker: the argument is moved and the caller cannot use it again (7.1, E-OWN)",
+     "scope": "the call"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "main",
+   "file": "acceptance/a2/src/main.ft",
+   "line": 65,
+   "head": "async try func main(args: List[String]) Void",
+   "guarantees": [
+    {
+     "kind": "async",
+     "checker": "the core executor's contract (12.3) and the loan checker across suspension points",
+     "scope": "the function and the tasks it launches"
+    },
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  }
+ ]
+}

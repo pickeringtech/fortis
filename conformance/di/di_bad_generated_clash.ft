@@ -1,0 +1,12 @@
+// reject: E-DI-010 (at the marked line)
+// covers: PLAT-03-01
+// Two contexts may not generate one class: context C generates CApplication, which is also a context's name.
+export class Gauge {
+  size: Int = 1
+}
+context C {
+  provide Gauge
+}
+context CApplication {                                                // reject: E-DI-010 — C also generates CApplication
+  provide Gauge
+}

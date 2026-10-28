@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: with.build.script
+version: 1.0.0
+entry: app
+exports: [app]
+dependencies:
+  fortis: "1.0"

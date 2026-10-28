@@ -1,0 +1,22 @@
+import fortis.host { Host, Console }
+
+func apply(f: fn(Int) Int, x: Int) Int => f(x)
+
+func logged(console: Console, n: Int) Int {
+  console.print("called")
+  return n
+}
+
+func run(console: Console) Int {
+  return apply(fn[alias console](n: Int) Int => logged(console, n), 1)
+}
+
+func runLet(console: Console) Int {
+  let v = apply(fn[alias console](n: Int) Int => logged(console, n), 2)
+  return v
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${run(caps.console)} ${runLet(caps.console)}")
+}

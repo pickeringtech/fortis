@@ -1,0 +1,10 @@
+// reject: E-NAM-002 (at the marked line)
+// covers: LANG-05-04
+pure func count(n: Int<0..10>) Int {
+  let mut total = 0
+  for i in 0..n {
+    i = 0                                    // reject: E-NAM-002 — the index binding is immutable
+    total = Int.wrappingAdd(total, i)
+  }
+  return total
+}

@@ -1,0 +1,22 @@
+// reject: E-EFF-001 (at the marked lines)
+// LANG-11-03 (D-37): a call's effect summary is its callee's. util's `f` and `Node.m` allocate and claim nothing, so
+// a `noalloc` caller cannot prove itself; this module's own `f` and `Node.m` of the same names do not allocate, and
+// their summaries must not stand in for util's (an alias call once kept the previous call's label, and another
+// module's method was labelled like this module's).
+import eff.module.callee.util as util
+
+noalloc func f() Int => 1
+
+class Node {
+  n: Int
+
+  noalloc func m(self) Int => 1
+}
+
+func local() Int => f()
+
+func localMethod() Int => Node(n: 1).m()
+
+noalloc func viaAlias() Int => util.f()            // reject: E-EFF-001 — util.f may allocate
+
+noalloc func viaMethod(n: util.Node) Int => n.m()  // reject: E-EFF-001 — util's Node.m may allocate

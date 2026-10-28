@@ -1,0 +1,12 @@
+import fortis.host { Host }
+import exec.reportfile.util { boom }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let v = boom() catch e {
+    report e
+    recover 0
+  }
+  discard v
+  caps.console.print("reported")
+}

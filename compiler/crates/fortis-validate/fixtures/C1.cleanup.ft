@@ -1,0 +1,12 @@
+// DEL-45 fixture for C1.cleanup (effects contributed): a cleanup's allocation is part of the destroying function's summary.
+export class Res {
+  export n: Int
+  export log: String
+  cleanup(editable self) Void {
+    self.log = "closed ${self.n}"
+  }
+}
+export func main(args: List[String]) Void {
+  let r = Res(n: 1, log: "open")
+  discard r.n
+}

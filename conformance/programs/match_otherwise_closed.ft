@@ -1,0 +1,18 @@
+// reject: E-MAT-002 (at the marked lines)
+// covers: LANG-09-05
+export enum Status {
+  Draft
+  Issued(at: Int)
+}
+
+pure func code(s: Status, v: Int?) Int {
+  let a = match s {
+    Draft => 0
+    otherwise => 1                          // reject: E-MAT-002 — otherwise over a closed enum
+  }
+  let b = match v {
+    present(x) => x
+    _ => 0                                  // reject: E-MAT-002 — `_` over an optional
+  }
+  return a + b
+}

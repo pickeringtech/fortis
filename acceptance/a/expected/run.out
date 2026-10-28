@@ -1,0 +1,14 @@
+stock feed: 9 lines, checksum -6434049152208109950
+skipped stock line 5: feed.malformed
+skipped stock line 6: refinement.out_of_range
+skipped stock line 7: feed.malformed
+skipped stock line 8: refinement.out_of_range
+ledger: 5 items, 3 below 10
+sku 1001 is widget
+units held: 10054
+refused: stock.insufficient
+refused: stock.unknown_sku
+orders: 3 filled, 2 refused
+stock value: 7500 cents
+closed: 5 skus, 30 units
+run finished

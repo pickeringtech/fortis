@@ -1,0 +1,6 @@
+// accept
+export class Receipt derive Codec {
+  export reference: String
+  export amount: Int
+  export issued: Timestamp
+}

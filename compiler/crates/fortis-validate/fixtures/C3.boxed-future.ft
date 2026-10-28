@@ -1,0 +1,13 @@
+// DEL-45 fixture for C3.boxed-future: an async call through `dynamic` boxes its future (the summary has alloc).
+export interface Source {
+  async func next(self) Int
+}
+export class Fixed implements Source {
+  export n: Int
+  export async func next(self) Int => self.n
+}
+async func pull(src: dynamic Source) Int => await src.next()
+export async func main(args: List[String]) Void {
+  let f = Fixed(n: 1)
+  discard await pull(alias f)
+}

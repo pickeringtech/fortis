@@ -1,0 +1,20 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// D-77 (found in SP-18's design review): a null test applies a comparison of an operand's value to the place after
+// a later operand changed it, as D-74 does for intervals. `c.value != clear(editable c)` compares the old value, then
+// `clear` sets `c.value` to null; both checkers take `c.value` as present in the branch and return it as `Int`.
+export class Cell {
+  export value: Int?
+}
+
+func clear(c: editable Cell) Never? {
+  c.value = null
+  return null
+}
+
+export func bad(c: editable Cell) Int {
+  if c.value != clear(editable c) {
+    return c.value                           // reject: E-TYP-040 — `c.value` is null here
+  }
+  return 0
+}

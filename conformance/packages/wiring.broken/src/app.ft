@@ -1,0 +1,8 @@
+// reject: E-DI-010 (at the marked line); its text also ends in a syntax error (E-SYN-000), which is not reported
+// PLAT-03-01 (D-138): a module whose elaboration fails is reported by the kit's findings alone, as fortis-di
+// reports it, even when its elaborated text does not parse.
+context Production {
+  bind Pool                             // reject: E-DI-010 — not a DI schema v1 statement
+}
+
+func broken(

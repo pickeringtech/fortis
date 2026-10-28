@@ -1,0 +1,12 @@
+// reject: E-EFF-010 (at the marked line)
+// covers: LANG-11-07
+// D-110: the entry `main` is called only by the runtime, once; a call of it from Fortis code would create the
+// capabilities a second time (11.6).
+import fortis.host { Host }
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("run")
+  if args.count() < 2 {
+    main(copy args)                        // reject: E-EFF-010 — the entry main is referenced
+  }
+}

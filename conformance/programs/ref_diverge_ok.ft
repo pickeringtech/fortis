@@ -1,0 +1,43 @@
+// accept
+// covers: LANG-06-02
+// A guard whose branch diverges narrows the rest of the block: return, fail, break, Never call (6.3).
+func never() Never {
+  loop {
+  }
+}
+
+pure func guards(n: Int) Int<0..100> {
+  if n < 0 {
+    return 0
+  }
+  if n > 100 {
+    never()
+  }
+  return n
+}
+
+try recovers func guardFail(n: Int) Int<0..100> {
+  if n < 0 {
+    fail Int.add(0, 0) catch e {
+      recover 0
+    }
+  }
+  if n > 100 {
+    return 100
+  }
+  return n
+}
+
+pure func guardBreak(xs: ListView[Int], n: Int) Int<0..100> {
+  let mut last: Int<0..100> = 0
+  for i in 0..<xs.count() {
+    if n < 0 {
+      break
+    }
+    if n > 100 {
+      continue
+    }
+    last = n
+  }
+  return last
+}

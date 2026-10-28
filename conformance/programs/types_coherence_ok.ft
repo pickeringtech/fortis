@@ -1,0 +1,18 @@
+// accept
+// covers: LANG-06-10
+export class Tag {
+  export name: String
+}
+
+implement Displayable for Tag {
+  pure func display(self, into: editable Builder) Void {
+  }
+}
+
+export interface Labelled {
+  pure func label(self) String
+}
+
+implement Labelled for Int {
+  pure func label(self) String => "int"
+}

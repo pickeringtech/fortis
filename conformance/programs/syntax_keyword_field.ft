@@ -1,0 +1,5 @@
+// reject: E-SYN-002 (at the marked line)
+// covers: LANG-03-04
+export class Panel {
+  view: Int                               // reject: E-SYN-002 — a field cannot be named with a keyword
+}

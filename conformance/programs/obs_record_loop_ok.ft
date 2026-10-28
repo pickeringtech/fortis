@@ -1,0 +1,16 @@
+// accept
+// covers: LANG-13-02
+observation Sample {
+  value: Int                         required: all
+}
+observation Trace {
+  tier: Int                          required: all
+}
+@observe(Trace)
+func process(items: List[Int]) Int {
+  capture tier = 0
+  for item in items {
+    record Sample(value: item)
+  }
+  return 0
+}

@@ -1,0 +1,9 @@
+// accept
+// A string literal is a StringView from static (3.5, 6.6).
+pure func views(text: StringView) Int => text.scalarCount()
+
+pure func run() Int {
+  let v: StringView = "hello"
+  let raw: StringView = """raw text"""
+  return Int.saturatingAdd(views("literal"), Int.saturatingAdd(views(v), views(raw)))
+}

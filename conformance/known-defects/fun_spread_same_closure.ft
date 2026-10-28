@@ -1,0 +1,14 @@
+// accept
+// covers: LANG-08-04
+// Not a gate program: a closure stored in a class field does not build natively (D-157 item 1).
+// Spreading an instance back into its own class is the same closure.
+class A {
+  export run: fn(Int) Int
+}
+
+func run() Int {
+  let a = A(run: pure noalloc fn(x: Int) Int => x)
+  let again = A(...move a)
+  discard again
+  return 0
+}

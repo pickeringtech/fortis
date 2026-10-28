@@ -1,0 +1,12 @@
+// accept
+// A local Path that is not copyable must not make host.Path uncopyable.
+import facts.core.model { Holder }
+
+export class Path {
+  value: Outcome[Int]
+}
+
+func copied(h: Holder) Holder {
+  let p = copy h.path
+  return Holder(path: move p)
+}

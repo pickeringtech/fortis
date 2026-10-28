@@ -1,0 +1,48 @@
+// reject: E-REF-002, E-TYP-110 (at the marked lines)
+// covers: LANG-05-05, LANG-06-02
+// `give` ends its own match arm (5.5), not a branch or arm the match is nested in: after a nested statement `match`
+// whose arms give, the enclosing path goes on (D-76), even when the arm ends in `return` after an early `give`. Its
+// state joins at the `if`, and in expression position it reaches the end of the enclosing arm without a value.
+export func branch(take: Bool) Int {
+  let mut d: Int<0..1> = 0
+  if take {
+    match 0 {
+      _ => {
+        give 0
+      }
+    }
+  } else {
+    d = 1
+  }
+  return 1 / d                               // reject: E-REF-002 — `f(true)` reaches here with `d == 0`
+}
+
+export func returning(take: Bool) Int {
+  let mut d: Int<0..1> = 0
+  if take {
+    match 0 {
+      _ => {
+        if take {
+          give 0
+        }
+        return 0
+      }
+    }
+  } else {
+    d = 1
+  }
+  return 1 / d                               // reject: E-REF-002 — the early `give` goes on after the inner match
+}
+
+export func valued(v: Int) Int {
+  let x = match v {
+    _ => {                                   // reject: E-TYP-110 — the inner `give` ends the inner arm only
+      match 0 {
+        _ => {
+          give 1
+        }
+      }
+    }
+  }
+  return x
+}

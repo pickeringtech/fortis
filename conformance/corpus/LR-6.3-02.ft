@@ -1,0 +1,8 @@
+// reject: E-REF-001 (at the marked line)
+pure func sumTo(n: Int<0..1000>) Int<0..500500> {
+  let mut total: Int<0..500500> = 0
+  for i in 0..n {                       // i : Int<0..1000>
+    total = total + i                   // reject: E-REF-001 — interval of total+i is [0, 501500]
+  }
+  return total
+}

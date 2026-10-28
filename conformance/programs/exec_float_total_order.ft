@@ -1,0 +1,13 @@
+// execute: true|true|true|false
+// requires: runtime
+// covers: LANG-06-05
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let n = Float.sqrt(-1.0)
+  caps.console.print("${Float.totalOrder(-0.0) < Float.totalOrder(0.0)}")
+  caps.console.print("${Float.totalOrder(n) > Float.totalOrder(1.0 / 0.0)}")
+  caps.console.print("${Float.totalOrder(-1.0) < Float.totalOrder(-0.5)}")
+  caps.console.print("${-0.0 < 0.0}")
+}

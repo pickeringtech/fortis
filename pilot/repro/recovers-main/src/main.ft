@@ -1,0 +1,28 @@
+// Repro (FRICTION entry 39): `export recovers func main` is accepted in a single file but refused as a
+// package's entry, and `try recovers` is refused everywhere.
+//   bin/fortis run pilot/repro/recovers-main/src/main.ft   -> prints "0", exit 0 (accepted)
+//   bin/fortis run pilot/repro/recovers-main               -> E-NAM-001 "main has signature `recovers func
+//       main( args : List [ String ] ) Void`, not one of the four forms of 4.6"
+// The guide uses `export recovers func main` in accepted examples (06-types.md "Integer arithmetic",
+// 10-outcomes.md "Consuming an outcome"); LR 4.6 as quoted by the docs lists four forms without `recovers`.
+// A program whose entry calls anything that recovers a failure (here `halfOrZero`) therefore cannot be a
+// package, and `try recovers func main` (needed to both recover and exit with status 1) is refused in both.
+import fortis.host { Host }
+
+export error Odd {
+  code: "repro.odd"
+}
+
+pure try func half(n: Int) Int {
+  if n % 2 != 0 {
+    fail Odd()
+  }
+  return n / 2
+}
+
+pure recovers func halfOrZero(n: Int) Int => half(n) or recover 0
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${halfOrZero(3)}")
+}

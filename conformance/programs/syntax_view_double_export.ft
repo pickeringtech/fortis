@@ -1,0 +1,4 @@
+// reject: E-SYN-001 (at the marked line)
+export model Widget {
+  export export view { ; }                // reject: E-SYN-001 — not the template shape
+}

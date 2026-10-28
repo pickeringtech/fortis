@@ -1,0 +1,45 @@
+// accept
+// covers: LANG-07-01
+// The positions of own_match_arm_marker.ft with their markers (D-159): `copy` duplicates the field, `move`
+// hands an owned payload on. A trivial payload, a fresh value and a call through a payload's read loan
+// need no marker, as in every other value position (7.5).
+export class User {
+  export name: String
+  export age: Int
+}
+
+export enum Slot {
+  Empty
+  Full(label: String)
+  Size(count: Int)
+}
+
+func pickName(user: User, flag: Bool) String {
+  return match flag {
+    true => copy user.name
+    false => String.from("anonymous")
+  }
+}
+
+func nameOf(opt: User?) String {
+  return match opt {
+    present(u) => copy u.name
+    null => String.from("anonymous")
+  }
+}
+
+func takeLabel(slot: owned Slot) String {
+  return match move slot {
+    Full(label: l) => move l
+    Size(count: c) => "size ${c}"
+    Empty => String.from("none")
+  }
+}
+
+func countOf(slot: Slot) Int {
+  return match slot {
+    Size(count: c) => c
+    Full(label: l) => l.scalarCount()
+    Empty => 0
+  }
+}

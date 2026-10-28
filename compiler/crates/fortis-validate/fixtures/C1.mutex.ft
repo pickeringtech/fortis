@@ -1,0 +1,15 @@
+// DEL-45 fixture for C1.mutex: a MutexGuard is not live across an await (the guard's block ends first).
+import fortis.host { Host, Console }
+async func work(n: Int) Int => n
+async try func update(m: Mutex[Int], console: Console) Int {
+  {
+    let guard = await m.lock() or fail
+    console.print("locked")
+  }
+  return await work(1)
+}
+export async try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let m = Mutex.create(0)
+  discard await update(m, caps.console) or fail
+}

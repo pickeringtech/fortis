@@ -1,0 +1,155 @@
+// The journal as data: transactions made of postings, the declared commodities and accounts, and the drafts
+// the parser builds before the validator balances them.
+import pilot.ledger.scan { LineNo }
+import pilot.ledger.date { Date }
+// AccountClass is imported so that AccountName counts as Copyable here (pilot/repro/copy-imported-optional);
+// without it the native build derives Clone for ParsedJournal but not for TransactionDraft (E-INT-002).
+import pilot.ledger.account { AccountClass, AccountName }
+import pilot.ledger.amount { Amount, CommodityCode, Commodities }
+
+// The status mark of a transaction: `*` cleared, `!` pending, or none.
+export enum Flag derive Equatable {
+  Cleared
+  Pending
+  Unmarked
+}
+
+// The mark printed for a flag.
+export pure func flagMark(flag: Flag) StringView from static {
+  return match flag {
+    Cleared => "*"
+    Pending => "!"
+    Unmarked => " "
+  }
+}
+
+// A posting as written. Its amount may be left out, in at most one posting of a transaction, and is then
+// inferred so that the transaction balances.
+export class PostingDraft {
+  export line: LineNo
+  export account: AccountName
+  export amount: Amount?
+}
+
+// A transaction as written, before it is balanced.
+export class TransactionDraft {
+  export line: LineNo
+  export date: Date
+  export flag: Flag
+  export description: String
+  export tags: List[String]
+  export postings: List[PostingDraft]
+}
+
+// A balanced posting: an amount of one commodity moved into (positive) or out of (negative) an account.
+export class Posting {
+  export line: LineNo
+  export account: AccountName
+  export amount: Amount
+  // True when the amount was inferred rather than written.
+  export inferred: Bool
+}
+
+// A balanced transaction: for every commodity, its postings sum to zero.
+export class Transaction {
+  export line: LineNo
+  export date: Date
+  export flag: Flag
+  export description: String
+  export tags: List[String]
+  export postings: List[Posting]
+
+  // True when the transaction carries the tag (written without its `#`).
+  export pure func hasTag(self, tag: StringView) Bool {
+    for t in self.tags {
+      if t == tag {
+        return true
+      }
+    }
+    return false
+  }
+
+  // True when one of the postings is to the account or an account below it.
+  export pure func touches(self, account: StringView) Bool {
+    for p in self.postings {
+      if p.account.isWithin(account) {
+        return true
+      }
+    }
+    return false
+  }
+}
+
+// A checked journal: what was declared and the transactions that balanced.
+export class Journal {
+  export commodities: Commodities
+  export accounts: List[AccountName]
+  export transactions: List[Transaction]
+
+  // The scale of a commodity; undeclared commodities never reach a journal, so 0 is only a fallback.
+  export pure func scaleOf(self, code: CommodityCode) Int<0..8> => self.commodities.scaleOf(code) ?? 0
+
+  // True when the account was declared with an `account` directive.
+  export pure func isDeclared(self, account: StringView) Bool {
+    for a in self.accounts {
+      if a.text() == account {
+        return true
+      }
+    }
+    return false
+  }
+
+  // The number of postings over all transactions.
+  export pure func postingCount(self) Int {
+    let mut n = 0
+    for t in self.transactions {
+      n = Int.saturatingAdd(n, t.postings.count())
+    }
+    return n
+  }
+
+  // The first and last dates of the journal, or null when it has no transactions.
+  export pure func dateRange(self) Period? {
+    let first = self.transactions.first()
+    if first == null {
+      return null
+    }
+    let mut low = first.date
+    let mut high = first.date
+    for t in self.transactions {
+      if t.date.isBefore(low) {
+        low = t.date
+      }
+      if high.isBefore(t.date) {
+        high = t.date
+      }
+    }
+    return Period(first: low, last: high)
+  }
+}
+
+// An inclusive range of dates.
+export trivial class Period derive Equatable {
+  export first: Date
+  export last: Date
+
+  // True when the date lies in the range.
+  export pure func holds(self, d: Date) Bool => d.within(self.first, self.last)
+
+  // The number of days in the range, both ends included.
+  export pure func days(self) Int => Int.saturatingAdd(self.first.daysUntil(self.last), 1)
+}
+
+test "flags print their marks" {
+  expect flagMark(Flag.Cleared) == "*"
+  expect flagMark(Flag.Pending) == "!"
+  expect flagMark(Flag.Unmarked) == " "
+}
+
+test "a period holds its ends" {
+  let period = Period(first: Date.of(2026, 1, 1) or fail, last: Date.of(2026, 1, 31) or fail)
+  expect period.holds(Date.of(2026, 1, 1) or fail)
+  expect period.holds(Date.of(2026, 1, 31) or fail)
+  expect !period.holds(Date.of(2026, 2, 1) or fail)
+  expect period.days() == 31
+}

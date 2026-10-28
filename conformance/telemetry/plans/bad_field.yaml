@@ -1,0 +1,9 @@
+# E-TEL-002: a field the source does not declare
+telemetry:
+  projections:
+    p:
+      source: OrderProcessing
+      dimensions: [region, country]   # expect: E-TEL-002
+      metrics:
+        - name: p.count
+          instrument: counter

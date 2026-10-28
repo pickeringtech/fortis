@@ -1,0 +1,11 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-11-06
+// A contract name never satisfies a contract: every predicate is checked against the body (Platform 12, PLAT-12-02).
+import fortis.host { Console }
+contract FastCalculation {
+  pure
+  noalloc
+}
+FastCalculation func shout(c: Console, msg: StringView) Void {
+  c.print(msg)                             // reject: E-EFF-001 — io under pure
+}

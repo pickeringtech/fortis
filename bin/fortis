@@ -1,0 +1,436 @@
+#!/usr/bin/env python3
+"""The Fortis command (reference toolchain, Python).
+
+  fortis check FILE.ft            static checks: syntax, names, types, ownership, obligations, effects, contracts, aspects
+  fortis run   FILE.ft [args...]  check, then run `main` on the definitional interpreter
+  fortis test  FILE.ft            check, then run the module's test and property declarations; a file that is a
+                                  module of a package (the nearest project.yaml whose src/ holds it) is checked and
+                                  tested as that package's module: its imports resolve, and only its tests run
+  fortis check|run|test DIR       the same for a package directory (project.yaml): run starts its `entry` module;
+                                  `run DIR --inventory` also writes the runtime-inventory record (tasks, pools) to stderr
+  fortis build FILE.ft|DIR [--out OUT]   check, then build a native executable with the production compiler
+                                  (`fortisc build`: validated typed IR lowered to safe Rust; OUT defaults to build/bin/NAME)
+  fortis view [OPTIONS] PATH...   read Fortis source: files, directories, globs; --decls, --symbol NAME, --query Q,
+                                  --queries, --json (the production tool; never writes)
+  fortis fmt [--check|--write] PATH...   the canonical layout (whitespace only; refuses rather than change a program)
+  fortis skill install [--agent claude|codex|grok|all] [--scope project|user]
+                                  install the fortis-code skill (skills/fortis-code) into agent CLIs
+
+Every finding and runtime report is a record (PROG-DIA-07): JSON lines when the stream is not a terminal,
+text otherwise; `--format json|text` overrides. `--no-check` skips the static checks for run and test."""
+import json
+import os
+import sys
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), ".."))
+sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.join(ROOT, "conformance", "tools"))
+
+
+def records_of(path: str, src: str):
+    import lexer, names, parser, run  # noqa: E401
+    from checker import check
+    rec = parser.load_grammar(os.path.join(ROOT, "reference", "grammar", "fortis.ebnf"))
+    # the syntax runner's judgement first, with every rule it applies (interpolations, operator families, keywords)
+    run.CURRENT_FILE[0] = path
+    del run.RECORDS[:]
+    ok, *_ = run.try_parse(rec, src, "module")
+    if not ok and run.RECORDS:
+        return list(run.RECORDS)
+    try:
+        tree = rec.parse(lexer.lex(src), "module")
+    except Exception as e:  # noqa: BLE001  (a syntax error is a record too)
+        import re
+        m = re.search(r"at (\d+):(\d+)", str(e))
+        line, col = (int(m.group(1)), int(m.group(2))) if m else (getattr(e, "line", 1), getattr(e, "col", 1))
+        return [{"class": "Syntax", "code": "E-SYN-000", "message": str(e), "rule": "LANG-03-02", "file": path, "line": line, "column": col,
+                 "severity": "error", "status": "violated", "fields": {"expected_tokens": [], "found_token": ""}}]
+    lib = names.Library(rec)
+    return check.check_tree(lib, tree, path)
+
+
+def elaborated(path: str, src: str):
+    """A module that uses the Dependency injection kit's heads is read as the production elaboration writes it
+    (fortisc elaborate, SP-08): (text, the kit's records, the source line of each elaborated line)."""
+    import elaboration
+    if not elaboration.uses_di(src):     # read as tokens, as fortis-di's scan reads them (D-90)
+        return src, [], None
+    import subprocess
+    r = subprocess.run([os.path.join(ROOT, "compiler", "target", "release", "fortisc"), "elaborate", "--origins", path], capture_output=True, text=True)
+    errs = [json.loads(l) for l in r.stderr.splitlines() if l.startswith("{")]
+    origins = next((e["origins"] for e in errs if "origins" in e), None)
+    return r.stdout[:-1] if r.stdout.endswith("\n") else r.stdout, [e for e in errs if "code" in e], origins
+
+
+def remapped(recs, origins, source_lines):
+    """A record found in generated code moves to the declaration it was generated from (as fortisc remaps it)."""
+    if not origins:
+        return recs
+    for r in recs:
+        line = r.get("line", 0)
+        if 1 <= line <= len(origins):
+            if line > source_lines:
+                r.setdefault("fields", {})["generated_line"] = line
+                r["column"] = 1
+            r["line"] = origins[line - 1]
+    return recs
+
+
+def plan_records(path: str, src: str):
+    import lexer, names, parser  # noqa: E401
+    from checker import plans
+    rec = parser.load_grammar(os.path.join(ROOT, "reference", "grammar", "fortis.ebnf"))
+    try:
+        tree = rec.parse(lexer.lex(src), "module")
+    except Exception:  # noqa: BLE001
+        return []
+    return plans.check(names.Library(rec), tree, path)
+
+
+def package_set(d: str):
+    import parser, resolve  # noqa: E401
+    rec = parser.load_grammar(os.path.join(ROOT, "reference", "grammar", "fortis.ebnf"))
+    return resolve.PackageSet(os.path.abspath(d), os.path.dirname(os.path.abspath(d)), rec)
+
+
+def enclosing_package(path: str):
+    """The package a module file belongs to: the nearest ancestor directory holding a project.yaml, when its src/
+    holds the file; (the package's directory, the module's dotted path). A file the nearest package's src/ does not
+    hold is no module of it and stays standalone."""
+    ap = os.path.realpath(path)          # symlinks resolve to the module file they name, as fortisc canonicalises
+    d = os.path.dirname(ap)
+    while True:
+        if os.path.isfile(os.path.join(d, "project.yaml")):
+            src = os.path.join(d, "src")
+            rel = os.path.relpath(ap, src)
+            # `..` is a parent only as a path component (`../` or the path `..`). A file named `..calc.ft` is inside src/.
+            outside = rel == os.pardir or rel.startswith(os.pardir + os.sep)
+            if outside or not rel.endswith(".ft") or os.path.basename(rel) == ".ft":
+                return None
+            return d, rel[:-3].replace(os.sep, ".")
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def package_plan_records(ps):
+    """Plan compatibility of every module of the package (PROG-VM-04: before anything runs), as fortisc runs it for
+    a package directory (fortis-types plans::check_path); each module is checked with the package-aware libraries
+    the check step gives it, so an imported type resolves as the checker resolves it."""
+    from checker import check
+    return [r for r in check.check_package_set_plans(ps) if r.get("code")]
+
+
+def package_records(ps):
+    from checker import check
+    return [r for r in (ps.run() or check.check_package_set(ps)) if r.get("code")]
+
+
+def package_dir_of(path: str):
+    """The package a file is a module of (LR 4.2): the nearest directory above it holding a `project.yaml`, when
+    the file lies under that package's `src/`; else None (a standalone module)."""
+    d = os.path.dirname(os.path.abspath(path))
+    while True:
+        if os.path.exists(os.path.join(d, "project.yaml")):
+            return d if os.path.abspath(path).startswith(os.path.join(d, "src") + os.sep) else None
+        up = os.path.dirname(d)
+        if up == d:
+            return None
+        d = up
+
+
+def _records_for_file(recs, path: str):
+    """The package check's records for one module, plus manifest-level records (`project.yaml`)."""
+    want = os.path.realpath(path)
+    mine = []
+    for r in recs:
+        f = r.get("file", "")
+        if os.path.basename(f) == "project.yaml" or want in (os.path.realpath(f), os.path.realpath(os.path.join(ROOT, f))):
+            mine.append(r)
+    return mine
+
+
+def package_file(d: str, path: str, as_json):
+    """`fortis check FILE.ft` where FILE.ft is one module of the package at `d`: the package context decides, so
+    the file's findings are the package check's findings for it, plus the manifest-level records, without which
+    the module cannot be judged at all. Checking the file alone would resolve its imports against nothing and
+    accept an import of a member the imported module does not declare (D-51.8)."""
+    import diagnostics
+    from project import ManifestError
+    from checker import check
+    ps = None
+    try:
+        ps = package_set(d)
+        recs = [r for r in ps.run() if r.get("code")]
+    except ManifestError as e:
+        recs = [diagnostics.make("E-NAM-001", str(e), "LANG-04-03", os.path.relpath(os.path.join(d, "project.yaml"), ROOT), 1, 1, {"name": "", "candidates": []})]
+    mine = _records_for_file(recs, path)
+    # a sibling that does not parse makes `run` return before this module's imports are checked. Dropping that
+    # syntax record would accept the file. Continuing the name check would judge the unparsed module as exporting
+    # nothing (D-51.8). The file is reported as not name-checked.
+    if not mine and any(str(r.get("code", "")).startswith("E-SYN") for r in recs):
+        import resolve
+        mine.append(diagnostics.make("E-NAM-001", resolve.NOT_NAME_CHECKED, "LANG-04-03", os.path.relpath(os.path.join(d, "project.yaml"), ROOT), 1, 1, {"name": "", "candidates": []}))
+    elif ps is not None and not mine:
+        # a sibling's name error made `run` skip the type pass, and the filter then dropped that sibling. This
+        # file is still type-checked. A clean file stays clean. The whole-package check still stops at the name
+        # error (package_records). An unparsed sibling is the case above and is not type-checked.
+        typed = [r for r in check.check_package_set(ps) if r.get("code")]
+        mine = _records_for_file(typed, path)
+    for r in mine:
+        print(json.dumps(r, sort_keys=True) if as_json else render(r))
+    if not mine and not as_json:
+        print(f"{path}: no findings")
+    return 1 if mine else 0
+
+
+def package_interpreter(ps, entry_module):
+    """The interpreter for one module of a package set, with every other module's declarations loaded under the
+    program keys the linker gives names that two modules declare (interpreter/link.py, X-136)."""
+    import parser
+    from interpreter.eval import Interpreter
+    from interpreter.link import link
+    rec = parser.load_grammar(os.path.join(ROOT, "reference", "grammar", "fortis.ebnf"))
+    linked, entry = link(ps, rec, entry_module)
+    it = Interpreter("", entry.file, linked=(linked, entry))
+    for other in linked.modules.values():
+        if other is not entry:
+            it.load_module(other.tree, other.file, other.key)
+    return it
+
+
+def package(cmd, d, args, as_json, no_check, fmt, ps=None):
+    """`fortis check|run|test DIR`: a package directory (project.yaml). run starts the manifest's `entry` module;
+    test runs the tests of every module of the package, or of the modules named after DIR. A module file of the
+    package arrives here the same way (`enclosing_package`), with its name as the one module to test."""
+    from interpreter.values import FortisError
+    from interpreter.executor import DefectSignal
+    if ps is None:
+        try:
+            ps = package_set(d)
+        except Exception as e:  # noqa: BLE001  (a package that does not load is refused loudly, never a traceback)
+            sys.stderr.write(f"fortis {cmd}: {d}: the package does not load: {e}\n")
+            return 2
+    if cmd == "check" or not no_check:
+        recs = package_records(ps)
+        for r in recs if (recs or cmd == "check") else []:
+            print(json.dumps(r, sort_keys=True) if as_json else render(r))
+        if cmd == "check":
+            if not recs and not as_json:
+                print(f"{d}: no findings ({sum(len(p.modules) for p in ps.packages.values())} modules)")
+            return 1 if recs else 0
+        if recs:
+            sys.stderr.write(f"{d}: {len(recs)} finding{'s' if len(recs) != 1 else ''}; not run\n")
+            return 1
+    # plan compatibility, the step check does not run (PROG-VM-04): before anything runs, as for one module
+    plan = package_plan_records(ps)
+    if plan:
+        for r in plan:
+            print(json.dumps(r, sort_keys=True) if as_json else render(r))
+        sys.stderr.write(f"{d}: the plan conflicts with a claim; not run\n")
+        return 1
+    try:
+        if cmd == "test":
+            mods = args or sorted(ps.root.modules)
+            passed = failed = 0
+            for mname in mods:
+                it = package_interpreter(ps, mname)
+                it.json_out = (fmt == "json") if fmt else not sys.stderr.isatty()
+                p_, f_ = it.run_tests()
+                passed, failed = passed + p_, failed + f_
+                if it.tests and not as_json:
+                    print(f"{mname}: {p_} passed, {f_} failed")
+            print(json.dumps({"kind": "test-summary", "passed": passed, "failed": failed}) if as_json else f"{passed} passed, {failed} failed")
+            return 1 if failed else 0
+        if not ps.root.entry:
+            sys.stderr.write(f"{d}: the manifest names no entry module\n")
+            return 2
+        inventory = "--inventory" in args
+        args = [a for a in args if a != "--inventory"]
+        it = package_interpreter(ps, ps.root.entry)
+        it.json_out = (fmt == "json") if fmt else not sys.stderr.isatty()
+        it.stream = sys.stdout                       # console lines as printed, kept when the run ends in a defect
+        code = it.run_main(args)
+        if inventory:
+            sys.stderr.write(json.dumps(it.runtime_inventory(), sort_keys=True) + "\n")
+    except FortisError as e:
+        sys.stderr.write(f"dynamic check failed: {e}\n")
+        return 2
+    except RecursionError:
+        sys.stderr.write("defect: stack_exhaustion\n")
+        return 3
+    except DefectSignal:
+        return 3
+    return code
+
+
+def render(r: dict) -> str:
+    """The text of a record: the reference renderer, which `fortisc check` matches byte for byte (PROG-DIA-05), so
+    both commands print the same text for the same record (D-55)."""
+    import diagnostics
+    if all(k in r for k in ("file", "line", "column", "severity", "code", "rule", "class", "status", "message", "fields")):
+        # fields in the record's canonical (sorted) order, as the JSON rendering writes them
+        return diagnostics.render_text(dict(r, fields=dict(sorted(r["fields"].items()))))
+    return f"{r.get('file', '')}:{r.get('line', 0)}:{r.get('column', r.get('col', 0))}: {r['code']} {r.get('message', '')}" + (f"  [{r['rule']}]" if r.get("rule") else "")
+
+
+def build(rest, fmt):
+    """`fortis build`: the production native build (`fortisc build`, DEL-36/DEL-43). It used to run the experimental
+    lowering of DEL-25 (compiler/experimental-lowering), which the production lowering superseded (D-56)."""
+    args = ["--out" if a == "-o" else a for a in rest]
+    if fmt:
+        args = ["--format", fmt] + args
+    return production("build", args)
+
+
+FORTISC = os.path.join(ROOT, "compiler", "target", "release", "fortisc")
+
+
+def production(cmd, rest):
+    """`view`, `fmt` and `build` are the production tools (compiler/, Rust); this command runs them."""
+    if not os.path.exists(FORTISC):
+        sys.stderr.write("fortis: build the production tools first: cargo build --release --manifest-path compiler/Cargo.toml\n")
+        return 3
+    os.execv(FORTISC, [FORTISC, cmd] + rest)
+
+
+SKILL = os.path.join(ROOT, "skills", "fortis-code")
+# where each agent CLI looks for skills, by scope (a project directory is relative to the repository root)
+AGENTS = {
+    "claude": (".claude/skills", "~/.claude/skills"),
+    "codex": (".agents/skills", "~/.codex/skills"),
+    "grok": (".grok/skills", "~/.grok/skills"),
+}
+
+
+def skill(rest):
+    """`skill install`: link skills/fortis-code into each agent CLI's skill directory (project scope by default)."""
+    if not rest or rest[0] != "install":
+        print(__doc__.strip())
+        return 2
+    agent = rest[rest.index("--agent") + 1] if "--agent" in rest else "all"
+    scope = rest[rest.index("--scope") + 1] if "--scope" in rest else "project"
+    agents = list(AGENTS) if agent == "all" else [agent]
+    for a in agents:
+        if a not in AGENTS or scope not in ("project", "user"):
+            print(__doc__.strip())
+            return 2
+        project, user = AGENTS[a]
+        d = os.path.join(ROOT, project) if scope == "project" else os.path.expanduser(user)
+        os.makedirs(d, exist_ok=True)
+        target = os.path.join(d, "fortis-code")
+        if os.path.lexists(target):
+            if os.path.islink(target) and os.path.realpath(target) == os.path.realpath(SKILL):
+                print(f"{a}: already installed at {target}")
+                continue
+            sys.stderr.write(f"{a}: {target} exists and is not this skill; remove it first\n")
+            return 1
+        os.symlink(os.path.relpath(SKILL, d), target)
+        print(f"{a}: installed at {target}")
+    return 0
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 0
+    fmt = None
+    if "--format" in argv:
+        i = argv.index("--format")
+        fmt = argv[i + 1]
+        del argv[i:i + 2]
+    no_check = "--no-check" in argv
+    argv = [a for a in argv if a != "--no-check"]
+    cmd, rest = argv[0], argv[1:]
+    if cmd in ("view", "fmt"):
+        return production(cmd, rest)
+    if cmd == "skill":
+        return skill(rest)
+    if cmd == "build" and rest:
+        return build(rest, fmt)
+    if cmd not in ("check", "run", "test") or not rest:
+        print(__doc__.strip())
+        return 2
+    path = rest[0]
+    if not os.path.exists(path):
+        # an invalid invocation (Programme 9.2: exit status 2), not a crash (D-54)
+        sys.stderr.write(f"fortis {cmd}: {path}: no such file or directory\n")
+        return 2
+    as_json = (fmt == "json") if fmt else not sys.stdout.isatty()
+    if os.path.isdir(path):
+        return package(cmd, path, rest[1:], as_json, no_check, fmt)
+    if cmd == "test":
+        # a module of a package (D-54): the enclosing package (the nearest project.yaml whose src/ holds the file)
+        # is loaded, checked as a package, and this module's tests run with its imports resolved, as
+        # `fortis test DIR MODULE` does
+        enc = enclosing_package(path)
+        if enc is not None:
+            d, mod = enc
+            try:
+                ps = package_set(d)
+            except Exception as e:  # noqa: BLE001  (a package that does not load is refused loudly, never a traceback)
+                sys.stderr.write(f"fortis test: {path}: its package {d} does not load: {e}\n")
+                return 2
+            if mod in ps.root.modules:
+                return package("test", d, [mod], as_json, no_check, fmt, ps)
+    if cmd == "run":
+        # a module of a package (D-327): the package is checked and its entry program runs, as `fortis run DIR`
+        # does. The file's own main is not a second program.
+        enc = enclosing_package(path)
+        if enc is not None:
+            d, _mod = enc
+            return package("run", d, rest[1:], as_json, no_check, fmt)
+    if cmd == "check":
+        # one file of a package: the package context decides, so the check agrees with the package's (D-51.8)
+        pd = package_dir_of(path)
+        if pd is not None:
+            return package_file(pd, path, as_json)
+    src = open(path, encoding="utf-8").read()
+    source_lines = len(src.split("\n"))
+    src, di_recs, origins = elaborated(path, src)
+    if cmd == "check" or not no_check:
+        # a module whose elaboration failed is reported by the kit's findings alone (as fortisc does)
+        recs = di_recs or remapped([r for r in records_of(path, src) if r.get("code")], origins, source_lines)
+        if recs or cmd == "check":
+            for r in recs:
+                print(json.dumps(r, sort_keys=True) if as_json else render(r))
+            if cmd == "check":
+                if not recs and not as_json:
+                    print(f"{path}: no findings")
+                return 1 if recs else 0
+            if recs:
+                sys.stderr.write(f"{path}: {len(recs)} finding{'s' if len(recs) != 1 else ''}; not run\n")
+                return 1
+    # plan compatibility, the step check does not run (PROG-VM-04): before anything runs
+    plan = plan_records(path, src)
+    if plan:
+        for r in plan:
+            print(json.dumps(r, sort_keys=True) if as_json else render(r))
+        sys.stderr.write(f"{path}: the plan conflicts with a claim; not run\n")
+        return 1
+    from interpreter.eval import Interpreter
+    from interpreter.values import FortisError
+    from interpreter.executor import DefectSignal
+    try:
+        it = Interpreter(src, path)
+        it.json_out = (fmt == "json") if fmt else not sys.stderr.isatty()
+        if cmd == "test":
+            passed, failed = it.run_tests()
+            print(json.dumps({"kind": "test-summary", "passed": passed, "failed": failed}) if as_json else f"{passed} passed, {failed} failed")
+            return 1 if failed else 0
+        it.stream = sys.stdout                       # console lines as printed, kept when the run ends in a defect
+        code = it.run_main(rest[1:])
+    except FortisError as e:
+        sys.stderr.write(f"dynamic check failed: {e}\n")
+        return 2
+    except RecursionError:
+        sys.stderr.write("defect: stack_exhaustion\n")
+        return 3
+    except DefectSignal as d:
+        return 3                                     # the defect record was emitted; no completion value (10.8)
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

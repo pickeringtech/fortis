@@ -1,0 +1,12 @@
+// reject: E-DI-004 (at the marked line)
+// covers: PLAT-03-02
+export class Gateway {
+  name: String
+}
+export class Checkout {
+  inject gateway: Gateway
+}
+context Production {
+  provide Checkout
+  provide Gateway using instance Gateway(name: "live") replaces      // reject: E-DI-004 — no parent to replace
+}

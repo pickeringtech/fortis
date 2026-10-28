@@ -1,0 +1,8 @@
+// The dependency of conformance/packages/wiring.dependency (not a fixture of its own).
+export class Pool {
+  export size: Int = 1
+}
+
+context Production {
+  bind Pool
+}

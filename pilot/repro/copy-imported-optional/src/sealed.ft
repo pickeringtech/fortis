@@ -1,0 +1,23 @@
+// A class with an enum field. Copying it inside this module is accepted.
+export enum Kind derive Equatable {
+  First
+  Second
+}
+
+export class Tagged derive Equatable {
+  name: String
+  export kind: Kind
+  export pure func of(text: StringView, kind: Kind) Tagged => Tagged(name: String.from(text), kind: kind)
+  export pure func label(self) String => copy self.name
+  export pure func first(text: StringView) Tagged => Tagged(name: String.from(text), kind: Kind.First)
+}
+
+export class Untagged {
+  export name: String
+}
+
+test "copy inside the declaring module" {
+  let t = Tagged.of("x", Kind.First)
+  let t2 = copy t
+  expect t2.label() == "x"
+}

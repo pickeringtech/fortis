@@ -1,0 +1,6 @@
+// reject: E-TYP-090 (at the marked line)
+// Encodable and Decodable require every field to be exported (6.10).
+export class Receipt derive Codec {        // reject: E-TYP-090
+  export reference: String
+  secret: Int
+}

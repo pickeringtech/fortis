@@ -1,0 +1,5 @@
+// accept
+// covers: LANG-03-01, LANG-05-06
+export pure func pick(flag: Bool, fallback: Int?, value: Int) Bool {
+  return (fallback ?? value) > 0 || flag  // parenthesised: not E-SYN-004
+}

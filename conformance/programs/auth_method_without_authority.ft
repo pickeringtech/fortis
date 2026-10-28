@@ -1,0 +1,41 @@
+// reject: E-EFF-010 (at the marked lines)
+// covers: LANG-11-07
+// D-173: a method or associated function names the authority it uses in its signature too (11.6, X-270): a parameter of
+// an Authority type, or, for a method, a field of its receiver's class whose type is an authority or a `Shared` of one
+// (`Stamp` holds a `Shared[Clock]`). A field of another type names none (`Toolbox` holds a `Capabilities` record). Both
+// checkers exempted every method and associated function.
+import fortis.host { Host, Capabilities, Clock, Console }
+
+class Reader {
+  export name: String
+  func read(self, caps: Capabilities) Timestamp => caps.clock.now()      // reject: E-EFF-010 — a method
+  func at(caps: Capabilities) Timestamp => caps.clock.now()              // reject: E-EFF-010 — an associated function
+}
+
+class Stamp {
+  export clock: Shared[Clock]
+  func now(self) Timestamp => self.clock.now()
+}
+
+class Closer {
+  export caps: Capabilities
+  cleanup(editable self) Void {
+    self.caps.console.print("bye")                                       // reject: E-EFF-010 — a cleanup without one
+  }
+}
+
+class Quiet {
+  export out: Shared[Console]
+  cleanup(editable self) Void {
+    self.out.print("bye")
+  }
+}
+
+class Toolbox {
+  export caps: Capabilities
+  func now(self) Timestamp => self.caps.clock.now()                      // reject: E-EFF-010 — a record of capabilities
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+}

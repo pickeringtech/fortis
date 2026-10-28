@@ -1,0 +1,22 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-11-02
+// A callee's footprint is instantiated at the call: fresh storage imports nothing, a capture imports mutate.
+export class Cell {
+  export value: Int
+  export pure func set(editable self, value: Int) Void {
+    self.value = value
+  }
+}
+pure func fresh() Int {
+  let mut c = Cell(value: 0)
+  editable c.set(1)
+  return c.value
+}
+pure func captured() Int {
+  let mut c = Cell(value: 0)
+  let mut poke = fn mut[editable c]() Void {
+    editable c.set(2)
+  }
+  editable poke()                          // reject: E-EFF-001 — the footprint lands on a capture: mutate
+  return 0
+}

@@ -1,0 +1,7 @@
+// reject: E-NAM-001
+// A name error in another module does not stop the package check. This file was judged; the clean module is not
+// failed for it (D-51.8).
+import fortis.money { Money }
+import fortis.money { Money }
+
+export pure func limit() Int => 1

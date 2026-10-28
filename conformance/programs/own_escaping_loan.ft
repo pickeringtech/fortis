@@ -1,0 +1,10 @@
+// reject: E-OWN-051 (at the marked line)
+// covers: LANG-07-04, LANG-07-06
+export class Cell {
+  export value: Int
+}
+
+func escape() alias Cell from static {
+  let local = Cell(value: 1)
+  return alias local                        // reject: E-OWN-051 — a loan of a local cannot be returned
+}

@@ -1,0 +1,14 @@
+// reject: E-DI-005 (at the marked line)
+// covers: PLAT-03-04
+// An instance held at the application level may not depend on one held per request (Platform 3.2).
+export class RequestId {
+  value: Int
+}
+export class Cache {
+  inject id: RequestId
+}
+context Production {
+  request(id: owned RequestId)
+  provide RequestId using instance move id { lifetime: request }
+  provide Cache using Cache { lifetime: application }                // reject: E-DI-005 — application needs request
+}

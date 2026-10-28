@@ -1,0 +1,2 @@
+// A module that is not the entry. Running this file runs the package program.
+export pure func side() Int => 1

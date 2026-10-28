@@ -1,0 +1,13 @@
+// reject: E-TYP-040 (at the marked line)
+// LANG-04-04 (D-35, D-38): cycle.newtype.pq with c's two imports in the other order, so the check enters the cycle of
+// p and q at q. Before D-35 was fixed, p's table was then built while q's was still being built, `take`'s parameter
+// named no declaration, and c's own `Small` was accepted for q's.
+import cycle.newtype.qp.q { Bee }
+import cycle.newtype.qp.p { take }
+
+type Small = Int<0..10>
+
+func mine(s: Small) Int {
+  discard take(s)                       // reject: E-TYP-040 — c's Small is not q's Small
+  return Bee(n: 0).n
+}

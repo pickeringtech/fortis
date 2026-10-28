@@ -1,0 +1,112 @@
+; Household books for the first quarter of 2026.
+; Run: FORTIS_DEV_ROOT=pilot/ledger/data bin/fortis run pilot/ledger
+
+commodity GBP 2
+commodity EUR 2
+commodity JPY 0
+
+account assets:bank:current
+account assets:bank:savings
+account assets:cash
+account liabilities:card
+account equity:opening
+account income:salary
+account income:interest
+account expenses:food:groceries
+account expenses:food:eating-out
+account expenses:housing:rent
+account expenses:housing:energy
+account expenses:travel
+account expenses:fees
+
+2026-01-01 * Opening balances #setup
+  assets:bank:current      1,250.00 GBP
+  assets:bank:savings      5,000.00 GBP
+  assets:cash                180.00 GBP
+  liabilities:card          -320.40 GBP
+  equity:opening
+
+2026-01-02 * Rent for January #home
+  expenses:housing:rent      950.00 GBP
+  assets:bank:current
+
+2026-01-06 Groceries #food
+  expenses:food:groceries     64.35 GBP
+  liabilities:card
+
+2026-01-15 * Salary #work
+  assets:bank:current      2,840.00 GBP
+  income:salary
+
+2026-01-18 Pay the card
+  liabilities:card           384.75 GBP
+  assets:bank:current
+
+2026-01-20 Energy bill #home
+  expenses:housing:energy    112.80 GBP
+  assets:bank:current
+
+; this line has a month that does not exist
+2026-13-02 Mystery purchase
+  expenses:food:groceries     10.00 GBP
+  assets:cash
+
+2026-01-31 * Savings interest
+  assets:bank:savings          4.17 GBP
+  income:interest
+
+2026-02-01 * Rent for February #home
+  expenses:housing:rent      950.00 GBP
+  assets:bank:current
+
+2026-02-07 Dinner out #food
+  expenses:food:eating-out    48.00 GBP
+  assets:cash               -48.00 GBP
+
+2026-02-10 Weekend in Paris #travel
+  expenses:travel            180.00 EUR
+  expenses:food:eating-out    62.50 EUR
+  expenses:fees                2.40 GBP
+  liabilities:card          -242.50 EUR
+  liabilities:card
+
+; an amount with too many decimal places
+2026-02-12 Coffee
+  expenses:food:eating-out     3.505 GBP
+  assets:cash
+
+2026-02-15 * Salary #work
+  assets:bank:current      2,840.00 GBP
+  income:salary
+
+; a transaction that does not balance
+2026-02-20 Groceries #food
+  expenses:food:groceries     71.20 GBP
+  assets:bank:current        -70.20 GBP
+
+2026-02-14 Flowers
+  expenses:food:groceries     15.00 GBP
+  assets:cash
+
+2026-03-01 * Rent for March #home
+  expenses:housing:rent      950.00 GBP
+  assets:bank:current
+
+2026-03-04 Sushi in Tokyo #travel #food
+  expenses:food:eating-out   4,800 JPY
+  assets:cash               -4,800 JPY
+
+2026-03-09 Bus fare
+  expenses:transport           2.80 GBP
+  assets:cash
+
+2026-03-15 * Salary #work
+  assets:bank:current      2,840.00 GBP
+  income:salary
+
+2026-03-20 ! Groceries #food
+  expenses:food:groceries     58.90 GBP
+  assets:cash                -20.00 GBP
+  liabilities:card
+
+budget food 300.00 GBP

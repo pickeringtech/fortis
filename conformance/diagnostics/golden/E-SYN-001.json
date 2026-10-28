@@ -1,0 +1,28 @@
+{
+  "class": "Syntax",
+  "code": "E-SYN-001",
+  "column": 19,
+  "correction": {
+    "edits": [
+      {
+        "column": 19,
+        "end_column": 20,
+        "end_line": 4,
+        "file": "conformance/programs/syntax_semicolon.ft",
+        "line": 4,
+        "replacement": ""
+      }
+    ],
+    "kind": "delete the semicolon"
+  },
+  "fields": {
+    "expected_tokens": [],
+    "found_token": ";"
+  },
+  "file": "conformance/programs/syntax_semicolon.ft",
+  "line": 4,
+  "message": "';' is not a token",
+  "rule": "LANG-03-01",
+  "severity": "error",
+  "status": "violated"
+}

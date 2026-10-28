@@ -1,0 +1,10 @@
+# E-TEL-001: an unknown unit
+telemetry:
+  projections:
+    p:
+      source: OrderProcessing
+      metrics:
+        - name: p.amount
+          instrument: histogram
+          value: amount
+          unit: furlongs   # expect: E-TEL-001

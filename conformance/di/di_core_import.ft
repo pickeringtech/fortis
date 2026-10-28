@@ -1,0 +1,24 @@
+// reject: E-OWN-002 (at the marked line)
+// covers: PLAT-03-04
+// An instance held at the application level reaches the request level as a handle the request level holds: a
+// Shared is retained, a Copyable value copied (no field stores a loan, X-137). An instance that is neither cannot be
+// used below its level: the core rejects the copy the elaboration writes, at the binding of the instance. Bind the
+// instance as a Shared to share it with requests.
+export class Connection {
+  handle: Shared[Int]
+}
+export class RequestId {
+  value: Int
+}
+export class Query {
+  size: Int = 0
+}
+export func open(connection: Connection, id: RequestId) Query {
+  return Query(size: id.value)
+}
+context Production {
+  request(id: owned RequestId)
+  provide Connection using instance Connection(handle: Shared.create(1)) { lifetime: application }   // reject: E-OWN-002 — the request level would copy this Connection
+  provide RequestId using instance move id { lifetime: request }
+  provide Query using factory open
+}

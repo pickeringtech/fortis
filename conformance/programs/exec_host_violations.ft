@@ -1,0 +1,66 @@
+// execute: fs.outside_root|fs.outside_root|fs.closed|network.unreachable|clock.future|process.denied|sql.unavailable|path.invalid
+// requires: runtime
+// covers: LANG-11-07
+// Each development adapter refuses its contract's violation with an outcome (DEL-28 adapter contracts).
+import fortis.host { Host, FileSystem, Network, Clock, Process, RawSql, Path }
+try func escape(fs: FileSystem) String {
+  let p = Path.parse("../outside.txt") or fail
+  return fs.readText(p) or fail
+}
+try func confined(fs: FileSystem) String {
+  let up = Path.parse("../elsewhere") or fail
+  let inner = fs.subtree(up)
+  let p = Path.parse("a.txt") or fail
+  return inner.readText(p) or fail
+}
+try func afterClose(fs: FileSystem) Int {
+  let p = Path.parse("w.txt") or fail
+  let mut f = fs.create(p) or fail
+  let data = fs.readAll(p) or fail
+  editable f.close()
+  editable f.writeAll(data) or fail
+  return 0
+}
+try func future(clock: Clock) Duration {
+  let later = Timestamp.add(Timestamp.epoch(), Duration.seconds(10)) or fail
+  return clock.frozen(Timestamp.epoch()).elapsedSince(later) or fail
+}
+try func parsed(text: String) Int {
+  let p = Path.parse(text) or fail
+  return 1
+}
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  discard escape(caps.fileSystem) catch e {
+    caps.console.print(e.code)
+    recover ""
+  }
+  discard confined(caps.fileSystem) catch e {
+    caps.console.print(e.code)
+    recover ""
+  }
+  discard afterClose(caps.fileSystem) catch e {
+    caps.console.print(e.code)
+    recover 0
+  }
+  discard caps.network.resolve("example.com") catch e {
+    caps.console.print(e.code)
+    recover ""
+  }
+  discard future(caps.clock) catch e {
+    caps.console.print(e.code)
+    recover Duration.seconds(0)
+  }
+  discard caps.process.run("rm", List.default()) catch e {
+    caps.console.print(e.code)
+    recover 0
+  }
+  discard caps.rawSql.execute("drop table users") catch e {
+    caps.console.print(e.code)
+    recover 0
+  }
+  discard parsed("") catch e {
+    caps.console.print(e.code)
+    recover 0
+  }
+}

@@ -1,0 +1,13 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// `d.p == null` narrows the false state. The `&&` chain sees the true state, where `d.p` is absent (LR 6.8).
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+}
+
+export class Holder {
+  export p: Cell?
+}
+
+export pure func flipped(d: Holder) Bool => d.p == null && d.p.read() // reject: E-TYP-040 — `== null` did not narrow `d.p`

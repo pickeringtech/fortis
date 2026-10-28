@@ -1,0 +1,6 @@
+// illustrative
+fn(Int) Bool
+pure fn(StringView) Int
+fn mut(editable Buffer) Void
+try fn once(owned Job) Void
+async fn(Request) Response

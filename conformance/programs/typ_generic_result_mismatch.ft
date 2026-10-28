@@ -1,0 +1,41 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-06-01
+// A call's expected type fixes its type arguments (6.10). `List[Bool]` is not `List[Int]`,
+// and a generic result is checked the same way `List.of(true)` already was. An expected
+// function element is not an enum value or `null`.
+class Box[T] {
+  value: T
+}
+
+enum Light {
+  Wrap(n: Int)
+}
+
+func box[T](a: T) List[T] {
+  return List.of(a)
+}
+
+func make[T](value: T) Box[T] {
+  return Box(value: value)
+}
+
+func badBox() Int {
+  let xs: List[Int] = box(true)     // reject: E-TYP-040 — Bool is not Int
+  return xs.count()
+}
+
+func badMake() Int {
+  let b: Box[Bool] = make(1)        // reject: E-TYP-040 — Int is not Bool
+  discard b
+  return 0
+}
+
+func badLight() Int {
+  let xs: List[fn(Int) Light] = List.of(Light.Wrap, pure noalloc fn(x: Int) Light => Light.Wrap(n: x), pure noalloc fn(x: Int) Light => Light.Wrap(n: Int.saturatingAdd(x, 1)))     // reject: E-TYP-040 — Light is not fn(Int) Light
+  return xs.count()
+}
+
+func badNull() Int {
+  let xs: List[(fn(Int) Int)?] = List.of(null, pure noalloc fn(x: Int) Int => x, pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1))     // reject: E-TYP-040 — null does not make the element a closure
+  return xs.count()
+}

@@ -1,0 +1,6 @@
+// context: LR-8.3-01 (Language Reference 8.3, capture lists)
+import fortis.text
+
+func example() Void {
+  // {{example}}
+}

@@ -1,0 +1,9 @@
+// DEL-45 fixture for C1.copy (copyable set; allocation): a copy of a copyable heap-owning value allocates.
+export class Box {
+  export name: String
+}
+export func main(args: List[String]) Void {
+  let a = Box(name: "a")
+  let b = copy a
+  discard b.name.scalarCount()
+}

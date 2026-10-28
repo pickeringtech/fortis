@@ -1,0 +1,8 @@
+// accept
+// covers: LANG-03-02
+export class Config
+  derive Default {
+  export limit: Int = 10
+
+  export pure func where(self) Int => self.limit   // a method may be named with a keyword (LR 3.4)
+}

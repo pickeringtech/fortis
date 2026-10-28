@@ -1,0 +1,11 @@
+// reject: E-TYP-150 (at the marked line)
+// covers: LANG-11-09
+import fortis.http.server { PublicApi, get, Identity, PublicProblem }
+export enum Lookup {
+  Found(value: Int)
+  Missing
+}
+@get("/items/{id}", responses: { Found: 200, Missing: 404 })   // reject: E-TYP-150 — http needs PublicApi on its target
+export async try func getItem(who: Identity, id: Int) Lookup {
+  return Missing
+}

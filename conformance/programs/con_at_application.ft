@@ -1,0 +1,8 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-11-08
+contract FastCalculation {
+  pure
+  noalloc
+}
+@FastCalculation                           // reject: E-SYN-000 — `@` applies aspects only; a contract goes in the modifier position
+func square(value: Int<-1000..1000>) Int => value * value

@@ -1,0 +1,17 @@
+// accept
+// covers: LANG-11-09, LANG-11-08
+// `@get` is a specialisation of `http`: the application forwards `...rest`, the base aspect's `needs who: Identity`
+// and `needs PublicApi` are met, and its hooks are elaborated around the body (11.8).
+import fortis.http.server { PublicApi, get, Identity, PublicProblem }
+export enum Lookup {
+  Found(value: Int)
+  Missing
+  Unavailable(problem: PublicProblem)
+}
+@get("/items/{id}", responses: { Found: 200, Missing: 404, Unavailable: 503 }, fallback: Unavailable)
+export PublicApi async try func getItem(who: Identity, id: Int) Lookup {
+  if id > 0 {
+    return Found(value: id)
+  }
+  return Missing
+}

@@ -1,0 +1,20 @@
+// Both checkers accept this program; LR 6.9 and 3.5 reject it twice.
+// 1. `Percent(140)` for `type Percent = Int<0..100>`: a newtype value is built only by `validate` or by a literal
+//    the checker proves in range (6.9); 140 is out of range (E-REF-001). The interpreter prints 140; the VM refuses
+//    the IR (C1.newtype) and native reports E-INT-001.
+// 2. `OrderId(7)` passed where a `CustomerId` is expected (two newtypes over Int<1..>, 6.9: they never
+//    interchange; E-TYP-040). A parameter of type OrderId passed to the same function IS rejected.
+import fortis.host { Host }
+
+type Percent = Int<0..100>
+type CustomerId = Int<1..>
+type OrderId = Int<1..>
+
+pure func describe(customer: CustomerId) Int => 1
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let p = Percent(140)
+  let order = OrderId(7)
+  caps.console.print("${p} ${describe(order)}")
+}

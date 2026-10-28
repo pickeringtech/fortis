@@ -1,0 +1,15 @@
+// reject: E-ERR-001 (at the marked line)
+// covers: LANG-11-09
+// A before hook may fail on a non-try target only when a same-or-outer `on failure` maps every failure (11.8).
+export error Denied {
+  code: "demo.denied"
+}
+export aspect guard(limit: Int) {
+  before {
+    if limit > 10 {
+      fail Denied()                        // reject: E-ERR-001 — the target is not try and no handler maps the failure
+    }
+  }
+}
+@guard(limit: 20)
+func work(n: Int) Int => n

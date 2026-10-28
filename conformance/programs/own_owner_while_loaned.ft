@@ -1,0 +1,11 @@
+// reject: E-OWN-011 (at the marked line)
+// covers: LANG-07-04
+export class Cell {
+  export value: Int
+}
+
+func use(c: editable Cell) Void {
+  let r = editable c
+  r.value = 1
+  discard c.value                           // reject: E-OWN-011 — c is suspended while r is live
+}

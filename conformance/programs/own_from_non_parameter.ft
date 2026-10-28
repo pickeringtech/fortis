@@ -1,0 +1,8 @@
+// reject: E-NAM-001 (at the marked line)
+// covers: LANG-07-06
+export class User {
+  export name: String
+}
+pure func displayName(user: User) StringView from owner {     // reject: E-NAM-001 — `owner` is not a parameter or lifetime
+  return alias user.name
+}

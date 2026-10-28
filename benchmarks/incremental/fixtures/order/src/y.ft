@@ -1,0 +1,3 @@
+import ord.app.z
+
+export func fb() z.Cee => z.fc()

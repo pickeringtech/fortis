@@ -1,0 +1,72 @@
+// execute: tag #ada|level <high>|level <low 2>|pair Pair(first: #ada, level: <high>)|list [#ada, #bob]|plain Plain(n: 1)|counter 4|painter 5
+// requires: runtime
+// covers: LANG-03-05
+// D-83: interpolation writes a value through its type's `Displayable` (3.6, 11.1): a class or enum that implements
+// it by hand shows what its own `display` appends, also as a field of a derived display and an item of a list. A
+// type without a hand-written `display` keeps the derived form, and a method that is merely named `display` (not
+// Displayable's) is an ordinary method.
+import fortis.host { Host }
+import fortis.text { Builder }
+
+export class Tag implements Displayable {
+  export name: String
+  export pure func display(self, into: editable Builder) Void {
+    editable into.append("#")
+    editable into.append(self.name)
+  }
+}
+
+export enum Level implements Displayable {
+  High
+  Low(depth: Int)
+
+  export pure func display(self, into: editable Builder) Void {
+    match self {
+      High => editable into.append("<high>")
+      Low(depth: d) => editable into.append("<low ${d}>")
+    }
+  }
+}
+
+export class Pair derive Displayable {
+  export first: Tag
+  export level: Level
+}
+
+export class Plain derive Displayable {
+  export n: Int
+}
+
+export class Painter {
+  export n: Int
+  export func display(editable self, into: editable Builder) Void {
+    self.n = Int.wrappingAdd(self.n, 1)
+    editable into.append("painted")
+  }
+}
+
+export class Counter {
+  export n: Int
+  export func display(self) Int => self.n
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let t = Tag(name: String.from("ada"))
+  caps.console.print("tag ${t}")
+  let high = Level.High
+  caps.console.print("level ${high}")
+  let low: Level = Low(depth: 2)
+  caps.console.print("level ${low}")
+  let p = Pair(first: Tag(name: String.from("ada")), level: Level.High)
+  caps.console.print("pair ${p}")
+  let tags = List.of(Tag(name: String.from("ada")), Tag(name: String.from("bob")))
+  caps.console.print("list ${tags}")
+  caps.console.print("plain ${Plain(n: 1)}")
+  let counter = Counter(n: 4)
+  caps.console.print("counter ${counter.display()}")
+  let mut painter = Painter(n: 4)
+  let mut b = Builder.create()
+  editable painter.display(editable b)
+  caps.console.print("painter ${painter.n}")
+}

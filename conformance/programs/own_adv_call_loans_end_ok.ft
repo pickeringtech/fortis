@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-07-05
+// Loans activated for a call end when it returns, so the assignment that follows is legal (5.7 step 4).
+func total(a: Int, b: Int) Int => Int.saturatingAdd(a, b)
+export class Acc {
+  export sum: Int
+}
+func run(acc: editable Acc, n: Int) Void {
+  acc.sum = total(acc.sum, n)
+  let mut s = List.of(1)
+  editable s.push(s.count())
+}

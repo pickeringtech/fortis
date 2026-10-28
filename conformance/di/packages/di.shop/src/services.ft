@@ -1,0 +1,14 @@
+// The consumers: classes of another module of the package, with `inject` slots.
+export class Prices {
+  export base: Int
+}
+
+export class Quote {
+  export inject prices: Shared[Prices]
+  export func of(self, n: Int) Int => Int.wrappingMul(n, self.prices.base)
+}
+
+export class Basket {
+  export inject quote: Quote
+  export func total(self, items: Int) String => "basket of ${items}: ${self.quote.of(items)}"
+}

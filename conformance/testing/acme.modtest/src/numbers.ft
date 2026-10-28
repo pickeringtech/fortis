@@ -1,0 +1,24 @@
+// The sibling module: the module under test (calc) imports these functions. Its own test stays with it: a test
+// run of one module of the package runs that module's tests and no other module's (D-54 item 9).
+
+// The alias calc's observation records: the plan step resolves it through the package as the checker resolves it
+// (an alias of Int is trivial); a standalone plan context cannot see it and would wrongly hold the field
+// allocating (E-EFF-030 on a checked program).
+export type Kind = Int
+
+// Exported so another module can carry it. Its field type is resolved in this module: Kind is an alias of Int.
+export observation Trace {
+  value: Kind                          required: none
+}
+
+export pure func double(x: Int) Int {
+  return Int.wrappingMul(x, 2)
+}
+
+export pure func isEven(x: Int) Bool {
+  return x % 2 == 0
+}
+
+test "the sibling's own test" {
+  expect double(3) == 6
+}

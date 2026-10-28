@@ -1,0 +1,6 @@
+// accept
+export pure func clamp(value: Int) Int => value
+
+export const limit: Int = 10
+
+pure func helper() Int => 1

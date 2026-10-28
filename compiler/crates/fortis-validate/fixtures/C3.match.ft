@@ -1,0 +1,11 @@
+// DEL-45 fixture for C3.match: a match in a noalloc function.
+noalloc func label(n: Int) Int {
+  let r = match n {
+    0 => 10
+    otherwise => n
+  }
+  return r
+}
+export func main(args: List[String]) Void {
+  discard label(0)
+}

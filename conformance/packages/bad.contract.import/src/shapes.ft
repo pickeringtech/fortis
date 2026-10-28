@@ -1,0 +1,7 @@
+export contract Lean {
+  noalloc
+}
+
+export interface Measured {
+  Lean func size(self) Int
+}

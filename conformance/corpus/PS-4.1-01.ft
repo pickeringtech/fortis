@@ -1,0 +1,59 @@
+// illustrative
+import fortis.data { Db }
+import fortis.http.server { PublicApi, PublicProblem, get, post }
+import fortis.security { Authorisation, Identity, Role }
+
+export enum CustomerAccess implements Authorisation {
+  Read
+  Create
+  export pure func grantedTo(self, who: Identity) Bool => match self {
+    Read => who.hasRole(Role.Staff) || who.hasRole(Role.Admin)
+    Create => who.hasRole(Role.Admin)
+  }
+}
+
+export enum GetCustomerResponse {
+  Found(customer: Customer)             // the model encodes itself (section 4.5)
+  NotFound
+  Unavailable(problem: PublicProblem)
+}
+
+export enum CreateCustomerResponse {
+  Created(id: CustomerId)
+  Unavailable(problem: PublicProblem)
+}
+
+@get("/customers/{id}",
+  auth: CustomerAccess.Read,
+  responses: { Found: 200, NotFound: 404, Unavailable: 503 },
+  fallback: Unavailable,
+  observe: CustomerOps,
+)
+export PublicApi async try func getCustomer(db: Db, who: Identity, id: CustomerId) GetCustomerResponse {
+  let customer = await Customer.find(db, id) or fail
+  if customer == null {
+    return NotFound
+  }
+  capture tier = customer.tier
+  return Found(customer: move customer)
+}
+
+@post("/customers",
+  auth: CustomerAccess.Create,
+  responses: { Created: 201, Unavailable: 503 },
+  fallback: Unavailable,
+  limits: { bodyBytes: 65536, timeout: 5s },
+)
+export PublicApi async try func createCustomer(
+  db: editable Db,
+  who: Identity,
+  name: owned String<scalars: 1..120>,
+  tier: CustomerTier?,
+) CreateCustomerResponse {
+  let created = await Customer.create(editable db,
+    name: move name,
+    tier: tier ?? CustomerTier.Standard,
+    accountId: who.accountId,
+  ) or fail
+  return Created(id: created.id)
+}

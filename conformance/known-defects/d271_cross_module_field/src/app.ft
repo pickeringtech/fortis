@@ -1,0 +1,11 @@
+// The cross-module pin is enforced by conformance/packages/fun.closure.field (D-271, fixed).
+// This copy is the original shape: steps.make and this construction use different lambdas.
+import d271.field.steps { Step, make }
+
+export func main(args: List[String]) Void {
+  discard args
+  let first = make()
+  let second = Step(run: pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1))
+  discard first
+  discard second
+}

@@ -1,0 +1,7 @@
+// The fixed cost of a run: process start, the runtime's setup, one line of output.
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("0")
+}

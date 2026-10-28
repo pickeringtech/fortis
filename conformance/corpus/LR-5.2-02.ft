@@ -1,0 +1,2 @@
+// accept
+let label = if count == 0 { give "none" } else { give "some" }

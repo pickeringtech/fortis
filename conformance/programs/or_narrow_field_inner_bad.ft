@@ -1,0 +1,17 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// Narrowing `d.mid` unwraps `Box?` only. The field `p` inside it is still `Cell?` (LR 6.8).
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+}
+
+export class Box {
+  export p: Cell?
+}
+
+export class Wrap {
+  export mid: Box?
+}
+
+export pure func inner(d: Wrap) Bool => d.mid != null && d.mid.p.read() // reject: E-TYP-040 — `d.mid.p` is still Cell?

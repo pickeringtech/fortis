@@ -1,0 +1,15 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-06-01
+export class Tag {
+  export name: String
+}
+
+pure func takesInt(n: Int) Int => n
+
+pure func wrong(a: Tag, b: Tag, text: StringView) Int {
+  let x = takesInt(text)                    // reject: E-TYP-040 — StringView where Int is expected
+  let same = a == b                         // reject: E-TYP-040 — Tag is not Equatable
+  let less = a < b                          // reject: E-TYP-040 — Tag is not Comparable
+  let joined = text + text                  // reject: E-TYP-040 — no + on text
+  return "done"                             // reject: E-TYP-040 — a literal is not an Int
+}

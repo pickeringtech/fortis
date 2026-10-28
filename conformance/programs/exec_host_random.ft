@@ -1,0 +1,16 @@
+// execute: 3|3|true
+// requires: runtime
+// covers: LANG-11-07
+// The development Random is SplitMix64: a seeded generator replays its sequence exactly.
+import fortis.host { Host, Random }
+func draw(r: Random) Int => r.below(10)
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let a = caps.random.seeded(42)
+  let b = caps.random.seeded(42)
+  let x = draw(a)
+  let y = draw(b)
+  caps.console.print("${x}")
+  caps.console.print("${y}")
+  caps.console.print("${x == y}")
+}

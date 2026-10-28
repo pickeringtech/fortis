@@ -1,0 +1,17 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-75 (found in SP-18's design review): a `defer` body is checked with the facts at its registration, but it
+// runs at the block's exit. Here it is registered with `d = 1`, and runs at `break` with `d = 0`: both checkers prove
+// `10 / d`, which divides by zero when the cleanup runs.
+export func f() Int {
+  let mut d: Int<0..1> = 1
+  loop {
+    d = 1
+    defer {
+      let q = 10 / d                         // reject: E-REF-002 — `d` is 0 when the cleanup runs
+    }
+    d = 0
+    break
+  }
+  return 0
+}

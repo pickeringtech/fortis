@@ -1,0 +1,19 @@
+// accept
+// D-90 (X-231): the Dependency injection kit is installed (fortis-di elaborates its `context` head before the
+// check), so a context is accepted; the heads of kits this toolchain does not install are rejected.
+export class Rate {
+  percent: Int
+}
+
+export class Tax {
+  inject rate: Rate
+}
+
+context Production {
+  provide Rate using instance Rate(percent: 20)
+  provide Tax
+}
+
+test "a rate" {
+  expect Rate(percent: 20).percent == 20
+}

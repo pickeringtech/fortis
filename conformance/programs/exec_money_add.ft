@@ -1,0 +1,11 @@
+// execute: 12.75 GBP
+// requires: runtime
+// covers: LANG-06-04
+// 15: same-currency addition is exact at the larger operand scale.
+import fortis.host { Host }
+import fortis.money { Money, Currency, CurrencyMismatch }
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let total = Money.add(Money.of(Currency.GBP, 10.50d), Money.of(Currency.GBP, 2.25d)) or fail
+  caps.console.print("${total.amount} ${total.currency}")
+}

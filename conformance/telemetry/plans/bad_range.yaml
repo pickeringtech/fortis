@@ -1,0 +1,11 @@
+# E-TEL-001: a range on a field that is not numeric
+telemetry:
+  projections:
+    p:
+      source: OrderProcessing
+      where:
+        field: tier
+        range: [1, 2]   # expect: E-TEL-001
+      metrics:
+        - name: p.count
+          instrument: counter

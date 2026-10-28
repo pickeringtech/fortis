@@ -1,0 +1,60 @@
+// execute: built pool|built cache|request done|drop cache|drop pool|built pool|drop pool|failed:demo.down
+// covers: PLAT-03-04, PLAT-02-04
+// Held instances are dropped in reverse dependency order when their scope ends (Platform 3.2); a construction
+// that fails drops what was already built, in reverse order, and reaches the caller once (Platform 2.3).
+import fortis.host { Host, Console, Capabilities }
+
+export error Down {
+  code: "demo.down"
+}
+
+export class Pool {
+  console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("drop pool")
+  }
+}
+
+export class Cache {
+  inject pool: Shared[Pool]
+  console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("drop cache")
+  }
+}
+
+export try func openPool(console: Shared[Console]) Pool {
+  console.print("built pool")
+  return Pool(console: console.retain())
+}
+
+export try func openCache(pool: Shared[Pool], console: Shared[Console], up: Bool) Cache {
+  if !up {
+    fail Down()
+  }
+  console.print("built cache")
+  return Cache(pool: pool.retain(), console: console.retain())
+}
+
+context Production(console: owned Shared[Console], up: Bool) {
+  provide Shared[Console] using instance move console
+  provide Bool using instance up
+  provide Shared[Pool] using factory openPool { lifetime: application }
+  provide Cache using factory openCache { lifetime: application }
+}
+
+recovers func serve(console: Shared[Console], up: Bool) Void {
+  let app = Production.application(console.retain(), up) catch e {
+    console.print("failed:${e.code}")
+    return
+  }
+  console.print("request done")
+}
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  serve(console, true)
+  serve(console, false)
+}

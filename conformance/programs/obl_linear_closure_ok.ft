@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-10-02, LANG-06-09
+try func half(n: Int) Int => n
+func takeOutcome(o: owned Outcome[Int]) Int => 0
+func run(n: Int) Int {
+  let o = half(n)
+  let later = fn once[move o]() Int => takeOutcome(move o)
+  return move later()
+}

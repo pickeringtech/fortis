@@ -1,0 +1,21 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-73 (Codex's design review, finding 2): an `&&` (or `||`) in expression position restores the facts saved
+// before it, so the right operand's invalidation of `c` is lost. `reset` sets `c.v` to 0, yet both checkers keep
+// `c.v = 1` afterwards, and `10 / c.v` divides by zero.
+export class Cell {
+  export v: Int<0..1>
+}
+
+func reset(c: editable Cell) Bool {
+  c.v = 0
+  return true
+}
+
+export func f(c: editable Cell) Int {
+  if c.v != 1 {
+    return 0
+  }
+  let b = c.v == 1 && reset(editable c)
+  return 10 / c.v                            // reject: E-REF-002 — `c` was passed editable inside the `&&`
+}

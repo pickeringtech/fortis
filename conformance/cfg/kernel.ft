@@ -1,0 +1,67 @@
+// accept
+// Five functions whose control-flow graphs are kept as golden files (DEL-12).
+import fortis.host { Host }
+
+export enum Shape {
+  Circle(radius: Int)
+  Square(side: Int)
+  Point
+}
+
+pure func clamp(value: Int, low: Int, high: Int) Int {
+  if value < low {
+    return low
+  }
+  if value > high {
+    return high
+  }
+  return value
+}
+
+pure func sumTo(n: Int) Int {
+  let mut total = 0
+  for i in 0..n {
+    total = total + i
+  }
+  return total
+}
+
+pure func firstEven(items: List[Int]) Int? {
+  let mut i = 0
+  while i < items.count() {
+    let v = items[i]
+    if v % 2 == 0 {
+      return v
+    }
+    i = i + 1
+  }
+  return null
+}
+
+pure func area(shape: Shape) Int {
+  match shape {
+    Circle(radius: r) => {
+      let rr = r * r
+      give rr * 3
+    }
+    Square(side: s) => s * s
+    Point => 0
+  }
+  return 0
+}
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut count = 0
+  outer: loop {
+    count = count + 1
+    if count > 3 {
+      break outer
+    }
+    {
+      let inner = count * 2
+      caps.console.print("${inner}")
+    }
+  }
+  caps.console.print("${count}")
+}

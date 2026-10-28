@@ -1,0 +1,27 @@
+// accept
+// covers: LANG-12-01, LANG-05-02
+// 12.1: a deferred block is checked at every exit; it holds no loan between registration and exit.
+export class Handle {
+  export open: Bool
+  export func close(editable self) Void {
+    self.open = false
+  }
+  export func read(editable self) Int => 1
+}
+export error Busy {
+  code: "demo.busy"
+}
+try func acquire(n: Int) Handle {
+  if n < 0 {
+    fail Busy()
+  }
+  return Handle(open: true)
+}
+try func duplicate(n: Int) Int {
+  let mut input = acquire(n) or fail
+  defer { editable input.close() }
+  let mut output = acquire(n) or fail
+  defer { editable output.close() }
+  let data = editable input.read()
+  return Int.wrappingAdd(data, editable output.read())
+}

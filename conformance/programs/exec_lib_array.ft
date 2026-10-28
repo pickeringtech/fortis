@@ -1,0 +1,14 @@
+// execute: 3|[0, 0, 0]|[0, 7, 0]|7
+// requires: runtime
+// covers: LANG-06-07
+// Array[T, N] is fixed-size; Array.filled takes N from the type (6.7).
+import fortis.host { Host }
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut slots = Array[Int, 3].filled(0)
+  caps.console.print("${slots.count()}")
+  caps.console.print("${slots}")
+  editable slots.set(1, 7)
+  caps.console.print("${slots}")
+  caps.console.print("${slots[1]}")
+}

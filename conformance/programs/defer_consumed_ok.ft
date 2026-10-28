@@ -1,0 +1,15 @@
+// accept
+// covers: LANG-12-02
+try func flush(n: Int) Int => n
+recovers func run(n: Int) Int {
+  defer {
+    discard flush(n) or recover 0
+  }
+  defer {
+    discard flush(n) catch e {
+      report e
+      recover 0
+    }
+  }
+  return n
+}

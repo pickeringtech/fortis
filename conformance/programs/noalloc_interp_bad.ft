@@ -1,0 +1,5 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-10-04
+export noalloc func label(n: Int) String {
+  return "value ${n}"                      // reject: E-EFF-001 — interpolation allocates a String
+}

@@ -1,0 +1,7 @@
+// accept
+export contract FastCalculation {
+  pure
+  noalloc
+}
+
+export FastCalculation func square(value: Int<-1000000..1000000>) Int => value * value

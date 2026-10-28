@@ -1,0 +1,11 @@
+// reject: E-DI-001 (at the marked line)
+// covers: PLAT-03-02
+export class Clock2 {
+  tick: Int
+}
+export class Report {
+  inject clock: Clock2                     // reject: E-DI-001 — no binding provides Clock2
+}
+context Production {
+  provide Report
+}

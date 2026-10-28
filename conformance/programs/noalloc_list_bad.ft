@@ -1,0 +1,8 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-10-04
+// Growing a list allocates (C.3): not permitted under noalloc.
+export noalloc func grow(n: Int) Int {
+  let mut items: List[Int] = List.default()
+  editable items.push(n)                   // reject: E-EFF-001 — List.push allocates
+  return items.count()
+}

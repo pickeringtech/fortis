@@ -1,0 +1,12 @@
+// D-21 (review): `gw.Gateway` names the interface even where a local `Gateway` class takes the bare name.
+import bad.iface.alias.gateways as gw
+
+class Gateway {
+  export n: Int
+}
+
+func payShadowed(g: gw.Gateway) Bool => true
+
+func lambdaShadowed() Void {
+  let g = fn(c: gw.Gateway) Int => 1
+}

@@ -1,0 +1,23 @@
+// execute: recovered 0
+// reports: runtime-failure:demo.odd
+// requires: runtime
+// covers: LANG-10-06
+// Reported then recovered: exactly one record, and the program exits 0.
+import fortis.host { Host }
+export error Odd {
+  code: "demo.odd"
+}
+try func check(n: Int) Int {
+  if n % 2 == 1 {
+    fail Odd()
+  }
+  return n
+}
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let v = check(5) catch e {
+    report e
+    recover 0
+  }
+  caps.console.print("recovered ${v}")
+}

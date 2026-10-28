@@ -1,0 +1,88 @@
+// accept
+// covers: LANG-09-05
+export enum Status {
+  Draft
+  Issued(at: Int)
+  Paid(at: Int, reference: String)
+}
+
+export error Empty {
+  code: "demo.empty"
+}
+
+export class Point {
+  export x: Int
+  export y: Int
+}
+
+pure func number(n: Int) StringView from static {
+  return match n {
+    0 => "zero"
+    1 => "one"
+    otherwise => "many"
+  }
+}
+
+pure func status(s: Status) Int {
+  return match s {
+    Draft => 0
+    Issued(at: t) => t
+    Paid(t, reference) => Int.saturatingAdd(t, reference.scalarCount())
+  }
+}
+
+pure func optional(v: Int?) Int {
+  return match v {
+    present(x) => x
+    null => 0
+  }
+}
+
+try func outcome(n: Int) Int {
+  return match Int.add(n, 1) {
+    success(v) => v
+    failure(f) => {
+      report f
+      give 0
+    }
+  }
+}
+
+pure func failureKind(f: Failure) Int {
+  return match f {
+    is Empty as whole => 1
+    otherwise => 2
+  }
+}
+
+pure func pair(p: (Int, Int)) Int {
+  return match p {
+    (a, b) => Int.saturatingAdd(a, b)
+  }
+}
+
+pure func rect(r: { width: Int, height: Int }) Int {
+  return match r {
+    { width: w, height: h } => Int.saturatingMul(w, h)
+  }
+}
+
+pure func destructure(p: owned Point) Int {
+  return match move p {
+    Point(x: a, y: b) => Int.saturatingAdd(a, b)
+  }
+}
+
+pure func flag(b: Bool) Int {
+  return match b {
+    true => 1
+    false => 0
+  }
+}
+
+pure func guarded(n: Int) Int {
+  return match n {
+    v when v > 10 => 10
+    v => v
+  }
+}

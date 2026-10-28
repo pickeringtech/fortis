@@ -1,0 +1,16 @@
+// execute: no arguments|10
+// requires: runtime
+// covers: LANG-04-03
+// `platform.Host` is fortis.host's Host, not this program's class of the same name (D-142). The program's own
+// `Host.capabilities` is still the one a bare name reaches.
+import fortis.host as platform
+
+class Host {
+  export pure func capabilities() Int => 10
+}
+
+export func main(args: List[String]) Void {
+  let caps = platform.Host.capabilities()
+  caps.console.print("no arguments")
+  caps.console.print("${Host.capabilities()}")
+}

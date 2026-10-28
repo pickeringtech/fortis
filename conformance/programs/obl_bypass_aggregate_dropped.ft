@@ -1,0 +1,8 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-03
+try func half(n: Int) Int => n
+func run(n: Int) Int {
+  let failures: List[Failure] = List.default()
+  Failures.aggregate(move failures)        // reject: E-OBL-001 — the aggregated failure is dropped
+  return 0
+}

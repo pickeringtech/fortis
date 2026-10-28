@@ -1,0 +1,33 @@
+// execute: recovered -1
+// execute-trace: launch worker#1 on parallel|launch quick#2|suspend main|start worker#1|suspend worker#1|start quick#2|complete quick#2|resume main|join quick#2|loans-end|cancel worker#1|suspend main|resume worker#1|cancelled worker#1|loans-end|defer|complete worker#1|resume main|join worker#1
+// requires: runtime
+// covers: LANG-12-03, LANG-12-05
+// 12.4: a parallel task observes cancellation at an `await` (here a sleep on a Clock moved into it: capability
+// values are Shareable and cross the launch by move) as well as at checkpoint().
+import fortis.host { Host, Capabilities, Console, Clock }
+export error Bad {
+  code: "demo.bad"
+}
+async func worker(clock: owned Clock, data: List[Int]) Int {
+  defer { discard data.count() }
+  await clock.sleep(100ms)
+  return data.count()
+}
+async try func quick() Int {
+  fail Bad()
+}
+async try func run(pool: owned Clock) Int {
+  let data = List.of(1, 2, 3)
+  scope tasks {
+    let w = tasks.launchParallel(worker(move pool, copy data))
+    let q = tasks.launch(quick())
+    let x = await q or fail
+    return Int.wrappingAdd(x, await w)
+  }
+}
+export async recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(fileSystem: fs, network: net, clock: poolClock, random: rnd, environment: envc, process: proc, supervisor: sup, console: console, secretAccess: sec, rawSql: sql) = move caps
+  let r = await run(move poolClock) or recover -1
+  console.print("recovered ${r}")
+}

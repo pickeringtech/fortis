@@ -1,0 +1,5 @@
+// reject: E-NAM-001 (at the marked line)
+// covers: LANG-04-03
+import fortis.text { Shouter }          // reject: E-NAM-001 — fortis.text declares no Shouter
+
+export pure func f() Int => 1

@@ -1,0 +1,11 @@
+import root.identity
+import root.identity.tools as full
+
+export func pick(n: Int) full.Kind {
+  if n > 2 {
+    return identity.Kind.Two
+  }
+  return full.Kind.One
+}
+
+export func same(k: owned identity.Kind) full.Kind => move k

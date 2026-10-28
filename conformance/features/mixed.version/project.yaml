@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: mixed.version
+version: 1.0.0
+exports: [app]
+dependencies:
+  fortis: "1.0"
+  fortis.http: "2.0"

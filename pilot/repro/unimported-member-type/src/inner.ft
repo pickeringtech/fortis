@@ -1,0 +1,5 @@
+// A class with a method, declared in its own module.
+export class Counter {
+  export n: Int
+  export pure func count(self) Int => self.n
+}

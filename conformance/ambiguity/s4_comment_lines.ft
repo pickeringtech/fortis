@@ -1,0 +1,16 @@
+// accept — S4: comment-only lines inside bodies
+export enum E {
+  // first
+  One
+  // second
+
+  Two
+}
+pure func g(e: E) Int {
+  // leading comment
+  return match e {
+    One => 1
+    // between arms
+    Two => 2
+  }
+}

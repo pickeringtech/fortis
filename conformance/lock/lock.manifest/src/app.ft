@@ -1,0 +1,10 @@
+// accept
+import fortis.host { Host }
+import acme.billing.invoices { Invoice }
+import acme.util { Helper }
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let helper = Helper(name: "fortis")
+  caps.console.print(helper.greet())
+}

@@ -1,0 +1,21 @@
+// reject: E-NAM-034 — src/accounts.ft in package acme.bank
+// Domain declarations imported by async_transfer.ft. The syntax layer accepts the `model` head (LR 16); the checker
+// rejects it, since the Data kit is not installed (E-NAM-034; D-90, X-231).
+import fortis.data { Connection }
+import fortis.money { Money }
+import fortis.time { Timestamp }
+
+export type AccountId = Int<1..>
+
+export class Receipt derive Codec {
+  export source: AccountId
+  export target: AccountId
+  export amount: Money
+  export postedAt: Timestamp
+}
+
+export model Account {
+  key id: AccountId
+  balance: Money
+  timestamps
+}

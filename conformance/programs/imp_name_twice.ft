@@ -1,0 +1,10 @@
+// reject: E-NAM-001 (at the marked line)
+// covers: LANG-04-03
+// An import binds the names it lists (4.3): a second import that binds a name an earlier import has bound is
+// rejected, whether or not it names the same module (D-51.4); the record's candidate is the first import's module.
+import fortis.money { Money, Currency }
+import fortis.money { Money }               // reject: E-NAM-001 — `Money` is bound twice
+
+export func main(args: List[String]) Void {
+  let m = Money.zero(Currency.GBP)
+}

@@ -1,0 +1,306 @@
+// The command line: which journal to read and which report to print.
+//
+//   ledger [--file PATH] [COMMAND [ARGUMENTS]]
+//
+// COMMAND is one of `all` (the default), `balance`, `tree`, `trial`, `income [FROM TO]`, `register ACCOUNT`,
+// `check` and `help`.
+import fortis.text { Text }
+import pilot.ledger.date { Date }
+// AccountClass is imported so that AccountName counts as Copyable here (pilot/repro/copy-imported-optional).
+import pilot.ledger.account { AccountClass, AccountName }
+
+// The journal read when no `--file` is given.
+export const defaultFile = "journal.ledger"
+
+// What the program was asked to do.
+export enum Command {
+  All
+  Balance
+  Tree
+  Trial
+  // An income statement; without dates it covers the whole journal.
+  Income(first: Date?, last: Date?)
+  Register(account: AccountName)
+  Check
+  Help
+}
+
+// A parsed command line.
+export class Invocation {
+  export file: String
+  export command: Command
+}
+
+// What was wrong with the command line.
+export enum UsageProblem derive Equatable {
+  UnknownCommand
+  MissingArgument
+  ExtraArgument
+  ReversedDates
+}
+
+// The command line could not be understood; `argument` is the position of the offending word (from 1), or the
+// number of words plus one when one is missing.
+export error UsageError {
+  code: "ledger.usage"
+  payload { problem: UsageProblem, argument: Int }
+  message: "the command line is not understood (argument ${argument})"
+}
+
+// The text printed for `help` and after a usage error.
+export const usage = """usage: ledger [--file PATH] [COMMAND [ARGUMENTS]]
+
+commands:
+  all                     every report (the default)
+  balance                 balances per account
+  tree                    balances per account tree
+  trial                   trial balance
+  income [FROM TO]        income statement, optionally for the dates FROM to TO (YYYY-MM-DD)
+  register ACCOUNT        the postings of an account and of the accounts below it
+  check                   only check the journal; fails when it has errors
+  help                    this text"""
+
+// Parses the arguments of the program (without the program's own name).
+export pure try func parseArguments(args: ListView[String]) Invocation {
+  let n = args.count()
+  let mut i = 0
+  let mut file = String.from(defaultFile)
+  let first = wordAt(args, 0)
+  if first == "--file" {
+    if n < 2 {
+      fail UsageError(problem: UsageProblem.MissingArgument, argument: 2)
+    }
+    file = wordAt(args, 1)
+    i = 2
+  }
+  if i >= n {
+    return Invocation(file: move file, command: Command.All)
+  }
+  let name = wordAt(args, i)
+  let position = Int.add(i, 1) or fail
+  let rest = Int.sub(n, position) or fail
+  let command = commandNamed(name, args, position, rest) or fail
+  return Invocation(file: move file, command: move command)
+}
+
+// The command called `name`, whose arguments are the `rest` words after position `position`.
+pure try func commandNamed(name: StringView, args: ListView[String], position: Int, rest: Int) Command {
+  if name == "all" || name == "balance" || name == "tree" || name == "trial" || name == "check" || name == "help" {
+    if rest > 0 {
+      let extra = Int.add(position, 1) or fail
+      fail UsageError(problem: UsageProblem.ExtraArgument, argument: extra)
+    }
+    if name == "all" {
+      return Command.All
+    }
+    if name == "balance" {
+      return Command.Balance
+    }
+    if name == "tree" {
+      return Command.Tree
+    }
+    if name == "trial" {
+      return Command.Trial
+    }
+    if name == "check" {
+      return Command.Check
+    }
+    return Command.Help
+  }
+  if name == "income" {
+    if rest == 0 {
+      return Command.Income(first: null, last: null)
+    }
+    checkArity(position, rest, 2) or fail
+    let fromAt = Int.add(position, 1) or fail
+    let toAt = Int.add(position, 2) or fail
+    let startDate = dateArgument(args, position, fromAt) or fail
+    let endIndex = Int.add(position, 1) or fail
+    let endDate = dateArgument(args, endIndex, toAt) or fail
+    if endDate.isBefore(startDate) {
+      fail UsageError(problem: UsageProblem.ReversedDates, argument: toAt)
+    }
+    return Command.Income(first: startDate, last: endDate)
+  }
+  if name == "register" {
+    let at = Int.add(position, 1) or fail
+    checkArity(position, rest, 1) or fail
+    let text = wordAt(args, position)
+    // The account's own failure is passed on, annotated with the argument it came from. Replacing it with a
+    // usage error would discard it, which is the `recovers` effect, and `main` may not have that effect.
+    let account = AccountName.parse(text) catch e {
+      fail annotate(move e, "command-line argument ${at}")
+    }
+    return Command.Register(account: move account)
+  }
+  fail UsageError(problem: UsageProblem.UnknownCommand, argument: position)
+}
+
+// Fails unless the command at `position` has exactly `wanted` arguments after it: a missing argument is reported
+// at the position just after the last word, an extra one at its own position.
+pure try func checkArity(position: Int, rest: Int, wanted: Int<0..2>) Void {
+  if rest < wanted {
+    let lastWord = Int.add(position, rest) or fail
+    let missing = Int.add(lastWord, 1) or fail
+    fail UsageError(problem: UsageProblem.MissingArgument, argument: missing)
+  }
+  if rest > wanted {
+    let lastWanted = Int.add(position, wanted) or fail
+    let extra = Int.add(lastWanted, 1) or fail
+    fail UsageError(problem: UsageProblem.ExtraArgument, argument: extra)
+  }
+}
+
+// The date argument at index `index`; `argument` is its position for the failure.
+pure try func dateArgument(args: ListView[String], index: Int, argument: Int) Date {
+  let text = wordAt(args, index)
+  let date = Date.parse(text) catch e {
+    fail annotate(move e, "command-line argument ${argument}")
+  }
+  return date
+}
+
+// The word at a position, copied; empty past the end.
+pure func wordAt(words: ListView[String], index: Int) String {
+  return match words.get(index) {
+    present(word) => copy word
+    null => String.empty()
+  }
+}
+
+// True for the `help` command, which needs no journal. (`Command` has payloads that are not Equatable, so it
+// cannot be compared with `==`; a match names every variant instead.)
+export pure func wantsHelp(command: Command) Bool {
+  return match command {
+    Help => true
+    All => false
+    Balance => false
+    Tree => false
+    Trial => false
+    Income(first: _, last: _) => false
+    Register(account: _) => false
+    Check => false
+  }
+}
+
+// The explanation printed for a usage problem.
+export pure func usageProblemText(problem: UsageProblem) StringView from static {
+  return match problem {
+    UnknownCommand => "unknown command"
+    MissingArgument => "an argument is missing"
+    ExtraArgument => "too many arguments"
+    ReversedDates => "the period ends before it starts"
+  }
+}
+
+// A one-line description of a command, for tests and messages.
+export pure func describeCommand(command: Command) String {
+  return match command {
+    All => "all"
+    Balance => "balance"
+    Tree => "tree"
+    Trial => "trial"
+    Income(first: startDate, last: endDate) => incomeDescription(startDate, endDate)
+    Register(account: account) => "register ${account.text()}"
+    Check => "check"
+    Help => "help"
+  }
+}
+
+// The description of an income command.
+pure func incomeDescription(startDate: Date?, endDate: Date?) String {
+  if startDate != null && endDate != null {
+    return "income ${startDate.iso()} ${endDate.iso()}"
+  }
+  return "income"
+}
+
+// The arguments of a test row: words separated by single spaces.
+pure func argumentsOf(line: StringView) List[String] => Text.words(line)
+
+test "command lines that parse" cases {
+  "nothing":         { line: "", file: "journal.ledger", command: "all" }
+  "all":             { line: "all", file: "journal.ledger", command: "all" }
+  "balance":         { line: "balance", file: "journal.ledger", command: "balance" }
+  "another file":    { line: "--file books/2026.ledger tree", file: "books/2026.ledger", command: "tree" }
+  "file only":       { line: "--file x.ledger", file: "x.ledger", command: "all" }
+  "trial":           { line: "trial", file: "journal.ledger", command: "trial" }
+  "income":          { line: "income", file: "journal.ledger", command: "income" }
+  "income period":   { line: "income 2026-01-01 2026-03-31", file: "journal.ledger", command: "income 2026-01-01 2026-03-31" }
+  "one-day period":  { line: "income 2026-01-01 2026-01-01", file: "journal.ledger", command: "income 2026-01-01 2026-01-01" }
+  "register":        { line: "register assets:bank:current", file: "journal.ledger", command: "register assets:bank:current" }
+  "check":           { line: "check", file: "journal.ledger", command: "check" }
+  "help":            { line: "help", file: "journal.ledger", command: "help" }
+} as row {
+  let invocation = parseArguments(argumentsOf(row.line)) or fail
+  expect invocation.file == row.file
+  expect describeCommand(invocation.command) == row.command
+}
+
+test "command lines that do not parse" cases {
+  "unknown command":   { line: "balances", code: "ledger.usage" }
+  "extra argument":    { line: "tree now", code: "ledger.usage" }
+  "one date":          { line: "income 2026-01-01", code: "ledger.usage" }
+  "three dates":       { line: "income 2026-01-01 2026-01-02 2026-01-03", code: "ledger.usage" }
+  "reversed dates":    { line: "income 2026-02-01 2026-01-01", code: "ledger.usage" }
+  "bad date":          { line: "income 2026-01-01 2026-02-30", code: "ledger.date.range" }
+  "date syntax":       { line: "income 1/1/2026 2026-02-01", code: "ledger.date.syntax" }
+  "no account":        { line: "register", code: "ledger.usage" }
+  "bad account":       { line: "register Assets", code: "ledger.account.bad_name" }
+  "file without path": { line: "--file", code: "ledger.usage" }
+} as row {
+  let parsed = parseArguments(argumentsOf(row.line)) catch e {
+    expect e.code == row.code
+    recover Invocation(file: "refused", command: Command.Help)
+  }
+  expect parsed.file == "refused"
+}
+
+test "usage errors name the argument" cases {
+  "missing date":    { line: "income 2026-02-01", argument: 3 }
+  "extra date":      { line: "income 2026-01-01 2026-02-01 2026-03-01", argument: 4 }
+  "missing account": { line: "--file x.ledger register", argument: 4 }
+  "extra account":   { line: "register assets:cash assets:bank", argument: 3 }
+  "extra word":      { line: "trial now", argument: 2 }
+  "unknown":         { line: "--file x.ledger totals", argument: 3 }
+} as row {
+  let outcome = parseArguments(argumentsOf(row.line))
+  match move outcome {
+    success(invocation) => {
+      expect invocation.file == "should have failed"
+    }
+    failure(f) => {
+      expect usageArgument(move f) == row.argument
+    }
+  }
+}
+
+test "a usage error names the argument" {
+  let outcome = parseArguments(argumentsOf("--file a.ledger income 2026-02-01 2026-01-01"))
+  match move outcome {
+    success(invocation) => {
+      expect invocation.file == "should have failed"
+    }
+    failure(f) => {
+      expect usageArgument(move f) == 5
+    }
+  }
+}
+
+// The argument position of a usage error, or -1 for any other failure, which is discarded (tests only).
+pure recovers func usageArgument(f: owned Failure) Int {
+  return match move f {
+    is UsageError(problem: p, argument: at) => at
+    otherwise(other) => {
+      let lost: Outcome[Int] = Outcome.failure(move other)
+      give move lost or recover -1
+    }
+  }
+}
+
+test "every usage problem is explained" {
+  expect usageProblemText(UsageProblem.UnknownCommand) == "unknown command"
+  expect usageProblemText(UsageProblem.ReversedDates) == "the period ends before it starts"
+  expect !wantsHelp(Command.All)
+  expect wantsHelp(Command.Help)
+}

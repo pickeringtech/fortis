@@ -1,0 +1,11 @@
+// accept — S8: ranged for headers
+pure func run(n: Int<0..10>) Int {
+  let mut total = 0
+  for i in 0..<n {
+    total = Int.wrappingAdd(total, i)
+  }
+  for j in 1..n {
+    total = Int.wrappingAdd(total, j)
+  }
+  return total
+}

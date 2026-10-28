@@ -1,0 +1,17 @@
+// Repro (FRICTION entry 27): whether a class is Copyable in a module depends on whether that module imports
+// the types of the class's fields. `Tagged` has a field of the enum `Kind`; this module imports `Tagged` but
+// not `Kind`, and both checkers reject line 15 with E-OWN-002 "`copy t`: Tagged is not Copyable (6.11)".
+// Adding `Kind` to the import list (line 11) makes the same line accepted. The single-file check
+// (`bin/fortis check pilot/repro/copy-imported-optional/src/outside.ft`) reports nothing either way, and
+// reports nothing even for an import of a member the module does not export.
+// Docs: guide/06-types.md, "Trivial and copyable types": enums of trivial payloads are trivial, and
+// "classes, enums, tuples and records whose fields are all copyable" are copyable; nothing depends on what the
+// using module imports. In the ledger this made `AccountName` (which has an `AccountClass` field) uncopyable in
+// every module that did not also import `AccountClass`.
+import repro.copyopt.sealed { Tagged }
+
+test "copy outside the declaring module" {
+  let t = Tagged.first("x")
+  let t2 = copy t
+  expect t2.label() == "x"
+}

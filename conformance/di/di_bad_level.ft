@@ -1,0 +1,8 @@
+// reject: E-DI-008 (at the marked line)
+// covers: PLAT-03-04
+export class Cache {
+  size: Int = 1
+}
+context Production {
+  provide Cache using Cache { lifetime: forever }                     // reject: E-DI-008 — not a scope level
+}

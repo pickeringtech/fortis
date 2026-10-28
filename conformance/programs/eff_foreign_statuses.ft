@@ -1,0 +1,21 @@
+// reject: E-EFF-001 (at the marked lines)
+// covers: LANG-11-03, LANG-11-04
+// A foreign `trusted` function's effects are what its signature claims, labelled trusted; anything it does not claim
+// is behind a trust boundary, so a claim that relies on it is unknown, not violated (PROG-DIA-02, X-132).
+
+trusted func rawChecksum(data: List[Int]) Int        // reject: E-EFF-001 — violated: only the standard packages may write `trusted` (D-146)
+trusted pure func rawSquare(x: Int) Int        // reject: E-EFF-001 — violated: only the standard packages may write `trusted` (D-146)
+trusted pure noalloc func rawDouble(x: Int) Int        // reject: E-EFF-001 — violated: only the standard packages may write `trusted` (D-146)
+
+pure func checksum(data: List[Int]) Int => rawChecksum(data)              // reject: E-EFF-001 — unknown: rawChecksum claims nothing
+
+pure func square(x: Int) Int => rawSquare(x)
+
+noalloc func squareFast(x: Int) Int => rawSquare(x)                      // reject: E-EFF-001 — unknown: rawSquare does not claim noalloc
+
+pure noalloc func double(x: Int) Int => rawDouble(x)
+
+// the unknown boundary is carried by summaries: a caller that claims nothing passes it on
+func relay(data: List[Int]) Int => rawChecksum(data)
+
+pure func viaRelay(data: List[Int]) Int => relay(data)                   // reject: E-EFF-001 — unknown: through relay

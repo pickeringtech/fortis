@@ -1,0 +1,18 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-76, an early `give`: the first branch can give its value before `d = 1` runs, so the state after the expression
+// joins the state at every `give`, not only the branch's last statement.
+export func f(take: Bool, early: Bool) Int {
+  let mut d: Int<0..1> = 0
+  let n = if take {
+    if early {
+      give 0
+    }
+    d = 1
+    give 0
+  } else {
+    d = 1
+    give 0
+  }
+  return 1 / d                               // reject: E-REF-002 — `f(true, true)` gives before `d = 1`
+}

@@ -1,0 +1,5 @@
+// reject: E-OWN-053
+export class Line {                      // reject: E-OWN-053 — a field may not store a loan
+  export number: Int
+  export text: StringView
+}

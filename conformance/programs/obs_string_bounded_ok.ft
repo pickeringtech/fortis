@@ -1,0 +1,10 @@
+// accept
+// covers: LANG-13-03
+observation Trace {
+  label: String<scalars: 0..32>      required: all
+}
+@observe(Trace)
+func work(text: String) Int {
+  capture label = text
+  return 1
+}

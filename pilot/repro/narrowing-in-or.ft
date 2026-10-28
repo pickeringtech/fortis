@@ -1,0 +1,21 @@
+// Repro (FRICTION entry 36): `p == null || p.method()` is accepted by both checkers and runs on the
+// interpreter, but the VM cannot build it:
+//   compiler/target/release/fortisc test pilot/repro/narrowing-in-or.ft
+//   -> "pilot/repro/narrowing-in-or.ft:13: not built: no method `holds` on Limit?"
+// Docs (guide/06-types.md, "Optional values"; agent/06-types.md "Optionals") list narrowing "after `x != null`,
+// after `if x == null { return … }`, and in `x != null && e`"; the `||` form is not listed, so either the
+// checkers accept too much or the VM too little. `viaAnd` (the listed form) builds on the VM.
+class Limit {
+  export most: Int
+  export pure func holds(self, n: Int) Bool => n <= self.most
+}
+
+pure func viaOr(limit: Limit?, n: Int) Bool => limit == null || limit.holds(n)
+
+pure func viaAnd(limit: Limit?, n: Int) Bool => !(limit != null && !limit.holds(n))
+
+test "narrowing" {
+  expect viaOr(null, 5)
+  expect viaOr(Limit(most: 9), 5)
+  expect viaAnd(Limit(most: 9), 5)
+}

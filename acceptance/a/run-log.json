@@ -1,0 +1,1226 @@
+{
+ "application": "A",
+ "title": "Core library: a stock ledger",
+ "programme": "Programme 14, application A",
+ "chunk": "DEL-30",
+ "backend": "interpreter",
+ "evidence_integrity": {
+  "algorithm": "sha256",
+  "inputs": {
+   "acceptance/a/project.yaml": "1ca8b38dc5d788d71c70fc86d6f26133b2cc6106c31e736efd2a8d348e28ac46",
+   "acceptance/a/spec.json": "fba6c2b86a2b3de418761baae3bc4166c8428981987339bf42ea4ca9d78768fd",
+   "acceptance/a/src/feed.ft": "1e913854728295972c5e0bfbe668b184ad0db4bd4d01950d9c499b54cf098bbe",
+   "acceptance/a/src/ids.ft": "546fac956ad1c4c8ab75df811d2dc236e1937519ddf3cc0036b2800062a2806a",
+   "acceptance/a/src/ledger.ft": "9fc2d5b29ac08b6ba134c39779b38f622c316f7fff3ef994ec40fb325b8fb8c5",
+   "acceptance/a/src/main.ft": "eec5dd13c798fc54d4c717cd8113a36452bcf6de1484e36a929ba456161aca1a",
+   "acceptance/a/data/orders.txt": "320d0b57cf34744018ef9c0d4c6dd227f1fa4c571aee71343145f9ebe9d65651",
+   "acceptance/a/data/stock.txt": "f1aeabc2c5ec58781f967057bcec9f30affdce9ce3fc46ae85e16cbc5f5a5f85",
+   "acceptance/a/expected/run.out": "4d3cdaa1280bba9ee2bfa4cfaffab2e0af2f3b5a910b8b02aa7d524f5f1def8b",
+   "acceptance/a/negatives/async.ft": "9932bf201306e0152f4cf292e876799cac003ae5478d74dc8f58140dee5b2431",
+   "acceptance/a/negatives/closures.ft": "1b66ba45e4d30dcd875b33f7c48a06130913c9bad998a870554866c1af1c6a6e",
+   "acceptance/a/negatives/defer.ft": "5846a816fe8054357f76573ebfb32f5ac014bfcdb66e20ffcc419a59ee7fdf18",
+   "acceptance/a/negatives/effect.ft": "deaf9723e445bd1f42b9d04d13bb349bebc0e9f980ab915bdbb493533755e4e8",
+   "acceptance/a/negatives/names.ft": "c038bb323e1f5c61df0a653bef2b32d6be2d57e227ad7a349b0616dc18bfc380",
+   "acceptance/a/negatives/obligation.ft": "62b3c5ed7ff7799d8cd58f9b9c6704d9626e76776337c1b3297b7a6f3a780f6b",
+   "acceptance/a/negatives/observation.ft": "e4db308bbe5bfe49ce91f741e82b43cc22094c4df7ff167d06fcaa3a2947679d",
+   "acceptance/a/negatives/ownership.ft": "9e3237294cb7ead58ddd325866303e37d5f1bb5fab372108124092830f935ecb",
+   "acceptance/a/negatives/patterns.ft": "a029f57f4d93ee7daf56917bfb7d27d362f099a8cadc58d58a6b5ba0b98c7fe5",
+   "acceptance/a/negatives/refinement.ft": "cf42344d0d1ce6baaa7c60f63ac4ab841e4806e9aad403c17d046bdf2803f3fd",
+   "acceptance/a/negatives/shape.ft": "dd19c02a623417144cbea446830c83be3c047e159f210e1489e8686a2620a262",
+   "acceptance/a/negatives/syntax.ft": "69410ce742621d6b89878d8401112d648fc01a50f026148e68c325e883c0563e",
+   "acceptance/a/negatives/type.ft": "85affb8e3e8ab42df1cbcfaa3560f5641162c9ea27201ff6c9a19ef823465093"
+  },
+  "toolchain": {
+   "bin/fortis": "bf3c2f39ce0dc71433520f186490ad1516d7bdbd89eccdecb7240fc56ff92d39",
+   "reference/grammar/fortis.ebnf": "c383b8df6bb6969b485a2e57bc97bd208aecd7960bfb91211a7a54e7df7bee8a",
+   "reference/library/collections.ft": "c82c455a1f0f272ebde557d64653b4e35deadf9709a36b0884364b8830418aa6",
+   "reference/library/host.ft": "4517eb9c86078d3ff6a2be558e445a2624e44ea5e41df96a2a69c9a903a18a50",
+   "reference/library/money.ft": "298a4d676d3aea3c9aa19bcd765a1435c9155a9a76b2a07e05d5deb5112d7c32",
+   "reference/library/numeric.ft": "bb10b04dd00f13577c6b040821dc33c2d1182935e0dd7a1140c433aa6b0cd006",
+   "reference/library/prelude.ft": "b60a75b6c8f8fc3af1640105e09a013fcc2a1f4d2800b1413c64ced788a4fd87",
+   "reference/library/text.ft": "f266a96757315891e117bec2c442f774899acb3becf88953b3d49348d796ddc1",
+   "reference/library/time.ft": "92a71fe2a9cc17a65e977ec8e222ddf53807402c9136cce4fd0ab51e8d1f806f",
+   "reference/library/effects/fortis.json": "9caf0e859d8e0edb73b779141d176618269a383b6ce767bfed9cf21cc6f1b9cc",
+   "reference/library/examples/acme.accounts.ft": "88d76e68505e7fd5e3bbe74c36faae35c8dbf05df4bf5bd16900cbcb848f66c0",
+   "reference/library/examples/acme.orders.ft": "6c784fd1d3a15f0e08ff03438a5d6e52457f4c2ab08ef51dc935030a58a74127",
+   "reference/library/kits/fortis.codec.json.ft": "222704eb2751b60d4cd65b2c7ff1140079869cf0212bf5e0b546ebcd7d083408",
+   "reference/library/kits/fortis.data.ft": "537abe45340f45b4575b7583727dca8217b787585259e692a15241f4aa9d01ab",
+   "reference/library/kits/fortis.data.postgres.ft": "d6cd5738f9eab69359df55532351bcb73050703a44197184d0d52519565329a6",
+   "reference/library/kits/fortis.di.ft": "4248d47deb6645d03dbe9e812d2f7c8a6dfd9bd66985311cf88a066e05bea030",
+   "reference/library/kits/fortis.di.provenance.ft": "d617c5ab6c3cb8262969b311d33bfa6ba59a50889bcad7c1776656de583cc25e",
+   "reference/library/kits/fortis.http.server.ft": "9fa319de4d160f7dd1c56021f39b85de9f2b8c73446020ee7472c909e1b40700",
+   "reference/library/kits/fortis.runtime.ft": "c9a0d7ecba706ead5816cad8441009b81aee40fff850aa558130c24d93ddde6b",
+   "reference/library/kits/fortis.security.ft": "6bf60abb47149eb3bade4a0ec3febb8f2e0e940228df2d996597555c8e80658e",
+   "reference/library/kits/fortis.web.components.ft": "134fae6980df7b88110ee9073b0c40306a4387c0f31af00dac09686830eaf3a0",
+   "reference/library/kits/fortis.web.ssr.ft": "134fae6980df7b88110ee9073b0c40306a4387c0f31af00dac09686830eaf3a0",
+   "checker/__init__.py": "900fbe73a08a67a16307be6b0e9b1b9a1d2e5c267573781c87b4ef997753cb0b",
+   "checker/cfg.py": "f9ab9443d09a123f22ee29a7d387201de02373ad39191119f8b36c6f3fad75af",
+   "checker/check.py": "8fedfbbb6f039d8a8043860eeac922b94a30d03edf168d7fcb0907c823f9799c",
+   "checker/decl_ir.py": "6d71211838b837084d892bbc290d28a50dbee1e2402b104e6a5c9acfde81af11",
+   "checker/decls.py": "ed00221d90fb251d654aa107b7a4d9559c58cbeef73892bacff97e1676756c6d",
+   "checker/effects.py": "642ce78e08d74bc62744df8b8b301bf70ac6de6134b670809f6f4ae0377d6891",
+   "checker/intervals.py": "f3a28b514c2845158ae369ecdbddc6aba0dfecd81c9001257e983e1023023f81",
+   "checker/literals.py": "1bfbd61d153e92fb3a6ca0310adbdd740f4345fe804952df908ed8f4d39d2bf9",
+   "checker/owners.py": "7f55c107401f3760800af275a311c72dccab2ca62e3c8730d0a19324d66d6f54",
+   "checker/plans.py": "da13e9938c530d22c56db2829089c5f7b73afdbbeacf31e89d91f8d619441540",
+   "checker/sets_report.py": "bb44cb770881fc3f806d83931875d18949fad2333a1aaa556bffde4163d87c78",
+   "checker/typer.py": "966e0fa7fa3e76b05b777c84ead963cf437ac80f47b4736ecaf6811e67cfff4e",
+   "checker/types.py": "2b405f69cd2c6e315f645be6b2b1e4b6c0369f05def1aa82d960732115e6f752",
+   "interpreter/ARCHITECTURE.md": "c6e079cbfd9171a93e30db1cb89425d7d7092fbe17ee3c6b3eb0a122f938c5a9",
+   "interpreter/INTRINSICS.md": "5129221f72ce36869b320d12934f468d5d7ed7661d46b8673646a6367a3c8d9d",
+   "interpreter/__init__.py": "f7e8c21ebc20a380e124902d33257569293f3d564d237417fc3ecc79d1559881",
+   "interpreter/codec.py": "8ab907a5f405fa4477bc4c23f1e7c41ff8605ed96b4724997b9440fa69983272",
+   "interpreter/eval.py": "a45120e6dbc61f6498d79e67975166358b480a74264a43064988f3ceed8e7f6e",
+   "interpreter/executor.py": "47cf8967ce7141fda4e23317024b3b98962f23cc80efcb6237332255bcbceb0a",
+   "interpreter/intrinsics.py": "5ab9c23eb8d799f2d8f6ae2d5a83fed4d275fec35d49bd8a59ff5aba740f088b",
+   "interpreter/link.py": "c2d70463f9efb748058ecdcbf8bd2bc10c2583bc2c373a4a1b6c2f411070bff3",
+   "interpreter/numeric.py": "ffe884bb3a712855385f95f58103bcbba3e85a11399b25fd70d0a7d41fbfebcf",
+   "interpreter/probe_threads.py": "d61da049ba465e78ee629a107bbb7a08ba9ff7343e20e6cc1a5c365df90d472c",
+   "interpreter/records.py": "02e2a7af19367f37bf04c4f192b26da45591f39c37ae06158c14746f4dbc577f",
+   "interpreter/run.py": "d830e9868366233d6f58b42968486cde43c61ae06dc93a0f0acb02764d4b79cd",
+   "interpreter/telemetry.py": "e869bd34033a4a24519a02adb318ca33ee29a6e25389997d755807b3958e3fb2",
+   "interpreter/values.py": "173420921e94d926efe00f5aad0492eb25e57e0caa70773a8c56252f038f8c5c",
+   "library/fortis/collections.ft": "e6bb3a59aca8af5493cf7b2d165e3ceeb85ef9b1bf307cb241eb343d7e07f97d",
+   "library/fortis/compatibility.yaml": "01f0777bc5a36559b9cad1444a90e4aa4eccf09db9a190c199ccd96f60487adf",
+   "library/fortis/host.ft": "90e7739deb638aba9e99050eceb01ded4baf22fb97a26afac64a05e01a381ee1",
+   "library/fortis/money.ft": "3bab6fac383123cc718f182b5edcd7562893d4bd6bd7ad4688a34c1835f6925b",
+   "library/fortis/numeric.ft": "424551b3caa9c9f8af3d23a268b95596575bb56f0794a7ac8cedaafb000e9bcc",
+   "library/fortis/prelude.ft": "bdd6910d79da2f87b11c6d9bc309ada41bc0b561c4d1c8c3aac4e6ea4934e281",
+   "library/fortis/text.ft": "2166365c0294f4adcd18efa1181a691b39e06c6a4811a0af6d3c0d001a2646c5",
+   "library/fortis/time.ft": "1b3b31179ea033326ac0d2a5e3d71517e235d686ad89b9e77868ba45c50b4024",
+   "conformance/tools/names.py": "2f42a32f51487ce3e75acad596498c37f44498af12720836e17154d1c3b26169",
+   "conformance/tools/parser.py": "534c046d465202d42c4d91364bd8bbcd8dc1e6fe4c400c8c72fbbc6d1288321f",
+   "conformance/tools/lexer.py": "baa321c0be1e9381294192d4bef63a58812e3ed5afe3af91e73aabf2727864fc",
+   "conformance/tools/resolve.py": "5f34beb9ccf23c441847f7cf13605152e6ffd15b01a921b841fdb1c8ff107943",
+   "conformance/tools/project.py": "81c1dedbec42b425cad620050f1f88aff75643d69b5a3b5d318a2743dedf63cc",
+   "conformance/tools/tree.py": "a2f0cfb800b403c14439dc7033f8edcf3aca6f1a6a15704aef3b64ef4d981622",
+   "conformance/tools/diagnostics.py": "d22044ec6118620dc492bc03d94e4fc4f13fd823bb73e129c4a862a449a057b6",
+   "acceptance/run.py": "6fcfb0af167b6e587466f261fc05b30dceb901f447836b8959c1416292065d4e"
+  },
+  "outputs": {
+   "check.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "run.stdout": "4d3cdaa1280bba9ee2bfa4cfaffab2e0af2f3b5a910b8b02aa7d524f5f1def8b",
+   "run.stderr": "2488c58ed89593ca5cbd1563548e039baac25aa85a7cbb8f6c7f388afa36476f",
+   "test.stdout": "74afe2a4aacea55fb3c7ecd584cdc1749b5979e0f8a88830db2fda61d97930a4",
+   "test.stderr": "3be05b7b02efcd91b9b70c11d27a8efc3458f63335665bbaef19d8bc3f058ec3"
+  },
+  "digest": "07e6d77e218cbee0d14464ee4f8a31b49100b0dee91363d0d0f837fab00dc225"
+ },
+ "execution_attestation": {
+  "commit": "eddd9558333b0cf402b47760f17a7206f2b29c5b",
+  "worktree_clean": true,
+  "host": "rpickz-framework-desktop",
+  "platform": "Linux-7.2.5-3-omarchy-x86_64-with-glibc2.44",
+  "python": "3.12.12",
+  "harness": "python3 -I acceptance/run.py a",
+  "steps": [
+   {
+    "step": "check",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "acceptance/a",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:53:56.620+00:00",
+    "duration_ms": 707,
+    "exit": 0
+   },
+   {
+    "step": "run",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "run",
+     "acceptance/a",
+     "--inventory",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "<fresh copy of acceptance/a/data>"
+    },
+    "started": "2026-10-27T11:53:57.328+00:00",
+    "duration_ms": 1786,
+    "exit": 0
+   },
+   {
+    "step": "native build",
+    "argv": [
+     "compiler/target/release/fortisc",
+     "build",
+     "--format",
+     "json",
+     "--out",
+     "build/tmp/acceptance-a-bin-9gxiicou/a",
+     "acceptance/a"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:53:59.115+00:00",
+    "duration_ms": 195,
+    "exit": 0
+   },
+   {
+    "step": "main on the interpreter",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "run",
+     "acceptance/a",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "build/tmp/acceptance-a-interpreter-jnaz8uzz"
+    },
+    "started": "2026-10-27T11:53:59.311+00:00",
+    "duration_ms": 1762,
+    "exit": 0
+   },
+   {
+    "step": "main on the VM",
+    "argv": [
+     "compiler/target/release/fortisc",
+     "vm",
+     "acceptance/a"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "build/tmp/acceptance-a-vm-uel4_48l"
+    },
+    "started": "2026-10-27T11:54:01.074+00:00",
+    "duration_ms": 79,
+    "exit": 0
+   },
+   {
+    "step": "main natively",
+    "argv": [
+     "build/tmp/acceptance-a-bin-9gxiicou/a"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "build/tmp/acceptance-a-native-bu54sbih",
+     "FORTIS_TRACE": "1"
+    },
+    "started": "2026-10-27T11:54:01.154+00:00",
+    "duration_ms": 1,
+    "exit": 0
+   },
+   {
+    "step": "test",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "test",
+     "acceptance/a",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:01.156+00:00",
+    "duration_ms": 3273,
+    "exit": 0
+   },
+   {
+    "step": "test on the VM",
+    "argv": [
+     "compiler/target/release/fortisc",
+     "test",
+     "--format",
+     "json",
+     "acceptance/a"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:04.430+00:00",
+    "duration_ms": 95,
+    "exit": 0
+   },
+   {
+    "step": "negative async.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-3xr9_ezx/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:04.528+00:00",
+    "duration_ms": 738,
+    "exit": 1
+   },
+   {
+    "step": "negative closures.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-qu1zoekj/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:05.268+00:00",
+    "duration_ms": 760,
+    "exit": 1
+   },
+   {
+    "step": "negative defer.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-4sim5zkv/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:06.030+00:00",
+    "duration_ms": 759,
+    "exit": 1
+   },
+   {
+    "step": "negative effect.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-hd83v6dc/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:06.791+00:00",
+    "duration_ms": 749,
+    "exit": 1
+   },
+   {
+    "step": "negative names.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-ohkshjhd/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:07.541+00:00",
+    "duration_ms": 750,
+    "exit": 1
+   },
+   {
+    "step": "negative obligation.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-qjr5kqv0/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:08.292+00:00",
+    "duration_ms": 747,
+    "exit": 1
+   },
+   {
+    "step": "negative observation.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-93nf45sr/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:09.041+00:00",
+    "duration_ms": 750,
+    "exit": 1
+   },
+   {
+    "step": "negative ownership.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-gddjvqwa/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:09.793+00:00",
+    "duration_ms": 769,
+    "exit": 1
+   },
+   {
+    "step": "negative patterns.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-axo58am7/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:10.564+00:00",
+    "duration_ms": 752,
+    "exit": 1
+   },
+   {
+    "step": "negative refinement.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-81z3020g/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:11.318+00:00",
+    "duration_ms": 753,
+    "exit": 1
+   },
+   {
+    "step": "negative shape.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-282kkodw/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:12.072+00:00",
+    "duration_ms": 767,
+    "exit": 1
+   },
+   {
+    "step": "negative syntax.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-fs53cn_3/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:12.841+00:00",
+    "duration_ms": 230,
+    "exit": 1
+   },
+   {
+    "step": "negative type.ft",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-kvqv6c3d/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:13.073+00:00",
+    "duration_ms": 765,
+    "exit": 1
+   },
+   {
+    "step": "mutant 1 check",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-3e2fa5qk/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:13.839+00:00",
+    "duration_ms": 757,
+    "exit": 0
+   },
+   {
+    "step": "mutant 1 test",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "test",
+     "build/tmp/acceptance-a-variant-3e2fa5qk/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:14.597+00:00",
+    "duration_ms": 3768,
+    "exit": 1
+   },
+   {
+    "step": "mutant 2 check",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-oce4f0bz/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:18.366+00:00",
+    "duration_ms": 757,
+    "exit": 0
+   },
+   {
+    "step": "mutant 2 test",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "test",
+     "build/tmp/acceptance-a-variant-oce4f0bz/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:19.123+00:00",
+    "duration_ms": 3727,
+    "exit": 1
+   },
+   {
+    "step": "mutant 3 check",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-bksucxzw/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:22.852+00:00",
+    "duration_ms": 767,
+    "exit": 0
+   },
+   {
+    "step": "mutant 3 test",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "test",
+     "build/tmp/acceptance-a-variant-bksucxzw/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:23.619+00:00",
+    "duration_ms": 3656,
+    "exit": 1
+   },
+   {
+    "step": "mutant 4 check",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "check",
+     "build/tmp/acceptance-a-variant-dl2sgy7j/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {},
+    "started": "2026-10-27T11:54:27.277+00:00",
+    "duration_ms": 745,
+    "exit": 0
+   },
+   {
+    "step": "mutant 4 run",
+    "argv": [
+     "python3",
+     "-I",
+     "bin/fortis",
+     "run",
+     "build/tmp/acceptance-a-variant-dl2sgy7j/acme.stock",
+     "--format",
+     "json"
+    ],
+    "cwd": ".",
+    "env": {
+     "FORTIS_DEV_ROOT": "<fresh copy of acceptance/a/data>"
+    },
+    "started": "2026-10-27T11:54:28.022+00:00",
+    "duration_ms": 1972,
+    "exit": 0
+   }
+  ]
+ },
+ "semantic_correctness": {
+  "passed": true,
+  "checks": [
+   {
+    "check": "package checks with 0 findings",
+    "passed": true,
+    "detail": {
+     "findings": 0,
+     "codes": []
+    }
+   },
+   {
+    "check": "run exits 0",
+    "passed": true,
+    "detail": {
+     "exit": 0
+    }
+   },
+   {
+    "check": "run output equals the expected output",
+    "passed": true,
+    "detail": {
+     "lines": 14,
+     "diff": []
+    }
+   },
+   {
+    "check": "runtime failures reported once each, by code",
+    "passed": true,
+    "detail": {
+     "observed": {
+      "feed.malformed": 2,
+      "refinement.out_of_range": 2,
+      "stock.insufficient": 1,
+      "stock.unknown_sku": 1
+     },
+     "expected": {
+      "feed.malformed": 2,
+      "refinement.out_of_range": 2,
+      "stock.insufficient": 1,
+      "stock.unknown_sku": 1
+     }
+    }
+   },
+   {
+    "check": "observation frames",
+    "passed": true,
+    "detail": {
+     "observed": [
+      {
+       "schema": "Load",
+       "function": "stockItems",
+       "outcome": "success",
+       "fields": {
+        "accepted": "5",
+        "bytes": "142",
+        "lines": "10"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "check": "no unrequested runtime work (inventory)",
+    "passed": true,
+    "detail": {
+     "observed": {
+      "detached": 0,
+      "di_registry": false,
+      "kind": "runtime-inventory",
+      "records": {
+       "observation-frame": 1,
+       "runtime-failure": 6
+      },
+      "tasks": 0,
+      "tasks_by_executor": {
+       "blocking": 0,
+       "cooperative": 0,
+       "parallel": 0
+      },
+      "telemetry_exporters": 0,
+      "virtual_time_ns": 0
+     },
+     "expected": {
+      "tasks": 0,
+      "detached": 0,
+      "tasks_by_executor": {
+       "cooperative": 0,
+       "parallel": 0,
+       "blocking": 0
+      },
+      "di_registry": false,
+      "telemetry_exporters": 0
+     }
+    }
+   },
+   {
+    "check": "failure origins name the declaring module",
+    "passed": true,
+    "detail": {
+     "origins": [
+      "acceptance/a/src/feed.ft",
+      "acceptance/a/src/ids.ft",
+      "acceptance/a/src/ledger.ft"
+     ]
+    }
+   },
+   {
+    "check": "the application builds natively",
+    "passed": true,
+    "detail": {
+     "exit": 0,
+     "tail": "{\"binary\": \"build/tmp/acceptance-a-bin-9gxiicou/a\", \"kind\": \"build\", \"manifest\": \"build/tmp/acceptance-a-bin-9gxiicou/a.build.json\"}\n"
+    }
+   },
+   {
+    "check": "interpreter: main: output, exit 0 and failures {'feed.malformed': 2, 'refinement.out_of_range': 2, 'stock.insufficient': 1, 'stock.unknown_sku': 1} as expected",
+    "passed": true,
+    "detail": {
+     "exit": 0,
+     "failures": {
+      "feed.malformed": 2,
+      "refinement.out_of_range": 2,
+      "stock.insufficient": 1,
+      "stock.unknown_sku": 1
+     },
+     "seconds": 1.762,
+     "diff": []
+    }
+   },
+   {
+    "check": "vm: main: output, exit 0 and failures {'feed.malformed': 2, 'refinement.out_of_range': 2, 'stock.insufficient': 1, 'stock.unknown_sku': 1} as expected",
+    "passed": true,
+    "detail": {
+     "exit": 0,
+     "failures": {
+      "feed.malformed": 2,
+      "refinement.out_of_range": 2,
+      "stock.insufficient": 1,
+      "stock.unknown_sku": 1
+     },
+     "seconds": 0.079,
+     "diff": []
+    }
+   },
+   {
+    "check": "native: main: output, exit 0 and failures {'feed.malformed': 2, 'refinement.out_of_range': 2, 'stock.insufficient': 1, 'stock.unknown_sku': 1} as expected",
+    "passed": true,
+    "detail": {
+     "exit": 0,
+     "failures": {
+      "feed.malformed": 2,
+      "refinement.out_of_range": 2,
+      "stock.insufficient": 1,
+      "stock.unknown_sku": 1
+     },
+     "seconds": 0.001,
+     "diff": []
+    }
+   },
+   {
+    "check": "tests pass",
+    "passed": true,
+    "detail": {
+     "passed": 21,
+     "failed": 0,
+     "tests": 15
+    }
+   },
+   {
+    "check": "tests pass on the VM (fortisc test)",
+    "passed": true,
+    "detail": {
+     "failed": 0,
+     "kind": "test-summary",
+     "passed": 21,
+     "rule": "PROG-TST-01"
+    }
+   },
+   {
+    "check": "feature: refined numerics with plain operators where the interval domain proves them",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: checked APIs where the domain cannot prove the result",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: nominal IDs",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: a noalloc parser over StringView",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: a noalloc parser over BytesView",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: copies",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: views",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: from regions",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: closures of all three kinds",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: linear outcomes through containers",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: a module structure with export and import",
+    "passed": true,
+    "detail": {
+     "missing": []
+    }
+   },
+   {
+    "check": "feature: no unrequested runtime overhead",
+    "passed": true,
+    "detail": {
+     "missing": [],
+     "deferred": "Cross-target native builds of A and their binary inspection belong to DEL-42 (A native); this run checks that A imports no kit package and that running it starts no task, pool, DI registry or exporter."
+    }
+   },
+   {
+    "check": "imports no kit package",
+    "passed": true,
+    "detail": {
+     "outside": [],
+     "allowed": [
+      "fortis.host",
+      "acme.stock."
+     ]
+    }
+   },
+   {
+    "check": "negative async.ft (Defer and async)",
+    "passed": true,
+    "detail": {
+     "change": "an added helper returns a task out of its scope (A is synchronous; async is application A2's)",
+     "base": "src/main.ft",
+     "changed_lines": 7,
+     "changed_at": [
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67
+     ],
+     "codes": [
+      "E-ASY-001"
+     ],
+     "near_change": [
+      "E-ASY-001@65"
+     ]
+    }
+   },
+   {
+    "check": "negative closures.ft (Closures)",
+    "passed": true,
+    "detail": {
+     "change": "a closure that mutates its capture declared as plain fn",
+     "base": "src/main.ft",
+     "changed_lines": 1,
+     "changed_at": [
+      86
+     ],
+     "codes": [
+      "E-FUN-010"
+     ],
+     "near_change": [
+      "E-FUN-010@87"
+     ]
+    }
+   },
+   {
+    "check": "negative defer.ft (Defer and async)",
+    "passed": true,
+    "detail": {
+     "change": "a return inside defer",
+     "base": "src/main.ft",
+     "changed_lines": 1,
+     "changed_at": [
+      68
+     ],
+     "codes": [
+      "E-DEF-001"
+     ],
+     "near_change": [
+      "E-DEF-001@68"
+     ]
+    }
+   },
+   {
+    "check": "negative effect.ft (Effect)",
+    "passed": true,
+    "detail": {
+     "change": "an allocation inside the noalloc parser",
+     "base": "src/feed.ft",
+     "changed_lines": 1,
+     "changed_at": [
+      38
+     ],
+     "codes": [
+      "E-EFF-001"
+     ],
+     "near_change": [
+      "E-EFF-001@38"
+     ]
+    }
+   },
+   {
+    "check": "negative names.ft (Names and modules)",
+    "passed": true,
+    "detail": {
+     "change": "a misspelt imported function",
+     "base": "src/main.ft",
+     "changed_lines": 1,
+     "changed_at": [
+      73
+     ],
+     "codes": [
+      "E-NAM-001"
+     ],
+     "near_change": [
+      "E-NAM-001@73"
+     ]
+    }
+   },
+   {
+    "check": "negative obligation.ft (Obligation)",
+    "passed": true,
+    "detail": {
+     "change": "the failure arm drops the failure instead of reporting it",
+     "base": "src/main.ft",
+     "changed_lines": 1,
+     "changed_at": [
+      105
+     ],
+     "codes": [
+      "E-OBL-001"
+     ],
+     "near_change": [
+      "E-OBL-001@102"
+     ]
+    }
+   },
+   {
+    "check": "negative observation.ft (Observation)",
+    "passed": true,
+    "detail": {
+     "change": "a required field captured only after a failure exit",
+     "base": "src/main.ft",
+     "changed_lines": 2,
+     "changed_at": [
+      19,
+      21
+     ],
+     "codes": [
+      "E-OBS-001"
+     ],
+     "near_change": [
+      "E-OBS-001@20"
+     ]
+    }
+   },
+   {
+    "check": "negative ownership.ft (Ownership)",
+    "passed": true,
+    "detail": {
+     "change": "an owned parameter passed on without `move`",
+     "base": "src/ledger.ft",
+     "changed_lines": 1,
+     "changed_at": [
+      28
+     ],
+     "codes": [
+      "E-OWN-001"
+     ],
+     "near_change": [
+      "E-OWN-001@28"
+     ]
+    }
+   },
+   {
+    "check": "negative patterns.ft (Patterns)",
+    "passed": true,
+    "detail": {
+     "change": "the failure arm removed from a match over an outcome",
+     "base": "src/main.ft",
+     "changed_lines": 5,
+     "changed_at": [
+      102
+     ],
+     "codes": [
+      "E-MAT-001"
+     ],
+     "near_change": [
+      "E-MAT-001@98"
+     ]
+    }
+   },
+   {
+    "check": "negative refinement.ft (Refinement unproved)",
+    "passed": true,
+    "detail": {
+     "change": "a sum returned without validation: its interval exceeds the declared range",
+     "base": "src/ids.ft",
+     "changed_lines": 1,
+     "changed_at": [
+      18
+     ],
+     "codes": [
+      "E-REF-001"
+     ],
+     "near_change": [
+      "E-REF-001@18"
+     ]
+    }
+   },
+   {
+    "check": "negative shape.ft (Unsupported shape)",
+    "passed": true,
+    "detail": {
+     "change": "a fn mut closure moved into Shared, a shape with no safe lowering",
+     "base": "src/main.ft",
+     "changed_lines": 1,
+     "changed_at": [
+      89
+     ],
+     "codes": [
+      "E-OWN-090"
+     ],
+     "near_change": [
+      "E-OWN-090@89"
+     ]
+    }
+   },
+   {
+    "check": "negative syntax.ft (Syntax)",
+    "passed": true,
+    "detail": {
+     "change": "an unclosed call",
+     "base": "src/feed.ft",
+     "changed_lines": 1,
+     "changed_at": [
+      17
+     ],
+     "codes": [
+      "E-SYN-000"
+     ],
+     "near_change": [
+      "E-SYN-000@18"
+     ]
+    }
+   },
+   {
+    "check": "negative type.ft (Type)",
+    "passed": true,
+    "detail": {
+     "change": "a Bool where the declared result is an integer",
+     "base": "src/ids.ft",
+     "changed_lines": 1,
+     "changed_at": [
+      11
+     ],
+     "codes": [
+      "E-TYP-040"
+     ],
+     "near_change": [
+      "E-TYP-040@11"
+     ]
+    }
+   },
+   {
+    "check": "one negative per diagnostic class with a producer",
+    "passed": true,
+    "detail": {
+     "classes": {
+      "Type": [
+       "type.ft"
+      ],
+      "Ownership": [
+       "ownership.ft"
+      ],
+      "Obligation": [
+       "obligation.ft"
+      ],
+      "Effect": [
+       "effect.ft"
+      ],
+      "Refinement unproved": [
+       "refinement.ft"
+      ],
+      "Unsupported shape": [
+       "shape.ft"
+      ],
+      "Syntax": [
+       "syntax.ft"
+      ],
+      "Names and modules": [
+       "names.ft"
+      ],
+      "Patterns": [
+       "patterns.ft"
+      ],
+      "Closures": [
+       "closures.ft"
+      ],
+      "Defer and async": [
+       "async.ft",
+       "defer.ft"
+      ],
+      "Observation": [
+       "observation.ft"
+      ]
+     },
+     "missing": [],
+     "without_producer": {
+      "Resource limit": "E-LIM",
+      "Internal defect": "E-INT"
+     }
+    }
+   },
+   {
+    "check": "mutant 1 killed (src/feed.ft)",
+    "passed": true,
+    "detail": {
+     "mutation": "if n == 0 || n > 6 {  ->  if n == 0 || n > 7 {",
+     "killed_by": "test `malformed numbers`",
+     "statuses": [
+      "pass",
+      "fail",
+      "pass",
+      "pass",
+      "pass"
+     ]
+    }
+   },
+   {
+    "check": "mutant 2 killed (src/ids.ft)",
+    "passed": true,
+    "detail": {
+     "mutation": "if taken > current {  ->  if taken > current + 1 {",
+     "killed_by": "test `taking more than is held is a domain failure`",
+     "statuses": [
+      "fail"
+     ]
+    }
+   },
+   {
+    "check": "mutant 3 killed (src/ledger.ft)",
+    "passed": true,
+    "detail": {
+     "mutation": "return self.items.countWhere(fn[threshold](item: Item) Bool => item.quantity < threshold)  ->  return self.items.countWhere(fn[threshold](item: Item) Bool => item.quantity <= threshold)",
+     "killed_by": "test `closures of the three kinds`",
+     "statuses": [
+      "fail"
+     ]
+    }
+   },
+   {
+    "check": "mutant 4 killed (src/ledger.ft)",
+    "passed": true,
+    "detail": {
+     "mutation": "editable self.items.set(found, Item(sku: sku, name: copy item.name, quantity: left)) or fail  ->  editable self.items.set(found, Item(sku: sku, name: copy item.name, quantity: item.quantity)) or fail",
+     "killed_by": "run output differs"
+    }
+   }
+  ],
+  "failed": []
+ }
+}

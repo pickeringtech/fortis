@@ -1,0 +1,18 @@
+// reject: E-REF-001 (at the marked line)
+// covers: LANG-06-02
+// A fact is discarded when the place is passed editable (6.3 invalidation).
+export class Cell {
+  export value: Int
+}
+
+func reset(c: editable Cell) Void {
+  c.value = 500
+}
+
+func narrowThenInvalidate(c: editable Cell) Int<0..100> {
+  if c.value >= 0 && c.value <= 100 {
+    reset(editable c)
+    return c.value                           // reject: E-REF-001 — c was passed editable, its facts are gone
+  }
+  return 0
+}

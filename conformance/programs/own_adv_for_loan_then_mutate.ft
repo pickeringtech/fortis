@@ -1,0 +1,10 @@
+// reject: E-OWN-010 (at the marked line)
+// covers: LANG-07-05
+export class Bag {
+  export items: List[Int]
+}
+func run(bag: editable Bag) Void {
+  for item in bag.items {
+    editable bag.items.push(item)          // reject: E-OWN-010 — the loop holds a read loan of bag.items
+  }
+}

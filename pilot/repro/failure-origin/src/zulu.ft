@@ -1,0 +1,16 @@
+// The failure is raised here, in `Day.of`.
+export error BadDay {
+  code: "repro.bad_day"
+  payload { day: Int }
+  message: "day ${day} does not exist"
+}
+
+export trivial class Day {
+  export n: Int
+  export pure try func of(n: Int) Day {
+    if n > 31 {
+      fail BadDay(day: n)
+    }
+    return Day(n: n)
+  }
+}

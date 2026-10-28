@@ -1,0 +1,20 @@
+// accept
+export class HttpLimits derive Default {
+  export maxBody: Int = 1_048_576
+}
+
+export enum Region {
+  Europe
+  Asia
+}
+
+export enum Lookup {
+  Found
+  NotFound
+}
+
+const limit: Int = 100
+const margin = limit * 2 - 1
+const statuses: VariantMap[Lookup, Int] = { Found: 200, NotFound: 404 }
+const empty = HttpLimits.default()
+const region = Region.Europe

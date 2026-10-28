@@ -1,0 +1,4 @@
+// accept
+export pure func quote() String {
+  return "${"""a"b"""} and ${"inner ${1}"}"
+}

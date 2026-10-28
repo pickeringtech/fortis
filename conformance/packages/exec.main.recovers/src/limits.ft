@@ -1,0 +1,2 @@
+// a failure discharged without a report: the `recovers` effect (10.4)
+export recovers func clamped(value: Int) Int<0..100> => Int<0..100>.validate(value) or recover 0

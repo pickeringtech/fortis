@@ -1,0 +1,3 @@
+{"verdict": "reject", "code": "E-NAM-001", "covers": ["LANG-04-04"], "onefile": "src/user.ft", "records": [
+  {"file": "user.ft", "line": 5, "column": 8, "code": "E-NAM-001", "message": "bad.onefile.member.util exports no ceiling", "candidates": ["limit"]}
+]}

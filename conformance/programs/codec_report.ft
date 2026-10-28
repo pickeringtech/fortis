@@ -1,0 +1,12 @@
+// accept — src/report.ft in package acme.ledger
+// Deciding-cycle program 2, module two: encodes Entry values as JSON lines with text.Builder (LR 2).
+import fortis.text
+import acme.ledger.entries { Entry }
+
+export pure func render(entries: ListView[Entry]) String {
+  let mut out = text.Builder.create()
+  for entry in entries {
+    editable out.appendLine(entry.toJson())
+  }
+  return out.finish()
+}

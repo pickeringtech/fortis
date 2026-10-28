@@ -1,0 +1,5 @@
+// accept — S2: a brace in expression position is a record literal
+pure func bounds(n: Int) { low: Int, high: Int } {
+  let r = { low: 0, high: n }
+  return r
+}

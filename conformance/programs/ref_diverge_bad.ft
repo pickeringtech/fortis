@@ -1,0 +1,13 @@
+// reject: E-REF-001 (at the marked line)
+// covers: LANG-06-02
+// A guard whose branch does not diverge narrows nothing after the if (6.3).
+pure func soft(n: Int) Int<0..100> {
+  let mut seen = 0
+  if n < 0 {
+    seen = 1
+  }
+  if n > 100 {
+    seen = 2
+  }
+  return n                                   // reject: E-REF-001 — neither guard diverged
+}

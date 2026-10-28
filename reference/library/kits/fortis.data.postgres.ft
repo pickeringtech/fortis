@@ -1,0 +1,2 @@
+// Kit signature fixture (DEL-06).
+export class Postgres {}

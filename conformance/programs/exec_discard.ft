@@ -1,0 +1,15 @@
+// execute: kept 3|discarded
+// requires: runtime
+// covers: LANG-05-08
+// A non-Void value that is not used must be discarded explicitly; `discard` evaluates and drops it (5.8).
+import fortis.host { Host }
+
+pure func three() Int => 3
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let kept = three()
+  caps.console.print("kept ${kept}")
+  discard three()
+  caps.console.print("discarded")
+}

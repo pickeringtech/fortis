@@ -1,0 +1,11 @@
+// accept
+// covers: LANG-12-06
+async func pause() Void {
+}
+async try func run(m: Mutex[Int]) Int {
+  {
+    let g = await m.lock() or fail
+  }
+  await pause()
+  return 0
+}

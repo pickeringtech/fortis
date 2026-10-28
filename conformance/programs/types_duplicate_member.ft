@@ -1,0 +1,6 @@
+// reject: E-TYP-070 (at the marked line)
+// covers: LANG-09-01
+export class Counter {
+  count: Int
+  export pure func count(self) Int => self.count    // reject: E-TYP-070 — `count` is declared twice
+}

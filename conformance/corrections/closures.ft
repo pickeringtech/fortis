@@ -1,0 +1,12 @@
+// reject: E-FUN-010 (at the marked line)
+// Pinned for the corrections check: the correction declares the mutating closure `fn mut`.
+func count() Int {
+  let mut n = 0
+  {
+    let mut bump = fn[editable n]() Void {
+      n = Int.wrappingAdd(n, 1)            // reject: E-FUN-010
+    }
+    editable bump()
+  }
+  return n
+}

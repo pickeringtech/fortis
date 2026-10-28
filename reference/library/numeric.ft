@@ -1,0 +1,4 @@
+// Signature module for `fortis.numeric` (Language Reference 6.4, 6.5).
+export trusted pure func abs(value: Int) Int<0..>
+export trusted pure func min(a: Int, b: Int) Int
+export trusted pure func max(a: Int, b: Int) Int

@@ -1,0 +1,21 @@
+// execute: other hello
+// requires: runtime
+// covers: LANG-09-07
+// `Coin.Other` where `fn(String) Coin` is expected is the constructor (LR 9.7). The payload is owned by the variant.
+import fortis.host { Host }
+
+enum Coin {
+  Other(text: String)
+}
+
+pure func label(c: Coin) String {
+  return match c {
+    Other(text: t) => "other ${t}"
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let f: fn(String) Coin = Coin.Other
+  caps.console.print(label(f("hello")))
+}

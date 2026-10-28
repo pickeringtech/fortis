@@ -1,0 +1,17 @@
+// accept
+// covers: LANG-05-07
+// The read loan taken to evaluate an argument ends when its value is produced (5.7, step 1), so the exclusive loan
+// of the first argument activates afterwards without conflict.
+export class Buffer {
+  export items: List[Int]
+  export pure func length(self) Int => self.items.count()
+}
+
+func update(buffer: editable Buffer, n: Int) Void {
+  editable buffer.items.push(n)
+}
+
+func run() Void {
+  let mut buffer = Buffer(items: List.default())
+  update(editable buffer, buffer.length())
+}

@@ -1,0 +1,12 @@
+// reject: E-OWN-050 (at the marked line)
+// covers: LANG-07-06
+export class User {
+  export name: String
+}
+
+pure func longer(a: User, b: User) StringView from a {
+  if a.name.scalarCount() > b.name.scalarCount() {
+    return alias a.name
+  }
+  return alias b.name                      // reject: E-OWN-050 — the result is declared from a
+}

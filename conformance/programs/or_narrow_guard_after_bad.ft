@@ -1,0 +1,16 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// D-51.6: `||` does not narrow (LR 6.3, 6.8), and not afterwards either. The diverging-branch rule (6.8)
+// needs a null test or comparison as the condition; a guard whose condition is `p == null || flag` gives the
+// rest of the block nothing, because the block is also left when `p` is present and `flag` holds.
+export class Limit {
+  export most: Int
+  export pure func holds(self, n: Int) Bool => n <= self.most
+}
+
+export pure func afterGuard(p: Limit?, n: Int, flag: Bool) Bool {
+  if p == null || flag {
+    return false
+  }
+  return p.holds(n)                         // reject: E-TYP-040 — the `||` guard did not narrow `p`
+}

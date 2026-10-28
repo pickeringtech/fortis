@@ -1,0 +1,7 @@
+// reject: E-TYP-090 (at the marked line)
+// covers: LANG-06-10
+// DEL-29 exclusion 6 of 7: a future is a pending computation, not a value.
+export class Pending derive Codec {      // reject: E-TYP-090
+  export id: Int
+  export result: Future[Int]
+}

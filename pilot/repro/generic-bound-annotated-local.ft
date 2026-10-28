@@ -1,0 +1,24 @@
+// Repro (FRICTION entry 6): the `where` bound of a type parameter is lost for values read from a local whose
+// annotation names T. Both checkers report E-TYP-040 "`>` needs Comparable; T does not implement it" at line 13,
+// although `T implements Comparable` is declared; the same comparison on values read from the parameter
+// (`direct`) is accepted. Expected (LR 6.10; guide Types, "Generics": "A generic body is checked once, against
+// its bounds"): accepted.
+
+pure try func viaLocal[T](items: List[T]) Bool where T implements Comparable, T implements Copyable {
+  let mut out: List[T] = List.default()
+  for item in items {
+    editable out.push(copy item)
+  }
+  let a = out.at(0) or fail
+  return a > a
+}
+
+pure try func direct[T](items: List[T]) Bool where T implements Comparable, T implements Copyable {
+  let a = items.at(0) or fail
+  return a > a
+}
+
+test "bound kept" {
+  expect !(viaLocal(List.of(1)) or fail)
+  expect !(direct(List.of(1)) or fail)
+}

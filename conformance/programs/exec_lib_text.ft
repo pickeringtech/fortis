@@ -1,0 +1,19 @@
+// execute: 3|[alpha, beta, gamma]|7|null|10|empty true|ell
+// requires: runtime
+// covers: LANG-03-05
+// fortis.text intrinsics: graphemes counts clusters (e + combining acute is one), words splits on white space.
+import fortis.host { Host }
+import fortis.text { graphemes, Text, Scalar }
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${graphemes("aéz")}")
+  caps.console.print("${Text.words("  alpha beta\tgamma ")}")
+  caps.console.print("${Scalar.digitValue(Scalar.of("7")) ?? 0}")
+  caps.console.print("${Scalar.digitValue(Scalar.of("x"))}")
+  caps.console.print("${Scalar.hexValue(Scalar.of("a")) ?? 0}")
+  let e = String.empty()
+  caps.console.print("empty ${e.scalarCount() == 0}")
+  let word = "hello"
+  let middle = word.slice(1, 4) or recover "?"
+  caps.console.print("${middle}")
+}

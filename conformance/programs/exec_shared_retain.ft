@@ -1,0 +1,21 @@
+// execute: 7|7|present 7
+// requires: runtime
+// covers: LANG-07-08
+import fortis.host { Host }
+
+export class Config {
+  export limit: Int
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let shared = Shared.create(Config(limit: 7))
+  let other = shared.retain()
+  caps.console.print("${shared.limit}")
+  caps.console.print("${other.limit}")
+  let weak = shared.downgrade()
+  match weak.upgrade() {
+    present(strong) => caps.console.print("present ${strong.limit}")
+    null => caps.console.print("gone")
+  }
+}

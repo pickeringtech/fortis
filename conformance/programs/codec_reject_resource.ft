@@ -1,0 +1,8 @@
+// reject: E-TYP-090 (at the marked line)
+// covers: LANG-06-10
+// DEL-29 exclusion 4 of 7: a resource (an open File) owns an operating-system handle that no bytes can recreate.
+import fortis.host { File }
+export class Upload derive Codec {      // reject: E-TYP-090
+  export name: String
+  export file: File
+}

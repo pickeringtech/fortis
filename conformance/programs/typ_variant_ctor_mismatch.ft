@@ -1,0 +1,18 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-01
+// A variant name where a function type is expected denotes that variant's constructor (9.7). `Red` is a unit
+// variant, so the constructor is `fn() Light`; it does not meet `fn(Int) Light`. The result type still picks
+// `Light` among the enums that declare `Red`, so this is a type mismatch, not an ambiguous name (D-253).
+enum Light {
+  Red
+  Green
+}
+
+enum Paint {
+  Red
+  Blue
+}
+
+pure func takeBad(f: fn(Int) Light) Int => 1
+
+pure func passBad() Int => takeBad(Red)     // reject: E-TYP-040 — parameter count differs

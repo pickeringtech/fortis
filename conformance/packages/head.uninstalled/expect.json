@@ -1,0 +1,7 @@
+{"verdict": "reject", "code": "E-NAM-034", "covers": [], "records": [
+  {"file": "app.ft", "line": 11, "column": 8, "code": "E-NAM-034", "message": "`model` is a head of the Data kit (`fortis.data`), which this toolchain does not install: the declaration can be neither validated nor elaborated, so it is not accepted (LR 16)", "candidates": ["fortis.data"]},
+  {"file": "app.ft", "line": 15, "column": 1, "code": "E-NAM-034", "message": "`application` is a head of the Runtime host kit (`fortis.runtime`), which this toolchain does not install: the declaration can be neither validated nor elaborated, so it is not accepted (LR 16)", "candidates": ["fortis.runtime"]},
+  {"file": "app.ft", "line": 19, "column": 8, "code": "E-NAM-034", "message": "`component` is a head of the Web UI kit (`fortis.web.components`), which this toolchain does not install: the declaration can be neither validated nor elaborated, so it is not accepted (LR 16)", "candidates": ["fortis.web.components"]},
+  {"file": "app.ft", "line": 23, "column": 8, "code": "E-NAM-034", "message": "`view` is a head of the Web UI kit (`fortis.web.ssr`), which this toolchain does not install: the declaration can be neither validated nor elaborated, so it is not accepted (LR 16)", "candidates": ["fortis.web.ssr"]},
+  {"file": "app.ft", "line": 5, "column": 1, "code": "E-NAM-034", "message": "`explore` is a head of the Developer tooling kit, which this toolchain does not install: the declaration can be neither validated nor elaborated, so it is not accepted (LR 16)", "candidates": []}
+]}

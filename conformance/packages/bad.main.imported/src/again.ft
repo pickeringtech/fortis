@@ -1,0 +1,6 @@
+// D-110: the entry `main` is called only by the runtime, once; no module of the program may call it (11.6).
+import bad.main.imported.app { main }
+
+export func twice(args: List[String]) Void {
+  main(copy args)                            // reject: E-EFF-010 — the entry main is referenced
+}

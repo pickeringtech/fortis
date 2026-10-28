@@ -1,0 +1,50 @@
+// execute: made 1|cleanup 1|yes|made 2|cleanup 2|body|made 0|cleanup 0|made 10|cleanup 10|made 11|cleanup 11|made 3|arm|cleanup 3|after
+// execute-trace: drop Handle|drop Handle|drop Handle|drop Handle|drop Handle|drop Handle
+// requires: runtime
+// covers: LANG-07-07
+// 7.9: a condition's temporaries are destroyed when the condition finishes, before the branch or the next
+// iteration. A temporary created in a loop body is destroyed at the end of its statement, on that iteration.
+// A match scrutinee temporary is destroyed at the end of the match statement.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  export func open(self) Bool {
+    return self.id != 0
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+func run(console: Shared[Console]) Void {
+  if Handle.make(1, alias console).open() {
+    console.print("yes")
+  }
+  let mut n = 2
+  while Handle.make(n, alias console).open() {
+    console.print("body")
+    n = 0
+  }
+  let mut i = 0
+  while i < 2 {
+    discard Handle.make(i + 10, alias console)
+    i = i + 1
+  }
+  match Handle.make(3, alias console) {
+    _ => { console.print("arm") }
+  }
+  console.print("after")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

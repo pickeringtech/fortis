@@ -1,0 +1,602 @@
+{
+ "schema": "fortis.contracts/v1",
+ "application": "a",
+ "rule": "PROG-FND-05",
+ "build_manifest": "build/release-record/a.build.json",
+ "built": true,
+ "guarantees": [
+  {
+   "declaration": "segment",
+   "file": "acceptance/a/src/feed.ft",
+   "line": 16,
+   "head": "pure noalloc try func segment(text: StringView, separator: Scalar, index: Int<0..>) StringView from text",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "noalloc",
+     "checker": "effect checker, then the plan-compatibility step at build (E-EFF-030)",
+     "scope": "transitive: the function and everything it calls (11.3, 11.4)"
+    },
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    },
+    {
+     "kind": "refinement",
+     "checker": "interval domain at compile time; validation where it cannot prove (6.3, E-REF)",
+     "scope": "the value's type, wherever it flows"
+    },
+    {
+     "kind": "view",
+     "checker": "ownership checker: the view's loan cannot outlive its origin (7.6, E-OWN)",
+     "scope": "the caller's block"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "number",
+   "file": "acceptance/a/src/feed.ft",
+   "line": 37,
+   "head": "pure noalloc try func number(field: StringView) Int<0..999999>",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "noalloc",
+     "checker": "effect checker, then the plan-compatibility step at build (E-EFF-030)",
+     "scope": "transitive: the function and everything it calls (11.3, 11.4)"
+    },
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    },
+    {
+     "kind": "refinement",
+     "checker": "interval domain at compile time; validation where it cannot prove (6.3, E-REF)",
+     "scope": "the value's type, wherever it flows"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "segmentCount",
+   "file": "acceptance/a/src/feed.ft",
+   "line": 55,
+   "head": "pure noalloc try func segmentCount(text: StringView, separator: Scalar) Int",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "noalloc",
+     "checker": "effect checker, then the plan-compatibility step at build (E-EFF-030)",
+     "scope": "transitive: the function and everything it calls (11.3, 11.4)"
+    },
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "entry",
+   "file": "acceptance/a/src/feed.ft",
+   "line": 67,
+   "head": "pure noalloc try func entry(line: StringView) Entry",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "noalloc",
+     "checker": "effect checker, then the plan-compatibility step at build (E-EFF-030)",
+     "scope": "transitive: the function and everything it calls (11.3, 11.4)"
+    },
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "nameField",
+   "file": "acceptance/a/src/feed.ft",
+   "line": 79,
+   "head": "pure noalloc try func nameField(line: StringView) StringView from line",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "noalloc",
+     "checker": "effect checker, then the plan-compatibility step at build (E-EFF-030)",
+     "scope": "transitive: the function and everything it calls (11.3, 11.4)"
+    },
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    },
+    {
+     "kind": "view",
+     "checker": "ownership checker: the view's loan cannot outlive its origin (7.6, E-OWN)",
+     "scope": "the caller's block"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "lineCount",
+   "file": "acceptance/a/src/feed.ft",
+   "line": 82,
+   "head": "pure noalloc func lineCount(data: BytesView) Int",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "noalloc",
+     "checker": "effect checker, then the plan-compatibility step at build (E-EFF-030)",
+     "scope": "transitive: the function and everything it calls (11.3, 11.4)"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "checksum",
+   "file": "acceptance/a/src/feed.ft",
+   "line": 93,
+   "head": "pure noalloc func checksum(data: BytesView) Int",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "noalloc",
+     "checker": "effect checker, then the plan-compatibility step at build (E-EFF-030)",
+     "scope": "transitive: the function and everything it calls (11.3, 11.4)"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "combined",
+   "file": "acceptance/a/src/ids.ft",
+   "line": 11,
+   "head": "pure func combined(a: Int<0..10000>, b: Int<0..10000>) Int<0..20000>",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "refinement",
+     "checker": "interval domain at compile time; validation where it cannot prove (6.3, E-REF)",
+     "scope": "the value's type, wherever it flows"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "lineValue",
+   "file": "acceptance/a/src/ids.ft",
+   "line": 14,
+   "head": "pure func lineValue(quantity: Int<0..10000>, unitCents: Int<0..1000000>) Int<0..10000000000>",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "refinement",
+     "checker": "interval domain at compile time; validation where it cannot prove (6.3, E-REF)",
+     "scope": "the value's type, wherever it flows"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "restocked",
+   "file": "acceptance/a/src/ids.ft",
+   "line": 17,
+   "head": "pure try func restocked(current: Int<0..10000>, added: Int<0..10000>) Int<0..10000>",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    },
+    {
+     "kind": "refinement",
+     "checker": "interval domain at compile time; validation where it cannot prove (6.3, E-REF)",
+     "scope": "the value's type, wherever it flows"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "withdrawn",
+   "file": "acceptance/a/src/ids.ft",
+   "line": 22,
+   "head": "pure try func withdrawn(current: Int<0..10000>, taken: Int<0..10000>) Int<0..10000>",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    },
+    {
+     "kind": "refinement",
+     "checker": "interval domain at compile time; validation where it cannot prove (6.3, E-REF)",
+     "scope": "the value's type, wherever it flows"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "total",
+   "file": "acceptance/a/src/ids.ft",
+   "line": 30,
+   "head": "pure try func total(values: List[Int<0..10000000000>]) Int",
+   "guarantees": [
+    {
+     "kind": "pure",
+     "checker": "effect checker (fortis-types effects; E-EFF-001\u2026)",
+     "scope": "transitive: the function and everything it calls (11.3)"
+    },
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    },
+    {
+     "kind": "refinement",
+     "checker": "interval domain at compile time; validation where it cannot prove (6.3, E-REF)",
+     "scope": "the value's type, wherever it flows"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "close",
+   "file": "acceptance/a/src/ledger.ft",
+   "line": 102,
+   "head": "func close(ledger: owned Ledger) Summary",
+   "guarantees": [
+    {
+     "kind": "owned",
+     "checker": "ownership checker: the argument is moved and the caller cannot use it again (7.1, E-OWN)",
+     "scope": "the call"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "pairTotal",
+   "file": "acceptance/a/src/ledger.ft",
+   "line": 111,
+   "head": "func pairTotal(a: Item, b: Item) Int<0..20000>",
+   "guarantees": [
+    {
+     "kind": "refinement",
+     "checker": "interval domain at compile time; validation where it cannot prove (6.3, E-REF)",
+     "scope": "the value's type, wherever it flows"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "stockItems",
+   "file": "acceptance/a/src/main.ft",
+   "line": 18,
+   "head": "try func stockItems(text: StringView, out: Console) List[Item]",
+   "guarantees": [
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    },
+    {
+     "kind": "observe",
+     "checker": "observation checker: required fields assigned before each exit (13, E-OBS)",
+     "scope": "the function's exits"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "orderEntries",
+   "file": "acceptance/a/src/main.ft",
+   "line": 42,
+   "head": "try func orderEntries(text: StringView, out: Console) List[Entry]",
+   "guarantees": [
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "main",
+   "file": "acceptance/a/src/main.ft",
+   "line": 61,
+   "head": "try func main(args: List[String]) Void",
+   "guarantees": [
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  },
+  {
+   "declaration": "run",
+   "file": "acceptance/a/src/main.ft",
+   "line": 66,
+   "head": "try func run(fs: FileSystem, out: Console) Void",
+   "guarantees": [
+    {
+     "kind": "try",
+     "checker": "obligation checker (E-OBL): every outcome is consumed exactly once",
+     "scope": "every caller (10.2)"
+    }
+   ],
+   "contracts": [],
+   "effects": null,
+   "authorities": null,
+   "trust": {
+    "baseline": [
+     "the generated crate is #![forbid(unsafe_code)] Rust checked by rustc (natively)",
+     "the fortis-native runtime crate and the Rust standard library",
+     "the development VM's own checks (on the VM)",
+     "the host adapters behind each capability the entry receives"
+    ],
+    "operations": [],
+    "trusted_effects": []
+   }
+  }
+ ]
+}

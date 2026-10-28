@@ -1,0 +1,9 @@
+// reject: E-EFF-010 (in again.ft)
+import fortis.host { Host }
+import bad.main.imported.again
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("run")
+  again.twice(copy args)
+}

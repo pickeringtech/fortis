@@ -1,0 +1,10 @@
+// reject: E-TYP-150 (at the marked lines)
+// covers: LANG-11-09
+import fortis.host { Console }
+func forward(...rest) Int => 1               // reject: E-TYP-150 — ...rest only in an aspect's parameter list
+export aspect loud(label: StringView, ...rest) {   // reject: E-TYP-150 — ...rest without a specialisation
+  needs console: Console
+  before {
+    console.print(label)
+  }
+}

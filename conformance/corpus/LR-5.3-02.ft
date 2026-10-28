@@ -1,0 +1,13 @@
+// accept
+interface Iterable[T, I] where I implements Iterator[T] {
+  pure func iterate(self) I from self               // I is a standard cursor: an owned value that stores a read loan of self
+}
+interface Iterator[T] {
+  pure func next(editable self) (alias T from self)?   // a read loan of the next element, drawn from the cursor's stored loan
+}
+interface Consumable[T, I] where I implements Consumer[T] {
+  func consume(owned self) I                        // an owned cursor that owns the collection
+}
+interface Consumer[T] {
+  func next(editable self) T?                       // the next element, owned
+}

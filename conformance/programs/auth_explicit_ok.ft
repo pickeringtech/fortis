@@ -1,0 +1,12 @@
+// accept
+// covers: LANG-11-07
+import fortis.host { Console }
+export class Logger implements Authority {
+  export console: Console
+}
+func shout(l: Logger, msg: StringView) Void {
+  l.console.print(msg)
+}
+func direct(c: Console, msg: StringView) Void {
+  c.print(msg)
+}

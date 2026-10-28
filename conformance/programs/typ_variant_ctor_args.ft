@@ -1,0 +1,10 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-09-07
+// `Level[Int].High` denotes the constructor of `Level[Int]`. That is not a function to `Level[String]` (LR 9.7).
+enum Level[T] {
+  High(value: T)
+}
+
+export func main(args: List[String]) Void {
+  let f: fn(Int) Level[String] = Level[Int].High                  // reject: E-TYP-040
+}

@@ -1,0 +1,25 @@
+// accept
+// covers: LANG-11-09, LANG-11-08
+// Two user aspects: before hooks run in application order, after hooks in reverse (11.8); see conformance/aspects/asp_user_order.golden.
+import fortis.host { Console }
+export aspect logged(label: StringView) {
+  needs console: Console
+  before {
+    console.print(label)
+  }
+  after(result: Int) {
+    console.print(label)
+  }
+}
+export aspect timed(tag: StringView) {
+  needs console: Console
+  before {
+    console.print(tag)
+  }
+  after(result: Int) {
+    console.print(tag)
+  }
+}
+@logged("outer")
+@timed("inner")
+func work(console: Console, n: Int) Int => n

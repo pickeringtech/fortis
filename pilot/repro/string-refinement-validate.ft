@@ -1,0 +1,24 @@
+// Repro (FRICTION entry 9): `validate` into String-based types; the two backends fail on different forms.
+// Both checkers accept the program.
+//
+//   bin/fortis run pilot/repro/string-refinement-validate.ft
+//     prints "dynamic check failed: validate of a non-integer", exit status 2, no record, nothing printed:
+//     the interpreter cannot validate the structural refinement `String<scalars: 0..40>` (line 19).
+//   compiler/target/release/fortisc vm pilot/repro/string-refinement-validate.ft
+//     prints "observed: dynamic:validate of a non-integer", exit status 0, nothing printed (with line 21-22
+//     removed it prints "observed: 3"): the VM cannot validate the newtype `Plain` over an unrefined String.
+//
+// A newtype over a refined String (`type Code = String<scalars: 3..3>`) validates on both.
+// Docs: agent/06-types.md, "Facts": refinement forms include `String<scalars: 1..120>`; "`T.validate(x)` and
+// `Int<0..100>.validate(x)` are pure, return `Outcome[T]`"; newtypes "values only from `Name.validate(raw)`".
+import fortis.host { Host }
+
+type Plain = String
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let short = String<scalars: 0..40>.validate(String.from("abc")) or fail
+  caps.console.print("${short.scalarCount()}")
+  let plain = Plain.validate(String.from("abc")) or fail
+  caps.console.print("${plain}")
+}

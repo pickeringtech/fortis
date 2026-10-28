@@ -1,0 +1,11 @@
+// illustrative
+import fortis.host { Host }
+import fortis.runtime { Application }
+import fortis.http.server { Router }
+import fortis.data.postgres as pg
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()            // see section 2
+  let app = Application.build(move caps)
+  app.run() or fail                         // a failing main reports once and exits 1
+}

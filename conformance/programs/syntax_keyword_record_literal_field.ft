@@ -1,0 +1,2 @@
+// reject: E-SYN-002 (at the marked line)
+export pure func f() Int => { view: 1 }.view          // reject: E-SYN-002

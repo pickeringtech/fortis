@@ -1,0 +1,9 @@
+import cycle.newtype.b { Bee, Small }
+
+export class Ay {
+  export n: Int
+}
+
+export func ayOf(b: Bee) Ay => Ay(n: b.n)
+
+export func take(x: Small) Small => x

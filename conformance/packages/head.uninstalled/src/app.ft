@@ -1,0 +1,29 @@
+// reject: E-NAM-034 (at the marked lines)
+// D-90 (X-231): a head whose kit this toolchain does not install can be neither validated nor elaborated, so the
+// check rejects it and names the kit, and `test` does not report this module's tests as passed. Before the fix
+// every head here was accepted, and the exploration's regression was silently not run.
+explore Pricing {                       // reject: E-NAM-034 — the Developer tooling kit
+  regression "totals" {
+    expect 1 == 2
+  }
+}
+
+export model Customer {                 // reject: E-NAM-034 — the Data kit
+  table: "customers"
+}
+
+application Billing {                   // reject: E-NAM-034 — the Runtime host kit
+  entry: app.main
+}
+
+server component Badge(label: String) { // reject: E-NAM-034 — the Web UI kit
+  state { shown: Bool }
+}
+
+export view Page(title: String) {
+  <h1>${title}</h1>
+}
+
+test "ordinary" {
+  expect 1 == 1
+}

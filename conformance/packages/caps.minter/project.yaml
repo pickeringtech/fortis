@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: caps.minter
+version: 1.0.0
+entry: lib
+exports: [lib]
+dependencies:
+  fortis: "1.0"

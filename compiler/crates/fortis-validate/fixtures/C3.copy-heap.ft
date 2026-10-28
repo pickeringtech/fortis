@@ -1,0 +1,9 @@
+// DEL-45 fixture for C3.copy-heap: a copy of a heap-owning value allocates (here, outside noalloc).
+export class Box {
+  export name: String
+}
+func build(b: Box) Box => copy b
+export func main(args: List[String]) Void {
+  let b = Box(name: "b")
+  discard build(b).name.scalarCount()
+}

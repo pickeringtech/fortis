@@ -1,0 +1,24 @@
+// accept
+// covers: LANG-10-01
+func never() Never {
+  loop {
+  }
+}
+try func half(n: Int) Int => n
+try recovers func exits(n: Int) Int {
+  let a = half(n) catch e {
+    report e
+    recover 0
+  }
+  let b = half(n) catch e {
+    return a
+  }
+  let c = half(n) catch e {
+    fail move e
+  }
+  let d = half(n) catch e {
+    report e
+    never()
+  }
+  return Int.saturatingAdd(a, Int.saturatingAdd(b, Int.saturatingAdd(c, d)))
+}

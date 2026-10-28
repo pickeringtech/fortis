@@ -1,0 +1,18 @@
+// execute: 3|30|20|2|first 10|empty false
+// requires: runtime
+// covers: LANG-06-07
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut xs: List[Int] = List.default()
+  editable xs.push(10)
+  editable xs.push(20)
+  editable xs.push(30)
+  caps.console.print("${xs.count()}")
+  caps.console.print("${editable xs.pop() ?? 0}")
+  caps.console.print("${xs.get(1) ?? 0}")
+  caps.console.print("${xs.count()}")
+  caps.console.print("first ${xs.first() ?? 0}")
+  caps.console.print("empty ${xs.isEmpty()}")
+}

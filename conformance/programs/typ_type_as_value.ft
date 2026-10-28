@@ -1,0 +1,8 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-01
+// D-141: a type is not a value (4.5's qualified forms are `Type.associated` and `Enum.Variant`): `let h = Host`
+// names nothing a program can use, and must not be a way to call `Host.capabilities` unseen.
+import fortis.host { Host }
+export func main(args: List[String]) Void {
+  let h = Host                             // reject: E-TYP-040 — a type used as a value
+}

@@ -1,0 +1,14 @@
+// Repro (FRICTION entry 37): a method called on a field whose class this module does not import.
+// Both checkers accept the package and `bin/fortis test pilot/repro/unimported-member-type` passes, but the VM
+// cannot build the test:
+//   compiler/target/release/fortisc test pilot/repro/unimported-member-type
+//   -> ERROR through a field: expected a built test, actual unbuilt: line 12: no method `count` on <unknown>
+// Importing `Holder` as well changes the message to "no method `count` on Counter"; importing both `Holder`
+// and `Counter` makes the VM build and pass it. (Same family as entry 27: what a module may do with a value
+// depends on which types it happens to import.)
+import repro.unimported.outer { make }
+
+test "through a field" {
+  let h = make()
+  expect h.counter.count() == 3
+}

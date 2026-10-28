@@ -1,0 +1,14 @@
+// Repro (FRICTION entry 47): unused imports produce no record at all.
+//   bin/fortis check pilot/repro/unused-import.ft --format json      -> nothing, exit 0
+//   compiler/target/release/fortisc check pilot/repro/unused-import.ft --format json   -> nothing, exit 0
+// Docs: agent/04-modules.md, "Package and import facts": "Unused import: warning at the baseline lint level,
+// error at the strict one"; guide/04-modules.md says the same. Neither says how to choose a lint level, and no
+// command line option for one is documented.
+import fortis.text { Text }
+import fortis.money { Money }
+
+pure func one() Int => 1
+
+test "one" {
+  expect one() == 1
+}

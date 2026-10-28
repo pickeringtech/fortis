@@ -1,0 +1,8 @@
+// reject: E-TYP-010 (at the marked line)
+// covers: LANG-05-03
+pure func positive(count: Int) Bool {
+  if count {                              // reject: E-TYP-010 — the condition is an Int, not a Bool
+    return true
+  }
+  return false
+}

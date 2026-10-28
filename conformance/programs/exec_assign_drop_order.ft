@@ -1,0 +1,37 @@
+// execute: cleanup 1|id 2|cleanup 2|done
+// execute-trace: loans-end|drop Res
+// requires: runtime
+// covers: LANG-05-02, LANG-07-07
+// Replacing a branch-moved cleanup builds the new value while the old one is still there, then
+// destroys the old one (7.9, D-181). The right-hand side may read the place being replaced.
+import fortis.host { Host, Console, Capabilities }
+
+export class Res {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+func eat(r: owned Res) Void {
+  discard r
+}
+
+func replace(console: Shared[Console], flag: Bool) Void {
+  let mut r = Res(id: 1, console: console.retain())
+  r = Res(id: Int.saturatingAdd(r.id, 1), console: console.retain())
+  if flag {
+    eat(move r)
+    return
+  }
+  console.print("id ${r.id}")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  replace(console, false)
+  console.print("done")
+}

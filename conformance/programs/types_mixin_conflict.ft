@@ -1,0 +1,13 @@
+// reject: E-MIX-001 (at the marked line)
+// covers: LANG-09-04
+export mixin Left {
+  export pure func summary(self) String => "left"
+}
+
+export mixin Right {
+  export pure func summary(self) String => "right"
+}
+
+export class Report with Left, Right {     // reject: E-MIX-001 — both mixins provide summary
+  export name: String
+}

@@ -1,0 +1,5 @@
+import cycle.newtype.nominal.a { take }
+
+export type Small = Int<0..10>
+
+func five() Int => take(5)              // reject: E-TYP-040 — Int<exact: 5..5> is not Small

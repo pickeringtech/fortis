@@ -1,0 +1,37 @@
+// execute: made 1|cleanup 1|after box|made 2|cleanup 2|after await
+// execute-trace: drop Handle
+// requires: runtime
+// covers: LANG-07-07
+// 7.9: a temporary whose cleanup is reached only through a type argument (`Box[Handle]`) is still destroyed
+// at the end of the statement. So is the result of `await`, which is a fresh owned value of the statement.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export class Box[T] {
+  export h: T
+}
+
+async func makeH(console: Shared[Console]) Handle {
+  return Handle.make(2, alias console)
+}
+
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  discard Box[Handle](h: Handle.make(1, alias console))
+  console.print("after box")
+  discard await makeH(console)
+  console.print("after await")
+}

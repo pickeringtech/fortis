@@ -1,0 +1,5 @@
+// reject: E-REF-002 (at the marked line)
+// Pinned for the corrections check: the correction replaces the unproved `+` with the checked `Int.add(...) or fail`.
+try func total(a: Int, b: Int) Int {
+  return a + b                             // reject: E-REF-002
+}

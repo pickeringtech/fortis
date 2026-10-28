@@ -1,0 +1,4 @@
+// reject: E-SYN-002 (at the marked line)
+export class Config {
+  pure: Int                               // reject: E-SYN-002 — `pure` is a modifier keyword
+}

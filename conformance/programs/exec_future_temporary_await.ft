@@ -1,0 +1,71 @@
+// execute: made|made|task 1|word 3|copy 3|B|A|pair AB|D|C|pair CD|edited 4|counter 7|made|end 1 1
+// requires: runtime
+// covers: LANG-07-04
+// D-31 (12.3, 5.7, X-251): a future that borrows a temporary argument or receiver is awaited in the temporary's
+// statement, or launched directly, when the task owns the temporary until it has run (a call's result, a
+// constructed receiver, a `copy`), its named arguments evaluated in source order on a cooperative
+// and a parallel launch alike; a future launched from a binding borrows a place instead, which the scope's block keeps
+// alive until the task is joined.
+import fortis.host { Host, Console, Capabilities }
+
+async func make(console: Shared[Console]) Int {
+  console.print("made")
+  return 1
+}
+
+async func greet(name: String) Int => name.scalarCount()
+
+func mark(console: Shared[Console], s: String) String {
+  console.print(s)
+  return copy s
+}
+
+async func pair(a: String, b: String) String => "${a}${b}"
+
+export class Counter {
+  export n: Int<0..100>
+}
+
+async func bump(c: editable Counter, text: String, k: Int<0..100>) Int {
+  c.n = 7
+  return Int.wrappingAdd(text.scalarCount(), k)
+}
+
+export class Word {
+  export s: String
+  export async func size(self) Int => self.s.scalarCount()
+}
+
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  let a = await make(console.retain())
+  scope tasks {
+    let t = tasks.launch(make(console.retain()))
+    let n = await t
+    console.print("task ${n}")
+    let w = tasks.launch(Word(s: String.from("abc")).size())
+    let wn = await w
+    console.print("word ${wn}")
+    let name = String.from("ada")
+    let c = tasks.launch(greet(copy name))
+    let cn = await c
+    console.print("copy ${cn}")
+    let p = tasks.launch(pair(b: mark(console, "B"), a: mark(console, "A")))
+    let pn = await p
+    console.print("pair ${pn}")
+    let q = tasks.launchParallel(pair(b: mark(console, "D"), a: mark(console, "C")))
+    let qn = await q
+    console.print("pair ${qn}")
+    let mut counter = Counter(n: 1)
+    scope edits {
+      let e = edits.launch(bump(editable counter, String.from("abc"), counter.n))
+      let en = await e
+      console.print("edited ${en}")
+    }
+    console.print("counter ${counter.n}")
+  }
+  let b = await make(console.retain())
+  console.print("end ${a} ${b}")
+}

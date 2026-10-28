@@ -1,0 +1,4 @@
+// accept
+export class Invoice {
+  export total: Int
+}

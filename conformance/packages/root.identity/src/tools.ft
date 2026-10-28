@@ -1,0 +1,12 @@
+import root.identity.both { pick }
+
+export class Helper {
+  export n: Int
+}
+
+export enum Kind derive Equatable {
+  One
+  Two
+}
+
+export func kindOf(h: Helper) Kind => pick(h.n)

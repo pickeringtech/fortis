@@ -1,0 +1,37 @@
+{
+  "why": "the handle's representation, ownership and origin are declared",
+  "expect": "handle:",
+  "manifest": {
+    "capability": "Network",
+    "rule": "PROG-ARC-02",
+    "normative": "Language Reference 11.6, 15",
+    "adapter": "compiler/crates/fortis-native/src/host.rs",
+    "handle": {
+      "representation": "zero-sized"
+    },
+    "operations": {
+      "resolve": {
+        "ownership": {
+          "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+          "host": "a read loan for the call, not retained",
+          "result": "an owned String"
+        },
+        "effects": [
+          "fail",
+          "io"
+        ],
+        "failures": [
+          "network.unreachable"
+        ],
+        "allocation": "the result text; the failure value with its `host` field when the host is not localhost",
+        "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+      }
+    },
+    "violation": {
+      "fixture": "conformance/programs/exec_host_violations.ft",
+      "refused_by": "native",
+      "expect": "network.unreachable",
+      "clause": "offline: only localhost resolves"
+    }
+  }
+}

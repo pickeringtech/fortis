@@ -1,0 +1,14 @@
+{
+  "class": "Syntax",
+  "code": "E-SYN-001",
+  "column": 1,
+  "fields": {
+    "found_token": "<found_token>"
+  },
+  "file": "x.ft",
+  "line": 1,
+  "message": "negative record",
+  "rule": "-",
+  "severity": "error",
+  "status": "violated"
+}

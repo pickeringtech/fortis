@@ -1,0 +1,9 @@
+// reject: E-EFF-010 (at the marked line)
+// covers: LANG-11-07
+// A function that reaches the Clock capability through the Capabilities record has no Authority in its signature (11.6).
+import fortis.host { Host, Capabilities, Path }
+func current(caps: Capabilities) Timestamp {
+  return caps.clock.now()                         // reject: E-EFF-010
+}
+export func main(args: List[String]) Void {
+}

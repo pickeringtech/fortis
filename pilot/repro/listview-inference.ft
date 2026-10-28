@@ -1,0 +1,19 @@
+// Repro (FRICTION entry 7): a List[Int] argument passed to a ListView[T] parameter does not fix T.
+// Both checkers report E-TYP-160 at line 17 ("the type arguments of this call are not fixed by its arguments"),
+// although the argument's element type is Int. Expected (LR 6.10; guide Types, "Generics": type arguments "are
+// inferred from the arguments"): accepted with T = Int. Annotating the binding (line 16) is the workaround.
+
+pure func copied[T](items: ListView[T]) List[T] where T implements Copyable {
+  let mut out: List[T] = List.default()
+  for item in items {
+    editable out.push(copy item)
+  }
+  return move out
+}
+
+test "view inference" {
+  let source = List.of(1, 2)
+  let annotated: List[Int] = copied(source)
+  let inferred = copied(source)
+  expect annotated.count() == inferred.count()
+}

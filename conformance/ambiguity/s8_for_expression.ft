@@ -1,0 +1,11 @@
+// accept — S8: for over an expression and over a place
+pure func run(xs: List[Int]) Int {
+  let mut total = 0
+  for x in xs {
+    total = Int.wrappingAdd(total, x)
+  }
+  for y in xs.reversed() {
+    total = Int.wrappingAdd(total, y)
+  }
+  return total
+}

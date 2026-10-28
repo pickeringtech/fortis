@@ -1,0 +1,9 @@
+// DEL-45 fixture for C3.inline-construct: constructing a trivial value in a noalloc function.
+export trivial class Point {
+  export x: Int
+  export y: Int
+}
+noalloc func origin() Point => Point(x: 0, y: 0)
+export func main(args: List[String]) Void {
+  discard origin().x
+}

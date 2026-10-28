@@ -1,0 +1,11 @@
+// reject: E-EFF-010 (at the marked line)
+// covers: LANG-11-07
+// D-110: a call inside a loop creates the capabilities once per iteration; only a direct call in the entry `main`'s
+// own body, outside every loop, creates them (11.6).
+import fortis.host { Host }
+export func main(args: List[String]) Void {
+  for a in args {
+    let caps = Host.capabilities()         // reject: E-EFF-010 — inside a loop
+    caps.console.print(a)
+  }
+}

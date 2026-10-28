@@ -1,0 +1,62 @@
+// execute: chain 2|held 1|forest 2
+// requires: runtime
+// covers: LANG-09-05
+// A generic enum that contains itself, and a non-generic enum that reaches itself only through a generic
+// class, are boxed the same way a monomorphic recursive enum is (D-55). A heap collection stays the
+// indirection boundary: the field is not boxed again.
+import fortis.host { Host }
+
+export enum Chain[T] {
+  End(value: T)
+  Next(tail: Chain[T])
+}
+
+export class Hold[T] {
+  export value: T
+}
+
+export enum Tree {
+  Leaf
+  Node(child: Hold[Tree])
+}
+
+export enum Forest {
+  None
+  Many(trees: List[Forest])
+}
+
+pure func depth(c: Chain[Int]) Int {
+  return match c {
+    End(value: _) => 0
+    Next(tail: rest) => Int.saturatingAdd(depth(rest), 1)
+  }
+}
+
+func held(t: owned Tree) Int {
+  return match move t {
+    Leaf => 0
+    Node(child: h) => match move h {
+      Hold(value: inner) => match inner {
+        Leaf => 1
+        Node(child: _) => 2
+      }
+    }
+  }
+}
+
+func trees(f: Forest) Int {
+  return match f {
+    None => 0
+    Many(trees: ts) => ts.count()
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let c = Chain.Next(tail: Chain.Next(tail: Chain.End(value: 4)))
+  let t = Tree.Node(child: Hold(value: Tree.Leaf))
+  let f = Forest.Many(trees: List.of(Forest.None, Forest.None))
+  caps.console.print("chain ${depth(c)}")
+  caps.console.print("held ${held(move t)}")
+  caps.console.print("forest ${trees(f)}")
+}

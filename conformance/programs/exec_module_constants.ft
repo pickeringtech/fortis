@@ -1,0 +1,20 @@
+// execute: 42|Fortis|84
+// requires: runtime
+// covers: LANG-04-01, LANG-04-02
+// A module holds only declarations and constant bindings; importing or loading it runs no code, so the first output
+// is main's (4.1, 4.2).
+import fortis.host { Host }
+import fortis.text { Text }
+import fortis.money { Money, Currency }
+
+const answer: Int = 42
+const name: String = "Fortis"
+
+pure func doubled() Int => Int.wrappingMul(answer, 2)
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${answer}")
+  caps.console.print(name)
+  caps.console.print("${doubled()}")
+}

@@ -1,0 +1,17 @@
+// reject: E-REF-001 (at the marked line)
+// covers: LANG-06-02
+// A fact about a place reachable from an editable capture is discarded when the closure is called (6.3).
+func run(n: Int) Int<0..100> {
+  let mut m = 0
+  if n >= 0 && n <= 100 {
+    m = n
+    {
+      let mut reset = fn mut[editable m]() Void {
+        m = 500
+      }
+      editable reset()
+    }
+    return m                                       // reject: E-REF-001 — the editable capture was called
+  }
+  return 0
+}

@@ -1,0 +1,10 @@
+// reject: E-TYP-080 (at the marked line)
+import ver.lib { Invoice }
+import ver.mid.api { Printer }
+
+export class Plain implements Printer {        // reject: E-TYP-080 — Invoice of ver.lib@2.0.0 is not Invoice of ver.lib@1.4.0
+  export pure func print(self, invoice: Invoice) String => "invoice"
+}
+
+export func main(args: List[String]) Void {
+}

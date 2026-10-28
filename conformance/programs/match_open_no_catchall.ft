@@ -1,0 +1,8 @@
+// reject: E-MAT-001 (at the marked line)
+// covers: LANG-09-05
+pure func code(n: Int) Int {
+  return match n {                          // reject: E-MAT-001 — an open type needs a catch-all arm
+    0 => 1
+    1 => 2
+  }
+}

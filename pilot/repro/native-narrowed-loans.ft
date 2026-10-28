@@ -1,0 +1,25 @@
+// Repro (FRICTION entry 44): in a generic function, optionals narrowed by `a != null && b != null` are passed
+// to a callback unwrapped on the interpreter and the VM (both print "true"), but the native build fails:
+//   bin/fortis build pilot/repro/native-narrowed-loans.ft --out /tmp/x
+//   -> E-INT-002 "the Rust generated for main::function firstBefore does not compile (error[E0308]:
+//      arguments to this function are incorrect)"
+// The generated Rust keeps `a` and `b` as `Option<&T>` and calls `(precedes)(&a, &b)`. The same function
+// without the type parameter (`List[String]`, `pure fn(String, String) Bool`) builds and runs natively.
+// Docs: guide/06-types.md, "Optional values": "in `a != null && e`, `a` is a `T` inside `e`" (here inside the
+// guarded block). The ledger's generic sort hit this.
+import fortis.host { Host }
+
+pure func firstBefore[T](items: List[T], precedes: pure fn(T, T) Bool) Bool {
+  let a = items.get(0)
+  let b = items.get(1)
+  if a != null && b != null {
+    return precedes(a, b)
+  }
+  return false
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let items: List[String] = List.of("apple", "pear")
+  caps.console.print("${firstBefore(items, fn(x: String, y: String) Bool => x < y)}")
+}

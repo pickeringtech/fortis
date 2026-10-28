@@ -1,0 +1,45 @@
+// execute: c,a,b|c=30,a=1,b=2|9,-4,7
+// requires: runtime
+// covers: LANG-06-06
+// Map and Set iterate in first-insertion order; replacing a value keeps its key's position (6.6).
+import fortis.host { Host }
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut names: Set[String] = Set.default()
+  discard editable names.add("c")
+  discard editable names.add("a")
+  discard editable names.add("c")
+  discard editable names.add("b")
+  let mut ages: Map[String, Int] = Map.default()
+  editable ages.set("c", 3)
+  editable ages.set("a", 1)
+  editable ages.set("b", 2)
+  editable ages.set("c", 30)
+  let mut numbers: Set[Int] = Set.default()
+  discard editable numbers.add(9)
+  discard editable numbers.add(-4)
+  discard editable numbers.add(7)
+  discard editable numbers.add(9)
+  let mut a = ""
+  let mut sep = ""
+  for n in names {
+    a = "${a}${sep}${n}"
+    sep = ","
+  }
+  let mut b = ""
+  sep = ""
+  for entry in move ages {
+    let (k, v) = move entry
+    b = "${b}${sep}${k}=${v}"
+    sep = ","
+  }
+  let mut c = ""
+  sep = ""
+  for n in numbers {
+    c = "${c}${sep}${n}"
+    sep = ","
+  }
+  caps.console.print(a)
+  caps.console.print(b)
+  caps.console.print(c)
+}

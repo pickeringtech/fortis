@@ -1,0 +1,20 @@
+// reject: E-EFF-010 (at the marked line)
+// covers: LANG-11-07
+// D-144: a function with the `io` effect names, in its own signature, the authority it uses (11.6). Reaching a clock
+// through the Capabilities record and handing it to a function that takes a Clock is still I/O without an Authority
+// parameter, as calling `caps.clock.now()` directly is (host_without_clock.ft).
+import fortis.host { Host, Capabilities, Clock }
+
+func stamp(clock: Clock) Timestamp => clock.now()
+
+func current(caps: Capabilities) Timestamp {
+  return stamp(caps.clock)                 // reject: E-EFF-010 — I/O through a callee, no Authority in the signature
+}
+
+func passed(clock: Clock) Timestamp => stamp(clock)
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let t = current(caps)
+  let u = passed(caps.clock)
+}

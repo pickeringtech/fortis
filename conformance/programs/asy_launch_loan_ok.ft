@@ -1,0 +1,15 @@
+// accept
+// covers: LANG-07-04, LANG-12-05, LANG-12-04
+// The permitted cooperative launch: the future borrows bindings declared before the scope block; the scope
+// joins the task before those bindings are dropped, so the loan ends at the join.
+export class Buffer {
+  export used: Int
+}
+async func scan(b: Buffer) Int => b.used
+async func run() Int {
+  let shared = Buffer(used: 1)
+  scope tasks {
+    let t = tasks.launch(scan(shared))
+    return await t
+  }
+}

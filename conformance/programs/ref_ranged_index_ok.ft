@@ -1,0 +1,14 @@
+// accept
+// covers: LANG-05-04, LANG-06-02
+// A ranged for refines its index; the index is immutable; a ranged loop over p.count() proves p[i] (X-93).
+pure func total(xs: ListView[Int<0..100>]) Int {
+  let mut sum: Int = 0
+  for i in 0..<xs.count() {
+    sum = Int.wrappingAdd(sum, xs[i])
+  }
+  for i in 0..10 {
+    let v: Int<0..10> = i
+    sum = Int.wrappingAdd(sum, v)
+  }
+  return sum
+}

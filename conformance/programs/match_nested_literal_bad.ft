@@ -1,0 +1,17 @@
+// reject: E-MAT-001, E-REF-002 (at the marked lines)
+// covers: LANG-09-05, LANG-06-02
+// D-79 (found in SP-18's design review): exhaustiveness counts `present(0)` as covering every present value, so
+// this `match` is accepted as exhaustive. For `v = 1` no arm runs, the VM's statement `match` falls through with
+// `d = 0`, and `1 / d` divides by zero; the checkers proved it from the arms' join, `d = 1`.
+export func bad(v: Int?) Int {
+  let mut d: Int<0..1> = 0
+  match v {                                  // reject: E-MAT-001 — `present(x)` for x other than 0 is not covered
+    null => {
+      d = 1
+    }
+    present(0) => {
+      d = 1
+    }
+  }
+  return 1 / d                               // reject: E-REF-002 — the final residual (no arm run) keeps `d = 0` (R12)
+}

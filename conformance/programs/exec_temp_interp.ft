@@ -1,0 +1,34 @@
+// execute: made 1|see 1|cleanup 1
+// execute-trace: drop Handle
+// requires: runtime
+// covers: LANG-07-07
+// 5.7, 7.9: a temporary consumed only while a string is built by interpolation is destroyed at the end of the
+// full statement, after the call that uses the string has returned.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+func label(h: Handle) String {
+  return "see ${h.id}"
+}
+
+func run(console: Shared[Console]) Void {
+  console.print("${label(Handle.make(1, alias console))}")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

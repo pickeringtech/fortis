@@ -1,0 +1,21 @@
+// Objects and methods: two hundred million small values, two method calls each; the result depends on the evolving
+// coordinates, so no part of the loop folds to a constant.
+import fortis.host { Host }
+
+export trivial class Point {
+  export x: Int
+  export y: Int
+  export pure func manhattan(self) Int => Int.wrappingAdd(self.x, self.y)
+  export pure func shifted(self, dx: Int, dy: Int) Point => Point(x: Int.wrappingAdd(self.x, dx), y: Int.wrappingMul(self.y, dy))
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut total = 0
+  let mut p = Point(x: 1, y: 2)
+  for i in 0..<200_000_000 {
+    p = p.shifted(i % 3, Int.wrappingAdd(i % 5, 1))
+    total = Int.wrappingAdd(Int.wrappingMul(total, 31), p.manhattan())
+  }
+  caps.console.print("${total}")
+}

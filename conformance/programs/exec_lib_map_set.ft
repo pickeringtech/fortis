@@ -1,0 +1,31 @@
+// execute: 2|10|absent|3|true|false|2|true
+// requires: runtime
+// covers: LANG-06-06
+// 6.7: Map and Set are hash containers; replacing a value keeps the key's place; Set.add reports novelty.
+import fortis.host { Host }
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut stock: Map[String, Int] = Map.default()
+  editable stock.set("apple", 3)
+  editable stock.set("pear", 5)
+  caps.console.print("${stock.count()}")
+  editable stock.set("apple", 10)
+  caps.console.print("${stock.get("apple") ?? 0}")
+  let missing = match stock.get("plum") {
+    present(v) => "present"
+    null => "absent"
+  }
+  caps.console.print(missing)
+  let mut seen: Set[Int] = Set.default()
+  discard editable seen.add(1)
+  discard editable seen.add(2)
+  discard editable seen.add(3)
+  caps.console.print("${seen.count()}")
+  caps.console.print("${seen.contains(2)}")
+  caps.console.print("${editable seen.add(2)}")
+  let mut pairs: Set[String] = Set.default()
+  discard editable pairs.add("a")
+  discard editable pairs.add("b")
+  caps.console.print("${pairs.count()}")
+  caps.console.print("${pairs.contains("b")}")
+}

@@ -1,0 +1,13 @@
+import fortis.host { Host }
+
+pure func plain(items: Int, size: Int = 20) Int => size
+pure func refined(items: Int, size: Int<1..100> = 20) Int => size
+pure func second(size: Int<1..100> = 20) Int => size
+
+pure func area(width: Int<0..100>, height: Int<0..100>) Int => width * height
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${plain(50)} ${refined(50)} ${second()}")
+  caps.console.print("${area(width: 2)}")
+}

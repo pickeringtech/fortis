@@ -1,0 +1,14 @@
+// execute: 42|0
+// requires: runtime
+// covers: LANG-04-06, LANG-10-05
+// D-111: the entry forms of 4.6 are each optionally `recovers`, written last; a single file and a package entry admit the
+// same eight. This entry is `try recovers`: it propagates one failure and discharges another without reporting it.
+import fortis.host { Host }
+
+export try recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let kept = Int<0..100>.validate(42) or fail
+  let dropped = Int<0..100>.validate(-7) or recover 0
+  caps.console.print("${kept}")
+  caps.console.print("${dropped}")
+}

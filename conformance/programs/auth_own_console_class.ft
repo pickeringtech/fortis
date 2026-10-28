@@ -1,0 +1,36 @@
+// reject: E-EFF-010 (at the marked lines)
+// covers: LANG-11-06, LANG-11-07
+// D-172: an authority is recognised by its declaration (it implements `Authority`), not by its name. A program's own
+// class named `Console` is an ordinary class: it gives `stamp` no authority for the clock it reads (both checkers counted
+// it by name and accepted `stamp`), and a `pure` function may take it (`lines`; no E-EFF-001).
+import fortis.host { Host, Capabilities }
+import fortis.prelude as pre
+
+class Console {
+  export lines: Int
+  func count(self) Int => self.lines
+}
+
+pure func lines(c: Console) Int => c.count()
+
+interface Authority {}
+
+class Fake implements Authority {
+  export n: Int
+}
+
+pure func faked(f: Fake) Int => f.n
+
+class Real implements pre.Authority {
+  export n: Int
+}
+
+func viaReal(r: Real, caps: Capabilities) Timestamp => caps.clock.now()
+func stamp2(f: Fake, caps: Capabilities) Timestamp => caps.clock.now()       // reject: E-EFF-010 — Fake is no authority
+
+func stamp(c: Console, caps: Capabilities) Timestamp => caps.clock.now()       // reject: E-EFF-010 — no authority
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let n = lines(Console(lines: 1))
+}

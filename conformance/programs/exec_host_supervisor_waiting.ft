@@ -1,0 +1,27 @@
+// execute: spawned|done|work 1|work 2
+// execute-trace: launch work#1|detach work#1|launch work#2|detach work#2|suspend main|start work#1|suspend work#1|start work#2|suspend work#2|time 5ms|resume work#1|complete work#1|resume main|suspend main|resume work#2|complete work#2|resume main
+// reports: task-completion:outcome=Completed|task-completion:outcome=Completed
+// requires: runtime
+// covers: LANG-11-07, LANG-12-04
+// 15, 12.5: the Supervisor waits for the tasks detached to it when the program's main ends, in detach order; the
+// scope that launched them exits without joining them, and the main task resumes after each completes (DEL-47).
+import fortis.host { Host, Console, Clock, Supervisor }
+async func work(console: Console, clock: Clock, n: Int) Int {
+  await clock.sleep(5ms)
+  console.print("work ${n}")
+  return n
+}
+async func spawn(console: Console, clock: Clock, supervisor: Supervisor) Void {
+  scope tasks {
+    let a = tasks.launch(work(console, clock, 1))
+    tasks.detach(move a, supervisor)
+    let b = tasks.launch(work(console, clock, 2))
+    tasks.detach(move b, supervisor)
+  }
+  console.print("spawned")
+}
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  await spawn(caps.console, caps.clock, caps.supervisor)
+  caps.console.print("done")
+}

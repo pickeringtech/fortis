@@ -1,0 +1,7 @@
+// accept
+func pair() {
+  value: Int,
+  label: String
+} {
+  return { value: 1, label: "one" }
+}

@@ -1,0 +1,5 @@
+// reject: E-SYN-000
+// This module does not parse, so the package check stops before name-checking the others (D-51.8).
+let started = true
+
+export pure func ceiling() Int => 1

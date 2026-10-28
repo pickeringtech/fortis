@@ -1,0 +1,18 @@
+// accept
+// covers: LANG-05-05
+pure func label(count: Int) StringView from static {
+  let text = if count == 0 { give "none" } else if count == 1 { give "one" } else { give "many" }
+  return text
+}
+
+pure func grade(score: Int) Int {
+  let points = match score {
+    0 => 0
+    1 => {
+      let bonus = 2
+      give bonus + 1
+    }
+    otherwise => 10
+  }
+  return points
+}

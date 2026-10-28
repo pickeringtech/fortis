@@ -1,0 +1,27 @@
+// execute: hello sandbox|5
+// requires: runtime
+// covers: LANG-11-07
+// The development FileSystem is rooted at a fresh temporary directory: a program passed the capability writes and reads there.
+import fortis.host { Host, FileSystem, Path }
+try func roundTrip(fs: FileSystem) String {
+  let p = Path.parse("note.txt") or fail
+  fs.writeAll(p, "hello sandbox") or fail
+  return fs.readText(p) or fail
+}
+try func copyFile(fs: FileSystem) Int {
+  let source = Path.parse("note.txt") or fail
+  let target = Path.parse("copy.txt") or fail
+  let mut input = fs.open(source) or fail
+  defer { editable input.close() }
+  let mut output = fs.create(target) or fail
+  defer { editable output.close() }
+  let data = editable input.readAll() or fail
+  editable output.writeAll(data) or fail
+  return data.byteCount()
+}
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print(roundTrip(caps.fileSystem) or fail)
+  let n = copyFile(caps.fileSystem) or fail
+  caps.console.print("${Int.saturatingSub(n, 8)}")
+}

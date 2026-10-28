@@ -1,0 +1,7 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-11-08
+contract FastCalculation {
+  pure
+  noalloc
+}
+FastCalculation(1) func square(value: Int<-1000..1000>) Int => value * value   // reject: E-SYN-000 — a contract takes no arguments

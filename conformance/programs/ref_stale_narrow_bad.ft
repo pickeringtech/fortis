@@ -1,0 +1,23 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-74 (Codex's design review, finding 1): narrowing applies a comparison of an operand's value to the place after a
+// later operand has changed the place. `c.v < bump(editable c)` compares the old `c.v` (0) with 5, then `bump` sets
+// `c.v` to 10; both checkers narrow the new `c.v` to `[0, 9]`, and `arr[c.v]` indexes a 10-element array at 10.
+export class Cell {
+  export v: Int<0..10>
+}
+
+func bump(c: editable Cell) Int<0..10> {
+  c.v = 10
+  return 5
+}
+
+export func f(arr: Array[Int, 10], c: editable Cell) Int {
+  if c.v != 0 {
+    return 0
+  }
+  if c.v < bump(editable c) {
+    return arr[c.v]                          // reject: E-REF-002 — `c.v` changed after it was compared
+  }
+  return 0
+}

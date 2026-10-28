@@ -1,0 +1,5 @@
+// illustrative
+[pure] [noalloc] [async] [try] [recovers] fn[captures](params) ReturnType { body }
+fn(params) ReturnType => expression               // no captures: no brackets
+fn mut[captures](params) ReturnType { body }
+fn once[captures](params) ReturnType { body }

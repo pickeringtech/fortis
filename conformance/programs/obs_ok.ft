@@ -1,0 +1,22 @@
+// accept
+// covers: LANG-13-02, LANG-13-01
+// Required fields are definitely assigned before every applicable exit: `all` before the fail and the return,
+// `failure` before the fail, `success` before the return (13).
+export error Bad {
+  code: "demo.bad"
+}
+observation Trace {
+  tier: Int                          required: all
+  txn: Int?                          required: success
+  reason: Int                        required: failure
+}
+@observe(Trace)
+try func process(n: Int) Int {
+  capture tier = n
+  if n < 0 {
+    capture reason = n
+    fail Bad()
+  }
+  capture txn = n
+  return n
+}

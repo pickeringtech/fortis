@@ -1,0 +1,14 @@
+// reject: E-OWN-001 (at the marked line)
+// covers: LANG-09-06
+export enum Slot {
+  Empty
+  Full(label: String)
+}
+func keep(s: owned String) Void {
+}
+func run(slot: Slot) Void {
+  match slot {
+    Full(label: l) => keep(move l)         // reject: E-OWN-001 — a payload binding of `match slot` is a read loan
+    Empty => { }
+  }
+}

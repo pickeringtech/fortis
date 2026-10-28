@@ -1,0 +1,6 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-03-06
+try func half(n: Int) Int => n
+func render(n: Int) String {
+  return "value ${half(n)}"                // reject: E-TYP-040 — an Outcome is not Displayable; the interpolation cannot handle it
+}

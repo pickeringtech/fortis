@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: acme.accounts
+version: 1.0.0
+root: accounts
+exports: [accounts]
+dependencies:
+  fortis: "1.0"

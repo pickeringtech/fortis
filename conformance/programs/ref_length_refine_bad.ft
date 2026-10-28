@@ -1,0 +1,14 @@
+// reject: E-REF-003 (at the marked lines)
+// covers: LANG-06-02
+// A length-refined collection is a property of a value and may not be mutated or loaned editable (6.3).
+func grow(xs: editable List[Int]) Void {
+  editable xs.push(1)
+}
+
+func mutate(short: List[Int]<length: 0..3>) Void {
+  let mut local = List.of(1)
+  grow(editable local)
+  let mut held = copy short
+  editable held.push(2)                      // reject: E-REF-003
+  grow(editable held)                        // reject: E-REF-003
+}

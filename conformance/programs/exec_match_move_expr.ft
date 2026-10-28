@@ -1,0 +1,57 @@
+// execute: made 1|made 2|cleanup 1|cleanup 2|n 1|after|made 1|made 2|cleanup 2|kept 1|after|cleanup 1
+// execute-trace: drop Handle|loans-end|drop Handle
+// requires: runtime
+// covers: LANG-09-06, LANG-07-07
+// 9.8, 7.9: an expression arm of `match move` destroys its named bindings, then fields matched by `_`, before the
+// match's result is used. A binding the arm gives back is not destroyed there: the discarded field dies at the
+// match, and the binding dies with the local that received it.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+export class Pair {
+  export first: Handle
+  export second: Handle
+}
+
+func pair(console: Shared[Console]) Pair => Pair(first: Handle.make(1, alias console), second: Handle.make(2, alias console))
+
+func readId(console: Shared[Console]) Void {
+  let p = pair(alias console)
+  let n = match move p {
+    Pair(first: a, second: _) => a.id
+  }
+  console.print("n ${n}")
+  console.print("after")
+}
+
+func giveBack(console: Shared[Console]) Void {
+  let p = pair(alias console)
+  let kept = match move p {
+    Pair(first: a, second: _) => move a
+  }
+  console.print("kept ${kept.id}")
+  console.print("after")
+}
+
+func run(console: Shared[Console]) Void {
+  readId(alias console)
+  giveBack(alias console)
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

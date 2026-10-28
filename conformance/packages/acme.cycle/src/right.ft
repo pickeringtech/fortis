@@ -1,0 +1,5 @@
+// accept
+import acme.cycle.left { Left }
+export class Right {
+  export partner: Left?
+}

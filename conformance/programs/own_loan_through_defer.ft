@@ -1,0 +1,13 @@
+// reject: E-OWN-052 (at the marked line)
+// covers: LANG-07-04, LANG-12-01
+// The loans held by a block's own bindings end before its deferred blocks run (12.1): a view binding of the
+// block cannot be used inside the defer.
+export class Buffer {
+  export used: Int
+  export func peek(self) alias Buffer from self => alias self
+}
+func run(items: Buffer) Int {
+  let seen = items.peek()
+  defer { discard seen.used }              // reject: E-OWN-052 — seen's loan has ended when the defer runs
+  return seen.used
+}

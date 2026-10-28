@@ -1,0 +1,6 @@
+// reject: E-NAM-001
+// Checking this file on its own must not succeed: the sibling module does not parse, so this module's import
+// was not name-checked (D-51.8). The record is on project.yaml, not on this import.
+import bad.onefile.unparsed.util { ceiling }
+
+export pure func use() Int => ceiling()

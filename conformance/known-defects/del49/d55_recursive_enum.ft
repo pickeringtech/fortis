@@ -1,0 +1,8 @@
+enum Expr {
+  Number(value: Int)
+  Negate(operand: Expr)
+}
+
+export func main(args: List[String]) Void {
+  let e = Expr.Negate(operand: Expr.Number(value: 2))
+}

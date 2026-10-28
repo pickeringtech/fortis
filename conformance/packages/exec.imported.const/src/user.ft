@@ -1,0 +1,13 @@
+// execute: limit 3, 3 names
+// requires: runtime
+// covers: LANG-04-02, LANG-05-01
+// An imported unannotated constant is usable at its initialiser's type, through a brace import and an alias.
+import fortis.host { Host }
+import exec.imported.const.vals { limit, names }
+import exec.imported.const.vals as vals
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let n: Int = limit
+  caps.console.print("limit ${n}, ${vals.names.count()} names")
+}

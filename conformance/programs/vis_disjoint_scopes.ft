@@ -1,0 +1,18 @@
+// accept
+// covers: LANG-04-05
+// The same name in sibling scopes is not shadowing: each block ends before the next begins.
+pure func pick(flag: Bool, items: List[Int]) Int {
+  if flag {
+    let chosen = items.count()
+    return chosen
+  } else {
+    let chosen = 0
+    return chosen
+  }
+}
+
+pure func twice(items: List[Int]) Int {
+  let a = items.map(fn(x: Int) Int => Int.wrappingAdd(x, 1))
+  let b = items.map(fn(x: Int) Int => Int.wrappingAdd(x, 2))
+  return Int.saturatingAdd(a.count(), b.count())
+}

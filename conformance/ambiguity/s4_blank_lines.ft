@@ -1,0 +1,20 @@
+// accept — S4: blank lines between members and statements
+
+
+export class A {
+
+  export x: Int
+
+
+  export pure func get(self) Int => self.x
+
+}
+
+
+pure func f(a: A) Int {
+
+  let v = a.get()
+
+  return v
+
+}

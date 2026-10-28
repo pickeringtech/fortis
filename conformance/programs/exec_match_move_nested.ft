@@ -1,0 +1,55 @@
+// execute: made 1|made 2|made 3|arm 1|cleanup 1|cleanup 2|cleanup 3|after|made 1|made 2|made 3|arm|cleanup 1|cleanup 2|cleanup 3|after
+// execute-trace: drop Handle
+// requires: runtime
+// covers: LANG-09-06, LANG-07-07
+// 9.8, 7.9: a consuming match that binds one element of a nested tuple destroys that binding once, then the
+// discarded fields in declaration order. Binding every field of the nested tuple with `_` destroys the whole
+// value in declaration order and traces nothing. The class is not exported: an exported field cannot be a tuple.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+class Box2 {
+  first: (Handle, Handle)
+  second: Handle
+}
+
+func box(console: Shared[Console]) Box2 => Box2(first: (Handle.make(1, alias console), Handle.make(2, alias console)), second: Handle.make(3, alias console))
+
+func nested(console: Shared[Console]) Void {
+  let p = box(alias console)
+  match move p {
+    Box2(first: (a, _), second: _) => { console.print("arm ${a.id}") }
+  }
+  console.print("after")
+}
+
+func allWild(console: Shared[Console]) Void {
+  let p = box(alias console)
+  match move p {
+    Box2(first: (_, _), second: _) => { console.print("arm") }
+  }
+  console.print("after")
+}
+
+func run(console: Shared[Console]) Void {
+  nested(alias console)
+  allWild(alias console)
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console)
+}

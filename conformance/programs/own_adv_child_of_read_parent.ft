@@ -1,0 +1,9 @@
+// reject: E-OWN-001 (at the marked line)
+// covers: LANG-07-05
+export class Cell {
+  export value: Int
+}
+func use(c: Cell) Int {
+  let child = editable c                   // reject: E-OWN-001 — an exclusive child needs an exclusive parent
+  return child.value
+}

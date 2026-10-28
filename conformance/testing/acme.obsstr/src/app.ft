@@ -1,0 +1,8 @@
+// The observation is declared in the sibling. Its field type is not a name of this module. The plan step resolves
+// it in the declaring module, where it is an alias of String, and refuses the noalloc claim (E-EFF-030).
+import acme.obsstr.kinds { Bad }
+
+@observe(Bad)
+export noalloc func total() Int {
+  return 1
+}

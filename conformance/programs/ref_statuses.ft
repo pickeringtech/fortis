@@ -1,0 +1,8 @@
+// reject: E-REF-001 (at the marked lines)
+// covers: LANG-06-02
+// The three statuses of an E-REF record (PROG-DIA-02): violated, unproved, unknown.
+pure func three(n: Int<50..200>, text: String) Void {
+  let a: Int8 = 300                          // reject: E-REF-001 — violated: [300, 300] is disjoint from Int8
+  let b: Int<0..100> = n                     // reject: E-REF-001 — unproved: [50, 200] overlaps [0, 100]
+  let c: String<scalars: 1..10> = copy text       // reject: E-REF-001 — unknown: no scalar-count facts
+}

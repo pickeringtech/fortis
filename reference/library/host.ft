@@ -1,0 +1,61 @@
+// Signature module for `fortis.host` (Language Reference 11.6, 15).
+export class Path {
+  export trusted pure try func parse(text: String) Path
+}
+export class Secret[T] {}
+export class SecretAccess implements Authority {}
+export trusted func reveal[T](secret: Secret[T], cap: SecretAccess) T
+export class FileSystem implements Authority {
+  export trusted try func readText(self, path: Path) String
+  export trusted try func writeAll(self, path: Path, text: StringView) Void
+  export trusted try func readAll(self, path: Path) Bytes
+  export trusted try func open(self, path: Path) File
+  export trusted try func create(self, path: Path) File
+  export trusted func subtree(self, path: Path) FileSystem
+}
+export class File {
+  export trusted try func readAll(editable self) Bytes
+  export trusted try func writeAll(editable self, data: BytesView) Void
+  export trusted func close(editable self) Void
+}
+export class Network implements Authority {
+  export trusted try func resolve(self, host: StringView) String
+}
+export class Clock implements Authority {
+  export trusted async func sleep(self, duration: Duration) Void
+  export trusted func now(self) Timestamp
+  export trusted func frozen(self, instant: Timestamp) Clock
+  export trusted try func elapsedSince(self, earlier: Timestamp) Duration
+}
+export class Random implements Authority {
+  export trusted func below(self, bound: Int<1..>) Int<0..>
+  export trusted func seeded(self, seed: Int) Random
+}
+export class Environment implements Authority {
+  export trusted func get(self, name: StringView) Secret[String]?
+}
+export class Process implements Authority {
+  export trusted try func run(self, program: StringView, arguments: ListView[String]) Int
+}
+export class Supervisor implements Authority {}
+export class Console implements Authority {
+  export trusted func print(self, text: StringView) Void
+}
+export class RawSql implements Authority {
+  export trusted try func execute(self, statement: StringView) Int
+}
+export class Capabilities {
+  export fileSystem: FileSystem
+  export network: Network
+  export clock: Clock
+  export random: Random
+  export environment: Environment
+  export process: Process
+  export supervisor: Supervisor
+  export console: Console
+  export secretAccess: SecretAccess
+  export rawSql: RawSql
+}
+export class Host {
+  export trusted func capabilities() Capabilities
+}

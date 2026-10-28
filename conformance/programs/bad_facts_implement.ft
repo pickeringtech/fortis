@@ -1,0 +1,23 @@
+// reject: E-TYP-090 (at the marked line)
+// covers: LANG-04-04, LANG-06-10
+// An implement block for the user's FileSystem must not satisfy Ping for host.FileSystem.
+// Both package identities are empty in one file, and the block lookup compares name and package
+// only. Removing the class and the block reports E-TYP-090 at the call, as this program does
+// once the origins have to match. The user's own value still implements Ping.
+import fortis.host
+
+interface Ping {
+  func ping(self) Int
+}
+
+class FileSystem {
+  n: Int
+}
+
+implement Ping for FileSystem {
+  func ping(self) Int => self.n
+}
+
+func need[T](x: T) Int where T implements Ping => x.ping()
+func right(x: FileSystem) Int => need(x)
+func wrong(x: host.FileSystem) Int => need(x)    // reject: E-TYP-090 — host.FileSystem is not the implemented type

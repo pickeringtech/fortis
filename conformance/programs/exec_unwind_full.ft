@@ -1,0 +1,66 @@
+// execute: slow start|quick|slow cleanup|scope defer|abandon tx|drop res|recovered -1
+// execute-trace: launch slow#1|launch quick#2|suspend main|start slow#1|suspend slow#1|start quick#2|complete quick#2|time 1ms|resume main|join quick#2|loans-end|cancel slow#1|suspend main|resume slow#1|cancelled slow#1|loans-end|defer|complete slow#1|resume main|join slow#1|defer|abandon Tx|drop Res
+// requires: runtime
+// covers: LANG-12-04, LANG-12-03
+// The full unwind order (12.4) on an `or fail` leaving a scope block: the block's loans end and the task still
+// suspended at its await (`slow`, parked on a 100ms sleep after the parent yielded to it for 1ms) is cancelled
+// and joined (it observes cancellation only at that await, runs its own defer and completes as cancelled); then
+// the block's deferred blocks run; then `abandon` on the live Abandonable local; then the remaining locals drop.
+import fortis.host { Host, Console, Clock, Capabilities }
+export error Bad {
+  code: "demo.bad"
+}
+export class Tx implements Abandonable {
+  witness: Must
+  export console: Shared[Console]
+  export func begin(console: Shared[Console]) Tx {
+    return Tx(witness: Must.create(), console: console.retain())
+  }
+  export func commit(owned self) Void {
+    let Tx(witness: w, console: c) = move self
+    Must.discharge(move w)
+  }
+  func abandon(owned self) Void {
+    self.console.print("abandon tx")
+    let Tx(witness: w, console: c) = move self
+    Must.discharge(move w)
+  }
+}
+export class Res {
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("drop res")
+  }
+}
+async try func quick(console: Shared[Console]) Int {
+  console.print("quick")
+  fail Bad()
+}
+async func slow(console: Shared[Console], clock: Clock) Int {
+  console.print("slow start")
+  defer { console.print("slow cleanup") }
+  await clock.sleep(100ms)
+  console.print("slow end")
+  return 7
+}
+async try func run(console: Shared[Console], clock: Clock) Int {
+  scope tasks {
+    let res = Res(console: console.retain())
+    let tx = Tx.begin(alias console)
+    let second = tasks.launch(slow(console, clock))
+    let first = tasks.launch(quick(console))
+    defer { console.print("scope defer") }
+    await clock.sleep(1ms)
+    let x = await first or fail
+    let y = await second
+    move tx.commit()
+    return Int.wrappingAdd(x, y)
+  }
+}
+export async recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  let r = await run(console, clock) or recover -1
+  console.print("recovered ${r}")
+}

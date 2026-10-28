@@ -1,0 +1,10 @@
+[package]
+name = "fortis-di"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The Dependency injection kit's validator and elaboration (Platform 3; SP-08): `inject`, `provide` and `context` become ordinary constructor parameters, scope classes and factory methods before the core checker runs"
+
+[dependencies]
+fortis-syntax = { path = "../fortis-syntax" }
+fortis-diag = { path = "../fortis-diag" }

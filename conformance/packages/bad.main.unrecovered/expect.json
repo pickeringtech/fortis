@@ -1,0 +1,1 @@
+{"verdict": "reject", "code": "E-EFF-001", "covers": ["LANG-10-05"], "at": ["bad.main.unrecovered/src/app.ft:11"]}

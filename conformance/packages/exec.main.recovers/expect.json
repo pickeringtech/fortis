@@ -1,0 +1,1 @@
+{"verdict": "execute", "expected": "42 0", "covers": ["LANG-04-06", "LANG-10-05"]}

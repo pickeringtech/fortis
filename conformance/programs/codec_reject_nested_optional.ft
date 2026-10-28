@@ -1,0 +1,6 @@
+// reject: E-TYP-090 (at the marked line)
+// covers: LANG-06-10
+// A nested optional `(T?)?` has no canonical text: present-null and absent would both be `null`.
+export class Probe derive Codec {      // reject: E-TYP-090
+  export reading: (Int?)?
+}

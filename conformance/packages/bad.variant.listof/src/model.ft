@@ -1,0 +1,16 @@
+// reject: E-NAM-001 (at the marked line)
+// `List.of(Red)` with no expected result does not pick an enum. Two owners of Red stay ambiguous (9.7, D-253).
+enum Light {
+  Red
+  Green
+}
+
+enum Paint {
+  Red
+  Blue
+}
+
+pure func loose() Int {
+  let xs = List.of(Red)                     // reject: E-NAM-001 — `Red` is ambiguous
+  return 1
+}

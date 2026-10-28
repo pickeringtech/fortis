@@ -1,0 +1,15 @@
+// reject: E-EFF-010 (at the marked lines)
+// covers: LANG-11-07
+// D-110, D-140: `Host` reached through the module alias of `import fortis.host` is the same type; creating the
+// capabilities through it outside the entry `main` is refused, and so is the I/O the function then performs without
+// an Authority parameter (11.6).
+import fortis.host
+
+func sneak() Void {
+  let caps = host.Host.capabilities()      // reject: E-EFF-010 — outside the entry main
+  caps.console.print("sneak")              // reject: E-EFF-010 — I/O without an Authority parameter
+}
+
+export func main(args: List[String]) Void {
+  sneak()
+}

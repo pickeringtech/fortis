@@ -1,0 +1,5 @@
+// reject: E-TYP-090 (at the marked line)
+// Float implements neither Equatable nor Hashable (6.5): the derivation is not available.
+export class Sample derive Equatable, Hashable {    // reject: E-TYP-090
+  export ratio: Float
+}

@@ -1,0 +1,25 @@
+// execute: 1 2
+// requires: runtime
+// covers: LANG-03-06, LANG-07-07
+// Interpolation shows each part before it evaluates the next (3.6), so a later part may edit a place an
+// earlier part displayed. The values agree on every backend; a temporary's destruction is D-150.
+import fortis.host { Host, Console, Capabilities }
+
+export class Cell {
+  export n: Int
+  func bump(editable self) Int {
+    self.n = Int.wrappingAdd(self.n, 1)
+    return self.n
+  }
+}
+
+func show(console: Console, c: editable Cell) Void {
+  console.print("${c.n} ${editable c.bump()}")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let mut c = Cell(n: 1)
+  show(move out, editable c)
+}

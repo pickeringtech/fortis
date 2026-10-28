@@ -1,0 +1,40 @@
+// execute: kept|cleanup 1|outer defer|cleanup 2|taken|outer defer|done
+// requires: runtime
+// covers: LANG-05-02, LANG-07-07
+// A move on one branch does not suppress the other branch's destruction (7.9, D-181). The inner block's
+// live local is destroyed before the outer block's defer, including when another branch of the same block
+// moved that local.
+import fortis.host { Host, Console, Capabilities }
+
+export class Res {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+func eat(r: owned Res) Void {
+  discard r
+}
+
+func branch(console: Shared[Console], flag: Bool, label: String) Void {
+  defer { console.print("outer defer") }
+  {
+    let r = Res(id: if flag { give 2 } else { give 1 }, console: console.retain())
+    if flag {
+      eat(move r)
+    }
+    console.print(label)
+    return
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  branch(console, false, "kept")
+  branch(console, true, "taken")
+  console.print("done")
+}

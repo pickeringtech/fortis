@@ -1,0 +1,12 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-02
+try func half(n: Int) Int => n
+export class Pending {
+  export result: Outcome[Int]
+}
+try func run(n: Int) Int {
+  let mut p = Pending(result: half(n))
+  p.result = half(n)                       // reject: E-OBL-001 — the stored outcome is overwritten unconsumed
+  let Pending(result: r) = move p
+  return r or fail
+}

@@ -1,0 +1,7 @@
+// reject: E-TYP-090 (at the marked line)
+// covers: LANG-06-10
+// DEL-29 exclusion 3 of 7: a loan (here a view) borrows from a place that does not travel with the encoding.
+export class Slice derive Encodable {      // reject: E-TYP-090
+  export label: String
+  export items: ListView[Int] from static
+}

@@ -1,0 +1,37 @@
+// execute: counted 1|later 3|drop async capture|awaited 3|direct 3|end
+// requires: runtime
+// covers: LANG-07-07
+// 8.2, 7.9 (X-250; D-30): `move f()` consumes the closure whatever its body does with its captures: one that
+// mutates a capture without moving it out, and an `async` one, whose call hands the closure to its future; the
+// future owns it until the body has run, so its capture is destroyed after the body, when the future is awaited.
+import fortis.host { Host, Console, Capabilities }
+
+export class Res {
+  console: Shared[Console]
+  label: String
+  cleanup(editable self) Void {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+export async func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  let n = 0
+  let step = fn once[move n]() Int {
+    n = Int.wrappingAdd(n, 1)
+    return n
+  }
+  console.print("counted ${move step()}")
+  let r = Res(console: console.retain(), label: "async capture")
+  let measure = async fn once[move r]() Int => Int.wrappingSub(r.label.scalarCount(), 10)
+  let future = move measure()
+  console.print("later 3")
+  let k = await future
+  console.print("awaited ${k}")
+  let oneShot = async fn once(s: String) Int => s.scalarCount()
+  let direct = await move oneShot(String.from("abc"))
+  console.print("direct ${direct}")
+  console.print("end")
+}

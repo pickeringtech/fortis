@@ -1,0 +1,7 @@
+// reject: E-EFF-001 (at the marked line)
+// D-146 (review): only the published compatibility set's packages, from the standard library itself, may declare
+// `trusted`; a package that names itself `fortis.*` is not one (before, the checkers tested the module name's prefix).
+export trusted pure noalloc func fake() Int
+
+export func main(args: List[String]) Void {
+}

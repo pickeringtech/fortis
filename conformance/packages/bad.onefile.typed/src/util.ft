@@ -1,0 +1,7 @@
+// reject: E-NAM-001
+// A name error here makes the package check skip typing. The other module is still type-checked when it is the
+// file named to `fortis check` (D-51.8).
+import fortis.money { Money }
+import fortis.money { Money }
+
+export pure func limit() Int => 1

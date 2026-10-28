@@ -1,0 +1,11 @@
+// accept
+// covers: LANG-06-08, LANG-06-02
+pure func first(v: Int?, w: Int?) Int {
+  if v != null {
+    return v
+  }
+  if w == null {
+    return 0
+  }
+  return w
+}

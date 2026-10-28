@@ -1,0 +1,34 @@
+{
+  "capability": "Environment",
+  "rule": "PROG-ARC-02",
+  "normative": "Language Reference 11.6, 15",
+  "adapter": "compiler/crates/fortis-native/src/host.rs",
+  "handle": {
+    "representation": "a zero-sized Copy struct with a private constructor (Appendix C.1)",
+    "ownership": "carries no state, so a copy is the capability itself; a future that holds one owns it and may be detached",
+    "created_by": "Host.capabilities(), called once by main (11.6); every other handle of this type is derived from that one"
+  },
+  "operations": {
+    "get": {
+      "ownership": {
+        "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+        "name": "a read loan for the call, not retained",
+        "result": "an owned Secret[String], or null"
+      },
+      "effects": [
+        "alloc",
+        "io",
+        "nondet"
+      ],
+      "failures": [],
+      "allocation": "the value as one owned String inside the Secret; none when the variable is absent or the name is empty or contains `=`",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    }
+  },
+  "violation": {
+    "fixture": "conformance/programs/secret_not_a_string.ft",
+    "refused_by": "static",
+    "expect": "E-TYP-040",
+    "clause": "values are handed out only as Secret[String], never as text"
+  }
+}

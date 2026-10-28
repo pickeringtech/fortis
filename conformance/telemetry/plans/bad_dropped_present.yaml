@@ -1,0 +1,15 @@
+# E-TEL-005: a dropped field is absent from the permitted record, so not even its presence can be tested
+telemetry:
+  privacy:
+    transforms:
+      OrderProcessing:
+        card: drop
+  projections:
+    p:
+      source: OrderProcessing
+      where:
+        field: card   # expect: E-TEL-005
+        present: false
+      metrics:
+        - name: p.count
+          instrument: counter

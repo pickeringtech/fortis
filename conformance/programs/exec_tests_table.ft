@@ -1,0 +1,34 @@
+// execute: 4 passed, 0 failed
+// tests: run
+// requires: runtime
+// covers: LANG-14-01, LANG-14-02
+// 14: a table test binds each row explicitly with `as`; a plain test is a try body where a failure fails the test.
+export error NotFound {
+  code: "accounts.not_found"
+}
+export class Account {
+  export name: String
+  export func guest() Account => Account(name: "guest")
+  export func isGuest(self) Bool => self.name == "guest"
+}
+pure func isAdult(age: Int) Bool => age >= 18
+try func loadAccount(id: Int) Account {
+  if id > 100 {
+    fail NotFound()
+  }
+  return Account(name: "user ${id}")
+}
+test "adult boundary" cases {
+  "below": { age: 17, expected: false }
+  "equal": { age: 18, expected: true }
+  "above": { age: 19, expected: true }
+} as row {
+  expect isAdult(row.age) == row.expected
+}
+test "guest account on failure" {
+  let account = loadAccount(999) catch e {
+    expect e.code == "accounts.not_found"
+    recover Account.guest()
+  }
+  expect account.isGuest()
+}

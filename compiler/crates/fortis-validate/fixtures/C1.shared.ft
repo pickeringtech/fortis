@@ -1,0 +1,9 @@
+// DEL-45 fixture for C1.shared (retain visibility): a Shared handle is duplicated by `retain`.
+export class Box {
+  export n: Int
+}
+export func main(args: List[String]) Void {
+  let s = Shared.create(Box(n: 1))
+  let t = s.retain()
+  discard t
+}

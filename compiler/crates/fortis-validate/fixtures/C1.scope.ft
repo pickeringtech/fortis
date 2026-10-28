@@ -1,0 +1,8 @@
+// DEL-45 fixture for C1.scope: a task launched on a scope is joined inside it and never leaves it.
+async func work(n: Int) Int => n
+export async func main(args: List[String]) Void {
+  scope tasks {
+    let t = tasks.launch(work(1))
+    discard await t
+  }
+}

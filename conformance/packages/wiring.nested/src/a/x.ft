@@ -1,0 +1,5 @@
+// reject: E-DI-010 (at the marked line)
+// PLAT-03-01 (D-138): with src/z.ft, the kit's findings of two modules, reported in one order by both checkers.
+context First {
+  bind One                              // reject: E-DI-010 — not a DI schema v1 statement
+}

@@ -1,0 +1,190 @@
+{
+ "about": "SP-12 fixtures (design 3.4, 15): each step edits one module of the fixture package, cumulatively; `append` adds text, `restore` puts the original back, `replace` substitutes the first occurrence. Every reply is compared with the batch check of the same state, made beside it with the same fortisc.",
+ "cycle": [
+  {
+   "file": "src/a.ft",
+   "append": "\n// edited\n"
+  },
+  {
+   "file": "src/a.ft",
+   "restore": true
+  },
+  {
+   "file": "src/b.ft",
+   "append": "\n// edited\n"
+  },
+  {
+   "file": "src/b.ft",
+   "restore": true
+  },
+  {
+   "file": "src/c.ft",
+   "append": "\n// edited\n"
+  },
+  {
+   "file": "src/c.ft",
+   "restore": true
+  },
+  {
+   "file": "src/b.ft",
+   "replace": [
+    "take(50)",
+    "take(5)"
+   ]
+  },
+  {
+   "file": "src/b.ft",
+   "restore": true
+  }
+ ],
+ "order": [
+  {
+   "file": "src/z.ft",
+   "replace": [
+    "import ord.app.y { fb }",
+    "// top\nimport ord.app.y { fb }"
+   ]
+  },
+  {
+   "file": "src/z.ft",
+   "restore": true
+  },
+  {
+   "file": "src/x.ft",
+   "replace": [
+    "import ord.app.y { fb }\nimport ord.app.z { Cee }",
+    "import ord.app.z { Cee }\nimport ord.app.y { fb }"
+   ]
+  },
+  {
+   "file": "src/z.ft",
+   "replace": [
+    "import ord.app.y { fb }",
+    "// top\nimport ord.app.y { fb }"
+   ]
+  },
+  {
+   "file": "src/z.ft",
+   "restore": true
+  },
+  {
+   "file": "src/y.ft",
+   "replace": [
+    "import ord.app.z",
+    "// top\nimport ord.app.z"
+   ]
+  },
+  {
+   "file": "src/y.ft",
+   "restore": true
+  },
+  {
+   "file": "src/x.ft",
+   "restore": true
+  },
+  {
+   "file": "src/z.ft",
+   "replace": [
+    "import ord.app.y { fb }",
+    "// top\nimport ord.app.y { fb }"
+   ]
+  },
+  {
+   "file": "src/z.ft",
+   "restore": true
+  }
+ ],
+ "root": [
+  {
+   "file": "src/tools.ft",
+   "replace": [
+    "export func take(x: Int) Int => x",
+    "export func take(x: String) Int => 1"
+   ]
+  },
+  {
+   "file": "src/tools.ft",
+   "restore": true
+  },
+  {
+   "file": "src/tools.ft",
+   "replace": [
+    "export class Helper",
+    "class Helper"
+   ]
+  },
+  {
+   "file": "src/tools.ft",
+   "restore": true
+  },
+  {
+   "file": "src/tools.ft",
+   "replace": [
+    "export func take(x: Int) Int => x",
+    "export func take(x: Int) Int =>"
+   ]
+  },
+  {
+   "file": "src/tools.ft",
+   "restore": true
+  },
+  {
+   "file": "src/other.ft",
+   "append": "\n// edited\n"
+  },
+  {
+   "file": "src/other.ft",
+   "restore": true
+  }
+ ],
+ "candidates": [
+  {
+   "file": "src/b.ft",
+   "append": "\nexport func extra() Int => 3\n"
+  },
+  {
+   "file": "src/b.ft",
+   "restore": true
+  },
+  {
+   "file": "src/b.ft",
+   "replace": [
+    "export func shown() Int => 1",
+    "export func shown(n: Int) Int => n"
+   ]
+  },
+  {
+   "file": "src/b.ft",
+   "restore": true
+  },
+  {
+   "file": "src/a.ft",
+   "append": "\n// edited\n"
+  },
+  {
+   "file": "src/a.ft",
+   "restore": true
+  }
+ ],
+ "lock": [
+  {
+   "file": "src/app.ft",
+   "append": "\n// edited\n"
+  },
+  {
+   "file": "src/app.ft",
+   "restore": true
+  },
+  {
+   "file": "src/app.ft",
+   "replace": [
+    "func one() Int => 1",
+    "func one() Int => \"x\""
+   ]
+  },
+  {
+   "file": "src/app.ft",
+   "restore": true
+  }
+ ]
+}

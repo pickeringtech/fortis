@@ -1,0 +1,7 @@
+// An alias of String, and the observation that records it. A module that imports the observation does not import
+// the alias; the plan step still resolves the field in this module and finds an allocating type.
+export type Label = String
+
+export observation Bad {
+  label: Label                         required: none
+}

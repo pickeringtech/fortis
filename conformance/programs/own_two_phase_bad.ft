@@ -1,0 +1,18 @@
+// reject: E-OWN-012 (at the marked lines)
+// covers: LANG-07-04
+func update(buffer: editable List[Int], n: Int) Void {
+}
+
+func consume(buffer: owned List[Int]) Int => 0
+
+func count(buffer: List[Int]) Int => buffer.count()
+
+func run() Void {
+  let mut buffer = List.of(1, 2)
+  update(editable buffer, consume(move buffer))          // reject: E-OWN-012 — the second argument moves the reserved place
+  let mut other = List.of(3)
+  update(editable other, count(other))
+  discard count(other)
+  let mut third = List.of(4)
+  update(editable third, Int.wrappingAdd(consume(move third), 1))   // reject: E-OWN-012
+}

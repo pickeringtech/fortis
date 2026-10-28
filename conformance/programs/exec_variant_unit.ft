@@ -1,0 +1,24 @@
+// execute: penny|penny
+// requires: runtime
+// covers: LANG-09-07
+// A payload-free variant used as `fn() Coin` is that constructor (LR 9.7). Calling it yields the variant.
+// Where the expected type is the enum, the same name is still the variant value.
+import fortis.host { Host }
+
+enum Coin {
+  Penny
+}
+
+pure func label(c: Coin) String {
+  return match c {
+    Penny => "penny"
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let f: fn() Coin = Coin.Penny
+  caps.console.print(label(f()))
+  let penny: Coin = Coin.Penny
+  caps.console.print(label(penny))
+}

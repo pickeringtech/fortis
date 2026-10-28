@@ -1,0 +1,19 @@
+// accept
+// covers: LANG-09-06
+export enum Slot {
+  Empty
+  Full(label: String)
+}
+func keep(s: owned String) Void {
+}
+func run(slot: Slot, owned_slot: owned Slot) Int {
+  let n = match slot {
+    Full(label: l) => l.scalarCount()
+    Empty => 0
+  }
+  match move owned_slot {
+    Full(label: l) => keep(move l)
+    Empty => { }
+  }
+  return n
+}

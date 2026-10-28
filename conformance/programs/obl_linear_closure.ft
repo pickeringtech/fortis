@@ -1,0 +1,8 @@
+// reject: E-OBL-006, E-OBL-001 (at the marked line)
+// covers: LANG-10-02, LANG-06-09
+try func half(n: Int) Int => n
+func run(n: Int) Int {
+  let o = half(n)
+  let later = fn[move o]() Int => 0        // reject: E-OBL-006 — a closure owning a linear value must be fn once (and it is never called: E-OBL-001)
+  return 0
+}

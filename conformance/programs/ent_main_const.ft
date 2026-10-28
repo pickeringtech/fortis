@@ -1,0 +1,5 @@
+// accept
+// covers: LANG-04-06
+// A module that does not export `main` is a library module (4.6, D-51.2). A constant named `main` that is not
+// exported is not an entry point.
+const main: Int = 1

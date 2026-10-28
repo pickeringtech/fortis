@@ -1,0 +1,14 @@
+// interpreter: a derived Displayable prints the fields in construction order with defaulted fields last
+// (`Settings(verbose: true, retries: 3)`); the VM and native print declaration order (`Settings(retries: 3, verbose: true)`).
+import fortis.host { Host }
+
+class Settings derive Displayable {
+  export retries: Int<0..10> = 3
+  export verbose: Bool
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let s = Settings(verbose: true)
+  caps.console.print("${s}")
+}

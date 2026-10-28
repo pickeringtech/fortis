@@ -1,0 +1,4 @@
+// A mutable cell (Language Reference 7.6).
+export class Cell {
+  export value: Int
+}

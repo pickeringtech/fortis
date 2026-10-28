@@ -1,0 +1,190 @@
+// The stock ledger: owned items, a copy wherever a value is duplicated, views `from` the ledger, closures of all
+// three kinds, and linear outcomes held in containers (Language Reference 7, 8, 10.7).
+import acme.stock.ids { SkuId, BinId, withdrawn, restocked, combined }
+import acme.stock.feed { Entry }
+
+export error UnknownSku {
+  code: "stock.unknown_sku"
+}
+
+export class Item derive Equatable {
+  export sku: SkuId
+  export name: String
+  export quantity: Int<0..10000>
+}
+
+export class Summary derive Equatable {
+  export skus: Int
+  export units: Int
+}
+
+export class Ledger {
+  export items: List[Item]
+
+  export func empty() Ledger => Ledger(items: List.default())
+
+  // Takes ownership of the item.
+  export func add(editable self, item: owned Item) Void {
+    editable self.items.push(move item)
+  }
+
+  export func count(self) Int => self.items.count()
+
+  // The position of a SKU, if it is held.
+  export func indexOf(self, sku: SkuId) Int? {
+    let mut i = 0
+    for item in self.items {
+      if item.sku == sku {
+        return i
+      }
+      i = Int.saturatingAdd(i, 1)
+    }
+    return null
+  }
+
+  // A view of an item's name borrowed from the ledger: nothing is copied, and the view cannot outlive it (7.6).
+  export func nameOf(self, sku: SkuId) (alias String from self)? {
+    for item in self.items {
+      if item.sku == sku {
+        return alias item.name
+      }
+    }
+    return null
+  }
+
+  // Withdraws a quantity; the item is rebuilt with an explicit copy of its name. Returns what is left.
+  export try func take(editable self, sku: SkuId, quantity: Int<0..10000>) Int<0..10000> {
+    let found = self.indexOf(sku)
+    if found == null {
+      fail UnknownSku()
+    }
+    let item = self.items.at(found) or fail
+    let left = withdrawn(item.quantity, quantity) or fail
+    editable self.items.set(found, Item(sku: sku, name: copy item.name, quantity: left)) or fail
+    return left
+  }
+
+  // Receives a delivery; the new quantity is validated against the stock range.
+  export try func receive(editable self, delivery: Entry) Int<0..10000> {
+    let found = self.indexOf(delivery.sku)
+    if found == null {
+      fail UnknownSku()
+    }
+    let item = self.items.at(found) or fail
+    let now = restocked(item.quantity, delivery.quantity) or fail
+    editable self.items.set(found, Item(sku: item.sku, name: copy item.name, quantity: now)) or fail
+    return now
+  }
+
+  // `fn`: a read-only predicate with a trivial capture, callable any number of times (8.2).
+  export func countBelow(self, threshold: Int<0..10000>) Int {
+    return self.items.countWhere(fn[threshold](item: Item) Bool => item.quantity < threshold)
+  }
+
+  // `fn mut`: the visitor may change what it captured; it is passed by exclusive loan.
+  export func visit(self, visitor: editable fn mut(Item) Void) Void {
+    for item in self.items {
+      editable visitor(item)
+    }
+  }
+
+  // Applies a batch of withdrawals; each outcome is moved into a list that the caller must consume (10.7).
+  export func takeAll(editable self, orders: ListView[Entry]) List[Outcome[Int<0..10000>]] {
+    let mut results: List[Outcome[Int<0..10000>]] = List.default()
+    for order in orders {
+      editable results.push(editable self.take(order.sku, order.quantity))
+    }
+    return move results
+  }
+}
+
+// Consumes the ledger and produces its closing summary.
+export func close(ledger: owned Ledger) Summary {
+  let mut units = 0
+  for item in ledger.items {
+    units = Int.saturatingAdd(units, item.quantity)
+  }
+  return Summary(skus: ledger.count(), units: units)
+}
+
+// Two stock levels summed with a plain operator: the interval domain proves it (6.3).
+export func pairTotal(a: Item, b: Item) Int<0..20000> => combined(a.quantity, b.quantity)
+
+func sample() Ledger {
+  let mut ledger = Ledger.empty()
+  editable ledger.add(Item(sku: SkuId(1), name: String.from("widget"), quantity: 40))
+  editable ledger.add(Item(sku: SkuId(2), name: String.from("gear"), quantity: 0))
+  editable ledger.add(Item(sku: SkuId(3), name: String.from("bolt"), quantity: 10000))
+  return move ledger
+}
+
+test "withdrawals at the boundaries" {
+  let mut ledger = sample()
+  expect (editable ledger.take(SkuId(1), 40) or fail) == 0
+  expect (editable ledger.take(SkuId(3), 0) or fail) == 10000
+  let over = editable ledger.take(SkuId(2), 1) catch e {
+    expect e.code == "stock.insufficient"
+    recover 0
+  }
+  let unknown = editable ledger.take(SkuId(9), 1) catch e {
+    expect e.code == "stock.unknown_sku"
+    recover 0
+  }
+  expect over == 0 && unknown == 0
+}
+
+test "deliveries stay inside the stock range" {
+  let mut ledger = sample()
+  expect (editable ledger.receive(Entry(sku: SkuId(2), bin: BinId(1), quantity: 10000)) or fail) == 10000
+  let full = editable ledger.receive(Entry(sku: SkuId(3), bin: BinId(1), quantity: 1)) catch e {
+    expect e.code == "refinement.out_of_range"
+    recover 10000
+  }
+  expect full == 10000
+}
+
+test "names are views of the ledger" {
+  let ledger = sample()
+  expect (ledger.nameOf(SkuId(3)) ?? "none") == "bolt"
+  expect (ledger.nameOf(SkuId(7)) ?? "none") == "none"
+  expect ledger.indexOf(SkuId(2)) == 1
+}
+
+test "closures of the three kinds" {
+  let ledger = sample()
+  expect ledger.countBelow(0) == 0
+  expect ledger.countBelow(1) == 1
+  expect ledger.countBelow(10000) == 2
+  let mut seen = 0
+  {
+    let mut count = fn mut[editable seen](item: Item) Void {
+      seen = Int.saturatingAdd(seen, 1)
+    }
+    ledger.visit(editable count)
+  }
+  expect seen == 3
+  let finish = fn once[move ledger]() Summary {
+    return close(move ledger)
+  }
+  expect move finish() == Summary(skus: 3, units: 10040)
+}
+
+test "every outcome of a batch is consumed" {
+  let mut ledger = sample()
+  let orders = List.of(Entry(sku: SkuId(1), bin: BinId(1), quantity: 10), Entry(sku: SkuId(2), bin: BinId(1), quantity: 1))
+  let results = editable ledger.takeAll(orders)
+  expect results.count() == 2
+  let mut good = 0
+  let mut bad = 0
+  move results.consumeEach(fn mut[editable good, editable bad](r: owned Outcome[Int<0..10000>]) Void {
+    let left: Int<0..10000>? = move r catch e {
+      bad = Int.saturatingAdd(bad, 1)
+      expect e.code == "stock.insufficient"
+      recover null
+    }
+    if left != null {
+      good = Int.saturatingAdd(good, 1)
+    }
+  })
+  expect good == 1 && bad == 1
+}

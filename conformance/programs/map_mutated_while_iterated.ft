@@ -1,0 +1,11 @@
+// reject: E-OWN-010 (at the marked line)
+// covers: LANG-06-06
+// Iteration order is deterministic per build because a map cannot change while it is iterated: the loop holds a read
+// loan of it for its whole body (6.6, 7.3).
+func run() Void {
+  let mut m: Map[String, Int] = Map.default()
+  editable m.set("a", 1)
+  for entry in m {
+    editable m.set("b", 2)                 // reject: E-OWN-010 — an exclusive loan while the loop reads the map
+  }
+}

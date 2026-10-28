@@ -1,0 +1,80 @@
+{
+  "why": "an async operation is a cancellation point (12.4)",
+  "expect": "cancellation: sleep is async",
+  "manifest": {
+    "capability": "Clock",
+    "rule": "PROG-ARC-02",
+    "normative": "Language Reference 11.6, 15",
+    "adapter": "compiler/crates/fortis-native/src/host.rs",
+    "handle": {
+      "representation": "a Copy struct holding an optional frozen instant (16 bytes)",
+      "ownership": "a copy is an equal clock; `frozen` returns a new handle and never changes this one",
+      "created_by": "Host.capabilities(), called once by main (11.6); every other handle of this type is derived from that one"
+    },
+    "operations": {
+      "now": {
+        "ownership": {
+          "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+          "result": "a Timestamp value"
+        },
+        "effects": [
+          "io",
+          "nondet"
+        ],
+        "failures": [],
+        "allocation": "none",
+        "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+      },
+      "frozen": {
+        "ownership": {
+          "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+          "instant": "a value",
+          "result": "a new owned Clock handle"
+        },
+        "effects": [
+          "io"
+        ],
+        "failures": [],
+        "allocation": "none",
+        "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+      },
+      "elapsedSince": {
+        "ownership": {
+          "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+          "earlier": "a value",
+          "result": "a Duration value"
+        },
+        "effects": [
+          "fail",
+          "io",
+          "nondet"
+        ],
+        "failures": [
+          "clock.future"
+        ],
+        "allocation": "none on success; the failure value when `earlier` is after now()",
+        "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+      },
+      "sleep": {
+        "ownership": {
+          "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+          "duration": "a value",
+          "result": "none"
+        },
+        "effects": [
+          "io",
+          "suspend"
+        ],
+        "failures": [],
+        "allocation": "none: the sleep's state lives in the awaiting future; the deadline joins the executor's sleeper list until the next time advance",
+        "cancellation": "not a cancellation point"
+      }
+    },
+    "violation": {
+      "fixture": "conformance/programs/exec_host_violations.ft",
+      "refused_by": "native",
+      "expect": "clock.future",
+      "clause": "elapsedSince(earlier) with earlier after now() fails"
+    }
+  }
+}

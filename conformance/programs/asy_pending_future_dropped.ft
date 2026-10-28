@@ -1,0 +1,7 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-12-03
+async func work(n: Int) Int => n
+async func run(n: Int) Int {
+  let pending = work(n)                    // reject: E-OBL-001 — a future is linear: await it, launch it or discard it
+  return n
+}

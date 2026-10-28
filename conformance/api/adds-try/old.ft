@@ -1,0 +1,4 @@
+// API fixture: the previous version.
+export func parsePort(text: String) Int {
+  return text.scalarCount()
+}

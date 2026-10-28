@@ -1,0 +1,19 @@
+// execute: numeric.overflow|numeric.overflow|0s
+// requires: runtime
+// covers: LANG-06-04
+// Duration arithmetic fails on overflow of the signed 64-bit nanosecond count (15).
+import fortis.host { Host }
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let big = Duration.days(100000)
+  let doubled = Duration.multiply(big, 2) catch e {
+    caps.console.print(e.code)
+    recover big
+  }
+  let summed = Duration.add(big, big) catch e {
+    caps.console.print(e.code)
+    recover big
+  }
+  let none = Duration.sub(big, big) or recover big
+  caps.console.print("${none}")
+}

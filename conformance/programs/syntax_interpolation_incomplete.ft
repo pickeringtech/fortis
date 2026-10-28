@@ -1,0 +1,4 @@
+// reject: E-SYN-000 (at the marked line)
+export pure func greet(name: String) String {
+  return "hello ${name +}"               // reject: E-SYN-000 — the interpolation is not an expression
+}

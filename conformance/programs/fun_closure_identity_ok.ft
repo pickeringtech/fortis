@@ -1,0 +1,22 @@
+// accept
+// covers: LANG-08-04
+// One lambda per closure position stays accepted: a callback parameter, an annotated
+// binding, a single-element list, and the same lambda value moved out and back.
+func applyFn(f: fn(Int) Int) Int => f(1)
+
+func run() Int {
+  let plain = pure noalloc fn(x: Int) Int => x
+  let other = pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1)
+  let a = applyFn(plain)
+  let b = applyFn(other)
+  let mut held = pure noalloc fn(x: Int) Int => x
+  let moved = move held
+  held = move moved
+  let annotated: fn(Int) Int = pure noalloc fn(x: Int) Int => Int.saturatingMul(x, 2)
+  let one = List.of(pure noalloc fn(x: Int) Int => x)
+  let listed: List[fn(Int) Int] = List.of(pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1))
+  discard one
+  discard listed
+  discard annotated
+  return Int.saturatingAdd(a, b)
+}

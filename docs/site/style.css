@@ -1,0 +1,122 @@
+/* The Fortis documentation site (conformance/tools/site.py). No external fonts or scripts. */
+:root {
+  --bg: #fbfaf7;
+  --fg: #1d1d1f;
+  --muted: #5d5d66;
+  --rule: #e2dfd8;
+  --panel: #f2efe8;
+  --link: #1f5fa8;
+  --human: #2f7d4f;
+  --agent: #7a4bb0;
+  --spec: #a35a16;
+  --code-bg: #f5f3ee;
+  --t-keyword: #8b2fa8;
+  --t-type: #1f5fa8;
+  --t-string: #2f7d4f;
+  --t-number: #a35a16;
+  --t-comment: #7b7b84;
+  --t-name: #1d1d1f;
+  --t-punctuation: #5d5d66;
+  --accept: #2f7d4f;
+  --reject: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17171a;
+    --fg: #e8e6e1;
+    --muted: #a3a1aa;
+    --rule: #2e2e33;
+    --panel: #202024;
+    --link: #7db3f0;
+    --human: #7fcf9b;
+    --agent: #c3a0f0;
+    --spec: #f0b07a;
+    --code-bg: #1e1e22;
+    --t-keyword: #d79bf0;
+    --t-type: #7db3f0;
+    --t-string: #9fdcae;
+    --t-number: #f0b07a;
+    --t-comment: #8a8893;
+    --t-name: #e8e6e1;
+    --t-punctuation: #a3a1aa;
+    --accept: #7fcf9b;
+    --reject: #f08a80;
+  }
+}
+* { box-sizing: border-box; }
+html { font-size: 16px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
+p code, li code, td code { background: var(--code-bg); padding: 0.05em 0.3em; border-radius: 3px; }
+header.top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 1rem; padding: 0.6rem 1.2rem; background: var(--panel); border-bottom: 1px solid var(--rule); }
+.brand { font-weight: 700; font-size: 1.15rem; color: var(--fg); letter-spacing: 0.02em; }
+.badge { font-size: 0.8rem; padding: 0.1rem 0.6rem; border-radius: 999px; border: 1px solid var(--rule); color: var(--muted); }
+.mode-human .badge { color: var(--human); border-color: var(--human); }
+.mode-agent .badge { color: var(--agent); border-color: var(--agent); }
+.mode-spec .badge { color: var(--spec); border-color: var(--spec); }
+#search { margin-left: auto; width: min(26rem, 50vw); padding: 0.4rem 0.7rem; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+#results { position: fixed; top: 3.2rem; right: 1.2rem; width: min(40rem, 92vw); max-height: 70vh; overflow: auto; z-index: 20; background: var(--bg); border: 1px solid var(--rule); border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); padding: 0.5rem; }
+#results .hit { display: block; padding: 0.45rem 0.6rem; border-radius: 6px; color: var(--fg); }
+#results .hit:hover, #results .hit.active { background: var(--panel); text-decoration: none; }
+#results .where { font-size: 0.8rem; color: var(--muted); }
+#results .m { font-size: 0.7rem; padding: 0 0.4rem; border-radius: 999px; margin-right: 0.4rem; border: 1px solid currentColor; }
+#results .m.human { color: var(--human); }
+#results .m.agent { color: var(--agent); }
+#results .m.spec { color: var(--spec); }
+#results .m.home { color: var(--muted); }
+#results .snippet { font-size: 0.85rem; color: var(--muted); }
+#results mark { background: none; color: var(--fg); font-weight: 600; }
+.layout { display: grid; grid-template-columns: 17rem minmax(0, 1fr); }
+nav.side { position: sticky; top: 3.1rem; height: calc(100vh - 3.1rem); overflow: auto; padding: 1rem 0.8rem; border-right: 1px solid var(--rule); font-size: 0.9rem; }
+nav.side summary { font-weight: 600; cursor: pointer; margin: 0.4rem 0; }
+nav.side ul { list-style: none; margin: 0 0 0.8rem; padding-left: 0.6rem; }
+nav.side li { margin: 0.15rem 0; }
+nav.side li.current > a { font-weight: 600; color: var(--fg); }
+main { max-width: 52rem; padding: 1.5rem 2.5rem 4rem; }
+main.landing { margin: 0 auto; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 0.5em; }
+h1 { font-size: 2rem; margin-top: 0.4em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.2em; }
+h3 { font-size: 1.15rem; }
+.anchor { margin-left: 0.4rem; color: var(--rule); font-weight: 400; visibility: hidden; }
+h1:hover .anchor, h2:hover .anchor, h3:hover .anchor, h4:hover .anchor { visibility: visible; }
+.mode-switch { margin: 0 0 1rem; font-size: 0.9rem; }
+.counterpart { padding: 0.15rem 0.6rem; border: 1px solid var(--rule); border-radius: 999px; }
+.mode-human .counterpart { color: var(--agent); }
+.mode-agent .counterpart { color: var(--human); }
+div.code { position: relative; margin: 1rem 0; border: 1px solid var(--rule); border-radius: 8px; background: var(--code-bg); }
+div.code pre { margin: 0; padding: 0.9rem 1rem; overflow-x: auto; line-height: 1.45; }
+div.code .lang { position: absolute; top: 0.3rem; right: 0.6rem; font-size: 0.7rem; color: var(--muted); }
+div.code.accept { border-left: 4px solid var(--accept); }
+div.code.reject { border-left: 4px solid var(--reject); }
+div.code.illustrative { border-left: 4px dashed var(--muted); }
+.t-keyword { color: var(--t-keyword); font-weight: 600; }
+.t-type { color: var(--t-type); }
+.t-string { color: var(--t-string); }
+.t-number { color: var(--t-number); }
+.t-comment { color: var(--t-comment); font-style: italic; }
+.t-name { color: var(--t-name); }
+.t-punctuation { color: var(--t-punctuation); }
+div.table { overflow-x: auto; margin: 1rem 0; }
+table { border-collapse: collapse; font-size: 0.92rem; }
+th, td { border: 1px solid var(--rule); padding: 0.35rem 0.6rem; vertical-align: top; text-align: left; }
+th { background: var(--panel); }
+tr:target { background: var(--panel); outline: 2px solid var(--link); }
+blockquote { margin: 1rem 0; padding: 0.4rem 1rem; border-left: 4px solid var(--rule); color: var(--muted); }
+a.cite, a.rule, a.code { white-space: nowrap; }
+footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule); font-size: 0.8rem; color: var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin: 2rem 0; }
+.card { display: block; padding: 1.2rem; border: 1px solid var(--rule); border-radius: 10px; color: var(--fg); }
+.card:hover { background: var(--panel); text-decoration: none; }
+.card h2 { margin: 0 0 0.4rem; border: none; font-size: 1.2rem; }
+.card.human h2 { color: var(--human); }
+.card.agent h2 { color: var(--agent); }
+.card.spec h2 { color: var(--spec); }
+.lede { font-size: 1.15rem; color: var(--muted); }
+@media (max-width: 52rem) {
+  .layout { grid-template-columns: 1fr; }
+  nav.side { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+  main { padding: 1rem 1rem 3rem; }
+}

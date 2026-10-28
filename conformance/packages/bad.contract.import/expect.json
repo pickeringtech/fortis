@@ -1,0 +1,1 @@
+{"verdict": "reject", "code": "E-TYP-080", "covers": ["LANG-09-03", "LANG-11-03"], "at": ["bad.contract.import/src/app.ft:6"]}

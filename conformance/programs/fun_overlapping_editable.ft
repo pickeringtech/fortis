@@ -1,0 +1,17 @@
+// reject: E-OWN-010 (at the marked lines)
+// covers: LANG-08-02
+export class Pair {
+  export left: Int
+  export right: Int
+}
+func run() Void {
+  let mut p = Pair(left: 0, right: 0)
+  let mut both = fn mut[editable p.left, editable p.right]() Void {   // reject: E-OWN-010 — two editable captures of one owner
+    p.left = 1
+  }
+  let mut q = Pair(left: 0, right: 0)
+  let mut mixed = fn mut[editable q.left, alias q.right]() Int {      // reject: E-OWN-010 — editable and another capture of one owner
+    q.left = 1
+    return q.right
+  }
+}

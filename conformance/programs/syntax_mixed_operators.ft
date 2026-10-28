@@ -1,0 +1,5 @@
+// reject: E-SYN-004 (at the marked line)
+// covers: LANG-05-06
+export pure func pick(flag: Bool, fallback: Int?, value: Int) Int {
+  return fallback ?? value || flag      // reject: E-SYN-004 — `??` and `||` mixed without parentheses
+}

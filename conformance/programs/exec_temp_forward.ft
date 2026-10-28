@@ -1,0 +1,68 @@
+// execute: made 1|consume 1|cleanup 1|after coalesce|made 2|consume 2|cleanup 2|after none|made 3|ping 3|cleanup 3|after ping|made 4|consume 4|cleanup 4|after free|made 5|cleanup 5|after discard|made 6|held|cleanup 6|after held|made 7|consume 7|cleanup 7|after outcome
+// execute-trace: drop Handle|drop Handle|drop Handle|drop Handle|drop Handle|loans-end|drop Handle|drop Handle
+// requires: runtime
+// covers: LANG-07-07
+// 7.9: a temporary forwarded by `??`, by a free-function call used as a receiver, or by `or fail` is
+// destroyed once. A consuming use owns the selected success value, so the statement does not destroy it too.
+import fortis.host { Host, Console, Capabilities }
+
+export class Handle {
+  export id: Int
+  export console: Shared[Console]
+  export func make(id: Int, console: Shared[Console]) Handle {
+    console.print("made ${id}")
+    return Handle(id: id, console: console.retain())
+  }
+  export func consume(owned self) Void {
+    self.console.print("consume ${self.id}")
+  }
+  export func ping(self) Void {
+    self.console.print("ping ${self.id}")
+  }
+  cleanup(editable self) Void {
+    self.console.print("cleanup ${self.id}")
+  }
+}
+
+func maybe(console: Shared[Console]) Handle? {
+  return Handle.make(1, alias console)
+}
+
+func none() Handle? {
+  return null
+}
+
+func make(id: Int, console: Shared[Console]) Handle {
+  return Handle.make(id, alias console)
+}
+
+try func makeTry(id: Int, console: Shared[Console]) Handle {
+  return Handle.make(id, alias console)
+}
+
+try func run(console: Shared[Console]) Void {
+  (maybe(console) ?? Handle.make(9, alias console)).consume()
+  console.print("after coalesce")
+  (none() ?? Handle.make(2, alias console)).consume()
+  console.print("after none")
+  make(3, console).ping()
+  console.print("after ping")
+  make(4, console).consume()
+  console.print("after free")
+  discard makeTry(5, console) or fail
+  console.print("after discard")
+  {
+    let h = makeTry(6, console) or fail
+    console.print("held")
+  }
+  console.print("after held")
+  (makeTry(7, console) or fail).consume()
+  console.print("after outcome")
+}
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  run(console) or fail
+}

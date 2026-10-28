@@ -1,0 +1,15 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-09-02, LANG-11-01
+// A constructor spread `...copy c` of a heap-owning value deep-copies it, so it allocates like `copy c` (6.11; X-116):
+// a `noalloc` function may not contain one.
+export class Customer {
+  export name: String
+  export age: Int
+}
+export class Summary {
+  export name: String
+  export age: Int
+}
+noalloc func summarise(c: Customer) Summary {
+  return Summary(...copy c)                          // reject: E-EFF-001
+}

@@ -1,0 +1,20 @@
+// execute: hello
+// requires: runtime
+// covers: LANG-03-05
+// A generic class with its own `display` shows that text (LR 11.1). The method's bounds stay on the
+// display, and interpolation uses them.
+import fortis.host { Host }
+import fortis.text { Builder }
+
+export class Hold[T] implements Displayable {
+  export value: T
+  export pure func display(self, into: editable Builder) Void {
+    editable into.append("hello")
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let h = Hold(value: 1)
+  caps.console.print("${h}")
+}

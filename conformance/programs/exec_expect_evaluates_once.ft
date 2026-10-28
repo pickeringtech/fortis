@@ -1,0 +1,26 @@
+// execute: 1 passed, 1 failed
+// tests: run
+// reports: test-result:pass|test-result:fail
+// requires: runtime
+// covers: LANG-14-02
+// `expect a == b` evaluates each operand once; a false expect's evidence shows those values (14; X-121).
+// A `fn once` closure called in an operand is called exactly once, also when the expect fails.
+export class Total derive Equatable {
+  export units: Int
+}
+
+test "a once closure in a passing expect" {
+  let base = Total(units: 3)
+  let finish = fn once[move base]() Total {
+    return move base
+  }
+  expect move finish() == Total(units: 3)
+}
+
+test "a once closure in a failing expect" {
+  let base = Total(units: 3)
+  let finish = fn once[move base]() Total {
+    return move base
+  }
+  expect move finish() == Total(units: 4)
+}

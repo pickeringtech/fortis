@@ -1,0 +1,34 @@
+// accept
+// covers: LANG-10-03
+// Failure matching (10.5): is-arms discharge, `as` binds the whole failure, otherwise(name) owns the rest.
+export error EmptyInvoice {
+  code: "billing.empty"
+}
+export error CurrencyMismatch {
+  code: "billing.mismatch"
+  payload { expected: Int, found: Int }
+}
+try func build(n: Int) Int => n
+recovers func describe(n: Int) Int? {
+  let maybe: Int? = match build(n) {
+    success(v) => v
+    failure(f) => match move f {
+      is EmptyInvoice => null
+      is CurrencyMismatch(expected: want, found: got) as mismatch => {
+        report mismatch
+        give null
+      }
+      otherwise(other) => {
+        report other
+        give null
+      }
+    }
+  }
+  return maybe
+}
+func inspect(f: Failure) Int {
+  return match f {
+    is EmptyInvoice => 1
+    otherwise => 2
+  }
+}

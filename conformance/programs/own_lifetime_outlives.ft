@@ -1,0 +1,12 @@
+// reject: E-OWN-011 (at the marked line)
+// covers: LANG-07-06
+// A view held by a local keeps its loan of the owner for the local's block (7.3, 7.7).
+export class User {
+  export name: String
+}
+pure func labelOf(user: User) StringView from user => alias user.name
+func run(u: editable User) Int {
+  let label = labelOf(alias u)
+  u.name = "changed"                       // reject: E-OWN-011 — label still holds the loan of u
+  return label.scalarCount()
+}

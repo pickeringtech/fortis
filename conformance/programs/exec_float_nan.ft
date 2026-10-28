@@ -1,0 +1,16 @@
+// execute: NaN|false|false|false|true|true|true
+// requires: runtime
+// covers: LANG-06-05
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let n = Float.sqrt(-1.0)
+  caps.console.print("${n}")
+  caps.console.print("${n == n}")
+  caps.console.print("${n < 1.0}")
+  caps.console.print("${n > 1.0}")
+  caps.console.print("${n != n}")
+  caps.console.print("${Float.isNaN(n)}")
+  caps.console.print("${Float.bitsEqual(n, n)}")
+}

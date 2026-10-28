@@ -1,0 +1,146 @@
+// accept
+import fortis.text
+import fortis.money { Money, Currency }
+
+// A customer identifier. Distinct from every other Int-backed id.
+export type CustomerId = Int<1..>
+
+// A line on an invoice. All fields are exported, so the generated
+// constructor Line(description: ..., quantity: ..., unitPrice: ...)
+// is usable from other modules.
+export class Line derive Equatable {
+  export description: String
+  export quantity: Int<1..10000>
+  export unitPrice: Money
+
+  // Read-only method: `self` borrows read-only by default.
+  export pure try func total(self) Money {
+    return Money.multiply(self.unitPrice, self.quantity) or fail
+  }
+}
+
+// Invoice status is a closed enum with payloads.
+export enum InvoiceStatus derive Equatable {
+  Draft
+  Issued(at: Timestamp)
+  Paid(at: Timestamp, reference: String)
+  Voided(reason: String)
+}
+
+// Declared failure kinds with stable codes.
+export error EmptyInvoice {
+  code: "billing.invoice.empty"
+  message: "An invoice must have at least one line"
+}
+
+export error CurrencyMismatch {
+  code: "billing.invoice.currency_mismatch"
+  payload { expected: Currency, found: Currency }
+  message: "Line currency ${found} does not match invoice currency ${expected}"
+}
+
+// An interface: anything that can be rendered to text.
+export interface Renderable {
+  pure func render(self) String
+}
+
+// A mixin contributes methods and requires methods, never fields.
+export mixin Summarised {
+  requires pure func title(self) String
+  requires pure func lineCount(self) Int
+
+  export pure func summary(self) String {
+    return "${self.title()} (${self.lineCount()} lines)"
+  }
+}
+
+export class Invoice implements Renderable with Summarised {
+  export customer: CustomerId
+  export currency: Currency
+  lines: List[Line]            // module-private field
+  status: InvoiceStatus
+
+  // Associated constructor function: no `self`, called as Invoice.create(...).
+  export pure try func create(customer: CustomerId, currency: Currency, lines: owned List[Line]) Invoice {
+    if lines.isEmpty() {
+      fail EmptyInvoice()
+    }
+    for line in lines {
+      if line.unitPrice.currency != currency {
+        fail CurrencyMismatch(expected: currency, found: line.unitPrice.currency)
+      }
+    }
+    return Invoice(customer: customer, currency: currency, lines: move lines, status: InvoiceStatus.Draft)
+  }
+
+  export pure func title(self) String => "Invoice for customer ${self.customer}"
+  export pure func lineCount(self) Int => self.lines.count()
+
+  // Mutating method: the receiver is an exclusive loan.
+  export pure func issue(editable self, now: Timestamp) Void {
+    self.status = InvoiceStatus.Issued(at: now)
+  }
+
+  export pure try func total(self) Money {
+    let mut sum = Money.zero(self.currency)
+    for line in self.lines {
+      let lineTotal = line.total() or fail
+      sum = Money.add(sum, lineTotal) or fail
+    }
+    return move sum
+  }
+
+  export pure func render(self) String {
+    let mut out = text.Builder.create()
+    editable out.appendLine(self.summary())
+    for line in self.lines {
+      editable out.appendLine("${line.quantity} x ${line.description}")
+    }
+    let statusText = match self.status {
+      Draft => "draft"
+      Issued(at: issuedAt) => "issued ${issuedAt}"
+      Paid(at: paidAt, reference: ref) => "paid ${paidAt} (${ref})"
+      Voided(reason: why) => "void: ${why}"
+    }
+    editable out.appendLine(statusText)
+    return out.finish()
+  }
+}
+
+// A free function using a closure with an explicit capture list and kind.
+export pure func countExpensive(invoice: Invoice, threshold: Money) Int {
+  let isExpensive = pure fn[alias threshold](line: Line) Bool {
+    return Money.greaterThan(line.unitPrice, threshold)
+  }
+  return invoice.lines.countWhere(isExpensive)
+}
+
+// Defer runs at every exit of the block, before locals are dropped; its body
+// is checked at each exit, so `audit` may be used freely in between.
+export recovers func withAudit(audit: editable List[String], invoice: Invoice) Money? {
+  defer {
+    editable audit.push("checked ${invoice.customer}")
+  }
+  let total: Money? = invoice.total() catch e {
+    report e
+    recover null
+  }
+  return move total
+}
+
+test "total sums lines" {
+  let lines = List.of(
+    Line(description: "Widget", quantity: 2, unitPrice: Money.of(Currency.GBP, 10d)),
+    Line(description: "Gadget", quantity: 1, unitPrice: Money.of(Currency.GBP, 5d)),
+  )
+  let invoice = Invoice.create(customer: CustomerId(42), currency: Currency.GBP, lines: move lines) or fail
+  expect (invoice.total() or fail) == Money.of(Currency.GBP, 25d)
+}
+
+test "quantity boundary" cases {
+  "minimum": { quantity: 1, expected: 10d }
+  "ten":     { quantity: 10, expected: 100d }
+} as row {
+  let line = Line(description: "x", quantity: row.quantity, unitPrice: Money.of(Currency.GBP, 10d))
+  expect (line.total() or fail).amount == row.expected
+}

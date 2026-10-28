@@ -1,0 +1,17 @@
+// execute: 1 passed, 1 failed
+// tests: run
+// reports: test-result:fail|test-result:pass
+// requires: runtime
+// covers: LANG-14-02
+// A false `expect` inside a closure of a test body fails that test, through the library call that runs the
+// closure; the next test still runs (14).
+test "an expect inside a visitor fails its test" {
+  let items = List.of(1, 2, 3)
+  move items.consumeEach(fn mut(x: owned Int) Void {
+    expect x < 3
+  })
+}
+
+test "the next test still runs" {
+  expect Int.wrappingAdd(1, 1) == 2
+}

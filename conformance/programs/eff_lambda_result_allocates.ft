@@ -1,0 +1,13 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-11-03
+// D-34: a lambda that returns a function value allocates: natively its result is boxed, because a Rust closure cannot
+// name an `impl Fn` result (Appendix C.1, C.3), so it may not claim `noalloc`.
+func make(r: Int) fn() fn(Int) Int {
+  return noalloc fn[copy r]() fn(Int) Int {      // reject: E-EFF-001 — the returned function is boxed
+    return fn[copy r](c: Int) Int => Int.wrappingAdd(c, r)
+  }
+}
+
+export func main(args: List[String]) Void {
+  let f = make(1)
+}

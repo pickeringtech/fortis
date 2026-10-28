@@ -1,0 +1,11 @@
+// API fixture: `scaled` no longer promises `pure`, and `Meter.doubled` drops the contract that made it `noalloc`.
+export contract Lean {
+  noalloc
+}
+
+export func scaled(value: Int, factor: Int) Int => Int.wrappingMul(value, factor) // expect: E-EFF-040
+
+export class Meter {
+  export reading: Int
+  export func doubled(self) Int => Int.wrappingMul(self.reading, 2) // expect: E-EFF-040
+}

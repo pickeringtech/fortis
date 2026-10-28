@@ -1,0 +1,493 @@
+{
+ "schema": "fortis.effects/v1",
+ "package": "fortis",
+ "about": "The effects of the fortis package's bodiless (trusted) operations that their signatures cannot show (Language Reference 11.1, 11.3; D-112). Both checkers read this file and nothing else for them: a row names one operation by module, owner (null for a free function) and name, and lists the effects it adds, from alloc, block, io, mutate and nondet. Modifiers give fail, suspend and recovers; a capability's method, or an operation that takes an Authority, has io (11.6). A malformed row stops the checker; library_check.py and fortis-types' unit test refuse a row that names no bodiless operation of its module. Reviewed with the package's trusted operations.",
+ "operations": [
+  {
+   "module": "fortis.host",
+   "owner": null,
+   "name": "reveal",
+   "effects": [
+    "alloc"
+   ],
+   "why": "the secret's value is copied out (DEL-39 adapter review; X-127)"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "Clock",
+   "name": "elapsedSince",
+   "effects": [
+    "nondet"
+   ],
+   "why": "reads the clock"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "Clock",
+   "name": "now",
+   "effects": [
+    "nondet"
+   ],
+   "why": "reads the clock"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "Environment",
+   "name": "get",
+   "effects": [
+    "nondet",
+    "alloc"
+   ],
+   "why": "reads the process environment into an owned secret"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "File",
+   "name": "readAll",
+   "effects": [
+    "block",
+    "alloc"
+   ],
+   "why": "blocking I/O (11.1; D-113); its result or failure is allocated (X-127)"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "File",
+   "name": "writeAll",
+   "effects": [
+    "block"
+   ],
+   "why": "blocking I/O (11.1; D-113)"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "FileSystem",
+   "name": "create",
+   "effects": [
+    "block",
+    "alloc"
+   ],
+   "why": "blocking I/O (11.1; D-113); its result or failure is allocated (X-127)"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "FileSystem",
+   "name": "open",
+   "effects": [
+    "block",
+    "alloc"
+   ],
+   "why": "blocking I/O (11.1; D-113); its result or failure is allocated (X-127)"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "FileSystem",
+   "name": "readAll",
+   "effects": [
+    "block",
+    "alloc"
+   ],
+   "why": "blocking I/O (11.1; D-113); its result or failure is allocated (X-127)"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "FileSystem",
+   "name": "readText",
+   "effects": [
+    "block",
+    "alloc"
+   ],
+   "why": "blocking I/O (11.1; D-113); its result or failure is allocated (X-127)"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "FileSystem",
+   "name": "subtree",
+   "effects": [
+    "alloc"
+   ],
+   "why": "a confinement that lives for the program (X-127)"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "FileSystem",
+   "name": "writeAll",
+   "effects": [
+    "block",
+    "alloc"
+   ],
+   "why": "blocking I/O (11.1; D-113); its result or failure is allocated (X-127)"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "Network",
+   "name": "resolve",
+   "effects": [
+    "block",
+    "alloc"
+   ],
+   "why": "blocking I/O (11.1; D-113); its result or failure is allocated (X-127)"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "Path",
+   "name": "parse",
+   "effects": [
+    "alloc"
+   ],
+   "why": "an owned path (X-127)"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "Process",
+   "name": "run",
+   "effects": [
+    "block",
+    "alloc"
+   ],
+   "why": "runs a program to completion (blocking I/O) and keeps its arguments' text"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "Random",
+   "name": "below",
+   "effects": [
+    "nondet"
+   ],
+   "why": "draws from the generator"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "Random",
+   "name": "seeded",
+   "effects": [
+    "alloc"
+   ],
+   "why": "a generator with its own state"
+  },
+  {
+   "module": "fortis.host",
+   "owner": "RawSql",
+   "name": "execute",
+   "effects": [
+    "block"
+   ],
+   "why": "blocking I/O (11.1; D-113)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": null,
+   "name": "annotate",
+   "effects": [
+    "alloc"
+   ],
+   "why": "the annotated failure carries text"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "AtomicBool",
+   "name": "store",
+   "effects": [
+    "mutate"
+   ],
+   "why": "writes storage shared between tasks (11.1)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "AtomicInt",
+   "name": "fetchAdd",
+   "effects": [
+    "mutate"
+   ],
+   "why": "writes storage shared between tasks (11.1)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "AtomicInt",
+   "name": "store",
+   "effects": [
+    "mutate"
+   ],
+   "why": "writes storage shared between tasks (11.1)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Builder",
+   "name": "append",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Builder",
+   "name": "appendLine",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Builder",
+   "name": "appendScalar",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Builder",
+   "name": "create",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Builder",
+   "name": "finish",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Failures",
+   "name": "aggregate",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "concat",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "filter",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "map",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "of",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "push",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "reversed",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Map",
+   "name": "set",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Mutex",
+   "name": "lockBlocking",
+   "effects": [
+    "block"
+   ],
+   "why": "a synchronous lock wait (12.7)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "MutexGuard",
+   "name": "get",
+   "effects": [
+    "alloc"
+   ],
+   "why": "a copy of the protected value, which may own heap storage (6.11)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "MutexGuard",
+   "name": "replace",
+   "effects": [
+    "mutate"
+   ],
+   "why": "writes storage shared between tasks (11.1)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "MutexGuard",
+   "name": "set",
+   "effects": [
+    "mutate"
+   ],
+   "why": "writes storage shared between tasks (11.1)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Outcome",
+   "name": "collect",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Scope",
+   "name": "launch",
+   "effects": [
+    "alloc"
+   ],
+   "why": "the v1 runtime host declares no inline task storage, so the future is boxed (C.3; X-125)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Scope",
+   "name": "launchBlocking",
+   "effects": [
+    "alloc"
+   ],
+   "why": "pool work is boxed and queued (C.3; X-122)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Scope",
+   "name": "launchParallel",
+   "effects": [
+    "alloc"
+   ],
+   "why": "pool work is boxed and queued (C.3; X-122)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Set",
+   "name": "add",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Shared",
+   "name": "create",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "String",
+   "name": "from",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Weak",
+   "name": "upgrade",
+   "effects": [
+    "nondet"
+   ],
+   "why": "whether the value is still alive depends on other owners (address identity, 11.1)"
+  },
+  {
+   "module": "fortis.text",
+   "owner": "Builder",
+   "name": "append",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.text",
+   "owner": "Builder",
+   "name": "appendLine",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.text",
+   "owner": "Builder",
+   "name": "appendScalar",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.text",
+   "owner": "Builder",
+   "name": "create",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.text",
+   "owner": "Builder",
+   "name": "finish",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.text",
+   "owner": "Text",
+   "name": "words",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  }
+ ]
+}

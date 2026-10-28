@@ -1,0 +1,15 @@
+// Signature module for the Language Reference's illustrative dependency `acme.accounts` (7.6, 10.1, 10.4, 14):
+// the names the examples import, with the signatures their use implies. Bodiless like the prelude.
+export class User {
+  export name: String
+  export age: Int
+}
+export type CustomerId = Int<1..>
+export class Account {
+  export name: String
+  export trusted pure func guest() Account
+  export trusted pure func isGuest(self) Bool
+}
+export trusted try func loadAccount(id: CustomerId) Account
+export trusted func save(account: Account) Void
+export trusted pure func isAdult(age: Int) Bool

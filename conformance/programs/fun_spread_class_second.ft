@@ -1,0 +1,20 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-08-04
+// Spreading a class instance carries the lambda its field already holds.
+// The destination field already holds a different lambda.
+class A {
+  export run: fn(Int) Int
+}
+
+class B {
+  export run: fn(Int) Int
+}
+
+func run() Int {
+  let a = A(run: pure noalloc fn(x: Int) Int => x)
+  let b = B(run: pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1))
+  let c = B(...move a)  // reject: E-TYP-040 — B.run already holds one lambda
+  discard b
+  discard c
+  return 0
+}

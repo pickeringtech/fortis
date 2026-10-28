@@ -1,0 +1,34 @@
+// LANG-04-03, LANG-04-04 (X-136): two packages each declare a class `Item`, a function `describe` and an error
+// `Missing`; this module imports one by name and the other through an alias, and each runs as its own package's.
+import fortis.host { Host, Console }
+import same.left.items { Item, describe, find }
+import same.right.items as right
+
+try func run(console: Console) Void {
+  let a = Item(label: "x")
+  let b = right.Item(count: 2, weight: 7)
+  console.print(a.show())
+  console.print(b.show())
+  console.print(describe(a))
+  console.print(right.describe(b))
+  let c = right.find(4) or fail
+  console.print(c.show())
+  match find("") {
+    success(i) => console.print(i.show())
+    failure(f) => {
+      console.print(f.code)
+      report f
+    }
+  }
+  match right.find(0) {
+    success(i) => console.print(i.show())
+    failure(f) => {
+      console.print(f.code)
+      report f
+    }
+  }
+}
+
+export try func main(args: List[String]) Void {
+  run(Host.capabilities().console) or fail
+}

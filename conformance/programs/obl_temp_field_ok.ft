@@ -1,0 +1,51 @@
+// accept
+// covers: LANG-10-02, LANG-07-01
+// The other fields are not linear, so projecting the one linear field is allowed. `move idInt(1)` marks a
+// function and calls it; no field of the result is projected, so the marker stays on the function.
+export error Negative {
+  code: "rcc.negative"
+}
+
+try func load(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n
+}
+
+export class One {
+  export a: Outcome[Int]
+  export n: Int
+}
+
+func make() One {
+  return One(a: load(1), n: 2)
+}
+
+recovers func peek() Int {
+  return make().a or recover 0
+}
+
+recovers func recordPeek() Int {
+  return { a: load(1), n: 2 }.a or recover 0
+}
+
+recovers func tuplePeek() Int {
+  return (load(1), 2).0 or recover 0
+}
+
+func maybe() One? {
+  return present(make())
+}
+
+recovers func optPeek() Int {
+  return (maybe()?.a ?? load(0)) or recover 0
+}
+
+func idInt(n: Int) Int {
+  return n
+}
+
+func movedCall() Int {
+  return move idInt(1)
+}

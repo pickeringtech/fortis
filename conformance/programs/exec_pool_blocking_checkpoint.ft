@@ -1,0 +1,34 @@
+// execute: recovered -1
+// execute-trace: launch work#1 on blocking|launch quick#2|suspend main|start work#1|checkpoint work#1|start quick#2|complete quick#2|resume main|join quick#2|loans-end|cancel work#1|suspend main|resume work#1|cancelled work#1|complete work#1|resume main|join work#1
+// requires: runtime
+// covers: LANG-12-03, LANG-12-05
+// 12.4/12.5: a blocking callback is synchronous `fn once` work whose environment is Shareable (the list is moved
+// in); it observes cancellation only at checkpoint().
+import fortis.host { Host }
+export error Bad {
+  code: "demo.bad"
+}
+async try func quick() Int {
+  fail Bad()
+}
+async try func run() Int {
+  let items = List.of(1, 2, 3, 4)
+  scope tasks {
+    let w = tasks.launchBlocking(fn once[move items]() Int {
+      let mut i = 1
+      while i <= items.count() {
+        checkpoint()
+        i = Int.wrappingAdd(i, 1)
+      }
+      return i
+    })
+    let q = tasks.launch(quick())
+    let x = await q or fail
+    return Int.wrappingAdd(x, await w)
+  }
+}
+export async recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let r = await run() or recover -1
+  caps.console.print("recovered ${r}")
+}

@@ -1,0 +1,47 @@
+{
+  "capability": "Random",
+  "rule": "PROG-ARC-02",
+  "normative": "Language Reference 11.6, 15",
+  "adapter": "compiler/crates/fortis-native/src/host.rs",
+  "handle": {
+    "representation": "a Copy struct holding a reference to a SplitMix64 state cell that lives for the program (one pointer)",
+    "ownership": "every copy of a handle draws from the same stream; `seeded` creates an independent stream",
+    "created_by": "Host.capabilities(), called once by main (11.6); every other handle of this type is derived from that one"
+  },
+  "operations": {
+    "below": {
+      "ownership": {
+        "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+        "bound": "a value, Int<1..> (refused statically below 1; a contract_violation defect natively if reached)",
+        "result": "an Int<0..> value"
+      },
+      "effects": [
+        "io",
+        "nondet"
+      ],
+      "failures": [],
+      "allocation": "none (rejection sampling on the stream, no modulo bias)",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    },
+    "seeded": {
+      "ownership": {
+        "receiver": "the handle by value (a Copy handle: copied, never consumed)",
+        "seed": "a value",
+        "result": "a new owned Random handle"
+      },
+      "effects": [
+        "alloc",
+        "io"
+      ],
+      "failures": [],
+      "allocation": "one 8-byte state cell per call, living for the program (shared by every copy of the new handle)",
+      "cancellation": "not a cancellation point: the operation completes; a cancellation of the task is observed at its next await (12.4)"
+    }
+  },
+  "violation": {
+    "fixture": "conformance/programs/host_random_bound.ft",
+    "refused_by": "static",
+    "expect": "E-REF-001",
+    "clause": "below(bound) requires bound >= 1"
+  }
+}

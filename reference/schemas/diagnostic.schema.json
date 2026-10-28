@@ -1,0 +1,444 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fortis-lang.org/schemas/diagnostic.schema.json",
+  "title": "Fortis diagnostic record",
+  "description": "One finding from any Fortis tool or the runtime (Delivery Programme 7.1, 7.3, 7.4). The text rendering is derived from this record.",
+  "type": "object",
+  "required": [
+    "class",
+    "code",
+    "message",
+    "rule",
+    "file",
+    "line",
+    "column",
+    "severity",
+    "status",
+    "fields"
+  ],
+  "properties": {
+    "class": {
+      "enum": [
+        "Type",
+        "Ownership",
+        "Obligation",
+        "Effect",
+        "Refinement unproved",
+        "Unsupported shape",
+        "Resource limit",
+        "Internal defect",
+        "Syntax",
+        "Names and modules",
+        "Patterns",
+        "Closures",
+        "Defer and async",
+        "Observation"
+      ]
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[EW]-[A-Z]{3,4}-[0-9]{3}$"
+    },
+    "message": {
+      "type": "string"
+    },
+    "rule": {
+      "type": "string",
+      "pattern": "^(LANG|PLAT|PROG)-[A-Z0-9]+-[0-9]{2}$|^-$"
+    },
+    "file": {
+      "type": "string"
+    },
+    "line": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "column": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "severity": {
+      "enum": [
+        "error",
+        "warning"
+      ]
+    },
+    "status": {
+      "enum": [
+        "unknown",
+        "unproved",
+        "violated"
+      ]
+    },
+    "fields": {
+      "type": "object"
+    },
+    "correction": {
+      "type": "object",
+      "required": [
+        "kind",
+        "edits"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "edits": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "file",
+              "line",
+              "column",
+              "end_line",
+              "end_column",
+              "replacement"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer"
+              },
+              "column": {
+                "type": "integer"
+              },
+              "end_line": {
+                "type": "integer"
+              },
+              "end_column": {
+                "type": "integer"
+              },
+              "replacement": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Type"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "expected_type",
+              "actual_type",
+              "primary_span"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Ownership"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "place",
+              "conflict",
+              "spans",
+              "loan_region"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Obligation"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "obligation_origin",
+              "unconsumed_path"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Effect"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "required_contract",
+              "violating_effect",
+              "witness_path"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Refinement unproved"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "required_range",
+              "proved_interval",
+              "widening_point"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Unsupported shape"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "lowering_row"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Resource limit"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "budget",
+              "operation"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Internal defect"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "reproduction"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Syntax"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "expected_tokens",
+              "found_token"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Names and modules"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "name",
+              "candidates"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Patterns"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "missing_variants",
+              "arm_set"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Closures"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "violation",
+              "capture_span",
+              "use_span"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Defer and async"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "offending_statement",
+              "rule_reference"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Observation"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "required": [
+              "frame_field",
+              "exit_path"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Unsupported shape"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "correction"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Resource limit"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "correction"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "class": {
+            "const": "Internal defect"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "correction"
+          ]
+        }
+      }
+    }
+  ]
+}

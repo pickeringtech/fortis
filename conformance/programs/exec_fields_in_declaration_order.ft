@@ -1,0 +1,24 @@
+// execute: Settings(retries: 3, verbose: true)|Settings(retries: 5, verbose: false)|Pair(left: 1, right: 2)
+// requires: runtime
+// covers: LANG-09-02
+// A class value's fields are in declaration order whatever order the constructor call gives them in, and a default
+// is a field like any other: a derived `Displayable` prints them in that order. The interpreter once printed them
+// in the order given, with defaulted fields last (D-53).
+import fortis.host { Host }
+
+class Settings derive Displayable {
+  export retries: Int<0..10> = 3
+  export verbose: Bool
+}
+
+class Pair derive Displayable {
+  export left: Int
+  export right: Int
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print("${Settings(verbose: true)}")
+  caps.console.print("${Settings(verbose: false, retries: 5)}")
+  caps.console.print("${Pair(right: 2, left: 1)}")
+}

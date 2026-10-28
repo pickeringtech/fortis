@@ -1,0 +1,7 @@
+// accept
+// covers: LANG-10-06
+// Expected conditions are outcomes; nothing in ordinary source can abort (10.8).
+// Expected conditions are outcomes; nothing in ordinary source can abort.
+try func at(items: List[Int], i: Int) Int => items.at(i) or fail
+
+recovers func safe(items: List[Int]) Int => at(items, 10) or recover 0

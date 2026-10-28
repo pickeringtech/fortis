@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: acme.util
+version: 2.0.0
+root: util
+exports: [util, strings]
+dependencies:
+  fortis: "1.0"

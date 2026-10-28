@@ -1,0 +1,9 @@
+// accept: `List[dynamic fn(Int) Int]` does bind the element, so two lambdas are one dynamic fn.
+// Not a gate program: a dynamic fn is a boxed closure, and the native parity audit counts
+// boxed closures. Both checkers must accept this function. The non-dynamic neighbour is
+// conformance/programs/fun_listof_expected_closure.ft.
+func run() Int {
+  let ys: List[dynamic fn(Int) Int] = List.of(pure noalloc fn(x: Int) Int => x, pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1))
+  discard ys
+  return 0
+}

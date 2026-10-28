@@ -1,0 +1,15 @@
+// DEL-45 fixture for C1.standard-loans (X-137): loans live in locals, parameters and `from` returns, and the
+// standard views and cursors are the only types that store one; no type of the program declares a lifetime.
+import fortis.host { Host }
+export class Line {
+  export text: String
+}
+pure func textOf(line: Line) StringView from line => alias line.text
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let lines = List.of(Line(text: "a"), Line(text: "bc"))
+  for line in lines {
+    let t = textOf(alias line)
+    caps.console.print("${t.scalarCount()}")
+  }
+}

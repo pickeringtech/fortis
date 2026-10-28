@@ -1,0 +1,13 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-11-01
+// An owned `dynamic I` boxes its value, so creating one allocates (Appendix C.3; X-117): a `noalloc` function may not.
+export interface Shape {
+  pure func area(self) Int
+}
+export class Square implements Shape {
+  export side: Int
+  export pure func area(self) Int => self.side
+}
+noalloc func boxed(s: owned Square) dynamic Shape {
+  return move s                                     // reject: E-EFF-001
+}

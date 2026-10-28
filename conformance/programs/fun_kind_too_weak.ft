@@ -1,0 +1,20 @@
+// reject: E-FUN-010 (at the marked lines)
+// covers: LANG-08-02
+export class Box {
+  export label: String
+}
+func keep(b: owned Box) Void {
+}
+func run(box: owned Box) Void {
+  let mut counter = 0
+  let bump = fn[editable counter]() Void {
+    counter = Int.saturatingAdd(counter, 1)        // reject: E-FUN-010 — mutating a capture needs fn mut
+  }
+  let mut tally = 0
+  let acc = fn[move tally]() Void {
+    tally = 1                                      // reject: E-FUN-010 — a mutated move capture needs fn mut
+  }
+  let mut giveAway = fn mut[move box]() Void {
+    keep(move box)                                 // reject: E-FUN-010 — moving a capture out needs fn once
+  }
+}

@@ -1,0 +1,10 @@
+[package]
+name = "fortis-fmt"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The Fortis formatter (DEL-41, DEL-43): canonical layout, and the inferred facts printed back"
+
+[dependencies]
+fortis-syntax = { path = "../fortis-syntax" }
+fortis-types = { path = "../fortis-types" }

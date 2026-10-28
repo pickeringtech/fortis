@@ -1,0 +1,19 @@
+// execute: 7|present 3|absent
+// requires: runtime
+// covers: LANG-06-08
+import fortis.host { Host }
+
+pure func describe(v: Int?) String {
+  return match v {
+    present(x) => "present ${x}"
+    null => "absent"
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let maybe: Int? = null
+  caps.console.print("${maybe ?? 7}")
+  caps.console.print(describe(3))
+  caps.console.print(describe(null))
+}

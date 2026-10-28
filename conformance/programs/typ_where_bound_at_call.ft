@@ -1,0 +1,82 @@
+// reject: E-TYP-090, E-TYP-040 (at the marked lines)
+// covers: LANG-06-10
+// D-171: a callee's `where` bounds hold at every call, for the type arguments the call fixes (6.10). Neither checker
+// checked them at a call: a generic function bounded by an interface, and a standard method bounded by `Copyable`
+// (`List.reversed`), accepted arguments that do not implement it.
+export interface Shown {
+  func show(self) String
+}
+
+class Plain {
+  export n: Int
+}
+
+class Shiny implements Shown {
+  export n: Int
+  func show(self) String => "shiny"
+}
+
+func label[T](x: T) String where T implements Shown => x.show()
+
+async func work() Int => 1
+
+export func main(args: List[String]) Void {
+  let a = label(Shiny(n: 1))
+  let b = label(Plain(n: 2))                         // reject: E-TYP-090 — Plain does not implement Shown
+}
+
+func backwards(xs: List[Future[Int]]) List[Future[Int]] {
+  return xs.reversed()                               // reject: E-TYP-090 — a Future is not Copyable
+}
+
+func wrapBad[U](x: U) String => label(x)             // reject: E-TYP-090 — U is not bounded by Shown
+func wrapOk[V](x: V) String where V implements Shown => label(x)
+func duplicate[W](g: MutexGuard[W]) W => g.get()     // reject: E-TYP-090 — W is not bounded by Copyable
+func dupOk[W](g: MutexGuard[W]) W where W implements Copyable => g.get()
+func keyed[K](k: K) Int where K implements Equatable => 1
+func hashed[H](h: H) Int where H implements Hashable => keyed(h)
+
+export interface Conv[T] {
+  func conv(self) T
+}
+
+class Num implements Conv[Int] {
+  export n: Int
+  func conv(self) Int => self.n
+}
+
+func asText[C](c: C) String where C implements Conv[String] => c.conv()
+func useText(n: Num) String => asText(n)             // reject: E-TYP-090 — Num converts to Int, not String
+
+export interface Sink[S] where S implements Copyable {
+  func put(self, s: S) Void
+}
+
+class FutSink implements Sink[Future[Int]] {
+  export n: Int
+  func put(self, s: Future[Int]) Void {
+  }
+}
+
+func pour[Q](q: Q) Int where Q implements Sink[Future[Int]] => 1
+func usePour(f: FutSink) Int => pour(f)              // reject: E-TYP-090 — Sink's own bound fails for Future
+
+export interface In[T] {}
+export interface Both[T] requires In[T] {}
+func needIn[X](x: X) Int where X implements In[Int] => 1
+func viaBoth[Y](y: Y) Int where Y implements Both[Int] => needIn(y)
+
+class Helper {
+  export n: Int
+  func shown[T](x: T) Int where T implements Shown => 1
+}
+
+func helperValue(p: Plain) Int {
+  let f = Helper.shown                               // reject: E-TYP-040 — its bounds hold only at a call
+  return f(p)
+}
+
+func bypass(g: MutexGuard[Future[Int]]) Future[Int] {
+  let f = g.get                                      // reject: E-TYP-040 — a method is called, never a value
+  return f()
+}

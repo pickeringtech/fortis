@@ -1,0 +1,7 @@
+// accept
+// The field's type is fortis.host.FileSystem, not a FileSystem declared by an importer.
+import fortis.host
+
+export class Box {
+  export fs: host.FileSystem
+}

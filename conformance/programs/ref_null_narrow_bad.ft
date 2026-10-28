@@ -1,0 +1,8 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+pure func first(v: Int?) Int {
+  if v == null {
+    discard 0
+  }
+  return v                                   // reject: E-TYP-040 — the null test did not diverge
+}

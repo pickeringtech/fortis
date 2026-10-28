@@ -1,0 +1,13 @@
+# E-TEL-006: two metrics with one name
+telemetry:
+  projections:
+    p:
+      source: OrderProcessing
+      metrics:
+        - name: p.count
+          instrument: counter
+    q:
+      source: OrderProcessing
+      metrics:
+        - name: p.count   # expect: E-TEL-006
+          instrument: counter

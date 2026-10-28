@@ -1,0 +1,7 @@
+// accept — S6: lambdas in expression position with greedy bodies
+pure func run(items: List[Int]) Int {
+  let doubled = items.map(fn(x: Int) Int => Int.wrappingMul(x, 2))
+  let kept = items.filter(fn(x: Int) Bool => x > 1 && x < 10)
+  let n = items.countWhere(fn(x: Int) Bool => x % 2 == 0)
+  return Int.saturatingAdd(doubled.count(), Int.saturatingAdd(kept.count(), n))
+}

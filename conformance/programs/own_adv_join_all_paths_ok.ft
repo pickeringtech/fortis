@@ -1,0 +1,15 @@
+// accept
+// covers: LANG-07-04
+export class Box {
+  export label: String
+}
+func consume(b: owned Box) Void {
+}
+func run(flag: Bool) Int {
+  let box = Box(label: "a")
+  if flag {
+    consume(move box)
+    return 1
+  }
+  return box.label.scalarCount()           // the moving path returned: box is initialised here
+}

@@ -1,0 +1,25 @@
+// execute: draft|paid 42|void: duplicate
+// requires: runtime
+// covers: LANG-09-05
+import fortis.host { Host }
+
+export enum Status {
+  Draft
+  Paid(amount: Int)
+  Voided(reason: String)
+}
+
+pure func describe(status: Status) String {
+  return match status {
+    Draft => "draft"
+    Paid(amount: a) => "paid ${a}"
+    Voided(reason: why) => "void: ${why}"
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  caps.console.print(describe(Status.Draft))
+  caps.console.print(describe(Status.Paid(amount: 42)))
+  caps.console.print(describe(Status.Voided(reason: "duplicate")))
+}

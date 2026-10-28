@@ -1,0 +1,13 @@
+// accept
+// covers: LANG-10-05
+// A function that discharges a failure writes recovers; one that reports first adds nothing (10.4, 10.5).
+try func half(n: Int) Int => n
+
+export recovers func safeHalf(n: Int) Int => half(n) or recover 0
+
+export func reported(n: Int) Int {
+  return half(n) catch e {
+    report e
+    recover 0
+  }
+}

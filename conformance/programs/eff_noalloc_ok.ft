@@ -1,0 +1,15 @@
+// accept
+// covers: LANG-11-03
+// `noalloc` is a checked claim: integer arithmetic, comparisons and a read of a list element allocate nothing
+// (11.4, Appendix C).
+pure noalloc func clamp(v: Int, lo: Int, hi: Int) Int {
+  if v < lo {
+    return lo
+  }
+  if v > hi {
+    return hi
+  }
+  return v
+}
+
+pure noalloc func firstOrZero(xs: List[Int]) Int => xs.get(0) ?? 0

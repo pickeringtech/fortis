@@ -1,0 +1,29 @@
+// The module under test (D-54 item 9): its tests call the sibling module's functions through the package's
+// import. `fortis test src/calc.ft` and `fortisc test src/calc.ft` used to treat this file as standalone, so
+// these tests could not run; both runners now load the enclosing package and resolve the import.
+import acme.modtest.numbers { double, isEven, Kind }
+
+observation CalcTrace {
+  value: Kind                          required: all
+}
+@observe(CalcTrace)
+export noalloc func counted(x: Kind) Kind {
+  capture value = x
+  return x
+}
+
+export pure func quadruple(x: Int) Int {
+  return double(double(x))
+}
+
+test "a test calls the sibling's functions" {
+  expect quadruple(5) == 20
+  expect isEven(quadruple(5))
+}
+
+test "a table test calls the sibling's functions" cases {
+  "two": { x: 2, want: 8 }
+  "three": { x: 3, want: 12 }
+} as row {
+  expect quadruple(row.x) == row.want
+}

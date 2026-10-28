@@ -1,0 +1,4 @@
+// reject: E-SYN-000 (at the marked line)
+export async func greet(names: Names) String {
+  return "hello ${await names.first()}"  // reject: E-SYN-000 — an interpolation may not await (LANG-03-06)
+}

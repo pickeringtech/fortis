@@ -1,0 +1,17 @@
+// Lists and closures: build twenty million items, map and filter them through the library, sum the result.
+import fortis.host { Host }
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut items: List[Int] = List.default()
+  for i in 0..<20_000_000 {
+    editable items.push(i)
+  }
+  let doubled = items.map(fn(x: Int) Int => Int.wrappingMul(x, 3))
+  let kept = doubled.filter(fn(x: Int) Bool => x % 4 == 0)
+  let mut total = 0
+  for x in kept {
+    total = Int.wrappingAdd(total, x)
+  }
+  caps.console.print("${kept.count()} ${total}")
+}

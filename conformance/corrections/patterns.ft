@@ -1,0 +1,19 @@
+// reject: E-MAT-001 (at the marked line)
+// Pinned for the corrections check: the correction adds the missing arm before the match's closing brace.
+export enum Light {
+  Red
+  Amber
+  Green
+}
+func describe(l: Light) Int {
+  let mut code = 0
+  match l {                                // reject: E-MAT-001
+    Red => {
+      code = 1
+    }
+    Amber => {
+      code = 2
+    }
+  }
+  return code
+}

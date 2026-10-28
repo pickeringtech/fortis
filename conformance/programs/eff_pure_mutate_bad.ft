@@ -1,0 +1,19 @@
+// reject: E-EFF-001 (at the marked lines)
+// covers: LANG-11-02
+// Writes through a mutable capture or a blocking guard are `mutate`/`block`; a pure function cannot import them.
+pure func viaCapture() Int {
+  let mut n = 0
+  let mut bump = fn mut[editable n]() Void {
+    n = 1
+  }
+  editable bump()                          // reject: E-EFF-001 — the closure's write lands on a capture: mutate
+  return 0
+}
+pure func viaAtomic(a: AtomicInt) Int {
+  a.store(1)                               // reject: E-EFF-001 — an atomic write is mutate
+  return 0
+}
+pure try func viaGuard(m: Mutex[Int]) Int {
+  let g = m.lockBlocking() or fail         // reject: E-EFF-001 — a blocking lock wait is block
+  return 0
+}

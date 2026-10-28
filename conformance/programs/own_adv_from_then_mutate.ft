@@ -1,0 +1,13 @@
+// reject: E-OWN-011 (at the marked line)
+// covers: LANG-07-06
+export class User {
+  export name: String
+}
+pure func displayName(user: User) StringView from user {
+  return alias user.name
+}
+func run(user: editable User) Int {
+  let name = displayName(alias user)
+  user.name = "other"                      // reject: E-OWN-011 — name still holds the kept loan
+  return name.scalarCount()
+}

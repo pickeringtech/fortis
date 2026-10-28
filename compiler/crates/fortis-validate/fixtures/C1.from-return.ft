@@ -1,0 +1,13 @@
+// DEL-45 fixture for C1.from-return (single-origin rule): a result lent from `a` lends `a` only.
+export class User {
+  export name: String
+}
+pure func pick(a: User, b: User) StringView from a {
+  return alias a.name
+}
+export func main(args: List[String]) Void {
+  let x = User(name: "x")
+  let y = User(name: "y")
+  let n = pick(alias x, y)
+  discard n.scalarCount()
+}

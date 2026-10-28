@@ -1,0 +1,1 @@
+function work: before ['logged', 'timed'] -> body -> after ['timed', 'logged']; on failure [] (innermost first)

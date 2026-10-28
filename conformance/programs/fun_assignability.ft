@@ -1,0 +1,21 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-08-04
+// A `fn mut` is not a `fn`; a lambda whose inferred summary has an effect `pure` forbids is not a `pure fn`
+// (a lambda literal's type carries its inferred purity, X-107).
+import fortis.host { Console }
+func applyPure(f: pure fn(Int) Int) Int => f(1)
+func applyFn(f: fn(Int) Int) Int => f(1)
+func run(c: Console) Int {
+  let mut n = 0
+  let mut bump = fn mut[editable n](x: Int) Int {
+    n = x
+    return n
+  }
+  let a = applyFn(bump)                            // reject: E-TYP-040 — a fn mut cannot be used as fn
+  let loud = fn[alias c](x: Int) Int {
+    c.print("called")
+    return x
+  }
+  let b = applyPure(loud)                          // reject: E-TYP-040 — the position requires pure; loud performs io
+  return Int.saturatingAdd(a, b)
+}

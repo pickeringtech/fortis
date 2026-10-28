@@ -1,0 +1,6 @@
+// reject: E-MIX-001 (at the marked line)
+// A class that declares a method an interface would derive cannot also derive that interface (6.10).
+export class Tag derive Equatable {        // reject: E-MIX-001
+  export name: String
+  export pure func equals(self, other: Tag) Bool => true
+}

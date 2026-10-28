@@ -1,0 +1,5 @@
+// reject: E-SYN-004 (at the marked line)
+// covers: LANG-05-06
+export pure func pick(a: Bool, b: Bool, c: Int?) Int {
+  return a || b ?? c                       // reject: E-SYN-004 — parses, and mixes || with ?? (LR 5.6)
+}

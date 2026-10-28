@@ -1,0 +1,51 @@
+// execute: begin|step|abandon tx|fail:demo.odd
+// requires: runtime
+// covers: LANG-06-09
+// Unwind order (12.4): at `or fail` the Abandonable local is abandoned before the function leaves.
+import fortis.host { Host, Console, Capabilities }
+
+export error Odd {
+  code: "demo.odd"
+}
+
+export class Tx implements Abandonable {
+  witness: Must
+  export console: Shared[Console]
+  export func begin(console: Shared[Console]) Tx {
+    console.print("begin")
+    return Tx(witness: Must.create(), console: console.retain())
+  }
+  export func commit(owned self) Void {
+    self.console.print("commit")
+    let Tx(witness: w, console: c) = move self
+    Must.discharge(move w)
+  }
+  func abandon(owned self) Void {
+    self.console.print("abandon tx")
+    let Tx(witness: w, console: c) = move self
+    Must.discharge(move w)
+  }
+}
+
+try func step(console: Shared[Console], n: Int) Int {
+  console.print("step")
+  if n > 0 {
+    fail Odd()
+  }
+  return n
+}
+
+try func work(console: Shared[Console]) Int {
+  let tx = Tx.begin(alias console)
+  let v = step(console, 1) or fail
+  move tx.commit()
+  return v
+}
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  let v = work(console) or fail
+  console.print("${v}")
+}

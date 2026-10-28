@@ -1,0 +1,15 @@
+// reject: E-OWN-002 (at the marked line)
+// covers: PLAT-03-01
+// No parallel borrow rules: an owned slot filled from a held instance is a `copy` in the elaborated code, and the
+// core rejects the copy of a value that is not Copyable (here, one holding a Shared handle), at the binding the
+// code was generated for.
+export class Connection {
+  handle: Shared[Int]
+}
+export class Repo {
+  inject connection: Connection
+}
+context Production {
+  provide Connection using instance Connection(handle: Shared.create(1)) { lifetime: application }
+  provide Repo                                                         // reject: E-OWN-002 — copy of a held Connection
+}

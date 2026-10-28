@@ -1,0 +1,22 @@
+// accept
+// covers: LANG-07-04
+// After a move the place is uninitialised; a let mut place may be re-initialised; a join is initialised only when every path is (7.4).
+export class Box {
+  export label: String
+}
+
+func consume(box: owned Box) Void {
+}
+
+func flow(flag: Bool) Void {
+  let mut box = Box(label: "a")
+  consume(move box)
+  box = Box(label: "b")
+  consume(move box)
+  let other = Box(label: "c")
+  if flag {
+    consume(move other)
+  } else {
+    consume(move other)
+  }
+}

@@ -1,0 +1,5 @@
+// Kit signature fixture (DEL-06).
+export mixin JsonSerialised {
+  requires pure func encode(self, into: editable Encoder) Void
+  export pure func toJson(self) String => String.from("")
+}

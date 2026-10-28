@@ -1,0 +1,13 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-71, second form (Codex's design review, finding 5): the body's `editable xs.pop()` is recorded as the path
+// `xs.pop`, so R1's exact-name test does not see `xs` and keeps the length fact. With `xs = [1, 2]` the second
+// iteration's `xs[1]` is outside the one-element list, and the run-time index check fires.
+export func walk(xs: editable List[Int]) Int {
+  let mut total = 0
+  for i in 0..<xs.count() {
+    total = Int.wrappingAdd(total, xs[i])   // reject: E-REF-002 — the body shortens `xs`
+    let gone = editable xs.pop()
+  }
+  return total
+}

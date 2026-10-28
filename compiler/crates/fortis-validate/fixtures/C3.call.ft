@@ -1,0 +1,6 @@
+// DEL-45 fixture for C3.call: a noalloc function calling a function whose summary lacks alloc.
+func helper(n: Int) Int => Int.wrappingAdd(n, 1)
+noalloc func outer(n: Int) Int => helper(n)
+export func main(args: List[String]) Void {
+  discard outer(1)
+}

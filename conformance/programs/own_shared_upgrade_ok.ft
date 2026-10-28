@@ -1,0 +1,17 @@
+// accept
+// covers: LANG-07-08
+export class Config {
+  export limit: Int
+}
+func run() Int {
+  let shared = Shared.create(Config(limit: 7))
+  let other = shared.retain()
+  let weak = shared.downgrade()
+  let w2 = weak.retain()
+  let strong = weak.upgrade() ?? other.retain()
+  let n = match w2.upgrade() {
+    present(s) => s.limit
+    null => 0
+  }
+  return Int.saturatingAdd(strong.limit, n)
+}

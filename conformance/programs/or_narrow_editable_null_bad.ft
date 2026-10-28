@@ -1,0 +1,17 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// `p == null` narrows the other branch. The null branch still has an optional receiver (LR 6.8).
+export class Cell {
+  export n: Int
+  export func change(editable self) Void {
+    self.n = 1
+  }
+}
+
+export func onNull(p: editable Cell?) Bool {
+  if p == null {
+    editable p.change()                       // reject: E-TYP-040 — `== null` did not narrow `p`
+    return true
+  }
+  return false
+}

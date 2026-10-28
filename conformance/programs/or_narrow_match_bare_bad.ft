@@ -1,0 +1,14 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-08
+// An arm with no guard has no fact from a null test (LR 6.8, 9.8).
+export class Cell {
+  export n: Int
+  export pure func read(self) Bool => self.n == 0
+}
+
+export pure func bare(n: Int, p: Cell?) Bool {
+  return match n {
+    1 => p.read()                             // reject: E-TYP-040 — no guard narrowed `p`
+    otherwise => false
+  }
+}

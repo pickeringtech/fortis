@@ -1,0 +1,1 @@
+{"verdict": "reject", "code": "E-NAM-001", "covers": ["LANG-04-05"], "at": ["bad.field.member/src/user.ft:8"]}

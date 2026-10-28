@@ -1,0 +1,55 @@
+// A user-written bottom-up merge sort of four million pseudo-random integers.
+import fortis.host { Host }
+
+func sorted(items: List[Int]) List[Int] {
+  let n = items.count()
+  let mut current = copy items
+  let mut width = 1
+  while width < n {
+    let mut next: List[Int] = List.default()
+    let mut lo = 0
+    while lo < n {
+      let mid = Int.saturatingAdd(lo, width)
+      let hi = Int.saturatingAdd(lo, Int.saturatingMul(width, 2))
+      let mid2 = if mid < n {
+        give mid
+      } else {
+        give n
+      }
+      let hi2 = if hi < n {
+        give hi
+      } else {
+        give n
+      }
+      let mut i = lo
+      let mut j = mid2
+      while i < mid2 || j < hi2 {
+        let a = current.get(i) ?? 0
+        let b = current.get(j) ?? 0
+        if j >= hi2 || i < mid2 && a <= b {
+          editable next.push(a)
+          i = Int.saturatingAdd(i, 1)
+        } else {
+          editable next.push(b)
+          j = Int.saturatingAdd(j, 1)
+        }
+      }
+      lo = hi2
+    }
+    current = move next
+    width = Int.saturatingMul(width, 2)
+  }
+  return move current
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut items: List[Int] = List.default()
+  let mut seed = 12345
+  for i in 0..<4_000_000 {
+    seed = Int.wrappingAdd(Int.wrappingMul(seed, 1103515245), 12345) % 2147483648
+    editable items.push(seed % 1000000)
+  }
+  let s = sorted(items)
+  caps.console.print("${s.count()} ${s.get(0) ?? 0} ${s.get(2000000) ?? 0} ${s.get(3999999) ?? 0}")
+}

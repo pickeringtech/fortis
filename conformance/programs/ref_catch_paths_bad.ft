@@ -1,0 +1,17 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-06-02
+// D-76, `catch` form: a `catch` block runs only when the call fails, but its assignment to `d` is kept as if it always
+// ran. When `parse` succeeds, `d` is still 0.
+try func parse(text: StringView) Int {
+  return 7
+}
+
+export func bad(text: StringView) Int {
+  let mut d: Int<0..1> = 0
+  let n = parse(text) catch e {
+    report e
+    d = 1
+    recover 0
+  }
+  return 1 / d                               // reject: E-REF-002 — `d` is 0 when `parse` succeeds
+}

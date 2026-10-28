@@ -1,0 +1,22 @@
+// accept
+// covers: LANG-07-05
+export class Counter {
+  export count: Int
+  export func bump(editable self) Void {
+    self.count = Int.wrappingAdd(self.count, 1)
+  }
+}
+func run() Int {
+  let mut c = Counter(count: 0)
+  {
+    let seen = alias c
+    discard seen.count
+  }
+  editable c.bump()
+  {
+    let held = editable c
+    held.count = 5
+  }
+  c.count = 6
+  return c.count
+}

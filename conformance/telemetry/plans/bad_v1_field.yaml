@@ -1,0 +1,9 @@
+# E-TEL-002: a pinned version that lacks the field (version 1 has no provider)
+telemetry:
+  projections:
+    p:
+      source: OrderProcessing.v1
+      dimensions: [provider]   # expect: E-TEL-002
+      metrics:
+        - name: p.count
+          instrument: counter

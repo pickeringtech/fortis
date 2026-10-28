@@ -1,0 +1,47 @@
+// Repro (FRICTION entry 29): a value moved in a branch that ends in `return`, and consumed again on the path
+// that skips the branch, is accepted by both checkers and runs on the interpreter, but the development VM
+// refuses the whole program:
+//   compiler/target/release/fortisc test pilot/repro/move-in-returning-branch.ft
+//   -> "pilot/repro/move-in-returning-branch.ft: the typed IR is invalid (C1.move main::function keep:19
+//       `other` is used after it was moved): a compiler defect"
+// `bin/fortis test` passes, and `fortisc check` reports nothing. Writing the second consumption in an `else`
+// branch (`keepElse`) is accepted by the VM. (A side finding: `keep(Odd())` is rejected with E-TYP-040 "Odd is
+// not Failure", although the docs say an error constructor produces a `Failure`; hence `odd()` below.)
+export error Odd {
+  code: "repro.odd"
+}
+
+pure try recovers func keep(f: owned Failure) Int {
+  return match move f {
+    otherwise(other) => {
+      if other.code == "repro.odd" {
+        let lost: Outcome[Int] = Outcome.failure(move other)
+        return move lost or recover 1
+      }
+      fail other
+    }
+  }
+}
+
+pure try recovers func keepElse(f: owned Failure) Int {
+  if f.code == "repro.odd" {
+    let lost: Outcome[Int] = Outcome.failure(move f)
+    return move lost or recover 1
+  } else {
+    fail f
+  }
+}
+
+pure try func odd() Int {
+  fail Odd()
+}
+
+test "kept" {
+  let a = odd() catch e {
+    recover keep(move e) or fail
+  }
+  let b = odd() catch e {
+    recover keepElse(move e) or fail
+  }
+  expect a == b
+}
