@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cleanup, async and concurrency (LR 12) · Fortis</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body class="mode-agent" data-root="../..">
+<header class="top">
+  <a class="brand" href="../../index.html">Fortis</a>
+  <span class="badge">Agent mode</span>
+  <input id="search" type="search" placeholder="Search both modes" autocomplete="off" aria-label="Search">
+</header>
+<div id="results" hidden></div>
+<div class="layout">
+<nav class="side"><details><summary>Guide (human mode)</summary><ul><li><a href="../guide/README.html">The Fortis guide</a></li><li><a href="../guide/tour.html">A tour of Fortis</a></li><li><a href="../guide/03-lexical.html">Lexical structure</a></li><li><a href="../guide/04-modules.html">Modules and packages</a></li><li><a href="../guide/05-statements.html">Statements and expressions</a></li><li><a href="../guide/06-types.html">Types</a></li><li><a href="../guide/06-proofs.html">Proving arithmetic and indexing</a></li><li><a href="../guide/07-ownership.html">Ownership</a></li><li><a href="../guide/08-functions.html">Functions and closures</a></li><li><a href="../guide/09-classes.html">Classes, interfaces, mixins and enums</a></li><li><a href="../guide/10-outcomes.html">Outcomes and failures</a></li><li><a href="../guide/11-effects.html">Effects and contracts</a></li><li><a href="../guide/12-async.html">Cleanup, async and concurrency</a></li><li><a href="../guide/13-observation.html">Observation</a></li><li><a href="../guide/14-tests.html">Tests</a></li><li><a href="../guide/15-runtime.html">The core runtime</a></li><li><a href="../guide/16-kits.html">Kits and declaration heads</a></li><li><a href="../guide/embedded-languages.html">Embedded languages</a></li><li><a href="../guide/appendix-a-keywords.html">Appendix A: Keywords</a></li><li><a href="../guide/appendix-b-decisions.html">Appendix B: Closed decisions</a></li><li><a href="../guide/appendix-c-lowering.html">Appendix C: Lowering to Rust</a></li><li><a href="../guide/appendix-d-rules.html">Appendix D: Rule index</a></li><li><a href="../guide/worked-examples.html">Worked examples</a></li><li><a href="../guide/from-rust.html">Notes for readers coming from Rust</a></li><li><a href="../guide/from-typescript.html">Notes for readers coming from TypeScript</a></li><li><a href="../guide/from-python.html">Notes for readers coming from Python</a></li><li><a href="../guide/glossary.html">Glossary</a></li><li><a href="../guide/known-limitations.html">Known limitations of v0.0.2</a></li></ul></details><details open><summary>Agent mode</summary><ul><li><a href="README.html">Fortis for agents</a></li><li><a href="known-limitations.html">Known limitations of v0.0.2</a></li><li><a href="records.html">Records</a></li><li><a href="codes.html">Diagnostic codes</a></li><li><a href="01-overview.html">Overview: design invariants and notation (LR 1, LR 2)</a></li><li><a href="03-lexical.html">Lexical structure (LR 3)</a></li><li><a href="04-modules.html">Modules and packages (LR 4)</a></li><li><a href="05-statements.html">Statements and expressions (LR 5)</a></li><li><a href="06-types.html">Types (LR 6)</a></li><li><a href="06-proofs.html">Proofs for arithmetic and indexing (LR 6.3, 6.4, 6.7)</a></li><li><a href="07-ownership.html">Ownership (LR 7)</a></li><li><a href="08-functions.html">Functions and closures (LR 8)</a></li><li><a href="09-classes.html">Classes, interfaces, mixins and enums (LR 9)</a></li><li><a href="10-outcomes.html">Outcomes and failures (LR 10)</a></li><li><a href="11-effects.html">Effects and contracts (LR 11)</a></li><li class=current><a href="12-async.html">Cleanup, async and concurrency (LR 12)</a></li><li><a href="13-observation.html">Observation schemas and statements (LR 13)</a></li><li><a href="14-tests.html">Test declarations (LR 14)</a></li><li><a href="15-runtime.html">Core runtime inventory (LR 15)</a></li><li><a href="16-kits.html">Reserved declaration heads for kits (LR 16)</a></li><li><a href="embedded-languages.html">Embedded languages (LR 16)</a></li><li><a href="appendix-a-keywords.html">Keyword inventory (LR A)</a></li><li><a href="appendix-b-decisions.html">Closed decisions (LR B)</a></li><li><a href="appendix-c-lowering.html">Lowering reference and the Rust-expressible subset (LR C)</a></li><li><a href="appendix-d-rules.html">Rule index (LR D)</a></li><li><a href="glossary.html">Glossary (agent mode)</a></li><li><a href="library.html">The core library</a></li><li><a href="../../skills/fortis-code/SKILL.html">fortis-code</a></li></ul></details><details><summary>Specification</summary><ul><li><a href="../Fortis_Specification.html">Fortis — Specification Overview</a></li><li><a href="../Fortis_Language_Reference.html">Fortis Language Reference</a></li><li><a href="../Fortis_Platform_Specification.html">Fortis Platform Specification</a></li></ul></details></nav>
+<main>
+<p class="mode-switch"><a class="counterpart" href="../guide/12-async.html">Human mode: Cleanup, async and concurrency</a></p>
+<h1 id="cleanup-async-and-concurrency-lr-12">Cleanup, async and concurrency (LR 12)<a class="anchor" href="#cleanup-async-and-concurrency-lr-12" aria-label="link">#</a></h1>
+<p><em>Agent mode. Human mode: <a href="../guide/12-async.html">Cleanup, async and concurrency</a>. Source of truth: <a class="cite" href="../Fortis_Language_Reference.html#12-cleanup-async-and-concurrency">LR 12</a>.</em></p>
+<blockquote><p>Preview: async, cancellation, scopes and sharing (<a class="cite" href="../Fortis_Language_Reference.html#123-async-functions-and-futures">LR 12.3</a>, <a class="cite" href="../Fortis_Language_Reference.html#124-cancellation">12.4</a>, <a class="cite" href="../Fortis_Language_Reference.html#125-structured-scopes-and-launch">12.5</a>, <a class="cite" href="../Fortis_Language_Reference.html#126-task-completion">12.6</a> and <a class="cite" href="../Fortis_Language_Reference.html#127-sharing-data-between-tasks">12.7</a>) arrive in v0.3. <code>defer</code> and destruction order (<a class="cite" href="../Fortis_Language_Reference.html#121-defer">LR 12.1</a>, <a class="cite" href="../Fortis_Language_Reference.html#122-destruction-order">12.2</a>) are in v0.0.1.</p></blockquote>
+<h2 id="rules">Rules<a class="anchor" href="#rules" aria-label="link">#</a></h2>
+<div class="table"><table><thead><tr><th>Rule</th><th>Statement</th><th>LR</th></tr></thead><tbody><tr id="LANG-12-01"><td><a class="rule" href="../Fortis_Language_Reference.html#LANG-12-01">LANG-12-01</a></td><td>A <code>defer</code> body is checked as if written at every exit of its block (after the block's own loans end, before its locals drop); it cannot alter the outcome; the places it names are initialised at every exit.</td><td><a class="cite" href="../Fortis_Language_Reference.html#121-defer">LR 12.1</a></td></tr><tr id="LANG-12-02"><td><a class="rule" href="../Fortis_Language_Reference.html#LANG-12-02">LANG-12-02</a></td><td>Failures produced inside a <code>defer</code> are consumed there (<code>or recover</code>, <code>catch … recover</code>, <code>report</code>) and never replace the primary outcome; cleanup reports are labelled as such.</td><td><a class="cite" href="../Fortis_Language_Reference.html#121-defer">LR 12.1</a></td></tr><tr id="LANG-12-03"><td><a class="rule" href="../Fortis_Language_Reference.html#LANG-12-03">LANG-12-03</a></td><td><code>Future</code> and <code>Task</code> are linear; a pending future is never destroyed; cancellation is observed only at cancellation points.</td><td><a class="cite" href="../Fortis_Language_Reference.html#123-async-functions-and-futures">LR 12.3</a>, <a class="cite" href="../Fortis_Language_Reference.html#124-cancellation">12.4</a></td></tr><tr id="LANG-12-04"><td><a class="rule" href="../Fortis_Language_Reference.html#LANG-12-04">LANG-12-04</a></td><td>A scope joins or cancels every task it launched before its block exits.</td><td><a class="cite" href="../Fortis_Language_Reference.html#125-structured-scopes-and-launch">LR 12.5</a></td></tr><tr id="LANG-12-05"><td><a class="rule" href="../Fortis_Language_Reference.html#LANG-12-05">LANG-12-05</a></td><td>Only <code>Shareable</code> environments without loans cross <code>launchParallel</code>/<code>launchBlocking</code>; loans cross only cooperative <code>launch</code> within the owner's block.</td><td><a class="cite" href="../Fortis_Language_Reference.html#125-structured-scopes-and-launch">LR 12.5</a>, <a class="cite" href="../Fortis_Language_Reference.html#127-sharing-data-between-tasks">12.7</a></td></tr><tr id="LANG-12-06"><td><a class="rule" href="../Fortis_Language_Reference.html#LANG-12-06">LANG-12-06</a></td><td>A <code>MutexGuard</code> is never live across <code>await</code>.</td><td><a class="cite" href="../Fortis_Language_Reference.html#123-async-functions-and-futures">LR 12.3</a>, <a class="cite" href="../Fortis_Language_Reference.html#127-sharing-data-between-tasks">12.7</a></td></tr></tbody></table></div>
+<h2 id="exit-and-destruction-order-lr-122-lr-51-lr-79">Exit and destruction order (LR 12.2, LR 5.1, LR 7.9)<a class="anchor" href="#exit-and-destruction-order-lr-122-lr-51-lr-79" aria-label="link">#</a></h2>
+<p>At every block exit, including cancellation and <code>or fail</code>:</p>
+<ol><li>the block's loans end; tasks launched on a <code>scope</code> declared in the block are cancelled and joined (their carried loans end) (<a class="cite" href="../Fortis_Language_Reference.html#124-cancellation">LR 12.4</a>, <a class="cite" href="../Fortis_Language_Reference.html#125-structured-scopes-and-launch">LR 12.5</a>);</li><li>deferred blocks run, last registered first (<a class="cite" href="../Fortis_Language_Reference.html#121-defer">LR 12.1</a>);</li><li>during an unwind (cancellation or <code>fail</code>), <code>abandon</code> runs on every live <code>Abandonable</code> local, reverse initialisation order (<a class="cite" href="../Fortis_Language_Reference.html#124-cancellation">LR 12.4</a>);</li><li>owned locals drop, reverse initialisation order; a class value runs its <code>cleanup</code>, then drops its fields in declaration order (<a class="cite" href="../Fortis_Language_Reference.html#79-destruction">LR 7.9</a>).</li></ol>
+<h2 id="defer-constraints-lr-121"><code>defer</code> constraints (LR 12.1)<a class="anchor" href="#defer-constraints-lr-121" aria-label="link">#</a></h2>
+<ul><li>Block form only; no <code>return</code>, <code>fail</code>, <code>give</code>, <code>break</code>, <code>continue</code>, <code>await</code> inside (<a class="code" href="codes.html#E-DEF-001"><code>E-DEF-001</code></a>); <code>defer await</code> is not in v1.</li><li>Places it names must be initialised at every exit: no <code>move</code> of them between the <code>defer</code> and an exit (<a class="code" href="codes.html#E-DEF-002"><code>E-DEF-002</code></a>).</li><li>It may not use a binding of its own block that holds a loan (<a class="code" href="codes.html#E-OWN-052"><code>E-OWN-052</code></a>); loans of enclosing blocks still apply.</li><li>Its effects join the function's summary; a silent recovery inside it adds <code>recovers</code>.</li></ul>
+<h2 id="async-model-lr-123-lr-124">Async model (LR 12.3, LR 12.4)<a class="anchor" href="#async-model-lr-123-lr-124" aria-label="link">#</a></h2>
+<ul><li><code>async func f(…) T</code> call: evaluates arguments, returns <code>Future[T]</code> (<code>Future[Outcome[T]]</code> with <code>try</code>); the body starts at the first <code>await</code> or at <code>launch</code>.</li><li><code>await e</code>: only directly in an <code>async</code> body (not in a non-async lambda, not in <code>defer</code>).</li><li><code>Future[T]</code> is linear: <code>await</code>, launch, or <code>discard</code>. <code>discard</code> only for a never-polled future whose environment holds no linear value and no exclusive loan; it emits a <code>not_started</code> record.</li><li>A future holds its arguments' loans (<a class="cite" href="../Fortis_Language_Reference.html#73-loans">LR 7.3</a>).</li><li>Cancellation points: <code>await</code> (cooperative); <code>await</code> and <code>checkpoint()</code> (parallel and blocking pools). Cancellation is not a failure: not catchable, recoverable or matchable.</li><li>No linear value live across a cancellation point unless it implements <code>Abandonable</code> (<code>func abandon(owned self)</code>: synchronous, non-failing, non-suspending). An <code>Abandonable</code> local may also be live at <code>or fail</code> (the unwind abandons it); a normal exit must still consume it. <code>Task</code> implements it.</li><li>The futures and tasks being awaited are not "live across" their own <code>await</code>.</li></ul>
+<h2 id="launch-forms-lr-125">Launch forms (LR 12.5)<a class="anchor" href="#launch-forms-lr-125" aria-label="link">#</a></h2>
+<div class="table"><table><thead><tr><th>Form</th><th>Executor</th><th>Environment</th></tr></thead><tbody><tr><td><code>s.launch(f)</code> → <code>Task[T]</code></td><td>same cooperative executor and thread</td><td>may borrow any binding declared in or before the scope</td></tr><tr><td><code>s.launchParallel(f)</code> → <code>Task[T]</code></td><td>CPU worker pool</td><td><code>Shareable</code>, no loans; cancellation at <code>await</code> and <code>checkpoint()</code></td></tr><tr><td><code>s.launchBlocking(work)</code> → <code>Task[T]</code></td><td>bounded blocking pool</td><td><code>work: fn once() T</code>, <code>Shareable</code> environment; the only place <code>block</code> is allowed in async code; cancellation at <code>checkpoint()</code></td></tr><tr><td><code>s.detach(move task, supervisor)</code></td><td>—</td><td>moves the join obligation to a <code>Supervisor</code>; removes the task from the scope</td></tr><tr><td><code>join(a, b)</code> → <code>(A, B)</code></td><td>polled inside the parent</td><td>consumes both futures; loans allowed; never returns early; failures stay in the tuple</td></tr></tbody></table></div>
+<p>A <code>Task</code> is awaited inside its scope or detached. A scope exiting by <code>fail</code>, <code>return</code>, <code>break</code> or cancellation cancels and joins its running tasks before its deferred blocks run; results never awaited are consumed by the scope (a failure inside one is reported, labelled as abandoned by the scope) (<a class="cite" href="../Fortis_Language_Reference.html#125-structured-scopes-and-launch">LR 12.5</a>).</p>
+<p><code>TaskCompletion[T]</code> = <code>Completed(value: T)</code> | <code>Cancelled(reason: Cancellation)</code> | <code>Defect(info: TaskDefect)</code>; observed only by the supervisor of a detached task; linear when <code>T</code> is; consumed with <code>match</code> (<a class="cite" href="../Fortis_Language_Reference.html#126-task-completion">LR 12.6</a>).</p>
+<h2 id="shareable-lr-127">Shareable (LR 12.7)<a class="anchor" href="#shareable-lr-127" aria-label="link">#</a></h2>
+<ul><li>Shareable: trivial types; <code>String</code>, <code>Bytes</code>, <code>BigInt</code>; <code>List</code>, <code>Array</code>, <code>Map</code>, <code>OrderedMap</code>, <code>Set</code>, <code>FixedList</code>, <code>FixedMap</code> of shareables; classes, enums, tuples and records whose fields are all shareable; <code>Shared[T]</code>, <code>Weak[T]</code>, <code>Mutex[T]</code> with <code>T: Shareable</code>; <code>AtomicInt</code>, <code>AtomicBool</code>; <code>fn</code> / <code>fn once</code> closures capturing only <code>copy</code>/<code>move</code> of shareables; capability values.</li><li>Not shareable: loans and views, <code>MutexGuard</code>, <code>fn mut</code> closures, <code>Future</code>, <code>Task</code>, thread-bound resources.</li></ul>
+<p><code>List.of("a", "b")</code> is a <code>List[StringView]</code> (views of static text), which is not <code>Shareable</code>; annotate <code>let words: List[String] = …</code> to make owned strings (<a class="cite" href="../Fortis_Language_Reference.html#35-literals">LR 3.5</a>, <a class="cite" href="../Fortis_Language_Reference.html#127-sharing-data-between-tasks">LR 12.7</a>).</p>
+<p>Mutation between tasks: <code>Mutex[T]</code>. Async: <code>await m.lock()</code>; sync: <code>m.lockBlocking()</code> (<code>block</code>). Both return <code>Outcome[MutexGuard[T]] from mutex</code>; the guard is an exclusive loan of <code>T</code>, not <code>Shareable</code>, unlocks when destroyed, and cannot cross <code>await</code>. Atomics: <code>AtomicInt</code>, <code>AtomicBool</code> (<a class="cite" href="../Fortis_Language_Reference.html#127-sharing-data-between-tasks">LR 12.7</a>).</p>
+<h2 id="diagnostics">Diagnostics<a class="anchor" href="#diagnostics" aria-label="link">#</a></h2>
+<div class="table"><table><thead><tr><th>Code</th><th>Trigger</th><th>Correction</th><th>LR</th></tr></thead><tbody><tr id="E-DEF-001"><td><a class="code" href="codes.html#E-DEF-001">E-DEF-001</a></td><td><code>return</code>, <code>fail</code>, <code>give</code>, <code>break</code>, <code>continue</code>, <code>await</code> (including <code>or fail</code>) inside <code>defer</code></td><td>consume failures with <code>catch … recover</code>, <code>or recover</code> or <code>report</code>; move control flow out of the <code>defer</code></td><td><a class="cite" href="../Fortis_Language_Reference.html#121-defer">LR 12.1</a></td></tr><tr id="E-DEF-002"><td><a class="code" href="codes.html#E-DEF-002">E-DEF-002</a></td><td>a place the <code>defer</code> names is moved out before an exit</td><td>keep it owned until every exit (lend it instead of moving it), or do the deferred work before the move and drop the <code>defer</code>; registering the <code>defer</code> later does not help, since the place is still moved at the exit</td><td><a class="cite" href="../Fortis_Language_Reference.html#121-defer">LR 12.1</a></td></tr><tr id="E-OWN-052"><td><a class="code" href="codes.html#E-OWN-052">E-OWN-052</a></td><td>a <code>defer</code> uses a loan-holding binding of its own block</td><td>use the owner (or a parameter), or copy the value into a non-loan binding</td><td><a class="cite" href="../Fortis_Language_Reference.html#121-defer">LR 12.1</a></td></tr><tr id="E-OBL-001"><td><a class="code" href="codes.html#E-OBL-001">E-OBL-001</a></td><td>a future, task or outcome dropped at block exit; an outcome unconsumed inside <code>defer</code></td><td><code>await</code> it, launch it, or consume it</td><td><a class="cite" href="../Fortis_Language_Reference.html#612-linear-types">LR 6.12</a>, <a class="cite" href="../Fortis_Language_Reference.html#121-defer">12.1</a>, <a class="cite" href="../Fortis_Language_Reference.html#123-async-functions-and-futures">12.3</a></td></tr><tr id="E-OBL-005"><td><a class="code" href="codes.html#E-OBL-005">E-OBL-005</a></td><td>a linear value live across <code>await</code> whose type is not <code>Abandonable</code></td><td>consume it before the <code>await</code> (<code>let v = e or fail</code>), or pass it into the awaited call</td><td><a class="cite" href="../Fortis_Language_Reference.html#124-cancellation">LR 12.4</a></td></tr><tr id="E-ASY-001"><td><a class="code" href="codes.html#E-ASY-001">E-ASY-001</a></td><td>a <code>Task</code> leaves its scope block (<code>return</code>, <code>give</code>, assignment to an outer binding)</td><td><code>await</code> it inside the scope, or <code>detach</code> it to a <code>Supervisor</code></td><td><a class="cite" href="../Fortis_Language_Reference.html#123-async-functions-and-futures">LR 12.3</a></td></tr><tr id="E-ASY-002"><td><a class="code" href="codes.html#E-ASY-002">E-ASY-002</a></td><td>a <code>MutexGuard</code> live across <code>await</code></td><td>end the guard's block before the <code>await</code></td><td><a class="cite" href="../Fortis_Language_Reference.html#123-async-functions-and-futures">LR 12.3</a></td></tr><tr id="E-ASY-003"><td><a class="code" href="codes.html#E-ASY-003">E-ASY-003</a></td><td>a pool launch whose future arguments or closure captures include a loan or a non-<code>Shareable</code> value</td><td>pass owned shareable data (<code>copy</code>/<code>move</code>); use cooperative <code>launch</code> for borrowed data</td><td><a class="cite" href="../Fortis_Language_Reference.html#127-sharing-data-between-tasks">LR 12.7</a></td></tr><tr id="E-EFF-020"><td><a class="code" href="codes.html#E-EFF-020">E-EFF-020</a></td><td><code>block</code> inside an <code>async</code> function or anything it calls</td><td><code>await m.lock()</code>, or <code>launchBlocking</code></td><td><a class="cite" href="../Fortis_Language_Reference.html#111-the-effect-set">LR 11.1</a></td></tr></tbody></table></div>
+<h2 id="correction-patterns">Correction patterns<a class="anchor" href="#correction-patterns" aria-label="link">#</a></h2>
+<h3 id="e-def-001-or-fail-inside-defer-lr-121">E-DEF-001: <code>or fail</code> inside <code>defer</code> (LR 12.1)<a class="anchor" href="#e-def-001-or-fail-inside-defer-lr-121" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-DEF-001</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">FlushFailed</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.flush"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">flush</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">fail</span> <span class="t-type">FlushFailed</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">defer</span> <span class="t-punctuation">{</span>
+    <span class="t-name">flush</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>                   <span class="t-comment">// reject: E-DEF-001</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"work"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">1</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">FlushFailed</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.flush"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">flush</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">fail</span> <span class="t-type">FlushFailed</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">defer</span> <span class="t-punctuation">{</span>
+    <span class="t-name">flush</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-keyword">catch</span> <span class="t-name">e</span> <span class="t-punctuation">{</span>
+      <span class="t-keyword">report</span> <span class="t-name">e</span>
+      <span class="t-keyword">recover</span> <span class="t-type">Void</span>
+    <span class="t-punctuation">}</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"work"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">1</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="e-def-002-a-deferred-place-moved-away-lr-121">E-DEF-002: a deferred place moved away (LR 12.1)<a class="anchor" href="#e-def-002-a-deferred-place-moved-away-lr-121" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-DEF-002</span>
+<span class="t-keyword">export</span> <span class="t-keyword">class</span> <span class="t-type">Handle</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">export</span> <span class="t-name">open</span><span class="t-punctuation">:</span> <span class="t-type">Bool</span>
+  <span class="t-keyword">export</span> <span class="t-keyword">func</span> <span class="t-name">close</span><span class="t-punctuation">(</span><span class="t-keyword">editable</span> <span class="t-keyword">self</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">self</span><span class="t-punctuation">.</span><span class="t-name">open</span> <span class="t-punctuation">=</span> <span class="t-keyword">false</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">keep</span><span class="t-punctuation">(</span><span class="t-name">h</span><span class="t-punctuation">:</span> <span class="t-keyword">owned</span> <span class="t-type">Handle</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">input</span> <span class="t-punctuation">=</span> <span class="t-type">Handle</span><span class="t-punctuation">(</span><span class="t-name">open</span><span class="t-punctuation">:</span> <span class="t-keyword">true</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">defer</span> <span class="t-punctuation">{</span> <span class="t-name">input</span><span class="t-punctuation">.</span><span class="t-name">close</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">}</span>
+  <span class="t-name">keep</span><span class="t-punctuation">(</span><span class="t-keyword">move</span> <span class="t-name">input</span><span class="t-punctuation">)</span>                    <span class="t-comment">// reject: E-DEF-002</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"run"</span> <span class="t-punctuation">{</span>
+  <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">expect</span> <span class="t-keyword">true</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">export</span> <span class="t-keyword">class</span> <span class="t-type">Handle</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">export</span> <span class="t-name">open</span><span class="t-punctuation">:</span> <span class="t-type">Bool</span>
+  <span class="t-keyword">export</span> <span class="t-keyword">func</span> <span class="t-name">close</span><span class="t-punctuation">(</span><span class="t-keyword">editable</span> <span class="t-keyword">self</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">self</span><span class="t-punctuation">.</span><span class="t-name">open</span> <span class="t-punctuation">=</span> <span class="t-keyword">false</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">keep</span><span class="t-punctuation">(</span><span class="t-name">h</span><span class="t-punctuation">:</span> <span class="t-keyword">owned</span> <span class="t-type">Handle</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">input</span> <span class="t-punctuation">=</span> <span class="t-type">Handle</span><span class="t-punctuation">(</span><span class="t-name">open</span><span class="t-punctuation">:</span> <span class="t-keyword">true</span><span class="t-punctuation">)</span>
+  <span class="t-name">input</span><span class="t-punctuation">.</span><span class="t-name">close</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-name">keep</span><span class="t-punctuation">(</span><span class="t-keyword">move</span> <span class="t-name">input</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"run"</span> <span class="t-punctuation">{</span>
+  <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">expect</span> <span class="t-keyword">true</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="e-own-052-a-loan-binding-used-in-defer-lr-121">E-OWN-052: a loan binding used in <code>defer</code> (LR 12.1)<a class="anchor" href="#e-own-052-a-loan-binding-used-in-defer-lr-121" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OWN-052</span>
+<span class="t-keyword">export</span> <span class="t-keyword">class</span> <span class="t-type">Buffer</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">export</span> <span class="t-name">used</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>
+  <span class="t-keyword">export</span> <span class="t-keyword">func</span> <span class="t-name">peek</span><span class="t-punctuation">(</span><span class="t-keyword">self</span><span class="t-punctuation">)</span> <span class="t-keyword">alias</span> <span class="t-type">Buffer</span> <span class="t-keyword">from</span> <span class="t-keyword">self</span> <span class="t-punctuation">=&gt;</span> <span class="t-keyword">alias</span> <span class="t-keyword">self</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">items</span><span class="t-punctuation">:</span> <span class="t-type">Buffer</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">seen</span> <span class="t-punctuation">=</span> <span class="t-name">items</span><span class="t-punctuation">.</span><span class="t-name">peek</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">defer</span> <span class="t-punctuation">{</span> <span class="t-keyword">discard</span> <span class="t-name">seen</span><span class="t-punctuation">.</span><span class="t-name">used</span> <span class="t-punctuation">}</span>         <span class="t-comment">// reject: E-OWN-052</span>
+  <span class="t-keyword">return</span> <span class="t-name">seen</span><span class="t-punctuation">.</span><span class="t-name">used</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"run"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-type">Buffer</span><span class="t-punctuation">(</span><span class="t-name">used</span><span class="t-punctuation">:</span> <span class="t-number">1</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">1</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">export</span> <span class="t-keyword">class</span> <span class="t-type">Buffer</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">export</span> <span class="t-name">used</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>
+  <span class="t-keyword">export</span> <span class="t-keyword">func</span> <span class="t-name">peek</span><span class="t-punctuation">(</span><span class="t-keyword">self</span><span class="t-punctuation">)</span> <span class="t-keyword">alias</span> <span class="t-type">Buffer</span> <span class="t-keyword">from</span> <span class="t-keyword">self</span> <span class="t-punctuation">=&gt;</span> <span class="t-keyword">alias</span> <span class="t-keyword">self</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">items</span><span class="t-punctuation">:</span> <span class="t-type">Buffer</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">defer</span> <span class="t-punctuation">{</span> <span class="t-keyword">discard</span> <span class="t-name">items</span><span class="t-punctuation">.</span><span class="t-name">used</span> <span class="t-punctuation">}</span>
+  <span class="t-keyword">let</span> <span class="t-name">seen</span> <span class="t-punctuation">=</span> <span class="t-name">items</span><span class="t-punctuation">.</span><span class="t-name">peek</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">return</span> <span class="t-name">seen</span><span class="t-punctuation">.</span><span class="t-name">used</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"run"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-type">Buffer</span><span class="t-punctuation">(</span><span class="t-name">used</span><span class="t-punctuation">:</span> <span class="t-number">1</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">1</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="e-obl-001-a-future-dropped-lr-612-lr-123">E-OBL-001: a future dropped (LR 6.12, LR 12.3)<a class="anchor" href="#e-obl-001-a-future-dropped-lr-612-lr-123" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OBL-001</span>
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">n</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">pending</span> <span class="t-punctuation">=</span> <span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span>               <span class="t-comment">// reject: E-OBL-001</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-keyword">await</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">n</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">pending</span> <span class="t-punctuation">=</span> <span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">return</span> <span class="t-keyword">await</span> <span class="t-name">pending</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-keyword">await</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="e-obl-005-a-linear-value-across-await-lr-124">E-OBL-005: a linear value across <code>await</code> (LR 12.4)<a class="anchor" href="#e-obl-005-a-linear-value-across-await-lr-124" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OBL-005</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Negative</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.negative"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">parse</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">&lt;</span> <span class="t-number">0</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Negative</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">pause</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">pending</span> <span class="t-punctuation">=</span> <span class="t-name">parse</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">await</span> <span class="t-name">pause</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>                       <span class="t-comment">// reject: E-OBL-005</span>
+  <span class="t-keyword">return</span> <span class="t-name">pending</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-keyword">await</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-number">3</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Negative</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.negative"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">parse</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">&lt;</span> <span class="t-number">0</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Negative</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">pause</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">value</span> <span class="t-punctuation">=</span> <span class="t-name">parse</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-keyword">await</span> <span class="t-name">pause</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">return</span> <span class="t-name">value</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-keyword">await</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-number">3</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="e-asy-001-a-task-escaping-its-scope-lr-123">E-ASY-001: a task escaping its scope (LR 12.3)<a class="anchor" href="#e-asy-001-a-task-escaping-its-scope-lr-123" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-ASY-001</span>
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">n</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Task</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">scope</span> <span class="t-name">tasks</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">let</span> <span class="t-name">t</span> <span class="t-punctuation">=</span> <span class="t-name">tasks</span><span class="t-punctuation">.</span><span class="t-name">launch</span><span class="t-punctuation">(</span><span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+    <span class="t-keyword">return</span> <span class="t-keyword">move</span> <span class="t-name">t</span>                     <span class="t-comment">// reject: E-ASY-001</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">n</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">scope</span> <span class="t-name">tasks</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">let</span> <span class="t-name">t</span> <span class="t-punctuation">=</span> <span class="t-name">tasks</span><span class="t-punctuation">.</span><span class="t-name">launch</span><span class="t-punctuation">(</span><span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+    <span class="t-keyword">return</span> <span class="t-keyword">await</span> <span class="t-name">t</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-keyword">await</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-number">2</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="e-asy-002-a-guard-across-await-lr-123">E-ASY-002: a guard across <code>await</code> (LR 12.3)<a class="anchor" href="#e-asy-002-a-guard-across-await-lr-123" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-ASY-002</span>
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">pause</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">m</span><span class="t-punctuation">:</span> <span class="t-type">Mutex</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">g</span> <span class="t-punctuation">=</span> <span class="t-keyword">await</span> <span class="t-name">m</span><span class="t-punctuation">.</span><span class="t-name">lock</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-keyword">await</span> <span class="t-name">pause</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>                       <span class="t-comment">// reject: E-ASY-002</span>
+  <span class="t-keyword">return</span> <span class="t-number">0</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">m</span> <span class="t-punctuation">=</span> <span class="t-type">Mutex</span><span class="t-punctuation">.</span><span class="t-name">create</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">discard</span> <span class="t-keyword">await</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">m</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">pause</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">m</span><span class="t-punctuation">:</span> <span class="t-type">Mutex</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-punctuation">{</span>
+    <span class="t-keyword">let</span> <span class="t-name">g</span> <span class="t-punctuation">=</span> <span class="t-keyword">await</span> <span class="t-name">m</span><span class="t-punctuation">.</span><span class="t-name">lock</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">await</span> <span class="t-name">pause</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">return</span> <span class="t-number">0</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">m</span> <span class="t-punctuation">=</span> <span class="t-type">Mutex</span><span class="t-punctuation">.</span><span class="t-name">create</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">discard</span> <span class="t-keyword">await</span> <span class="t-name">run</span><span class="t-punctuation">(</span><span class="t-name">m</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="e-asy-003-a-non-shareable-capture-crossing-a-pool-launch-lr-127">E-ASY-003: a non-<code>Shareable</code> capture crossing a pool launch (LR 12.7)<a class="anchor" href="#e-asy-003-a-non-shareable-capture-crossing-a-pool-launch-lr-127" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-ASY-003</span>
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">pools</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">words</span> <span class="t-punctuation">=</span> <span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">of</span><span class="t-punctuation">(</span><span class="t-string">"a"</span><span class="t-punctuation">,</span> <span class="t-string">"b"</span><span class="t-punctuation">,</span> <span class="t-string">"c"</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">scope</span> <span class="t-name">tasks</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">let</span> <span class="t-name">blocking</span> <span class="t-punctuation">=</span> <span class="t-name">tasks</span><span class="t-punctuation">.</span><span class="t-name">launchBlocking</span><span class="t-punctuation">(</span><span class="t-keyword">fn</span> <span class="t-keyword">once</span><span class="t-punctuation">[</span><span class="t-keyword">move</span> <span class="t-name">words</span><span class="t-punctuation">]</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">words</span><span class="t-punctuation">.</span><span class="t-name">count</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>   <span class="t-comment">// reject: E-ASY-003</span>
+    <span class="t-keyword">return</span> <span class="t-keyword">await</span> <span class="t-name">blocking</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-keyword">await</span> <span class="t-name">pools</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">pools</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">words</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">String</span><span class="t-punctuation">]</span> <span class="t-punctuation">=</span> <span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">of</span><span class="t-punctuation">(</span><span class="t-string">"a"</span><span class="t-punctuation">,</span> <span class="t-string">"b"</span><span class="t-punctuation">,</span> <span class="t-string">"c"</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">scope</span> <span class="t-name">tasks</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">let</span> <span class="t-name">blocking</span> <span class="t-punctuation">=</span> <span class="t-name">tasks</span><span class="t-punctuation">.</span><span class="t-name">launchBlocking</span><span class="t-punctuation">(</span><span class="t-keyword">fn</span> <span class="t-keyword">once</span><span class="t-punctuation">[</span><span class="t-keyword">move</span> <span class="t-name">words</span><span class="t-punctuation">]</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">words</span><span class="t-punctuation">.</span><span class="t-name">count</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+    <span class="t-keyword">return</span> <span class="t-keyword">await</span> <span class="t-name">blocking</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-keyword">await</span> <span class="t-name">pools</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h2 id="facts-used-when-writing-code">Facts used when writing code<a class="anchor" href="#facts-used-when-writing-code" aria-label="link">#</a></h2>
+<ul><li><code>main</code> may be <code>async func main</code> or <code>async try func main</code>; it runs as the root task on the core cooperative executor (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>).</li><li><code>await first or fail</code> leaving a scope cancels the other tasks of that scope; a task cancelled before its first poll never runs (<a class="cite" href="../Fortis_Language_Reference.html#125-structured-scopes-and-launch">LR 12.5</a>).</li><li>The v1 executor runs every cooperative task of one scope tree on one thread; <code>launch</code> never needs <code>Shareable</code> (<a class="cite" href="../Fortis_Language_Reference.html#125-structured-scopes-and-launch">LR 12.5</a>).</li><li><code>Shared[T]</code> gives read access only; mutation goes through <code>Mutex[T]</code> or an atomic (<a class="cite" href="../Fortis_Language_Reference.html#78-shared-ownership">LR 7.8</a>, <a class="cite" href="../Fortis_Language_Reference.html#127-sharing-data-between-tasks">LR 12.7</a>).</li><li>No cross-backend agreement is claimed for interleaving timing; write output after <code>await</code>s in a fixed order (<a class="cite" href="../Fortis_Language_Reference.html#127-sharing-data-between-tasks">LR 12.7</a>).</li></ul>
+<footer>Built from the repository at 0b33d59b9662 by <code>conformance/tools/site.py</code>; every example on this page is checked by <code>conformance/tools/docset_check.py</code>.</footer>
+</main>
+</div>
+<script src="../../search.js"></script>
+<script src="../../site.js"></script>
+</body>
+</html>

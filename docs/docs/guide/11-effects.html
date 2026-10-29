@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Effects and contracts · Fortis</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body class="mode-human" data-root="../..">
+<header class="top">
+  <a class="brand" href="../../index.html">Fortis</a>
+  <span class="badge">Human mode</span>
+  <input id="search" type="search" placeholder="Search both modes" autocomplete="off" aria-label="Search">
+</header>
+<div id="results" hidden></div>
+<div class="layout">
+<nav class="side"><details open><summary>Guide (human mode)</summary><ul><li><a href="README.html">The Fortis guide</a></li><li><a href="tour.html">A tour of Fortis</a></li><li><a href="03-lexical.html">Lexical structure</a></li><li><a href="04-modules.html">Modules and packages</a></li><li><a href="05-statements.html">Statements and expressions</a></li><li><a href="06-types.html">Types</a></li><li><a href="06-proofs.html">Proving arithmetic and indexing</a></li><li><a href="07-ownership.html">Ownership</a></li><li><a href="08-functions.html">Functions and closures</a></li><li><a href="09-classes.html">Classes, interfaces, mixins and enums</a></li><li><a href="10-outcomes.html">Outcomes and failures</a></li><li class=current><a href="11-effects.html">Effects and contracts</a></li><li><a href="12-async.html">Cleanup, async and concurrency</a></li><li><a href="13-observation.html">Observation</a></li><li><a href="14-tests.html">Tests</a></li><li><a href="15-runtime.html">The core runtime</a></li><li><a href="16-kits.html">Kits and declaration heads</a></li><li><a href="embedded-languages.html">Embedded languages</a></li><li><a href="appendix-a-keywords.html">Appendix A: Keywords</a></li><li><a href="appendix-b-decisions.html">Appendix B: Closed decisions</a></li><li><a href="appendix-c-lowering.html">Appendix C: Lowering to Rust</a></li><li><a href="appendix-d-rules.html">Appendix D: Rule index</a></li><li><a href="worked-examples.html">Worked examples</a></li><li><a href="from-rust.html">Notes for readers coming from Rust</a></li><li><a href="from-typescript.html">Notes for readers coming from TypeScript</a></li><li><a href="from-python.html">Notes for readers coming from Python</a></li><li><a href="glossary.html">Glossary</a></li><li><a href="known-limitations.html">Known limitations of v0.0.2</a></li></ul></details><details><summary>Agent mode</summary><ul><li><a href="../agent/README.html">Fortis for agents</a></li><li><a href="../agent/known-limitations.html">Known limitations of v0.0.2</a></li><li><a href="../agent/records.html">Records</a></li><li><a href="../agent/codes.html">Diagnostic codes</a></li><li><a href="../agent/01-overview.html">Overview: design invariants and notation (LR 1, LR 2)</a></li><li><a href="../agent/03-lexical.html">Lexical structure (LR 3)</a></li><li><a href="../agent/04-modules.html">Modules and packages (LR 4)</a></li><li><a href="../agent/05-statements.html">Statements and expressions (LR 5)</a></li><li><a href="../agent/06-types.html">Types (LR 6)</a></li><li><a href="../agent/06-proofs.html">Proofs for arithmetic and indexing (LR 6.3, 6.4, 6.7)</a></li><li><a href="../agent/07-ownership.html">Ownership (LR 7)</a></li><li><a href="../agent/08-functions.html">Functions and closures (LR 8)</a></li><li><a href="../agent/09-classes.html">Classes, interfaces, mixins and enums (LR 9)</a></li><li><a href="../agent/10-outcomes.html">Outcomes and failures (LR 10)</a></li><li><a href="../agent/11-effects.html">Effects and contracts (LR 11)</a></li><li><a href="../agent/12-async.html">Cleanup, async and concurrency (LR 12)</a></li><li><a href="../agent/13-observation.html">Observation schemas and statements (LR 13)</a></li><li><a href="../agent/14-tests.html">Test declarations (LR 14)</a></li><li><a href="../agent/15-runtime.html">Core runtime inventory (LR 15)</a></li><li><a href="../agent/16-kits.html">Reserved declaration heads for kits (LR 16)</a></li><li><a href="../agent/embedded-languages.html">Embedded languages (LR 16)</a></li><li><a href="../agent/appendix-a-keywords.html">Keyword inventory (LR A)</a></li><li><a href="../agent/appendix-b-decisions.html">Closed decisions (LR B)</a></li><li><a href="../agent/appendix-c-lowering.html">Lowering reference and the Rust-expressible subset (LR C)</a></li><li><a href="../agent/appendix-d-rules.html">Rule index (LR D)</a></li><li><a href="../agent/glossary.html">Glossary (agent mode)</a></li><li><a href="../agent/library.html">The core library</a></li><li><a href="../../skills/fortis-code/SKILL.html">fortis-code</a></li></ul></details><details><summary>Specification</summary><ul><li><a href="../Fortis_Specification.html">Fortis — Specification Overview</a></li><li><a href="../Fortis_Language_Reference.html">Fortis Language Reference</a></li><li><a href="../Fortis_Platform_Specification.html">Fortis Platform Specification</a></li></ul></details></nav>
+<main>
+<p class="mode-switch"><a class="counterpart" href="../agent/11-effects.html">Agent mode: Effects and contracts (LR 11)</a></p>
+<h1 id="effects-and-contracts">Effects and contracts<a class="anchor" href="#effects-and-contracts" aria-label="link">#</a></h1>
+<p><em>Human mode. Agent mode: <a href="../agent/11-effects.html">Effects and contracts, by rule</a>. Source of truth: <a class="cite" href="../Fortis_Language_Reference.html#11-effects-and-contracts">LR 11</a>.</em></p>
+<blockquote><p>Preview: contracts (<a class="cite" href="../Fortis_Language_Reference.html#115-contracts">LR 11.5</a>) arrive in v0.1. Effects, claims, noalloc and capabilities (<a class="cite" href="../Fortis_Language_Reference.html#111-the-effect-set">LR 11.1</a>, <a class="cite" href="../Fortis_Language_Reference.html#112-modifiers-as-claims">11.2</a>, <a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">11.3</a>, <a class="cite" href="../Fortis_Language_Reference.html#114-noalloc-and-plans">11.4</a> and <a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">11.6</a>) arrive in v0.2. The observation plane and aspects (<a class="cite" href="../Fortis_Language_Reference.html#117-observation-plane">LR 11.7</a>, <a class="cite" href="../Fortis_Language_Reference.html#118-aspects">11.8</a>) arrive in v0.5, except the diagnostic plane that <code>report</code> and the <code>log</code> statements write to (<a class="cite" href="../Fortis_Language_Reference.html#117-observation-plane">LR 11.7</a>, <a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>), which is in v0.0.2. <code>main</code>'s capability parameters (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>, <a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">11.6</a>) and the core aspect <code>@ignorable</code> (<a class="cite" href="../Fortis_Language_Reference.html#55-expression-statements-and-discard">LR 5.5</a>, <a class="cite" href="../Fortis_Language_Reference.html#118-aspects">11.8</a>) are in v0.0.2.</p></blockquote>
+<p>A reader of a Fortis function wants to know what it may do besides compute its result: allocate, touch the outside world, change something it was not handed, read the clock, wait, fail, or quietly swallow a failure. The checker works this out for every function, from its body and everything it calls, and compares the answer with what the function's head claims. This chapter covers that machinery: the eight effects, the modifiers that state claims about them, contracts that name a set of claims, capabilities that carry the authority to do I/O, and aspects, which add declared behaviour around a function.</p>
+<h2 id="the-eight-effects">The eight effects<a class="anchor" href="#the-eight-effects" aria-label="link">#</a></h2>
+<p>Every function has an <strong>effect summary</strong>: a subset of a closed set of eight effects, computed from its body and its callees (<a class="cite" href="../Fortis_Language_Reference.html#111-the-effect-set">LR 11.1</a>). No package or configuration can add a ninth.</p>
+<div class="table"><table><thead><tr><th>Effect</th><th>Present when the function may…</th></tr></thead><tbody><tr><td><code>alloc</code></td><td>allocate heap memory, including inside callees, failures, cleanup and the closures it creates</td></tr><tr><td><code>io</code></td><td>perform input or output through a capability, including <code>report</code></td></tr><tr><td><code>mutate</code></td><td>write to storage that is neither fresh in this call nor reachable from one of its own <code>editable</code> parameters</td></tr><tr><td><code>nondet</code></td><td>read a non-deterministic source: a clock, randomness, the environment, an address</td></tr><tr><td><code>suspend</code></td><td>reach an <code>await</code></td></tr><tr><td><code>block</code></td><td>block the calling thread, such as waiting for a lock synchronously</td></tr><tr><td><code>fail</code></td><td>return a failure</td></tr><tr><td><code>recovers</code></td><td>discharge a failure that was not reported</td></tr></tbody></table></div>
+<p>When the summary contains something the function's modifiers do not admit, the function is rejected with <a class="code" href="../agent/codes.html#E-EFF-001"><code>E-EFF-001</code></a>, which names the effect and the statement that introduces it (<a class="cite" href="../Fortis_Language_Reference.html#111-the-effect-set">LR 11.1</a>). Here a function claims to be <code>pure</code> and prints:</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-EFF-001</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">greet</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>      <span class="t-comment">// reject: E-EFF-001 (a pure function takes no capability)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"hello"</span><span class="t-punctuation">)</span>              <span class="t-comment">// reject: E-EFF-001</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">greet</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="fresh-storage-is-not-mutation">Fresh storage is not mutation<a class="anchor" href="#fresh-storage-is-not-mutation" aria-label="link">#</a></h3>
+<p><code>mutate</code> means writing to something the caller can see. Writing to storage the function created itself, and has not yet stored anywhere reachable from a parameter, a capture or <code>self</code>, is not <code>mutate</code> (<a class="cite" href="../Fortis_Language_Reference.html#111-the-effect-set">LR 11.1</a>). So building a list locally and returning it is pure:</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">squares</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">10</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">out</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span> <span class="t-punctuation">=</span> <span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">default</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">for</span> <span class="t-name">i</span> <span class="t-keyword">in</span> <span class="t-number">1</span><span class="t-punctuation">..</span><span class="t-name">n</span> <span class="t-punctuation">{</span>
+    <span class="t-name">out</span><span class="t-punctuation">.</span><span class="t-name">push</span><span class="t-punctuation">(</span><span class="t-name">i</span> <span class="t-punctuation">*</span> <span class="t-name">i</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">out</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">for</span> <span class="t-name">s</span> <span class="t-keyword">in</span> <span class="t-name">squares</span><span class="t-punctuation">(</span><span class="t-number">4</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+    <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${s}"</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>1
+4
+9
+16</code></pre></div>
+<h2 id="modifiers-are-claims">Modifiers are claims<a class="anchor" href="#modifiers-are-claims" aria-label="link">#</a></h2>
+<p>The function head carries five words that speak about effects (<a class="cite" href="../Fortis_Language_Reference.html#112-modifiers-as-claims">LR 11.2</a>):</p>
+<div class="table"><table><thead><tr><th>Modifier</th><th>Claim the checker verifies</th></tr></thead><tbody><tr><td><code>pure</code></td><td>none of <code>io</code>, <code>mutate</code>, <code>nondet</code>, <code>suspend</code>, <code>block</code></td></tr><tr><td><code>noalloc</code></td><td>no <code>alloc</code></td></tr><tr><td><code>async</code></td><td><code>suspend</code> is permitted</td></tr><tr><td><code>try</code></td><td><code>fail</code> is permitted</td></tr><tr><td><code>recovers</code></td><td><code>recovers</code> is permitted</td></tr></tbody></table></div>
+<p><code>pure</code> and <code>noalloc</code> are independent: a <code>pure</code> function may allocate, and a <code>noalloc</code> function may do I/O (<a class="cite" href="../Fortis_Language_Reference.html#112-modifiers-as-claims">LR 11.2</a>). The two kinds of modifier are also treated differently. <code>async</code>, <code>try</code> and <code>recovers</code> change a function's type, so a function must write them whenever its summary has the effect (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>). <code>pure</code> and <code>noalloc</code> are guarantees a function <em>may</em> offer: leaving one off never breaks a caller, it only withholds a promise (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>).</p>
+<p>A function that silently swallows a failure must say so. <code>half(n) or recover 0</code> discharges the failure without reporting it, which is the <code>recovers</code> effect, so the function needs the <code>recovers</code> modifier (<a class="cite" href="../Fortis_Language_Reference.html#112-modifiers-as-claims">LR 11.2</a>):</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-EFF-001</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Odd</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.odd"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">==</span> <span class="t-number">1</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Odd</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">halfOrZero</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">recover</span> <span class="t-number">0</span>   <span class="t-comment">// reject: E-EFF-001</span>
+
+<span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-name">halfOrZero</span><span class="t-punctuation">(</span><span class="t-number">3</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Odd</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.odd"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">==</span> <span class="t-number">1</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Odd</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">halfOrZero</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">recover</span> <span class="t-number">0</span>
+
+<span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${halfOrZero(8)} ${halfOrZero(3)}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>4 0</code></pre></div>
+<p><code>recovers</code> is contagious in the same way as the other effects: <code>main</code> calls <code>halfOrZero</code>, so it inherits the effect and writes the modifier too. A reviewer reading a signature diff can therefore see every function that swallows a failure somewhere below it (<a class="cite" href="../Fortis_Language_Reference.html#81-named-functions">LR 8.1</a>).</p>
+<h2 id="how-summaries-are-computed">How summaries are computed<a class="anchor" href="#how-summaries-are-computed" aria-label="link">#</a></h2>
+<p>A function's summary is built from its statements and closed over recursion (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>). A call imports the callee's summary, with two adjustments:</p>
+<ul><li><code>fail</code> is imported only if the call's failure leaves the function. <code>or fail</code> keeps it; <code>or recover</code>, a <code>catch</code> that ends in <code>recover</code>, and a <code>match</code> that consumes the failure remove it and add <code>recovers</code> where the failure was not reported (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>).</li><li><code>mutate</code> is imported through the callee's <strong>write footprint</strong>, described next.</li></ul>
+<h3 id="write-footprints">Write footprints<a class="anchor" href="#write-footprints" aria-label="link">#</a></h3>
+<p>A method with <code>editable self</code>, or a function with an <code>editable</code> parameter, writes through a loan its caller handed it. Inside the function that write is not <code>mutate</code>; it is recorded in the function's write footprint (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>). At each call the footprint is matched against the actual argument: if the caller's place is fresh, nothing is imported; if it is reachable from the caller's own <code>editable</code> parameter, it joins the caller's footprint; anything else, such as a mutable capture, makes the caller <code>mutate</code> (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>). This is what lets a <code>pure</code> function build an object with mutating methods:</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">class</span> <span class="t-type">Cell</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">export</span> <span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>
+  <span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">set</span><span class="t-punctuation">(</span><span class="t-keyword">editable</span> <span class="t-keyword">self</span><span class="t-punctuation">,</span> <span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">self</span><span class="t-punctuation">.</span><span class="t-name">value</span> <span class="t-punctuation">=</span> <span class="t-name">value</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">build</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-type">Cell</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">cell</span> <span class="t-punctuation">=</span> <span class="t-type">Cell</span><span class="t-punctuation">(</span><span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-number">0</span><span class="t-punctuation">)</span>
+  <span class="t-name">cell</span><span class="t-punctuation">.</span><span class="t-name">set</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">)</span>          <span class="t-comment">// cell is fresh here, so the footprint imports nothing</span>
+  <span class="t-keyword">return</span> <span class="t-name">cell</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">cell</span> <span class="t-punctuation">=</span> <span class="t-name">build</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${cell.value}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>1</code></pre></div>
+<p>The same call through a closure that captured the cell <code>editable</code> writes storage the closure's caller can see, so it is <code>mutate</code>, and a <code>pure</code> function cannot do it (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>):</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-EFF-001</span>
+<span class="t-keyword">class</span> <span class="t-type">Cell</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">export</span> <span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>
+  <span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">set</span><span class="t-punctuation">(</span><span class="t-keyword">editable</span> <span class="t-keyword">self</span><span class="t-punctuation">,</span> <span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">self</span><span class="t-punctuation">.</span><span class="t-name">value</span> <span class="t-punctuation">=</span> <span class="t-name">value</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">viaClosure</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">cell</span> <span class="t-punctuation">=</span> <span class="t-type">Cell</span><span class="t-punctuation">(</span><span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-number">0</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">poke</span> <span class="t-punctuation">=</span> <span class="t-keyword">fn</span> <span class="t-keyword">mut</span><span class="t-punctuation">[</span><span class="t-keyword">editable</span> <span class="t-name">cell</span><span class="t-punctuation">]</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-type">Void</span> <span class="t-punctuation">{</span>
+    <span class="t-name">cell</span><span class="t-punctuation">.</span><span class="t-name">set</span><span class="t-punctuation">(</span><span class="t-number">2</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-name">poke</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>                        <span class="t-comment">// reject: E-EFF-001</span>
+  <span class="t-keyword">return</span> <span class="t-number">0</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-name">viaClosure</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="callbacks-and-lambdas">Callbacks and lambdas<a class="anchor" href="#callbacks-and-lambdas" aria-label="link">#</a></h3>
+<p>A callback parameter contributes the effects its function type permits, not those of whatever argument is passed. A lambda literal whose inferred summary has none of the effects <code>pure</code> excludes is itself <code>pure</code>, so it can be passed where a <code>pure fn</code> is required without writing the modifier (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>). <code>countWhere</code> takes a <code>pure fn</code> (<a class="cite" href="../Fortis_Language_Reference.html#67-collections">LR 6.7</a>):</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">countAbove</span><span class="t-punctuation">(</span><span class="t-name">items</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span><span class="t-punctuation">,</span> <span class="t-name">threshold</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">return</span> <span class="t-name">items</span><span class="t-punctuation">.</span><span class="t-name">countWhere</span><span class="t-punctuation">(</span><span class="t-keyword">fn</span><span class="t-punctuation">[</span><span class="t-name">threshold</span><span class="t-punctuation">]</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Bool</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">n</span> <span class="t-punctuation">&gt;</span> <span class="t-name">threshold</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${countAbove(List.of(3, 8, 1, 9), 5)}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>2</code></pre></div>
+<h3 id="what-crosses-a-module-boundary">What crosses a module boundary<a class="anchor" href="#what-crosses-a-module-boundary" aria-label="link">#</a></h3>
+<p>Inside a module, callers see each function's inferred summary. Across a module boundary only the written claims count: a caller in another module may rely on <code>pure</code> or <code>noalloc</code> only when the callee writes it (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>). Removing a written <code>pure</code> or <code>noalloc</code> from an exported function, or adding <code>async</code>, <code>try</code> or <code>recovers</code>, is a change to its public API; <code>fortis check --api-baseline OLD</code> reports it as the warning <a class="code" href="../agent/codes.html#E-EFF-040"><code>E-EFF-040</code></a> at the declaration (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>).</p>
+<p>A few functions in the <code>fortis</code> package have no Fortis body: they are declared <code>trusted</code> and the backend supplies their implementation. A trusted claim is reported as <code>trusted</code> evidence, never as <code>proved</code>, and <code>trusted</code> is rejected outside the <code>fortis</code> package (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>).</p>
+<h2 id="noalloc"><code>noalloc</code><a class="anchor" href="#noalloc" aria-label="link">#</a></h2>
+<p><code>noalloc</code> claims that a function never allocates (<a class="cite" href="../Fortis_Language_Reference.html#114-noalloc-and-plans">LR 11.4</a>). The checker decides it by matching what the function lowers to against a whitelist of allocation-free patterns (<a class="cite" href="../Fortis_Language_Reference.html#c3-allocation-pattern-whitelist">LR C.3</a>), not by inspecting optimised code: integer arithmetic, comparisons, field access and reading a list element are allocation-free, while building a list or a string is not.</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">noalloc</span> <span class="t-keyword">func</span> <span class="t-name">clamp</span><span class="t-punctuation">(</span><span class="t-name">v</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">,</span> <span class="t-name">lo</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">,</span> <span class="t-name">hi</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">v</span> <span class="t-punctuation">&lt;</span> <span class="t-name">lo</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">return</span> <span class="t-name">lo</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">if</span> <span class="t-name">v</span> <span class="t-punctuation">&gt;</span> <span class="t-name">hi</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">return</span> <span class="t-name">hi</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">v</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">noalloc</span> <span class="t-keyword">func</span> <span class="t-name">firstOrZero</span><span class="t-punctuation">(</span><span class="t-name">xs</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">xs</span><span class="t-punctuation">.</span><span class="t-name">get</span><span class="t-punctuation">(</span><span class="t-number">0</span><span class="t-punctuation">)</span> <span class="t-punctuation">??</span> <span class="t-number">0</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${clamp(150, 0, 100)} ${firstOrZero(List.of(7, 8))}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>100 7</code></pre></div>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-EFF-001</span>
+<span class="t-keyword">noalloc</span> <span class="t-keyword">func</span> <span class="t-name">pair</span><span class="t-punctuation">(</span><span class="t-name">a</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">,</span> <span class="t-name">b</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span> <span class="t-punctuation">=&gt;</span> <span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">of</span><span class="t-punctuation">(</span><span class="t-name">a</span><span class="t-punctuation">,</span> <span class="t-name">b</span><span class="t-punctuation">)</span>   <span class="t-comment">// reject: E-EFF-001</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-name">pair</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">,</span> <span class="t-number">2</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p><code>noalloc</code> is a property under a target plan and a telemetry plan: a library is checked with its own plan, and the build checks the claim again against the application's. If the application's telemetry policy would attach an allocating record to a <code>noalloc</code> function, the build is rejected at the policy (<a class="code" href="../agent/codes.html#E-EFF-030"><code>E-EFF-030</code></a>), rather than the instrumentation being dropped quietly (<a class="cite" href="../Fortis_Language_Reference.html#114-noalloc-and-plans">LR 11.4</a>). For an <code>async</code> function, <code>noalloc</code> covers creating the future, every poll, completion and destruction (<a class="cite" href="../Fortis_Language_Reference.html#114-noalloc-and-plans">LR 11.4</a>).</p>
+<h2 id="contracts">Contracts<a class="anchor" href="#contracts" aria-label="link">#</a></h2>
+<p>A <strong>contract</strong> names a set of claims so that it can be applied by name (<a class="cite" href="../Fortis_Language_Reference.html#115-contracts">LR 11.5</a>). It may contain only modifiers, forbidden effects (<code>forbids recovers</code>), required authorities (<code>requires capability Clock</code>) and excluded authorities (<code>excludes capability Network</code>). Because a contract is a set of modifiers, it is written where modifiers are written, before the single-word modifiers, and never with <code>@</code> (<a class="cite" href="../Fortis_Language_Reference.html#115-contracts">LR 11.5</a>).</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">contract</span> <span class="t-type">FastCalculation</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">pure</span>
+  <span class="t-keyword">noalloc</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-type">FastCalculation</span> <span class="t-keyword">pure</span> <span class="t-keyword">noalloc</span> <span class="t-keyword">func</span> <span class="t-name">square</span><span class="t-punctuation">(</span><span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-punctuation">-</span><span class="t-number">1000000</span><span class="t-punctuation">..</span><span class="t-number">1000000</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">value</span> <span class="t-punctuation">*</span> <span class="t-name">value</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${square(-12)}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>144</code></pre></div>
+<p>The formatter keeps the contract's name and prints the modifiers it expands to after it, so a reader of formatted code sees both (<a class="cite" href="../Fortis_Language_Reference.html#115-contracts">LR 11.5</a>).</p>
+<p>A contract only subtracts: applying one never changes what a function does; it makes the checker reject a body that does something the contract rules out (<a class="cite" href="../Fortis_Language_Reference.html#115-contracts">LR 11.5</a>). Here <code>NoSilentRecovery</code> forbids the <code>recovers</code> effect, so the function must handle the failure some other way:</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-EFF-001</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Odd</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.odd"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">==</span> <span class="t-number">1</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Odd</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">contract</span> <span class="t-type">NoSilentRecovery</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">forbids</span> <span class="t-keyword">recovers</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-type">NoSilentRecovery</span> <span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">quiet</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">recover</span> <span class="t-number">0</span>   <span class="t-comment">// reject: E-EFF-001</span>
+
+<span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-name">quiet</span><span class="t-punctuation">(</span><span class="t-number">4</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p>An <code>excludes capability</code> clause is transitive: the function may not take the excluded authority, and may not call, directly or through any callee, a function that requires it (<a class="cite" href="../Fortis_Language_Reference.html#115-contracts">LR 11.5</a>).</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-EFF-001</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Network</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">contract</span> <span class="t-type">Offline</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">excludes</span> <span class="t-name">capability</span> <span class="t-type">Network</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-name">net</span><span class="t-punctuation">:</span> <span class="t-type">Network</span><span class="t-punctuation">,</span> <span class="t-name">name</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">name</span><span class="t-punctuation">.</span><span class="t-name">scalarCount</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+
+<span class="t-type">Offline</span> <span class="t-keyword">func</span> <span class="t-name">viaNetwork</span><span class="t-punctuation">(</span><span class="t-name">net</span><span class="t-punctuation">:</span> <span class="t-type">Network</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-name">net</span><span class="t-punctuation">,</span> <span class="t-string">"example"</span><span class="t-punctuation">)</span>   <span class="t-comment">// reject: E-EFF-001</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">network</span><span class="t-punctuation">:</span> <span class="t-type">Network</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-name">viaNetwork</span><span class="t-punctuation">(</span><span class="t-name">network</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p>Contracts compose by conjunction, and contradictory ones are rejected; a <code>pure</code> function may not take a capability parameter at all, so <code>pure</code> together with <code>requires capability</code> is a contradiction (<a class="cite" href="../Fortis_Language_Reference.html#115-contracts">LR 11.5</a>). Project configuration never attaches or selects a contract: a contract applies to a function only by appearing in its head (<a class="cite" href="../Fortis_Language_Reference.html#115-contracts">LR 11.5</a>).</p>
+<h2 id="capabilities">Capabilities<a class="anchor" href="#capabilities" aria-label="link">#</a></h2>
+<p>I/O needs authority, and authority is a value. A function with the <code>io</code> effect must take an <strong>authority value</strong> as a parameter: a nominal, non-copyable value implementing the marker interface <code>Authority</code> (<a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>). The process-wide authorities are the <strong>capabilities</strong> <code>FileSystem</code>, <code>Network</code>, <code>Clock</code>, <code>Random</code>, <code>Environment</code>, <code>Process</code>, <code>Supervisor</code>, <code>Console</code>, <code>SecretAccess</code> and <code>RawSql</code>. The runtime creates them once and hands them to the entry <code>main</code>, which declares the ones it needs as parameters: <code>func main(console: Console, files: FileSystem)</code> (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>, <a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>). No other function receives them from the runtime, and none can create them. Older code creates them in <code>main</code> with <code>Host.capabilities()</code>, which <code>fortis fmt</code> rewrites into parameters; anywhere else that call is rejected (<a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>):</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-EFF-010</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Host</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">sneak</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">caps</span> <span class="t-punctuation">=</span> <span class="t-type">Host</span><span class="t-punctuation">.</span><span class="t-name">capabilities</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>      <span class="t-comment">// reject: E-EFF-010</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">sneak</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p>From <code>main</code> the authorities are passed down explicitly, so a function's signature names every authority it uses. A function that reaches I/O without taking an <code>Authority</code> value, for example by reaching into the <code>Capabilities</code> record <code>Host.capabilities()</code> returns, is rejected with the same code, at the statement that performs the I/O (<a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>):</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-EFF-010</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Capabilities</span><span class="t-punctuation">,</span> <span class="t-type">Host</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">write</span><span class="t-punctuation">(</span><span class="t-name">caps</span><span class="t-punctuation">:</span> <span class="t-type">Capabilities</span><span class="t-punctuation">,</span> <span class="t-name">text</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">caps</span><span class="t-punctuation">.</span><span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-name">text</span><span class="t-punctuation">)</span>            <span class="t-comment">// reject: E-EFF-010</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">caps</span> <span class="t-punctuation">=</span> <span class="t-type">Host</span><span class="t-punctuation">.</span><span class="t-name">capabilities</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-name">write</span><span class="t-punctuation">(</span><span class="t-name">caps</span><span class="t-punctuation">,</span> <span class="t-string">"hello"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p>Pass the <code>Console</code> itself; the parameter is the visible statement that this function writes to the console:</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">say</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">,</span> <span class="t-name">text</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-name">text</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">say</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">,</span> <span class="t-string">"hello"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>hello</code></pre></div>
+<p>Capabilities are attenuated by their own methods, never widened: <code>fs.subtree(path)</code> gives a <code>FileSystem</code> confined below <code>path</code> (<a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>). The static rule is only that the authority's type is in the signature; which directory or host a value reaches is decided by the value and enforced by the runtime adapter (<a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>).</p>
+<h3 id="sharing-one-capability-between-owners">Sharing one capability between owners<a class="anchor" href="#sharing-one-capability-between-owners" aria-label="link">#</a></h3>
+<p>A capability is not copyable, and no field stores a loan (<a class="cite" href="../Fortis_Language_Reference.html#77-loan-carrying-values-no-stored-loans">LR 7.7</a>). When several values each need the console, hold it through an explicit <code>Shared[Console]</code>: a <code>Shared[A]</code> of an authority carries <code>A</code>'s authority, so a parameter of that type satisfies the rule exactly as an <code>A</code> parameter does (<a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>). Each <code>retain()</code> is visible where a new owner takes a handle (<a class="cite" href="../Fortis_Language_Reference.html#78-shared-ownership">LR 7.8</a>).</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">announce</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Shared</span><span class="t-punctuation">[</span><span class="t-type">Console</span><span class="t-punctuation">]</span><span class="t-punctuation">,</span> <span class="t-name">who</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"hello from ${who}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">out</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">console</span> <span class="t-punctuation">=</span> <span class="t-type">Shared</span><span class="t-punctuation">.</span><span class="t-name">create</span><span class="t-punctuation">(</span><span class="t-keyword">move</span> <span class="t-name">out</span><span class="t-punctuation">)</span>
+  <span class="t-name">announce</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">retain</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span><span class="t-punctuation">,</span> <span class="t-string">"one"</span><span class="t-punctuation">)</span>
+  <span class="t-name">announce</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">,</span> <span class="t-string">"two"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>hello from one
+hello from two</code></pre></div>
+<p><strong>Per-activation authorities</strong> such as <code>RequestContext</code>, <code>Db</code> or <code>TaskContext</code> are minted by a kit's adapter from a capability for one unit of work and passed to it as a parameter, so every authority still traces back to <code>main</code> (<a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>).</p>
+<p>Reading a clock is <code>nondet</code> and requires a <code>Clock</code>; a <code>pure</code> function receives the time as an ordinary parameter instead (<a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>). Capabilities, effects and <strong>target feature sets</strong> are three different things: a feature set (<code>core</code>, <code>alloc</code>, <code>host</code>, <code>async</code>, <code>web</code>, <code>browser</code>) decides which standard modules exist on a compilation target, an effect is a fact about a function, and a capability is a run-time value (<a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>).</p>
+<h2 id="the-observation-plane">The observation plane<a class="anchor" href="#the-observation-plane" aria-label="link">#</a></h2>
+<p>Observation is the one place where a function may "do" something without its summary changing. The records the compiler generates for <code>capture</code>, <code>record</code> and completion events go to a <strong>diagnostic plane</strong> that can never feed a value back into the program, so instrumenting a <code>pure</code> function leaves it <code>pure</code> (<a class="cite" href="../Fortis_Language_Reference.html#117-observation-plane">LR 11.7</a>). Optimisation must preserve a program's results and application effects always, and the records an observation schema declares required as well (<a class="cite" href="../Fortis_Language_Reference.html#117-observation-plane">LR 11.7</a>). Observation schemas and the two statements are the subject of <a href="13-observation.html">Observation</a>.</p>
+<p><code>report</code> sits on the same plane. It is <code>io</code>, so a <code>pure</code> function cannot report, but it is the one I/O operation that needs no capability value (<a class="cite" href="../Fortis_Language_Reference.html#106-reports-annotation-and-aggregation">LR 10.6</a>, <a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>):</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Odd</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.odd"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">==</span> <span class="t-number">1</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Odd</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">halfOrReport</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">return</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-keyword">catch</span> <span class="t-name">e</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">report</span> <span class="t-name">e</span>
+    <span class="t-keyword">recover</span> <span class="t-number">0</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${halfOrReport(10)} ${halfOrReport(3)}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>5 0</code></pre></div>
+<p><code>halfOrReport</code> does not need <code>recovers</code>: the failure was reported before <code>recover</code>, so nothing was swallowed (<a class="cite" href="../Fortis_Language_Reference.html#104-catch-and-recover">LR 10.4</a>). The report itself is a structured record on standard error, not part of the program's output.</p>
+<h2 id="aspects">Aspects<a class="anchor" href="#aspects" aria-label="link">#</a></h2>
+<p>Where a contract subtracts, an <strong>aspect</strong> adds: code that runs before a function's body, code that runs after it succeeds, a handler for failures the body leaves unhandled, and metadata a library can read (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>). Aspects are how kits attach routes, authorisation and limits to ordinary functions, and how a team writes its own conventions. They are ordinary declarations, typed, checked and lowered like any other code (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>).</p>
+<h3 id="declaring-an-aspect">Declaring an aspect<a class="anchor" href="#declaring-an-aspect" aria-label="link">#</a></h3>
+<p><code>aspect name(params) { parts }</code> declares one, optionally with a type parameter <code>R</code> after the name. The name is lowercase, <code>R</code> is bound at each application to the target function's success type, and the parts come from a closed set (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>):</p>
+<div class="table"><table><thead><tr><th>Part</th><th>Meaning</th></tr></thead><tbody><tr><td><code>needs name: Type</code></td><td>the target must have exactly one parameter of this type; the hooks use it by this name</td></tr><tr><td><code>needs Contract</code></td><td>the target must carry this contract</td></tr><tr><td><code>before { … }</code></td><td>runs before the body</td></tr><tr><td><code>after(result: R) { … }</code></td><td>runs after a successful body, with a read loan of the result</td></tr><tr><td><code>on failure(f: Failure) R { … }</code></td><td>receives any failure left unhandled, and must <code>return</code> an <code>R</code> or <code>fail</code></td></tr><tr><td><code>metadata</code></td><td>marks the arguments as data a library reads through the toolchain</td></tr></tbody></table></div>
+<p>There is no <code>around</code> hook and no access to the body: an aspect can never change what a line inside the function means, and cannot run the body twice (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>).</p>
+<h3 id="applying-aspects-and-in-which-order-they-run">Applying aspects, and in which order they run<a class="anchor" href="#applying-aspects-and-in-which-order-they-run" aria-label="link">#</a></h3>
+<p><code>@name(args)</code> goes on the lines directly above a function head (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>). Several aspects elaborate, before any ownership or effect checking, into one wrapper around the body: the <code>before</code> hooks run in application order (first line first), the <code>after</code> hooks in reverse, and the <code>on failure</code> handlers innermost first, so the first line is the outermost wrapper (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>).</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">TooBig</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.too_big"</span>
+  <span class="t-name">payload</span> <span class="t-punctuation">{</span> <span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">aspect</span> <span class="t-name">logged</span><span class="t-punctuation">(</span><span class="t-name">label</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">needs</span> <span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span>
+  <span class="t-keyword">before</span> <span class="t-punctuation">{</span>
+    <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"before ${label}"</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">after</span><span class="t-punctuation">(</span><span class="t-name">result</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+    <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"after ${label}: ${result}"</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">aspect</span> <span class="t-name">capped</span><span class="t-punctuation">(</span><span class="t-name">limit</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">needs</span> <span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span>
+  <span class="t-keyword">on</span> <span class="t-keyword">failure</span><span class="t-punctuation">(</span><span class="t-name">f</span><span class="t-punctuation">:</span> <span class="t-type">Failure</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+    <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"capped handles ${f.code}"</span><span class="t-punctuation">)</span>
+    <span class="t-keyword">report</span> <span class="t-name">f</span>
+    <span class="t-keyword">return</span> <span class="t-name">limit</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">logged</span><span class="t-punctuation">(</span><span class="t-string">"outer"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">@</span><span class="t-name">logged</span><span class="t-punctuation">(</span><span class="t-string">"inner"</span><span class="t-punctuation">)</span>
+<span class="t-keyword">func</span> <span class="t-name">square</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">,</span> <span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">1000</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"body"</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">*</span> <span class="t-name">n</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">capped</span><span class="t-punctuation">(</span><span class="t-name">limit</span><span class="t-punctuation">:</span> <span class="t-number">100</span><span class="t-punctuation">)</span>
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">checked</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">,</span> <span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">&gt;</span> <span class="t-number">100</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">TooBig</span><span class="t-punctuation">(</span><span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-name">n</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"square: ${square(console, 7)}"</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-name">small</span> <span class="t-punctuation">=</span> <span class="t-name">checked</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">,</span> <span class="t-number">5</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-keyword">let</span> <span class="t-name">big</span> <span class="t-punctuation">=</span> <span class="t-name">checked</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">,</span> <span class="t-number">500</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${small} ${big}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>before outer
+before inner
+body
+after inner: 49
+after outer: 49
+square: 49
+capped handles demo.too_big
+5 100</code></pre></div>
+<p>The handler reports the failure once and completes the function with <code>limit</code>, so for an observer the call succeeded (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>). The hooks' effects join the function's summary, and the elaborated function is checked as a whole: a hook that allocates under <code>noalloc</code>, reports under <code>pure</code>, or calls <code>Host.capabilities()</code> is rejected by the ordinary rules (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>). Nothing of an aspect remains at run time.</p>
+<p>An application that names an unknown aspect, passes arguments that do not match its declaration, or leaves a <code>needs</code> unmet or ambiguous is <a class="code" href="../agent/codes.html#E-TYP-150"><code>E-TYP-150</code></a> (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>):</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-TYP-150</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">aspect</span> <span class="t-name">logged</span><span class="t-punctuation">(</span><span class="t-name">label</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">needs</span> <span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span>
+  <span class="t-keyword">before</span> <span class="t-punctuation">{</span>
+    <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"before ${label}"</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">logged</span><span class="t-punctuation">(</span><span class="t-string">"count"</span><span class="t-punctuation">)</span>                      <span class="t-comment">// reject: E-TYP-150</span>
+<span class="t-keyword">func</span> <span class="t-name">count</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">n</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">discard</span> <span class="t-name">count</span><span class="t-punctuation">(</span><span class="t-number">3</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p>An <code>after</code> hook may fail only when the result type is not linear, because a failing <code>after</code> would leave a linear result with no consumer: <a class="code" href="../agent/codes.html#E-OBL-008"><code>E-OBL-008</code></a> (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>).</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OBL-008</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Stop</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.stop"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">aspect</span> <span class="t-name">strict</span><span class="t-punctuation">[</span><span class="t-type">R</span><span class="t-punctuation">]</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">after</span><span class="t-punctuation">(</span><span class="t-name">result</span><span class="t-punctuation">:</span> <span class="t-type">R</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Stop</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>                       <span class="t-comment">// reject: E-OBL-008</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">strict</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">produce</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Outcome</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">return</span> <span class="t-type">Outcome</span><span class="t-punctuation">.</span><span class="t-keyword">success</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="specialisations-and-the-core-aspect">Specialisations and the core aspect<a class="anchor" href="#specialisations-and-the-core-aspect" aria-label="link">#</a></h3>
+<p><code>aspect name(params, ...rest) = other(fixed: value, ...rest)</code> declares one aspect as another with some arguments fixed; <code>...rest</code> forwards every remaining named argument (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>). The core declares exactly one aspect, <code>observe(schema)</code>, which attaches an observation schema to a function; every other aspect is a library (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>, <a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>).</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">aspect</span> <span class="t-name">traced</span><span class="t-punctuation">(</span><span class="t-name">label</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">,</span> <span class="t-name">depth</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">=</span> <span class="t-number">1</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">needs</span> <span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span>
+  <span class="t-keyword">before</span> <span class="t-punctuation">{</span>
+    <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"enter ${label} at depth ${depth}"</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">aspect</span> <span class="t-name">topLevel</span><span class="t-punctuation">(</span><span class="t-name">label</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">,</span> <span class="t-punctuation">...</span><span class="t-name">rest</span><span class="t-punctuation">)</span> <span class="t-punctuation">=</span> <span class="t-name">traced</span><span class="t-punctuation">(</span><span class="t-name">label</span><span class="t-punctuation">:</span> <span class="t-name">label</span><span class="t-punctuation">,</span> <span class="t-name">depth</span><span class="t-punctuation">:</span> <span class="t-number">0</span><span class="t-punctuation">,</span> <span class="t-punctuation">...</span><span class="t-name">rest</span><span class="t-punctuation">)</span>
+
+<span class="t-punctuation">@</span><span class="t-name">topLevel</span><span class="t-punctuation">(</span><span class="t-string">"work"</span><span class="t-punctuation">)</span>
+<span class="t-keyword">func</span> <span class="t-name">work</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">,</span> <span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">n</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${work(console, 3)}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>enter work at depth 0
+3</code></pre></div>
+<footer>Built from the repository at 0b33d59b9662 by <code>conformance/tools/site.py</code>; every example on this page is checked by <code>conformance/tools/docset_check.py</code>.</footer>
+</main>
+</div>
+<script src="../../search.js"></script>
+<script src="../../site.js"></script>
+</body>
+</html>

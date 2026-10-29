@@ -1,0 +1,5 @@
+# Reading agents: a map of this site in Markdown is at /llms.txt, the full documentation at /llms-full.txt.
+User-agent: *
+Allow: /
+
+Sitemap: https://fortis.picktech.co.uk/sitemap.xml

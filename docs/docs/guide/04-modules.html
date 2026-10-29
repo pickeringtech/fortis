@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modules and packages · Fortis</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body class="mode-human" data-root="../..">
+<header class="top">
+  <a class="brand" href="../../index.html">Fortis</a>
+  <span class="badge">Human mode</span>
+  <input id="search" type="search" placeholder="Search both modes" autocomplete="off" aria-label="Search">
+</header>
+<div id="results" hidden></div>
+<div class="layout">
+<nav class="side"><details open><summary>Guide (human mode)</summary><ul><li><a href="README.html">The Fortis guide</a></li><li><a href="tour.html">A tour of Fortis</a></li><li><a href="03-lexical.html">Lexical structure</a></li><li class=current><a href="04-modules.html">Modules and packages</a></li><li><a href="05-statements.html">Statements and expressions</a></li><li><a href="06-types.html">Types</a></li><li><a href="06-proofs.html">Proving arithmetic and indexing</a></li><li><a href="07-ownership.html">Ownership</a></li><li><a href="08-functions.html">Functions and closures</a></li><li><a href="09-classes.html">Classes, interfaces, mixins and enums</a></li><li><a href="10-outcomes.html">Outcomes and failures</a></li><li><a href="11-effects.html">Effects and contracts</a></li><li><a href="12-async.html">Cleanup, async and concurrency</a></li><li><a href="13-observation.html">Observation</a></li><li><a href="14-tests.html">Tests</a></li><li><a href="15-runtime.html">The core runtime</a></li><li><a href="16-kits.html">Kits and declaration heads</a></li><li><a href="embedded-languages.html">Embedded languages</a></li><li><a href="appendix-a-keywords.html">Appendix A: Keywords</a></li><li><a href="appendix-b-decisions.html">Appendix B: Closed decisions</a></li><li><a href="appendix-c-lowering.html">Appendix C: Lowering to Rust</a></li><li><a href="appendix-d-rules.html">Appendix D: Rule index</a></li><li><a href="worked-examples.html">Worked examples</a></li><li><a href="from-rust.html">Notes for readers coming from Rust</a></li><li><a href="from-typescript.html">Notes for readers coming from TypeScript</a></li><li><a href="from-python.html">Notes for readers coming from Python</a></li><li><a href="glossary.html">Glossary</a></li><li><a href="known-limitations.html">Known limitations of v0.0.2</a></li></ul></details><details><summary>Agent mode</summary><ul><li><a href="../agent/README.html">Fortis for agents</a></li><li><a href="../agent/known-limitations.html">Known limitations of v0.0.2</a></li><li><a href="../agent/records.html">Records</a></li><li><a href="../agent/codes.html">Diagnostic codes</a></li><li><a href="../agent/01-overview.html">Overview: design invariants and notation (LR 1, LR 2)</a></li><li><a href="../agent/03-lexical.html">Lexical structure (LR 3)</a></li><li><a href="../agent/04-modules.html">Modules and packages (LR 4)</a></li><li><a href="../agent/05-statements.html">Statements and expressions (LR 5)</a></li><li><a href="../agent/06-types.html">Types (LR 6)</a></li><li><a href="../agent/06-proofs.html">Proofs for arithmetic and indexing (LR 6.3, 6.4, 6.7)</a></li><li><a href="../agent/07-ownership.html">Ownership (LR 7)</a></li><li><a href="../agent/08-functions.html">Functions and closures (LR 8)</a></li><li><a href="../agent/09-classes.html">Classes, interfaces, mixins and enums (LR 9)</a></li><li><a href="../agent/10-outcomes.html">Outcomes and failures (LR 10)</a></li><li><a href="../agent/11-effects.html">Effects and contracts (LR 11)</a></li><li><a href="../agent/12-async.html">Cleanup, async and concurrency (LR 12)</a></li><li><a href="../agent/13-observation.html">Observation schemas and statements (LR 13)</a></li><li><a href="../agent/14-tests.html">Test declarations (LR 14)</a></li><li><a href="../agent/15-runtime.html">Core runtime inventory (LR 15)</a></li><li><a href="../agent/16-kits.html">Reserved declaration heads for kits (LR 16)</a></li><li><a href="../agent/embedded-languages.html">Embedded languages (LR 16)</a></li><li><a href="../agent/appendix-a-keywords.html">Keyword inventory (LR A)</a></li><li><a href="../agent/appendix-b-decisions.html">Closed decisions (LR B)</a></li><li><a href="../agent/appendix-c-lowering.html">Lowering reference and the Rust-expressible subset (LR C)</a></li><li><a href="../agent/appendix-d-rules.html">Rule index (LR D)</a></li><li><a href="../agent/glossary.html">Glossary (agent mode)</a></li><li><a href="../agent/library.html">The core library</a></li><li><a href="../../skills/fortis-code/SKILL.html">fortis-code</a></li></ul></details><details><summary>Specification</summary><ul><li><a href="../Fortis_Specification.html">Fortis — Specification Overview</a></li><li><a href="../Fortis_Language_Reference.html">Fortis Language Reference</a></li><li><a href="../Fortis_Platform_Specification.html">Fortis Platform Specification</a></li></ul></details></nav>
+<main>
+<p class="mode-switch"><a class="counterpart" href="../agent/04-modules.html">Agent mode: Modules and packages (LR 4)</a></p>
+<h1 id="modules-and-packages">Modules and packages<a class="anchor" href="#modules-and-packages" aria-label="link">#</a></h1>
+<p><em>Human mode. Agent mode: <a href="../agent/04-modules.html">Modules and packages, by rule</a>. Source of truth: <a class="cite" href="../Fortis_Language_Reference.html#4-modules-and-packages">LR 4</a>.</em></p>
+<blockquote><p>Preview: dependencies and lock files (<a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a>) arrive in v0.2. An async entry point (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>, <a class="cite" href="../Fortis_Language_Reference.html#123-async-functions-and-futures">LR 12.3</a>) arrives in v0.3. One package, its modules, imports, visibility and the ordinary entry point (<a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a>, <a class="cite" href="../Fortis_Language_Reference.html#42-modules">4.2</a>, <a class="cite" href="../Fortis_Language_Reference.html#43-imports">4.3</a>, <a class="cite" href="../Fortis_Language_Reference.html#44-visibility">4.4</a>, <a class="cite" href="../Fortis_Language_Reference.html#45-names-and-resolution">4.5</a> and <a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">4.6</a>) are in v0.0.1.</p></blockquote>
+<p>A Fortis program is a set of packages; a package is a set of modules; a module is one file (<a class="cite" href="../Fortis_Language_Reference.html#1-what-fortis-is">LR 1</a>). This chapter covers how those three fit together: the manifest that names a package, how a file's path becomes its module's name, how imports find things, who can see what, and where a program starts.</p>
+<h2 id="packages-and-their-manifest">Packages and their manifest<a class="anchor" href="#packages-and-their-manifest" aria-label="link">#</a></h2>
+<p>A <strong>package</strong> is the unit of distribution, versioning and visibility: a directory holding a manifest, <code>project.yaml</code>, a lockfile and a <code>src/</code> directory (<a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a>). The manifest names the package, its version, its dependencies, which of its modules other packages may import (<code>exports:</code>) and, for an application, the module where it starts (<code>entry:</code>):</p>
+<div class="code"><span class="lang">YAML</span><pre><code># illustrative
+schema: fortis.project/v1
+name: acme.billing
+version: 1.4.0
+exports: [invoices, money]
+dependencies:
+  fortis: "1.0"</code></pre></div>
+<p>Packages are nominal: two versions of one package in the same build are two different packages, and their types never interchange (<a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a>). A dependency on a standard package (<code>fortis</code> or <code>fortis.…</code>) must name a package of the published compatibility set at the set's version, because the standard packages and kits are tested together as a set (<a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a>).</p>
+<p>The lockfile, <code>fortis.lock</code>, written by <code>fortis lock</code>, pins everything a build depends on: the root package, the digests of the compiler, standard library and Rust toolchain, and the identity and content digest of every package the manifests reach. When a package has a lockfile, resolution uses only it and fetches nothing. A dependency the lockfile does not pin, a pin nothing uses, or an unreadable lockfile is <a class="code" href="../agent/codes.html#E-NAM-020"><code>E-NAM-020</code></a>; a digest that differs from the pinned one is <a class="code" href="../agent/codes.html#E-NAM-021"><code>E-NAM-021</code></a> (<a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a>).</p>
+<p>A few more checks guard the edges of a build (<a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a>):</p>
+<div class="table"><table><thead><tr><th>Code</th><th>When</th><th>LR</th></tr></thead><tbody><tr id="E-NAM-030"><td><a class="code" href="../agent/codes.html#E-NAM-030"><code>E-NAM-030</code></a></td><td><code>fortis check --target T</code> or <code>fortis build --target T</code> finds an import of a standard module the target's feature set lacks</td><td><a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a></td></tr><tr id="E-NAM-031"><td><a class="code" href="../agent/codes.html#E-NAM-031"><code>E-NAM-031</code></a></td><td>a dependency names a standard package outside the compatibility set, or at another version</td><td><a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a></td></tr><tr id="E-NAM-032"><td><a class="code" href="../agent/codes.html#E-NAM-032"><code>E-NAM-032</code></a></td><td>a native build meets a package that ships a Cargo build script</td><td><a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a></td></tr><tr><td><a class="code" href="../agent/codes.html#E-LIM-003"><code>E-LIM-003</code></a>, <a class="code" href="../agent/codes.html#E-LIM-004"><code>E-LIM-004</code></a>, <a class="code" href="../agent/codes.html#E-LIM-005"><code>E-LIM-005</code></a></td><td>a manifest over 1 MiB or 10,000 lines, a lockfile over 8 MiB or 100,000 lines, or JSON the toolchain reads over 256 MiB or nested more than 128 deep</td><td><a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a></td></tr><tr><td><a class="code" href="../agent/codes.html#E-INT-001"><code>E-INT-001</code></a>, <a class="code" href="../agent/codes.html#E-INT-002"><code>E-INT-002</code></a>, <a class="code" href="../agent/codes.html#E-INT-003"><code>E-INT-003</code></a></td><td>the toolchain itself failed: a checker defect (its record names a minimised reproduction), generated Rust that does not compile, or a native tool that is missing or fails</td><td><a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a></td></tr></tbody></table></div>
+<p>None of these is a crash: a failure inside the toolchain is always a record (<a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a>).</p>
+<h2 id="modules">Modules<a class="anchor" href="#modules" aria-label="link">#</a></h2>
+<p>A <strong>module</strong> is one source file under <code>src/</code>. Its name is its path relative to <code>src/</code>, with <code>/</code> replaced by <code>.</code> and the extension dropped: <code>src/orders.ft</code> is <code>orders</code> and <code>src/pricing/tax.ft</code> is <code>pricing.tax</code>. A directory is not itself a module, and a module has no header line declaring its name (<a class="cite" href="../Fortis_Language_Reference.html#42-modules">LR 4.2</a>). Other packages import it as the package name followed by the module path: <code>guide.shop.pricing.tax</code>.</p>
+<p>A module contains only declarations and <code>const</code> bindings whose initialisers are compile-time constants (<a class="cite" href="../Fortis_Language_Reference.html#42-modules">LR 4.2</a>). There is no module initialisation code, so importing a module never runs anything, and the order in which modules load can never change what a program does. A statement at the top level is therefore a syntax error:</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-SYN-000</span>
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">let</span> <span class="t-name">counter</span> <span class="t-punctuation">=</span> <span class="t-number">0</span>                 <span class="t-comment">// reject: E-SYN-000</span></code></pre></div>
+<h2 id="a-package-file-by-file">A package, file by file<a class="anchor" href="#a-package-file-by-file" aria-label="link">#</a></h2>
+<p>Here is a small application package, <code>guide.shop</code>, with three modules, <code>app</code>, <code>orders</code> and <code>pricing.tax</code>, named by their paths under <code>src/</code> (<a class="cite" href="../Fortis_Language_Reference.html#42-modules">LR 4.2</a>). Each block is one file:</p>
+<div class="code"><span class="lang">YAML</span><pre><code># file: guide.shop/project.yaml
+schema: fortis.project/v1
+name: guide.shop
+version: 1.0.0
+entry: app
+exports: [orders]
+dependencies:
+  fortis: "1.0"</code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-comment">// file: guide.shop/src/pricing/tax.ft</span>
+<span class="t-comment">// Tax at 20%, in whole pennies, rounded down.</span>
+<span class="t-keyword">export</span> <span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">withTax</span><span class="t-punctuation">(</span><span class="t-name">pennies</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">100000</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">pennies</span> <span class="t-punctuation">+</span> <span class="t-name">pennies</span> <span class="t-punctuation">/</span> <span class="t-number">5</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-comment">// file: guide.shop/src/orders.ft</span>
+<span class="t-keyword">import</span> <span class="t-name">guide</span><span class="t-punctuation">.</span><span class="t-name">shop</span><span class="t-punctuation">.</span><span class="t-name">pricing</span><span class="t-punctuation">.</span><span class="t-name">tax</span> <span class="t-punctuation">{</span> <span class="t-name">withTax</span> <span class="t-punctuation">}</span>
+
+<span class="t-comment">// An order line. Every field is exported, so other modules may build one.</span>
+<span class="t-keyword">export</span> <span class="t-keyword">class</span> <span class="t-type">Line</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">export</span> <span class="t-name">item</span><span class="t-punctuation">:</span> <span class="t-type">String</span>
+  <span class="t-keyword">export</span> <span class="t-name">pennies</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">100000</span><span class="t-punctuation">&gt;</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">total</span><span class="t-punctuation">(</span><span class="t-name">lines</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Line</span><span class="t-punctuation">]</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">sum</span> <span class="t-punctuation">=</span> <span class="t-number">0</span>
+  <span class="t-keyword">for</span> <span class="t-name">line</span> <span class="t-keyword">in</span> <span class="t-name">lines</span> <span class="t-punctuation">{</span>
+    <span class="t-name">sum</span> <span class="t-punctuation">=</span> <span class="t-type">Int</span><span class="t-punctuation">.</span><span class="t-name">saturatingAdd</span><span class="t-punctuation">(</span><span class="t-name">sum</span><span class="t-punctuation">,</span> <span class="t-name">withTax</span><span class="t-punctuation">(</span><span class="t-name">line</span><span class="t-punctuation">.</span><span class="t-name">pennies</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">sum</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-comment">// file: guide.shop/src/app.ft</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+<span class="t-keyword">import</span> <span class="t-name">guide</span><span class="t-punctuation">.</span><span class="t-name">shop</span><span class="t-punctuation">.</span><span class="t-name">orders</span> <span class="t-punctuation">{</span> <span class="t-type">Line</span><span class="t-punctuation">,</span> <span class="t-name">total</span> <span class="t-punctuation">}</span>
+<span class="t-keyword">import</span> <span class="t-name">guide</span><span class="t-punctuation">.</span><span class="t-name">shop</span><span class="t-punctuation">.</span><span class="t-name">pricing</span><span class="t-punctuation">.</span><span class="t-name">tax</span> <span class="t-keyword">as</span> <span class="t-name">tax</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">lines</span> <span class="t-punctuation">=</span> <span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">of</span><span class="t-punctuation">(</span><span class="t-type">Line</span><span class="t-punctuation">(</span><span class="t-name">item</span><span class="t-punctuation">:</span> <span class="t-string">"tea"</span><span class="t-punctuation">,</span> <span class="t-name">pennies</span><span class="t-punctuation">:</span> <span class="t-number">250</span><span class="t-punctuation">)</span><span class="t-punctuation">,</span> <span class="t-type">Line</span><span class="t-punctuation">(</span><span class="t-name">item</span><span class="t-punctuation">:</span> <span class="t-string">"cake"</span><span class="t-punctuation">,</span> <span class="t-name">pennies</span><span class="t-punctuation">:</span> <span class="t-number">300</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"total ${total(lines)} pennies"</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"one cake ${tax.withTax(300)}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>total 660 pennies
+one cake 360</code></pre></div>
+<p>Run it with <code>fortis run guide.shop</code> (the package's directory), or build it with <code>fortis build guide.shop</code>.</p>
+<h2 id="imports">Imports<a class="anchor" href="#imports" aria-label="link">#</a></h2>
+<p>An <code>import</code> names a module by its full path, and imports appear only at the top of a module, before any declaration (<a class="cite" href="../Fortis_Language_Reference.html#43-imports">LR 4.3</a>). There are three forms:</p>
+<div class="table"><table><thead><tr><th>Form</th><th>Binds</th></tr></thead><tbody><tr><td><code>import guide.shop.orders</code></td><td>the alias <code>orders</code>; members are used as <code>orders.total(…)</code></td></tr><tr><td><code>import guide.shop.pricing.tax as tax</code></td><td>the alias <code>tax</code></td></tr><tr><td><code>import guide.shop.orders { Line, total }</code></td><td>the listed members, directly, and nothing else</td></tr></tbody></table></div>
+<p>The path is split into a package and a module by the manifest: the longest prefix that names the current package or one of its declared dependencies is the package, and the rest is the module path (<a class="cite" href="../Fortis_Language_Reference.html#43-imports">LR 4.3</a>). That is why the modules of <code>guide.shop</code> import each other as <code>guide.shop.orders</code> and not as <code>orders</code>: a bare <code>orders</code> names no package. Inside a package, any module may import any of its siblings (<a class="cite" href="../Fortis_Language_Reference.html#43-imports">LR 4.3</a>).</p>
+<p>The standard package is <code>fortis</code>. Its module <code>fortis.prelude</code> is imported into every module automatically and provides the core types (<code>Int</code>, <code>String</code>, <code>List</code>, <code>Map</code>, <code>Outcome</code>, …) and the built-in interfaces; every other standard module (<code>fortis.text</code>, <code>fortis.collections</code>, <code>fortis.numeric</code>, <code>fortis.time</code>, <code>fortis.money</code>, <code>fortis.host</code>) needs an import (<a class="cite" href="../Fortis_Language_Reference.html#43-imports">LR 4.3</a>).</p>
+<p>An import after a declaration is a syntax error (<a class="cite" href="../Fortis_Language_Reference.html#43-imports">LR 4.3</a>):</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-SYN-000</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Host</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">text</span>                <span class="t-comment">// reject: E-SYN-000</span></code></pre></div>
+<p>A name imported into a module must not collide with a declaration of that module (<a class="cite" href="../Fortis_Language_Reference.html#43-imports">LR 4.3</a>). The LR names no code for this yet, so read the record's message (X-152).</p>
+<p>The LR also says that importing the same name twice is an error, and that an unused import is a warning under the baseline lint level and an error under the strict one (<a class="cite" href="../Fortis_Language_Reference.html#43-imports">LR 4.3</a>).</p>
+<h3 id="a-packages-root-module">A package's root module<a class="anchor" href="#a-packages-root-module" aria-label="link">#</a></h3>
+<p>A package may name a <strong>root module</strong> in its manifest (<code>root: core</code>); an import of the bare package name then denotes that module (<a class="cite" href="../Fortis_Language_Reference.html#43-imports">LR 4.3</a>). Here <code>guide.units</code> is a library whose root module is <code>core</code>, and <code>guide.convert</code> depends on it:</p>
+<div class="code"><span class="lang">YAML</span><pre><code># file: guide.units/project.yaml
+schema: fortis.project/v1
+name: guide.units
+version: 2.1.0
+root: core
+exports: [core]
+dependencies:
+  fortis: "1.0"</code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-comment">// file: guide.units/src/core.ft</span>
+<span class="t-keyword">export</span> <span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">metres</span><span class="t-punctuation">(</span><span class="t-name">feet</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">10000</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">feet</span> <span class="t-punctuation">*</span> <span class="t-number">3048</span> <span class="t-punctuation">/</span> <span class="t-number">10000</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"ten feet is three metres, rounded down"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">metres</span><span class="t-punctuation">(</span><span class="t-number">10</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">3</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">YAML</span><pre><code># file: guide.convert/project.yaml
+schema: fortis.project/v1
+name: guide.convert
+version: 1.0.0
+entry: main
+exports: []
+dependencies:
+  fortis: "1.0"
+  guide.units: "2.1.0"</code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-comment">// file: guide.convert/src/main.ft</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+<span class="t-keyword">import</span> <span class="t-name">guide</span><span class="t-punctuation">.</span><span class="t-name">units</span> <span class="t-punctuation">{</span> <span class="t-name">metres</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"100 feet is ${metres(100)} metres"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>100 feet is 30 metres</code></pre></div>
+<p>Without a root module, an import of the bare package name is an error, and a set of dependencies whose names could split an import path two ways is rejected as a whole (<a class="code" href="../agent/codes.html#E-NAM-010"><code>E-NAM-010</code></a>, <a class="cite" href="../Fortis_Language_Reference.html#43-imports">LR 4.3</a>).</p>
+<h2 id="visibility">Visibility<a class="anchor" href="#visibility" aria-label="link">#</a></h2>
+<p>There is one visibility modifier, <code>export</code> (<a class="cite" href="../Fortis_Language_Reference.html#44-visibility">LR 4.4</a>). A declaration without it is private to its module. An exported declaration is visible to every module that imports its module, but whether it is visible <em>outside the package</em> is decided by the manifest: only the modules listed in <code>exports:</code> can be imported by another package, so an <code>export</code> in an unlisted module reaches its siblings only (<a class="cite" href="../Fortis_Language_Reference.html#43-imports">LR 4.3</a>, <a class="cite" href="../Fortis_Language_Reference.html#44-visibility">LR 4.4</a>).</p>
+<p>In <code>guide.shop</code> above, <code>orders</code> is listed and <code>pricing.tax</code> is not, so another package may import <code>orders</code> but not <code>pricing.tax</code>; the import is refused, with a record naming the modules that are exported. The LR names no code for this refusal yet (<a class="cite" href="../Fortis_Language_Reference.html#43-imports">LR 4.3</a>, X-152).</p>
+<p>Members follow the same rule. Fields, methods and associated functions of a class are private unless marked <code>export</code>, and using a declaration or member that is not visible is <a class="code" href="../agent/codes.html#E-NAM-004"><code>E-NAM-004</code></a>, reported where it is used (<a class="cite" href="../Fortis_Language_Reference.html#44-visibility">LR 4.4</a>). A package that another package depends on is a library: it has no <code>entry</code> and no <code>main</code>. Only the root program's entry <code>main</code> creates the capabilities, and a library's functions receive them as parameters (<a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>). Here a small library, <code>guide.menu</code>, keeps <code>discountCode</code> private:</p>
+<div class="code"><span class="lang">YAML</span><pre><code># file: guide.menu/project.yaml
+schema: fortis.project/v1
+name: guide.menu
+version: 1.0.0
+exports: [dishes]
+dependencies:
+  fortis: "1.0"</code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-comment">// file: guide.menu/src/dishes.ft</span>
+<span class="t-keyword">export</span> <span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">teaPennies</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-number">250</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">discountCode</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-type">StringView</span> <span class="t-keyword">from</span> <span class="t-name">static</span> <span class="t-punctuation">=&gt;</span> <span class="t-string">"SPRING"</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"tea costs 250 pennies"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">teaPennies</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">250</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p>An application that depends on it cannot reach the private member:</p>
+<div class="code"><span class="lang">YAML</span><pre><code># file: guide.till/project.yaml
+schema: fortis.project/v1
+name: guide.till
+version: 1.0.0
+entry: main
+exports: []
+dependencies:
+  fortis: "1.0"
+  guide.menu: "1.0.0"</code></pre></div>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-NAM-004</span>
+<span class="t-comment">// file: guide.till/src/main.ft</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+<span class="t-keyword">import</span> <span class="t-name">guide</span><span class="t-punctuation">.</span><span class="t-name">menu</span><span class="t-punctuation">.</span><span class="t-name">dishes</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-name">dishes</span><span class="t-punctuation">.</span><span class="t-name">discountCode</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>        <span class="t-comment">// reject: E-NAM-004</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p>An exported signature may name only exported types. An exported function returning a private class would hand callers a value whose type they cannot name, so it is rejected with <a class="code" href="../agent/codes.html#E-TYP-030"><code>E-TYP-030</code></a> (<a class="cite" href="../Fortis_Language_Reference.html#44-visibility">LR 4.4</a>):</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-TYP-030</span>
+<span class="t-keyword">class</span> <span class="t-type">Hidden</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">export</span> <span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">make</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-type">Hidden</span> <span class="t-punctuation">=&gt;</span> <span class="t-type">Hidden</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-number">1</span><span class="t-punctuation">)</span>    <span class="t-comment">// reject: E-TYP-030</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p>Two more visibility rules shape how classes are used across modules (<a class="cite" href="../Fortis_Language_Reference.html#44-visibility">LR 4.4</a>). An exported field can be read through any loan and written through an <code>editable</code> one. And a class's generated constructor, <code>Line(item: …, pennies: …)</code>, is available only where every field is visible, which is how a class with private fields forces every other module through its own associated functions (<a class="cite" href="../Fortis_Language_Reference.html#44-visibility">LR 4.4</a>, <a class="cite" href="../Fortis_Language_Reference.html#92-construction">LR 9.2</a>).</p>
+<h2 id="names-and-resolution">Names and resolution<a class="anchor" href="#names-and-resolution" aria-label="link">#</a></h2>
+<p>Each module has one namespace: its declarations, its imported aliases and its imported members. A name resolves to the innermost enclosing block that declares it, then to the module (<a class="cite" href="../Fortis_Language_Reference.html#45-names-and-resolution">LR 4.5</a>). Qualified names take four forms: <code>module.member</code>, <code>Type.associated</code>, <code>Enum.Variant</code> and <code>value.field</code> or <code>value.method(…)</code>. There is no <code>::</code>.</p>
+<p>Two rules keep a name's meaning obvious at every use (<a class="cite" href="../Fortis_Language_Reference.html#45-names-and-resolution">LR 4.5</a>). A <code>let</code> that would shadow a visible binding is <a class="code" href="../agent/codes.html#E-NAM-003"><code>E-NAM-003</code></a> (see <a href="05-statements.html">Statements and expressions</a>). And a field is always reached through a receiver, <code>self.lines</code> or <code>order.lines</code>; inside a method, a bare field name is not in scope.</p>
+<p>A type's identity is its name, its declaring package and version, and its declaring module (<a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a>). Two modules may each declare a <code>Point</code>, and they are two different types, even with identical fields. Passing one where the other is expected is a type mismatch, <a class="code" href="../agent/codes.html#E-TYP-040"><code>E-TYP-040</code></a> (<a class="cite" href="../Fortis_Language_Reference.html#61-overview">LR 6.1</a>), and the record names both modules. Here is a library whose two modules each declare a <code>Point</code>, and a test that uses both correctly:</p>
+<div class="code"><span class="lang">YAML</span><pre><code># file: guide.geo/project.yaml
+schema: fortis.project/v1
+name: guide.geo
+version: 1.0.0
+exports: [flat, screen]
+dependencies:
+  fortis: "1.0"</code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-comment">// file: guide.geo/src/flat.ft</span>
+<span class="t-keyword">export</span> <span class="t-keyword">trivial</span> <span class="t-keyword">class</span> <span class="t-type">Point</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">export</span> <span class="t-name">x</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>
+  <span class="t-keyword">export</span> <span class="t-name">y</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-comment">// file: guide.geo/src/screen.ft</span>
+<span class="t-keyword">export</span> <span class="t-keyword">trivial</span> <span class="t-keyword">class</span> <span class="t-type">Point</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">export</span> <span class="t-name">x</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>
+  <span class="t-keyword">export</span> <span class="t-name">y</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">column</span><span class="t-punctuation">(</span><span class="t-name">p</span><span class="t-punctuation">:</span> <span class="t-type">Point</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">p</span><span class="t-punctuation">.</span><span class="t-name">x</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-comment">// file: guide.geo/src/both.ft</span>
+<span class="t-keyword">import</span> <span class="t-name">guide</span><span class="t-punctuation">.</span><span class="t-name">geo</span><span class="t-punctuation">.</span><span class="t-name">flat</span>
+<span class="t-keyword">import</span> <span class="t-name">guide</span><span class="t-punctuation">.</span><span class="t-name">geo</span><span class="t-punctuation">.</span><span class="t-name">screen</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"each module's Point is its own type"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">onScreen</span> <span class="t-punctuation">=</span> <span class="t-name">screen</span><span class="t-punctuation">.</span><span class="t-type">Point</span><span class="t-punctuation">(</span><span class="t-name">x</span><span class="t-punctuation">:</span> <span class="t-number">3</span><span class="t-punctuation">,</span> <span class="t-name">y</span><span class="t-punctuation">:</span> <span class="t-number">4</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-name">onPaper</span> <span class="t-punctuation">=</span> <span class="t-name">flat</span><span class="t-punctuation">.</span><span class="t-type">Point</span><span class="t-punctuation">(</span><span class="t-name">x</span><span class="t-punctuation">:</span> <span class="t-number">1</span><span class="t-punctuation">,</span> <span class="t-name">y</span><span class="t-punctuation">:</span> <span class="t-number">2</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">expect</span> <span class="t-name">screen</span><span class="t-punctuation">.</span><span class="t-name">column</span><span class="t-punctuation">(</span><span class="t-name">onScreen</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">3</span>
+  <span class="t-keyword">expect</span> <span class="t-name">onPaper</span><span class="t-punctuation">.</span><span class="t-name">x</span> <span class="t-punctuation">==</span> <span class="t-number">1</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p>A module that passes a <code>flat.Point</code> where a <code>screen.Point</code> is expected is rejected, here in an application that uses the library:</p>
+<div class="code"><span class="lang">YAML</span><pre><code># file: guide.geomix/project.yaml
+schema: fortis.project/v1
+name: guide.geomix
+version: 1.0.0
+entry: app
+exports: []
+dependencies:
+  fortis: "1.0"
+  guide.geo: "1.0.0"</code></pre></div>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-TYP-040</span>
+<span class="t-comment">// file: guide.geomix/src/app.ft</span>
+<span class="t-keyword">import</span> <span class="t-name">guide</span><span class="t-punctuation">.</span><span class="t-name">geo</span><span class="t-punctuation">.</span><span class="t-name">flat</span>
+<span class="t-keyword">import</span> <span class="t-name">guide</span><span class="t-punctuation">.</span><span class="t-name">geo</span><span class="t-punctuation">.</span><span class="t-name">screen</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">onPaper</span> <span class="t-punctuation">=</span> <span class="t-name">flat</span><span class="t-punctuation">.</span><span class="t-type">Point</span><span class="t-punctuation">(</span><span class="t-name">x</span><span class="t-punctuation">:</span> <span class="t-number">1</span><span class="t-punctuation">,</span> <span class="t-name">y</span><span class="t-punctuation">:</span> <span class="t-number">2</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">discard</span> <span class="t-name">screen</span><span class="t-punctuation">.</span><span class="t-name">column</span><span class="t-punctuation">(</span><span class="t-name">onPaper</span><span class="t-punctuation">)</span>        <span class="t-comment">// reject: E-TYP-040</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p>This is what lets two versions of one package, or two packages that happen to use the same names, live in one program: each version's functions and types run where they are named (<a class="cite" href="../Fortis_Language_Reference.html#41-packages">LR 4.1</a>, <a class="cite" href="../Fortis_Language_Reference.html#44-visibility">LR 4.4</a>).</p>
+<h2 id="the-entry-point">The entry point<a class="anchor" href="#the-entry-point" aria-label="link">#</a></h2>
+<p>An application names its entry module in the manifest (<code>entry: app</code>), and that module declares a function called <code>main</code> with one of four heads (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>):</p>
+<div class="table"><table><thead><tr><th>Head</th><th>Use it when <code>main</code></th></tr></thead><tbody><tr><td><code>func main(…)</code></td><td>cannot fail and does not suspend</td></tr><tr><td><code>try func main(…)</code></td><td>may fail</td></tr><tr><td><code>async func main(…)</code></td><td>awaits asynchronous work</td></tr><tr><td><code>async try func main(…)</code></td><td>both</td></tr></tbody></table></div>
+<p><code>main</code> asks for what it needs as parameters, and the runtime supplies each one by its type: <code>List[String]</code> gets the command-line arguments, and each capability type of <code>fortis.host</code> (<code>Console</code>, <code>FileSystem</code>, <code>Clock</code> and the rest) gets that capability. Names and order are yours, each type appears once, and a <code>main</code> that needs nothing takes no parameters. <code>export</code> is implied on the entry <code>main</code> (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>):</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span><span class="t-punctuation">,</span> <span class="t-type">FileSystem</span><span class="t-punctuation">,</span> <span class="t-type">Path</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">,</span> <span class="t-name">files</span><span class="t-punctuation">:</span> <span class="t-type">FileSystem</span><span class="t-punctuation">,</span> <span class="t-name">args</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">String</span><span class="t-punctuation">]</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">path</span> <span class="t-punctuation">=</span> <span class="t-type">Path</span><span class="t-punctuation">.</span><span class="t-name">parse</span><span class="t-punctuation">(</span><span class="t-string">"note.txt"</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-name">files</span><span class="t-punctuation">.</span><span class="t-name">writeAll</span><span class="t-punctuation">(</span><span class="t-name">path</span><span class="t-punctuation">,</span> <span class="t-string">"${args.count()} arguments"</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-name">files</span><span class="t-punctuation">.</span><span class="t-name">readText</span><span class="t-punctuation">(</span><span class="t-name">path</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>0 arguments</code></pre></div>
+<p>A parameter of any other type is rejected (<a class="code" href="../agent/codes.html#E-NAM-005"><code>E-NAM-005</code></a>), and so is a second parameter of a type already taken (<a class="code" href="../agent/codes.html#E-NAM-006"><code>E-NAM-006</code></a>, <a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>). <code>main</code> owns the capabilities it receives: it lends them to the functions it calls, and it may move one, for example into a <code>Shared</code> that several owners hold (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>, <a class="cite" href="../Fortis_Language_Reference.html#78-shared-ownership">LR 7.8</a>). Older code writes <code>export func main(args: List[String]) Void</code> and creates its capabilities with <code>Host.capabilities()</code> in the body; that form is still accepted, and <code>fortis fmt</code> rewrites it to this one.</p>
+<p>Any of the four may also carry <code>recovers</code>, written like any function whose summary has that effect: a <code>main</code> that reaches a function that recovers a failure writes <code>try recovers func main</code> (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>, <a class="cite" href="../Fortis_Language_Reference.html#112-modifiers-as-claims">LR 11.2</a>). Today's checkers refuse <code>recovers</code> on the <code>main</code> of a package, though they accept it in a single file (D-52); until that is fixed, a package's <code>main</code> can report the failures it would recover instead.</p>
+<p><code>main</code> gets I/O authority through its capability parameters, and no other function receives capabilities from the runtime or creates them, which is why every function that does I/O through a capability must be handed one; <code>report</code> and the log statements are the <code>io</code> operations that need none (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>, <a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>, <a class="cite" href="../Fortis_Language_Reference.html#106-reports-annotation-and-aggregation">LR 10.6</a>, <a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>). A package whose entry module has no <code>main</code> with one of these heads is rejected (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>); the LR names no code for that yet (X-152).</p>
+<p>If a <code>try main</code> fails, the runtime writes exactly one report of the failure to standard error and the process exits with status 1 (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>). Nothing else is needed, and there is no <code>or die</code>:</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept (exit status 1)</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Path</span><span class="t-punctuation">,</span> <span class="t-type">Console</span><span class="t-punctuation">,</span> <span class="t-type">FileSystem</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">,</span> <span class="t-name">fileSystem</span><span class="t-punctuation">:</span> <span class="t-type">FileSystem</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"reading settings"</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-name">path</span> <span class="t-punctuation">=</span> <span class="t-type">Path</span><span class="t-punctuation">.</span><span class="t-name">parse</span><span class="t-punctuation">(</span><span class="t-string">"settings.txt"</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-keyword">let</span> <span class="t-name">text</span> <span class="t-punctuation">=</span> <span class="t-name">fileSystem</span><span class="t-punctuation">.</span><span class="t-name">readText</span><span class="t-punctuation">(</span><span class="t-name">path</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-name">text</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>reading settings</code></pre></div>
+<p>The file does not exist, so <code>readText</code> fails with <code>fs.not_found</code>, <code>or fail</code> passes the failure to <code>main</code>'s caller, and the runtime reports it once: as text on a terminal, and as one JSON record on a pipe (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>). The report is a record like every other finding.</p>
+<p>An <code>async main</code> runs on the core cooperative executor as the root task, and the process ends when it completes (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>):</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Clock</span><span class="t-punctuation">,</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">greet</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">,</span> <span class="t-name">clock</span><span class="t-punctuation">:</span> <span class="t-type">Clock</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">await</span> <span class="t-name">clock</span><span class="t-punctuation">.</span><span class="t-name">sleep</span><span class="t-punctuation">(</span><span class="t-number">10ms</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"after a short sleep"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">,</span> <span class="t-name">clock</span><span class="t-punctuation">:</span> <span class="t-type">Clock</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"starting"</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">await</span> <span class="t-name">greet</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">,</span> <span class="t-name">clock</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>starting
+after a short sleep</code></pre></div>
+<p><a href="12-async.html">Cleanup, async and concurrency</a> explains <code>async</code> and <code>await</code>.</p>
+<footer>Built from the repository at 0b33d59b9662 by <code>conformance/tools/site.py</code>; every example on this page is checked by <code>conformance/tools/docset_check.py</code>.</footer>
+</main>
+</div>
+<script src="../../search.js"></script>
+<script src="../../site.js"></script>
+</body>
+</html>

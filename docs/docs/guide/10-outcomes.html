@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outcomes and failures · Fortis</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body class="mode-human" data-root="../..">
+<header class="top">
+  <a class="brand" href="../../index.html">Fortis</a>
+  <span class="badge">Human mode</span>
+  <input id="search" type="search" placeholder="Search both modes" autocomplete="off" aria-label="Search">
+</header>
+<div id="results" hidden></div>
+<div class="layout">
+<nav class="side"><details open><summary>Guide (human mode)</summary><ul><li><a href="README.html">The Fortis guide</a></li><li><a href="tour.html">A tour of Fortis</a></li><li><a href="03-lexical.html">Lexical structure</a></li><li><a href="04-modules.html">Modules and packages</a></li><li><a href="05-statements.html">Statements and expressions</a></li><li><a href="06-types.html">Types</a></li><li><a href="06-proofs.html">Proving arithmetic and indexing</a></li><li><a href="07-ownership.html">Ownership</a></li><li><a href="08-functions.html">Functions and closures</a></li><li><a href="09-classes.html">Classes, interfaces, mixins and enums</a></li><li class=current><a href="10-outcomes.html">Outcomes and failures</a></li><li><a href="11-effects.html">Effects and contracts</a></li><li><a href="12-async.html">Cleanup, async and concurrency</a></li><li><a href="13-observation.html">Observation</a></li><li><a href="14-tests.html">Tests</a></li><li><a href="15-runtime.html">The core runtime</a></li><li><a href="16-kits.html">Kits and declaration heads</a></li><li><a href="embedded-languages.html">Embedded languages</a></li><li><a href="appendix-a-keywords.html">Appendix A: Keywords</a></li><li><a href="appendix-b-decisions.html">Appendix B: Closed decisions</a></li><li><a href="appendix-c-lowering.html">Appendix C: Lowering to Rust</a></li><li><a href="appendix-d-rules.html">Appendix D: Rule index</a></li><li><a href="worked-examples.html">Worked examples</a></li><li><a href="from-rust.html">Notes for readers coming from Rust</a></li><li><a href="from-typescript.html">Notes for readers coming from TypeScript</a></li><li><a href="from-python.html">Notes for readers coming from Python</a></li><li><a href="glossary.html">Glossary</a></li><li><a href="known-limitations.html">Known limitations of v0.0.2</a></li></ul></details><details><summary>Agent mode</summary><ul><li><a href="../agent/README.html">Fortis for agents</a></li><li><a href="../agent/known-limitations.html">Known limitations of v0.0.2</a></li><li><a href="../agent/records.html">Records</a></li><li><a href="../agent/codes.html">Diagnostic codes</a></li><li><a href="../agent/01-overview.html">Overview: design invariants and notation (LR 1, LR 2)</a></li><li><a href="../agent/03-lexical.html">Lexical structure (LR 3)</a></li><li><a href="../agent/04-modules.html">Modules and packages (LR 4)</a></li><li><a href="../agent/05-statements.html">Statements and expressions (LR 5)</a></li><li><a href="../agent/06-types.html">Types (LR 6)</a></li><li><a href="../agent/06-proofs.html">Proofs for arithmetic and indexing (LR 6.3, 6.4, 6.7)</a></li><li><a href="../agent/07-ownership.html">Ownership (LR 7)</a></li><li><a href="../agent/08-functions.html">Functions and closures (LR 8)</a></li><li><a href="../agent/09-classes.html">Classes, interfaces, mixins and enums (LR 9)</a></li><li><a href="../agent/10-outcomes.html">Outcomes and failures (LR 10)</a></li><li><a href="../agent/11-effects.html">Effects and contracts (LR 11)</a></li><li><a href="../agent/12-async.html">Cleanup, async and concurrency (LR 12)</a></li><li><a href="../agent/13-observation.html">Observation schemas and statements (LR 13)</a></li><li><a href="../agent/14-tests.html">Test declarations (LR 14)</a></li><li><a href="../agent/15-runtime.html">Core runtime inventory (LR 15)</a></li><li><a href="../agent/16-kits.html">Reserved declaration heads for kits (LR 16)</a></li><li><a href="../agent/embedded-languages.html">Embedded languages (LR 16)</a></li><li><a href="../agent/appendix-a-keywords.html">Keyword inventory (LR A)</a></li><li><a href="../agent/appendix-b-decisions.html">Closed decisions (LR B)</a></li><li><a href="../agent/appendix-c-lowering.html">Lowering reference and the Rust-expressible subset (LR C)</a></li><li><a href="../agent/appendix-d-rules.html">Rule index (LR D)</a></li><li><a href="../agent/glossary.html">Glossary (agent mode)</a></li><li><a href="../agent/library.html">The core library</a></li><li><a href="../../skills/fortis-code/SKILL.html">fortis-code</a></li></ul></details><details><summary>Specification</summary><ul><li><a href="../Fortis_Specification.html">Fortis — Specification Overview</a></li><li><a href="../Fortis_Language_Reference.html">Fortis Language Reference</a></li><li><a href="../Fortis_Platform_Specification.html">Fortis Platform Specification</a></li></ul></details></nav>
+<main>
+<p class="mode-switch"><a class="counterpart" href="../agent/10-outcomes.html">Agent mode: Outcomes and failures (LR 10)</a></p>
+<h1 id="outcomes-and-failures">Outcomes and failures<a class="anchor" href="#outcomes-and-failures" aria-label="link">#</a></h1>
+<p><em>Human mode. Agent mode: <a href="../agent/10-outcomes.html">Outcomes and failures, by rule</a>. Source of truth: <a class="cite" href="../Fortis_Language_Reference.html#10-outcomes-and-failures">LR 10</a>.</em></p>
+<blockquote><p>Preview: linear containers (<a class="cite" href="../Fortis_Language_Reference.html#107-linear-containers-and-generic-code">LR 10.7</a>) arrive in v0.1. The rest of this chapter (<a class="cite" href="../Fortis_Language_Reference.html#10-outcomes-and-failures">LR 10</a>) is in v0.0.1.</p></blockquote>
+<p>Fortis has no exceptions. A function that can fail says so with <code>try</code>, and its caller receives an <code>Outcome</code>: a value that holds either the success value or a <code>Failure</code>. An outcome is <strong>linear</strong>: it must be dealt with exactly once, and the checker rejects a program that drops one (<a class="cite" href="../Fortis_Language_Reference.html#1-what-fortis-is">LR 1</a>, <a class="cite" href="../Fortis_Language_Reference.html#101-fallible-functions">LR 10.1</a>). This chapter shows the ways to deal with an outcome, how failures are declared, matched and reported, and the few conditions, called defects, that are not failures at all.</p>
+<p>An absent value (<code>T?</code>), a <code>Bool</code> and an outcome are three different things with three different operators (<code>??</code>, <code>||</code>, <code>or</code>), and none converts into another (<a class="cite" href="../Fortis_Language_Reference.html#1-what-fortis-is">LR 1</a>, <a class="cite" href="../Fortis_Language_Reference.html#68-optional-values">LR 6.8</a>).</p>
+<h2 id="fallible-functions">Fallible functions<a class="anchor" href="#fallible-functions" aria-label="link">#</a></h2>
+<p><code>try func f(…) T</code> returns <code>Outcome[T]</code>. Inside it, <code>return v</code> succeeds with <code>v</code> and <code>fail f</code> fails with the failure <code>f</code> (<a class="cite" href="../Fortis_Language_Reference.html#101-fallible-functions">LR 10.1</a>). A call to it needs no prefix, but its result is an <code>Outcome[T]</code>, not a <code>T</code>: the success value cannot be reached without consuming the outcome (<a class="cite" href="../Fortis_Language_Reference.html#101-fallible-functions">LR 10.1</a>).</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">NotEven</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.not_even"</span>
+  <span class="t-name">payload</span> <span class="t-punctuation">{</span> <span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">}</span>
+  <span class="t-name">message</span><span class="t-punctuation">:</span> <span class="t-string">"${value} is odd"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">!=</span> <span class="t-number">0</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">NotEven</span><span class="t-punctuation">(</span><span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-name">n</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">h</span> <span class="t-punctuation">=</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-number">10</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"half of 10 is ${h}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>half of 10 is 5</code></pre></div>
+<p>Using the outcome as if it were the value is a type error (here <a class="code" href="../agent/codes.html#E-TYP-040"><code>E-TYP-040</code></a>, <a class="cite" href="../Fortis_Language_Reference.html#101-fallible-functions">LR 10.1</a>), and leaving it unconsumed is <a class="code" href="../agent/codes.html#E-OBL-001"><code>E-OBL-001</code></a> (<a class="cite" href="../Fortis_Language_Reference.html#101-fallible-functions">LR 10.1</a>):</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OBL-001, E-TYP-040</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">NotEven</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.not_even"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">!=</span> <span class="t-number">0</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">NotEven</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">double</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-type">Int</span><span class="t-punctuation">.</span><span class="t-name">saturatingMul</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">,</span> <span class="t-number">2</span><span class="t-punctuation">)</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-number">10</span><span class="t-punctuation">)</span>                            <span class="t-comment">// reject: E-OBL-001</span>
+  <span class="t-keyword">let</span> <span class="t-name">d</span> <span class="t-punctuation">=</span> <span class="t-name">double</span><span class="t-punctuation">(</span><span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-number">10</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>            <span class="t-comment">// reject: E-TYP-040</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h2 id="consuming-an-outcome">Consuming an outcome<a class="anchor" href="#consuming-an-outcome" aria-label="link">#</a></h2>
+<p>These are all the ways to consume an outcome (<a class="cite" href="../Fortis_Language_Reference.html#102-consuming-operations">LR 10.2</a>):</p>
+<div class="table"><table><thead><tr><th>Operation</th><th>What happens to the failure</th><th>Where</th></tr></thead><tbody><tr><td><code>e or fail</code></td><td>passed on to the caller</td><td>in a <code>try</code> function</td></tr><tr><td><code>e or recover v</code></td><td>replaced by <code>v</code>, which is evaluated only on failure</td><td>anywhere; adds <code>recovers</code></td></tr><tr><td><code>e catch name { … }</code></td><td>handled in a block that ends in <code>recover</code>, <code>return</code> or <code>fail</code></td><td>anywhere</td></tr><tr><td><code>match e { success(x) =&gt; …, failure(f) =&gt; … }</code></td><td>handled by the <code>failure</code> arm, which consumes <code>f</code></td><td>anywhere</td></tr><tr><td><code>report f</code></td><td>written to the diagnostic plane</td><td>where <code>io</code> is allowed</td></tr><tr><td><code>move</code> to an <code>owned Outcome[T]</code> or <code>owned Failure</code> parameter, or into a linear container or field</td><td>transferred</td><td>anywhere</td></tr><tr><td><code>fail f</code></td><td>passed on</td><td>in a <code>try</code> function</td></tr></tbody></table></div>
+<p>There is no bare <code>or value</code>: every discard of a failure is spelled <code>recover</code>, so a reader can find them all. There is no <code>?</code>, no <code>try</code> at the call site and no <code>unwrap</code> (<a class="cite" href="../Fortis_Language_Reference.html#102-consuming-operations">LR 10.2</a>).</p>
+<p>Because <code>or</code> binds loosest, the idiom is one decision per line: <code>let v = f() or fail</code>, then use <code>v</code> (<a class="cite" href="../Fortis_Language_Reference.html#11-notation-economy">LR 1.1</a>).</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">NotEven</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.not_even"</span>
+  <span class="t-name">payload</span> <span class="t-punctuation">{</span> <span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">!=</span> <span class="t-number">0</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">NotEven</span><span class="t-punctuation">(</span><span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-name">n</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">halfOrZero</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">recover</span> <span class="t-number">0</span>
+
+<span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">describe</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">String</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">return</span> <span class="t-keyword">match</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">success</span><span class="t-punctuation">(</span><span class="t-name">v</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-string">"half of ${n} is ${v}"</span>
+    <span class="t-keyword">failure</span><span class="t-punctuation">(</span><span class="t-name">f</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-punctuation">{</span>
+      <span class="t-keyword">report</span> <span class="t-name">f</span>
+      <span class="t-keyword">give</span> <span class="t-string">"${n} has no half"</span>
+    <span class="t-punctuation">}</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${halfOrZero(7)} ${halfOrZero(8)}"</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-name">describe</span><span class="t-punctuation">(</span><span class="t-number">6</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-name">describe</span><span class="t-punctuation">(</span><span class="t-number">3</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>0 4
+half of 6 is 3
+3 has no half</code></pre></div>
+<p><code>describe(3)</code> reports its failure, so a failure record also goes to standard error; the output above is standard output only.</p>
+<h3 id="recovers-discarding-a-failure-is-visible"><code>recovers</code>: discarding a failure is visible<a class="anchor" href="#recovers-discarding-a-failure-is-visible" aria-label="link">#</a></h3>
+<p>A failure discharged without being reported, by <code>or recover</code>, a <code>catch</code> ending in <code>recover</code>, or a <code>match</code> arm that drops it, adds the <code>recovers</code> effect (<a class="cite" href="../Fortis_Language_Reference.html#102-consuming-operations">LR 10.2</a>, <a class="cite" href="../Fortis_Language_Reference.html#104-catch-and-recover">LR 10.4</a>). A function with that effect must say <code>recovers</code> in its head, and because a call imports its callee's effects, so must the functions that call it; a signature therefore shows who swallowed a failure (<a class="cite" href="../Fortis_Language_Reference.html#81-named-functions">LR 8.1</a>, <a class="cite" href="../Fortis_Language_Reference.html#112-modifiers-as-claims">LR 11.2</a>, <a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>). Leaving the modifier off is <a class="code" href="../agent/codes.html#E-EFF-001"><code>E-EFF-001</code></a> (<a class="cite" href="../Fortis_Language_Reference.html#111-the-effect-set">LR 11.1</a>):</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-EFF-001</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">NotEven</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.not_even"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">!=</span> <span class="t-number">0</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">NotEven</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">halfOrZero</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">=&gt;</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">recover</span> <span class="t-number">0</span>     <span class="t-comment">// reject: E-EFF-001</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h2 id="declaring-failures">Declaring failures<a class="anchor" href="#declaring-failures" aria-label="link">#</a></h2>
+<p><code>Failure</code> is the one failure type. It carries a stable <code>code</code>, a typed payload, an origin (module, function and line) and an optional chain of causes; it is linear and cannot be copied (<a class="cite" href="../Fortis_Language_Reference.html#103-failure-values">LR 10.3</a>). Each kind of failure is declared with <code>error</code> (<a class="cite" href="../Fortis_Language_Reference.html#103-failure-values">LR 10.3</a>):</p>
+<div class="code illustrative"><span class="lang">Fortis</span><pre><code><span class="t-comment">// illustrative</span>
+export error Name {
+  code: "package.area.kind"
+  payload { field: Type, … }
+  message: "template naming ${field}"
+}</code></pre></div>
+<p>The declaration gives a constructor, <code>Name(field: …)</code>, that produces a <code>Failure</code>, a pattern <code>is Name(…)</code> for matching, and a display template (<a class="cite" href="../Fortis_Language_Reference.html#103-failure-values">LR 10.3</a>). The <code>message</code> is a template, not an interpolated string: its <code>${…}</code> may name only payload fields, and it is rendered when the failure is displayed (<a class="cite" href="../Fortis_Language_Reference.html#103-failure-values">LR 10.3</a>). Codes are unique within a package and stable across versions, and payload fields are trivial values or length-bounded strings, so a failure is bounded and never carries a secret (<a class="cite" href="../Fortis_Language_Reference.html#103-failure-values">LR 10.3</a>). A failure raised with <code>fail</code> in a <code>pure</code> function reads no clock and allocates no identifier, so it is as deterministic as the function (<a class="cite" href="../Fortis_Language_Reference.html#103-failure-values">LR 10.3</a>).</p>
+<p>What a program can read from a failure is its <code>code</code> (<code>e.code</code>, a <code>StringView</code>) and, through an <code>is Name(field: x)</code> pattern, its payload (<a class="cite" href="../Fortis_Language_Reference.html#103-failure-values">LR 10.3</a>, <a class="cite" href="../Fortis_Language_Reference.html#105-matching-on-failures">LR 10.5</a>). The message template is for display: <a class="cite" href="../Fortis_Language_Reference.html#103-failure-values">LR 10.3</a> says it is rendered when the failure is displayed, but <code>Failure</code> does not implement <code>Displayable</code> in Language 1.0's library, so it cannot be interpolated, and the records the toolchain writes carry the code and payload without rendering the template yet (X-154, D-57). Build a message from the payload when a program needs one. One more difference from the LR today: the checkers accept <code>fail Name(…)</code>, but refuse a constructor call where a <code>Failure</code> value is expected (<code>Outcome.failure(Name(…))</code>, a binding annotated <code>Failure</code>), which <a class="cite" href="../Fortis_Language_Reference.html#103-failure-values">LR 10.3</a> allows (D-52).</p>
+<p>A test or an adapter that needs to build an outcome by hand uses <code>Outcome.success(v)</code> and <code>Outcome.failure(move f)</code> (<a class="cite" href="../Fortis_Language_Reference.html#101-fallible-functions">LR 10.1</a>):</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Missing</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"store.missing"</span>
+  <span class="t-name">payload</span> <span class="t-punctuation">{</span> <span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">fake</span><span class="t-punctuation">(</span><span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Outcome</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">key</span> <span class="t-punctuation">&gt;</span> <span class="t-number">3</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">return</span> <span class="t-type">Outcome</span><span class="t-punctuation">.</span><span class="t-keyword">failure</span><span class="t-punctuation">(</span><span class="t-type">Missing</span><span class="t-punctuation">(</span><span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-name">key</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-type">Outcome</span><span class="t-punctuation">.</span><span class="t-keyword">success</span><span class="t-punctuation">(</span><span class="t-name">key</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">a</span> <span class="t-punctuation">=</span> <span class="t-name">fake</span><span class="t-punctuation">(</span><span class="t-number">2</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">recover</span> <span class="t-punctuation">-</span><span class="t-number">1</span>
+  <span class="t-keyword">let</span> <span class="t-name">b</span> <span class="t-punctuation">=</span> <span class="t-name">fake</span><span class="t-punctuation">(</span><span class="t-number">9</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">recover</span> <span class="t-punctuation">-</span><span class="t-number">1</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${a} ${b}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>2 -1</code></pre></div>
+<h2 id="catch-and-recover"><code>catch</code> and <code>recover</code><a class="anchor" href="#catch-and-recover" aria-label="link">#</a></h2>
+<p><code>e catch name { … }</code> names the failure and runs the block only when <code>e</code> failed (<a class="cite" href="../Fortis_Language_Reference.html#104-catch-and-recover">LR 10.4</a>). Inside the block, <code>return</code> and <code>fail</code> leave the enclosing function, and <code>recover v</code> ends the block with <code>v</code> as the value of the whole expression. A <code>catch</code> covers only its left operand (<a class="cite" href="../Fortis_Language_Reference.html#104-catch-and-recover">LR 10.4</a>). When the failing call returns <code>Void</code>, the replacement is <code>Void</code>'s one value, written <code>recover Void</code> (<a class="cite" href="../Fortis_Language_Reference.html#62-built-in-types">LR 6.2</a>, <a class="cite" href="../Fortis_Language_Reference.html#104-catch-and-recover">LR 10.4</a>).</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">NotANumber</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"parse.not_a_number"</span>
+  <span class="t-name">payload</span> <span class="t-punctuation">{</span> <span class="t-name">position</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">parseDigits</span><span class="t-punctuation">(</span><span class="t-name">text</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">n</span> <span class="t-punctuation">=</span> <span class="t-name">text</span><span class="t-punctuation">.</span><span class="t-name">scalarCount</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">value</span> <span class="t-punctuation">=</span> <span class="t-number">0</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">i</span> <span class="t-punctuation">=</span> <span class="t-number">0</span>
+  <span class="t-keyword">while</span> <span class="t-name">i</span> <span class="t-punctuation">&lt;</span> <span class="t-name">n</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">let</span> <span class="t-name">s</span> <span class="t-punctuation">=</span> <span class="t-name">text</span><span class="t-punctuation">.</span><span class="t-name">scalarAt</span><span class="t-punctuation">(</span><span class="t-name">i</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+    <span class="t-keyword">let</span> <span class="t-name">d</span> <span class="t-punctuation">=</span> <span class="t-type">Scalar</span><span class="t-punctuation">.</span><span class="t-name">digitValue</span><span class="t-punctuation">(</span><span class="t-name">s</span><span class="t-punctuation">)</span>
+    <span class="t-keyword">if</span> <span class="t-name">d</span> <span class="t-punctuation">==</span> <span class="t-keyword">null</span> <span class="t-punctuation">{</span>
+      <span class="t-keyword">fail</span> <span class="t-type">NotANumber</span><span class="t-punctuation">(</span><span class="t-name">position</span><span class="t-punctuation">:</span> <span class="t-name">i</span><span class="t-punctuation">)</span>
+    <span class="t-punctuation">}</span>
+    <span class="t-name">value</span> <span class="t-punctuation">=</span> <span class="t-name">value</span> <span class="t-punctuation">*</span> <span class="t-number">10</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+    <span class="t-name">value</span> <span class="t-punctuation">=</span> <span class="t-name">value</span> <span class="t-punctuation">+</span> <span class="t-name">d</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+    <span class="t-name">i</span> <span class="t-punctuation">=</span> <span class="t-type">Int</span><span class="t-punctuation">.</span><span class="t-name">add</span><span class="t-punctuation">(</span><span class="t-name">i</span><span class="t-punctuation">,</span> <span class="t-number">1</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">value</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">parseOrZero</span><span class="t-punctuation">(</span><span class="t-name">text</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">v</span> <span class="t-punctuation">=</span> <span class="t-name">parseDigits</span><span class="t-punctuation">(</span><span class="t-name">text</span><span class="t-punctuation">)</span> <span class="t-keyword">catch</span> <span class="t-name">e</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">report</span> <span class="t-name">e</span>
+    <span class="t-keyword">recover</span> <span class="t-number">0</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">v</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${parseOrZero("2026")} ${parseOrZero("20x6")}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>2026 0</code></pre></div>
+<p>If the block consumes the failure before <code>recover</code>, as <code>report e</code> does here, the <code>recover</code> discards nothing and adds no <code>recovers</code> effect; if it does not, <code>recover</code> consumes the failure and the function gets <code>recovers</code> (<a class="cite" href="../Fortis_Language_Reference.html#104-catch-and-recover">LR 10.4</a>). Every path through the block must end in <code>recover</code>, <code>return</code>, <code>fail</code> or a call that never returns (<a class="code" href="../agent/codes.html#E-OBL-002"><code>E-OBL-002</code></a>, <a class="cite" href="../Fortis_Language_Reference.html#104-catch-and-recover">LR 10.4</a>):</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OBL-002, E-OBL-001</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">NotEven</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.not_even"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">!=</span> <span class="t-number">0</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">NotEven</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">careful</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">v</span> <span class="t-punctuation">=</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-keyword">catch</span> <span class="t-name">e</span> <span class="t-punctuation">{</span>          <span class="t-comment">// reject: E-OBL-002, E-OBL-001</span>
+    <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">&gt;</span> <span class="t-number">100</span> <span class="t-punctuation">{</span>
+      <span class="t-keyword">recover</span> <span class="t-number">0</span>
+    <span class="t-punctuation">}</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">v</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p>The path that falls off the end of the block also leaves <code>e</code> unconsumed, which is <a class="code" href="../agent/codes.html#E-OBL-001"><code>E-OBL-001</code></a> on the same line (<a class="cite" href="../Fortis_Language_Reference.html#101-fallible-functions">LR 10.1</a>).</p>
+<h2 id="matching-on-failures">Matching on failures<a class="anchor" href="#matching-on-failures" aria-label="link">#</a></h2>
+<p><code>match move f</code> over a <code>Failure</code> uses <code>is ErrorName(…)</code> patterns, and because <code>Failure</code> is an open type it ends with <code>otherwise(name)</code>, which receives any other failure and must consume it (<a class="cite" href="../Fortis_Language_Reference.html#105-matching-on-failures">LR 10.5</a>). The library's own failures (<code>numeric.overflow</code>, <code>collection.index</code>, <code>text.index</code>, …) have no declared error a program can name in an <code>is</code> pattern yet (D-58), so test their code instead: <code>if e.code == "numeric.overflow" { … }</code> inside a <code>catch e</code> block, or after <code>match f</code> (a read loan) and before the failure is consumed (<a class="cite" href="../Fortis_Language_Reference.html#103-failure-values">LR 10.3</a>, <a class="cite" href="../Fortis_Language_Reference.html#105-matching-on-failures">LR 10.5</a>). Payload fields are bound by copy. An <code>is</code> arm without <code>as</code> discharges the failure when it matches, which adds <code>recovers</code>; an arm that binds the whole failure with <code>as name</code> must consume <code>name</code> (<a class="cite" href="../Fortis_Language_Reference.html#105-matching-on-failures">LR 10.5</a>).</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">NotANumber</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"parse.not_a_number"</span>
+  <span class="t-name">payload</span> <span class="t-punctuation">{</span> <span class="t-name">position</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Empty</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"parse.empty"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">TooLong</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"parse.too_long"</span>
+  <span class="t-name">payload</span> <span class="t-punctuation">{</span> <span class="t-name">length</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">parseDigits</span><span class="t-punctuation">(</span><span class="t-name">text</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">n</span> <span class="t-punctuation">=</span> <span class="t-name">text</span><span class="t-punctuation">.</span><span class="t-name">scalarCount</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">==</span> <span class="t-number">0</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Empty</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">&gt;</span> <span class="t-number">9</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">TooLong</span><span class="t-punctuation">(</span><span class="t-name">length</span><span class="t-punctuation">:</span> <span class="t-name">n</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">value</span> <span class="t-punctuation">=</span> <span class="t-number">0</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">i</span> <span class="t-punctuation">=</span> <span class="t-number">0</span>
+  <span class="t-keyword">while</span> <span class="t-name">i</span> <span class="t-punctuation">&lt;</span> <span class="t-name">n</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">let</span> <span class="t-name">s</span> <span class="t-punctuation">=</span> <span class="t-name">text</span><span class="t-punctuation">.</span><span class="t-name">scalarAt</span><span class="t-punctuation">(</span><span class="t-name">i</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+    <span class="t-keyword">let</span> <span class="t-name">d</span> <span class="t-punctuation">=</span> <span class="t-type">Scalar</span><span class="t-punctuation">.</span><span class="t-name">digitValue</span><span class="t-punctuation">(</span><span class="t-name">s</span><span class="t-punctuation">)</span>
+    <span class="t-keyword">if</span> <span class="t-name">d</span> <span class="t-punctuation">==</span> <span class="t-keyword">null</span> <span class="t-punctuation">{</span>
+      <span class="t-keyword">fail</span> <span class="t-type">NotANumber</span><span class="t-punctuation">(</span><span class="t-name">position</span><span class="t-punctuation">:</span> <span class="t-name">i</span><span class="t-punctuation">)</span>
+    <span class="t-punctuation">}</span>
+    <span class="t-name">value</span> <span class="t-punctuation">=</span> <span class="t-name">value</span> <span class="t-punctuation">*</span> <span class="t-number">10</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+    <span class="t-name">value</span> <span class="t-punctuation">=</span> <span class="t-name">value</span> <span class="t-punctuation">+</span> <span class="t-name">d</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+    <span class="t-name">i</span> <span class="t-punctuation">=</span> <span class="t-type">Int</span><span class="t-punctuation">.</span><span class="t-name">add</span><span class="t-punctuation">(</span><span class="t-name">i</span><span class="t-punctuation">,</span> <span class="t-number">1</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">value</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">explain</span><span class="t-punctuation">(</span><span class="t-name">text</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">)</span> <span class="t-type">String</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">return</span> <span class="t-keyword">match</span> <span class="t-name">parseDigits</span><span class="t-punctuation">(</span><span class="t-name">text</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">success</span><span class="t-punctuation">(</span><span class="t-name">v</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-string">"value ${v}"</span>
+    <span class="t-keyword">failure</span><span class="t-punctuation">(</span><span class="t-name">f</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-keyword">match</span> <span class="t-keyword">move</span> <span class="t-name">f</span> <span class="t-punctuation">{</span>
+      <span class="t-keyword">is</span> <span class="t-type">NotANumber</span><span class="t-punctuation">(</span><span class="t-name">position</span><span class="t-punctuation">:</span> <span class="t-name">p</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-string">"not a digit at ${p}"</span>
+      <span class="t-keyword">is</span> <span class="t-type">Empty</span> <span class="t-punctuation">=&gt;</span> <span class="t-string">"empty input"</span>
+      <span class="t-keyword">is</span> <span class="t-type">TooLong</span> <span class="t-keyword">as</span> <span class="t-name">long</span> <span class="t-punctuation">=&gt;</span> <span class="t-punctuation">{</span>
+        <span class="t-keyword">report</span> <span class="t-name">long</span>
+        <span class="t-keyword">give</span> <span class="t-string">"too long"</span>
+      <span class="t-punctuation">}</span>
+      <span class="t-keyword">otherwise</span><span class="t-punctuation">(</span><span class="t-name">other</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-punctuation">{</span>
+        <span class="t-keyword">report</span> <span class="t-name">other</span>
+        <span class="t-keyword">give</span> <span class="t-string">"unexpected"</span>
+      <span class="t-punctuation">}</span>
+    <span class="t-punctuation">}</span>
+  <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">recovers</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-name">explain</span><span class="t-punctuation">(</span><span class="t-string">"42"</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-name">explain</span><span class="t-punctuation">(</span><span class="t-string">"4x2"</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-name">explain</span><span class="t-punctuation">(</span><span class="t-string">""</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-name">explain</span><span class="t-punctuation">(</span><span class="t-string">"12345678901"</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>value 42
+not a digit at 1
+empty input
+too long</code></pre></div>
+<p>A <code>match f</code> without <code>move</code> is for inspection only: it copies payloads, no arm may consume <code>f</code>, and <code>f</code> must still be consumed afterwards (<a class="cite" href="../Fortis_Language_Reference.html#105-matching-on-failures">LR 10.5</a>).</p>
+<h2 id="reports-annotation-and-aggregation">Reports, annotation and aggregation<a class="anchor" href="#reports-annotation-and-aggregation" aria-label="link">#</a></h2>
+<p><code>report f</code> is a statement that consumes a failure and writes it to the current task's failure reporter; with <code>report f as receipt</code> it also binds a <code>Report</code>, a small receipt that cannot be turned back into a <code>Failure</code>, for use in a public response (<a class="cite" href="../Fortis_Language_Reference.html#106-reports-annotation-and-aggregation">LR 10.6</a>). Once reported, the failure is gone, so it cannot also be propagated (<a class="cite" href="../Fortis_Language_Reference.html#106-reports-annotation-and-aggregation">LR 10.6</a>), and a second use is a use after move (<a class="code" href="../agent/codes.html#E-OWN-020"><code>E-OWN-020</code></a>, <a class="cite" href="../Fortis_Language_Reference.html#74-moves">LR 7.4</a>):</p>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OWN-020</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">NotEven</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.not_even"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">!=</span> <span class="t-number">0</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">NotEven</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">strict</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">v</span> <span class="t-punctuation">=</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-keyword">catch</span> <span class="t-name">e</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">report</span> <span class="t-name">e</span>
+    <span class="t-keyword">fail</span> <span class="t-name">e</span>                           <span class="t-comment">// reject: E-OWN-020</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">v</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<p><code>report</code> has the <code>io</code> effect, but it is the one <code>io</code> operation that needs no capability: it writes only to the diagnostic plane, which cannot feed anything back into the program (<a class="cite" href="../Fortis_Language_Reference.html#106-reports-annotation-and-aggregation">LR 10.6</a>, <a class="cite" href="../Fortis_Language_Reference.html#117-observation-plane">LR 11.7</a>). A <code>pure</code> function therefore cannot report; it propagates or recovers (<a class="cite" href="../Fortis_Language_Reference.html#106-reports-annotation-and-aggregation">LR 10.6</a>).</p>
+<p>Two library functions help with context and with many failures (<a class="cite" href="../Fortis_Language_Reference.html#106-reports-annotation-and-aggregation">LR 10.6</a>):</p>
+<ul><li><code>annotate(move f, note)</code> returns a failure with the same code and payload, the original as its cause and the note added. It is the only way to add context, and it keeps exactly one obligation alive.</li><li><code>Failures.aggregate(move list)</code> consumes a <code>List[Failure]</code> and gives one failure whose causes are the inputs: the rule for parallel work and retries.</li></ul>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Missing</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"store.missing"</span>
+  <span class="t-name">payload</span> <span class="t-punctuation">{</span> <span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">key</span> <span class="t-punctuation">&gt;</span> <span class="t-number">3</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Missing</span><span class="t-punctuation">(</span><span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-name">key</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">key</span> <span class="t-punctuation">*</span> <span class="t-number">10</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">lookupBoth</span><span class="t-punctuation">(</span><span class="t-name">a</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">,</span> <span class="t-name">b</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">x</span> <span class="t-punctuation">=</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-name">a</span><span class="t-punctuation">)</span> <span class="t-keyword">catch</span> <span class="t-name">e</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-name">annotate</span><span class="t-punctuation">(</span><span class="t-keyword">move</span> <span class="t-name">e</span><span class="t-punctuation">,</span> <span class="t-string">"first key"</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">let</span> <span class="t-name">y</span> <span class="t-punctuation">=</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-name">b</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-keyword">return</span> <span class="t-name">x</span> <span class="t-punctuation">+</span> <span class="t-name">y</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">failures</span><span class="t-punctuation">(</span><span class="t-name">keys</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span><span class="t-punctuation">)</span> <span class="t-type">Failure</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">errors</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Failure</span><span class="t-punctuation">]</span> <span class="t-punctuation">=</span> <span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">default</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">for</span> <span class="t-name">k</span> <span class="t-keyword">in</span> <span class="t-name">keys</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">match</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-name">k</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+      <span class="t-keyword">success</span><span class="t-punctuation">(</span><span class="t-name">v</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-punctuation">{</span>
+      <span class="t-punctuation">}</span>
+      <span class="t-keyword">failure</span><span class="t-punctuation">(</span><span class="t-name">f</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-punctuation">{</span>
+        <span class="t-name">errors</span><span class="t-punctuation">.</span><span class="t-name">push</span><span class="t-punctuation">(</span><span class="t-keyword">move</span> <span class="t-name">f</span><span class="t-punctuation">)</span>
+      <span class="t-punctuation">}</span>
+    <span class="t-punctuation">}</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-type">Failures</span><span class="t-punctuation">.</span><span class="t-name">aggregate</span><span class="t-punctuation">(</span><span class="t-keyword">move</span> <span class="t-name">errors</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">total</span> <span class="t-punctuation">=</span> <span class="t-name">lookupBoth</span><span class="t-punctuation">(</span><span class="t-number">9</span><span class="t-punctuation">,</span> <span class="t-number">1</span><span class="t-punctuation">)</span> <span class="t-keyword">catch</span> <span class="t-name">e</span> <span class="t-punctuation">{</span>
+    <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"failed with ${e.code}"</span><span class="t-punctuation">)</span>
+    <span class="t-keyword">report</span> <span class="t-name">e</span>
+    <span class="t-keyword">recover</span> <span class="t-number">0</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"total ${total}"</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-name">all</span> <span class="t-punctuation">=</span> <span class="t-name">failures</span><span class="t-punctuation">(</span><span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">of</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">,</span> <span class="t-number">7</span><span class="t-punctuation">,</span> <span class="t-number">9</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">report</span> <span class="t-name">all</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"reported"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>failed with store.missing
+total 0
+reported</code></pre></div>
+<p>The annotated failure still has the code <code>store.missing</code>; its record lists the note. Metrics, span status and debug logging take a read loan of a failure and consume nothing (<a class="cite" href="../Fortis_Language_Reference.html#106-reports-annotation-and-aggregation">LR 10.6</a>).</p>
+<h3 id="a-failing-main">A failing <code>main</code><a class="anchor" href="#a-failing-main" aria-label="link">#</a></h3>
+<p>When a <code>try main</code> fails, the runtime prints exactly one report of the failure to standard error and the process exits with status 1 (<a class="cite" href="../Fortis_Language_Reference.html#46-entry-point">LR 4.6</a>). There is no <code>or die</code>: propagating to <code>main</code> is how a program stops on a failure.</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept (exit status 1)</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Missing</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"store.missing"</span>
+  <span class="t-name">payload</span> <span class="t-punctuation">{</span> <span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">key</span> <span class="t-punctuation">&gt;</span> <span class="t-number">3</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Missing</span><span class="t-punctuation">(</span><span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-name">key</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">key</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">a</span> <span class="t-punctuation">=</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-number">2</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"found ${a}"</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-name">b</span> <span class="t-punctuation">=</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-number">8</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"found ${b}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>found 2</code></pre></div>
+<h2 id="failures-as-data-one-report-each">Failures as data: one report each<a class="anchor" href="#failures-as-data-one-report-each" aria-label="link">#</a></h2>
+<p>A parser or a validator often has to try every input, keep going past the bad ones, and report each problem once. Recovering each failure would add <code>recovers</code> to every caller up to <code>main</code> (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>). The alternative keeps every failure: a <code>pure</code> function collects them, annotated with where they came from, into a <code>List[Failure]</code> it is lent <code>editable</code>, and the caller reports each one (<a class="cite" href="../Fortis_Language_Reference.html#106-reports-annotation-and-aggregation">LR 10.6</a>, <a class="cite" href="../Fortis_Language_Reference.html#107-linear-containers-and-generic-code">LR 10.7</a>):</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">NotADigit</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"parse.not_a_digit"</span>
+  <span class="t-name">payload</span> <span class="t-punctuation">{</span> <span class="t-name">position</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">digit</span><span class="t-punctuation">(</span><span class="t-name">text</span><span class="t-punctuation">:</span> <span class="t-type">StringView</span><span class="t-punctuation">)</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">9</span><span class="t-punctuation">&gt;</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">s</span> <span class="t-punctuation">=</span> <span class="t-name">text</span><span class="t-punctuation">.</span><span class="t-name">scalarAt</span><span class="t-punctuation">(</span><span class="t-number">0</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-keyword">let</span> <span class="t-name">d</span> <span class="t-punctuation">=</span> <span class="t-type">Scalar</span><span class="t-punctuation">.</span><span class="t-name">digitValue</span><span class="t-punctuation">(</span><span class="t-name">s</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">if</span> <span class="t-name">d</span> <span class="t-punctuation">==</span> <span class="t-keyword">null</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">NotADigit</span><span class="t-punctuation">(</span><span class="t-name">position</span><span class="t-punctuation">:</span> <span class="t-number">0</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">d</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-comment">// Every input is tried; a failure is kept, annotated with where it came from, for one report each.</span>
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">digits</span><span class="t-punctuation">(</span><span class="t-name">inputs</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">String</span><span class="t-punctuation">]</span><span class="t-punctuation">,</span> <span class="t-name">sink</span><span class="t-punctuation">:</span> <span class="t-keyword">editable</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Failure</span><span class="t-punctuation">]</span><span class="t-punctuation">)</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">found</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span> <span class="t-punctuation">=</span> <span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">default</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">for</span> <span class="t-name">text</span> <span class="t-keyword">in</span> <span class="t-name">inputs</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">match</span> <span class="t-name">digit</span><span class="t-punctuation">(</span><span class="t-name">text</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+      <span class="t-keyword">success</span><span class="t-punctuation">(</span><span class="t-name">d</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-punctuation">{</span>
+        <span class="t-name">found</span><span class="t-punctuation">.</span><span class="t-name">push</span><span class="t-punctuation">(</span><span class="t-name">d</span><span class="t-punctuation">)</span>
+      <span class="t-punctuation">}</span>
+      <span class="t-keyword">failure</span><span class="t-punctuation">(</span><span class="t-name">f</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-punctuation">{</span>
+        <span class="t-name">sink</span><span class="t-punctuation">.</span><span class="t-name">push</span><span class="t-punctuation">(</span><span class="t-name">annotate</span><span class="t-punctuation">(</span><span class="t-keyword">move</span> <span class="t-name">f</span><span class="t-punctuation">,</span> <span class="t-string">"input ${text}"</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+      <span class="t-punctuation">}</span>
+    <span class="t-punctuation">}</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">found</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">problems</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Failure</span><span class="t-punctuation">]</span> <span class="t-punctuation">=</span> <span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">default</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-name">inputs</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">String</span><span class="t-punctuation">]</span> <span class="t-punctuation">=</span> <span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">of</span><span class="t-punctuation">(</span><span class="t-string">"4"</span><span class="t-punctuation">,</span> <span class="t-string">"x"</span><span class="t-punctuation">,</span> <span class="t-string">"7"</span><span class="t-punctuation">,</span> <span class="t-string">""</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-name">found</span> <span class="t-punctuation">=</span> <span class="t-name">digits</span><span class="t-punctuation">(</span><span class="t-name">inputs</span><span class="t-punctuation">,</span> <span class="t-keyword">editable</span> <span class="t-name">problems</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${found.count()} digits, ${problems.count()} problems"</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">move</span> <span class="t-name">problems</span><span class="t-punctuation">.</span><span class="t-name">consumeEach</span><span class="t-punctuation">(</span><span class="t-keyword">fn</span> <span class="t-keyword">mut</span><span class="t-punctuation">(</span><span class="t-name">f</span><span class="t-punctuation">:</span> <span class="t-keyword">owned</span> <span class="t-type">Failure</span><span class="t-punctuation">)</span> <span class="t-type">Void</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">report</span> <span class="t-name">f</span>
+  <span class="t-punctuation">}</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>2 digits, 2 problems</code></pre></div>
+<p><code>digits</code> stays <code>pure</code>: pushing onto a list it was lent is a write through its own <code>editable</code> parameter, which is its footprint, not <code>mutate</code> (<a class="cite" href="../Fortis_Language_Reference.html#113-transitive-analysis">LR 11.3</a>). No failure is discarded, so nothing is <code>recovers</code>; <code>annotate</code> keeps each failure's code and payload and adds the note (<a class="cite" href="../Fortis_Language_Reference.html#106-reports-annotation-and-aggregation">LR 10.6</a>). The two reports go to standard error, one record each, with the code (<code>parse.not_a_digit</code>, and <code>text.index</code> for the empty input) and the note (<a class="cite" href="../Fortis_Language_Reference.html#106-reports-annotation-and-aggregation">LR 10.6</a>).</p>
+<h2 id="linear-containers">Linear containers<a class="anchor" href="#linear-containers" aria-label="link">#</a></h2>
+<blockquote><p>Preview: linear containers (<a class="cite" href="../Fortis_Language_Reference.html#107-linear-containers-and-generic-code">LR 10.7</a>) arrive in v0.1. The example below is checked and runs today; the rules it shows belong to v0.1.</p></blockquote>
+<p>A collection of outcomes, such as <code>List[Outcome[T]]</code>, is linear too: every element must be consumed (<a class="cite" href="../Fortis_Language_Reference.html#107-linear-containers-and-generic-code">LR 10.7</a>). The library says in each signature what happens to linear elements: <code>push(move item)</code> transfers one in, <code>pop()</code> transfers one out as a <code>T?</code> that must itself be consumed, and <code>consumeEach(owned self, fn mut(owned T) Void)</code> consumes the collection, calling the callback once per element, in order, with no early exit (<a class="cite" href="../Fortis_Language_Reference.html#107-linear-containers-and-generic-code">LR 10.7</a>). <code>Outcome.collect(move list)</code> turns a list of outcomes into an outcome of a list, consuming every input (<a class="cite" href="../Fortis_Language_Reference.html#107-linear-containers-and-generic-code">LR 10.7</a>).</p>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Missing</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"store.missing"</span>
+  <span class="t-name">payload</span> <span class="t-punctuation">{</span> <span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-type">Int</span> <span class="t-punctuation">}</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">key</span> <span class="t-punctuation">&gt;</span> <span class="t-number">3</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Missing</span><span class="t-punctuation">(</span><span class="t-name">key</span><span class="t-punctuation">:</span> <span class="t-name">key</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">key</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">results</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Outcome</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span><span class="t-punctuation">]</span> <span class="t-punctuation">=</span> <span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">default</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-name">results</span><span class="t-punctuation">.</span><span class="t-name">push</span><span class="t-punctuation">(</span><span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+  <span class="t-name">results</span><span class="t-punctuation">.</span><span class="t-name">push</span><span class="t-punctuation">(</span><span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-number">8</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+  <span class="t-name">results</span><span class="t-punctuation">.</span><span class="t-name">push</span><span class="t-punctuation">(</span><span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-number">3</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">good</span> <span class="t-punctuation">=</span> <span class="t-number">0</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">bad</span> <span class="t-punctuation">=</span> <span class="t-number">0</span>
+  <span class="t-keyword">move</span> <span class="t-name">results</span><span class="t-punctuation">.</span><span class="t-name">consumeEach</span><span class="t-punctuation">(</span><span class="t-keyword">fn</span> <span class="t-keyword">mut</span><span class="t-punctuation">[</span><span class="t-keyword">editable</span> <span class="t-name">good</span><span class="t-punctuation">,</span> <span class="t-keyword">editable</span> <span class="t-name">bad</span><span class="t-punctuation">]</span><span class="t-punctuation">(</span><span class="t-name">r</span><span class="t-punctuation">:</span> <span class="t-keyword">owned</span> <span class="t-type">Outcome</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">]</span><span class="t-punctuation">)</span> <span class="t-type">Void</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">match</span> <span class="t-keyword">move</span> <span class="t-name">r</span> <span class="t-punctuation">{</span>
+      <span class="t-keyword">success</span><span class="t-punctuation">(</span><span class="t-name">v</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-punctuation">{</span>
+        <span class="t-name">good</span> <span class="t-punctuation">=</span> <span class="t-type">Int</span><span class="t-punctuation">.</span><span class="t-name">saturatingAdd</span><span class="t-punctuation">(</span><span class="t-name">good</span><span class="t-punctuation">,</span> <span class="t-number">1</span><span class="t-punctuation">)</span>
+      <span class="t-punctuation">}</span>
+      <span class="t-keyword">failure</span><span class="t-punctuation">(</span><span class="t-name">f</span><span class="t-punctuation">)</span> <span class="t-punctuation">=&gt;</span> <span class="t-punctuation">{</span>
+        <span class="t-keyword">report</span> <span class="t-name">f</span>
+        <span class="t-name">bad</span> <span class="t-punctuation">=</span> <span class="t-type">Int</span><span class="t-punctuation">.</span><span class="t-name">saturatingAdd</span><span class="t-punctuation">(</span><span class="t-name">bad</span><span class="t-punctuation">,</span> <span class="t-number">1</span><span class="t-punctuation">)</span>
+      <span class="t-punctuation">}</span>
+    <span class="t-punctuation">}</span>
+  <span class="t-punctuation">}</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"${good} good, ${bad} bad"</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-name">all</span> <span class="t-punctuation">=</span> <span class="t-type">Outcome</span><span class="t-punctuation">.</span><span class="t-name">collect</span><span class="t-punctuation">(</span><span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">of</span><span class="t-punctuation">(</span><span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">)</span><span class="t-punctuation">,</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-number">2</span><span class="t-punctuation">)</span><span class="t-punctuation">,</span> <span class="t-name">lookup</span><span class="t-punctuation">(</span><span class="t-number">3</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"collected ${all.count()}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>2 good, 1 bad
+collected 3</code></pre></div>
+<p>Clearing or dropping a collection of linear elements is rejected, while <code>count()</code> and <code>isEmpty()</code> only borrow it (<a class="cite" href="../Fortis_Language_Reference.html#107-linear-containers-and-generic-code">LR 10.7</a>). A generic function may hold values of a type parameter in linear positions only if it declares <code>T: linear</code>, and must then consume them (<a class="cite" href="../Fortis_Language_Reference.html#107-linear-containers-and-generic-code">LR 10.7</a>, <a class="cite" href="../Fortis_Language_Reference.html#612-linear-types">LR 6.12</a>).</p>
+<h2 id="defects">Defects<a class="anchor" href="#defects" aria-label="link">#</a></h2>
+<p>A <strong>defect</strong> is a condition that cannot be represented as an outcome, because the program's assumptions are already broken. The list is closed (<a class="cite" href="../Fortis_Language_Reference.html#108-defects">LR 10.8</a>):</p>
+<div class="table"><table><thead><tr><th>Defect</th><th>Cause</th><th>Native code</th><th>Development VM</th></tr></thead><tbody><tr><td>contract violation in trusted code</td><td>a <code>trusted</code> adapter breaks its declared contract</td><td>the process aborts</td><td>the task ends with a <code>TaskDefect</code></td></tr><tr><td>stack exhaustion</td><td>unbounded recursion</td><td>abort</td><td>task terminated</td></tr><tr><td>out of memory</td><td>the allocator fails</td><td>abort</td><td>task terminated</td></tr><tr><td>runtime invariant</td><td>a bug in the VM or the runtime</td><td>abort</td><td>task terminated</td></tr></tbody></table></div>
+<p>Ordinary Fortis code cannot cause a defect: there is no <code>unwrap</code>, no unchecked index and no assertion that aborts (<a class="cite" href="../Fortis_Language_Reference.html#108-defects">LR 10.8</a>). Expected conditions, such as a bound, a parse error, I/O or arithmetic overflow, are always outcomes. A defect is never a <code>Failure</code>, is never caught by <code>catch</code>, and produces no value; only the supervisor of a task that ended with one sees it, as <code>TaskCompletion.Defect</code> (<a class="cite" href="../Fortis_Language_Reference.html#108-defects">LR 10.8</a>, <a class="cite" href="../Fortis_Language_Reference.html#126-task-completion">LR 12.6</a>).</p>
+<footer>Built from the repository at 0b33d59b9662 by <code>conformance/tools/site.py</code>; every example on this page is checked by <code>conformance/tools/docset_check.py</code>.</footer>
+</main>
+</div>
+<script src="../../search.js"></script>
+<script src="../../site.js"></script>
+</body>
+</html>

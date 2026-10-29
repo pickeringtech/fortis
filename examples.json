@@ -1,0 +1,229 @@
+[
+ {
+  "id": "mean",
+  "title": "Failures you can see",
+  "file": "mean.ft",
+  "source": "README.md",
+  "program": "import fortis.host { Console }\n\nexport error Empty {\n  code: \"demo.empty\"\n}\n\npure try func mean(readings: ListView[Int<0..1000>]) Int {\n  let n = readings.count()\n  if n <= 0 {\n    fail Empty()\n  }\n  let mut total = 0\n  for r in readings {\n    total = total + r or fail\n  }\n  return total / n\n}\n\nfunc main(console: Console) {\n  let mut readings: List[Int<0..1000>] = List.of(12, 30, 18)\n  readings.push(40)\n  let m = mean(readings) catch e {\n    report e\n    recover 0\n  }\n  console.print(\"mean of ${readings.count()} readings: ${m}\")\n}",
+  "output": "mean of 4 readings: 25",
+  "notes": [
+   {
+    "title": "Checked purity",
+    "text": "`pure` rules out effects such as I/O and clock access. The checker verifies it.",
+    "lines": [
+     7
+    ]
+   },
+   {
+    "title": "Declared failure",
+    "text": "`try` declares that `mean` can fail. Its caller must handle the outcome.",
+    "lines": [
+     7
+    ]
+   },
+   {
+    "title": "Bounded input",
+    "text": "`Int<0..1000>` carries a range. `ListView` gives read-only access.",
+    "lines": [
+     7
+    ]
+   },
+   {
+    "title": "Visible propagation",
+    "text": "`total + r` is checked: an overflow is a failure, and `or fail` passes it to the caller.",
+    "lines": [
+     14
+    ]
+   },
+   {
+    "title": "Changes declared once",
+    "text": "`let mut` says that `readings` will change, so the `push` that changes it needs no other marker.",
+    "lines": [
+     20,
+     21
+    ]
+   },
+   {
+    "title": "Caller\u2019s recovery",
+    "text": "`catch` handles the failure, reports it and recovers with `0`.",
+    "lines": [
+     22,
+     23,
+     24
+    ]
+   },
+   {
+    "title": "Authority as a parameter",
+    "text": "`main` declares the console it needs, and the runtime supplies it. Printing uses that capability.",
+    "lines": [
+     19,
+     26
+    ]
+   }
+  ],
+  "sha256": "6644ad107784e19df98888e893364cffbf3f8f342528673424b0d613be72b2c8"
+ },
+ {
+  "id": "cleanup",
+  "title": "Cleanup without a collector",
+  "file": "resource.ft",
+  "source": "docs/guide/07-ownership.md#17",
+  "program": "import fortis.host { Console }\n\nclass Resource {\n  export id: Int\n  export console: Shared[Console]\n  cleanup(editable self) {\n    self.console.print(\"release ${self.id}\")\n  }\n}\n\nfunc work(console: Shared[Console]) {\n  let first = Resource(id: 1, console: console.retain())\n  let second = Resource(id: 2, console: console.retain())\n  console.print(\"working\")\n}\n\nfunc main(out: Console) {\n  let console = Shared.create(move out)\n  work(console)\n  console.print(\"done\")\n}",
+  "output": "working\nrelease 2\nrelease 1\ndone",
+  "notes": [
+   {
+    "title": "Cleanup belongs to the type",
+    "text": "`cleanup` runs exactly once, when a `Resource` is destroyed.",
+    "lines": [
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "title": "Counted, explicit sharing",
+    "text": "`Shared[Console]` is reference-counted. `retain()` takes another reference, and says so.",
+    "lines": [
+     5,
+     12,
+     13
+    ]
+   },
+   {
+    "title": "Destroyed in reverse order",
+    "text": "When `work` returns, `second` is destroyed before `first`, so the output reads `release 2` then `release 1`. No garbage collector decides when.",
+    "lines": [
+     12,
+     13,
+     15
+    ]
+   },
+   {
+    "title": "Owned, then shared",
+    "text": "`main` owns the console it declares, and moves it into a `Shared` handle for the code it calls.",
+    "lines": [
+     17,
+     18
+    ]
+   },
+   {
+    "title": "Lent, not given away",
+    "text": "`work(console)` borrows the handle. `main` still owns it afterwards, and prints `done`.",
+    "lines": [
+     19,
+     20
+    ]
+   }
+  ],
+  "sha256": "f1aa627154c93ed6222faa00ed5b77acc4e1c6a884179ae1eddc4e0485e479ce"
+ },
+ {
+  "id": "patterns",
+  "title": "Patterns that take ownership",
+  "file": "parcel.ft",
+  "source": "docs/guide/09-classes.md#24",
+  "program": "import fortis.host { Console }\n\nclass Parcel {\n  export label: String\n  export grams: Int\n}\n\npure func heavy(p: owned Parcel) Bool {\n  return match move p {\n    Parcel(label: _, grams: g) => g > 1000\n  }\n}\n\nfunc main(console: Console) {\n  let parcel = Parcel(label: \"books\", grams: 2500)\n  let Parcel(label: label, grams: grams) = move parcel\n  console.print(\"${label}: ${grams} g\")\n  console.print(\"${heavy(Parcel(label: \"feather\", grams: 1))}\")\n}",
+  "output": "books: 2500 g\nfalse",
+  "notes": [
+   {
+    "title": "Ownership in the signature",
+    "text": "`owned Parcel` means `heavy` takes the parcel. The caller gives it up.",
+    "lines": [
+     8
+    ]
+   },
+   {
+    "title": "Pure, and checked",
+    "text": "`pure`: no effects at all. The checker verifies the claim.",
+    "lines": [
+     8
+    ]
+   },
+   {
+    "title": "Consume and take apart",
+    "text": "`match move p` consumes the parcel. The pattern binds the field it needs, and `_` discards the label.",
+    "lines": [
+     9,
+     10
+    ]
+   },
+   {
+    "title": "Destructuring a move",
+    "text": "`let Parcel(\u2026) = move parcel` takes the fields out. `parcel` can't be used after this line.",
+    "lines": [
+     16
+    ]
+   },
+   {
+    "title": "Fresh values need no marker",
+    "text": "A constructor's result is a fresh value, so it goes straight into `heavy` without `move`.",
+    "lines": [
+     18
+    ]
+   }
+  ],
+  "sha256": "5c36211d3b13d1f12c6844f5d7d26fc2624f771ba7fa1bba45b7bcd4bb3c1400"
+ },
+ {
+  "id": "outcomes",
+  "title": "Recover, report or pass on",
+  "file": "half.ft",
+  "source": "docs/guide/10-outcomes.md#3",
+  "program": "import fortis.host { Console }\n\nexport error NotEven {\n  code: \"demo.not_even\"\n  payload { value: Int }\n}\n\npure try func half(n: Int) Int {\n  if n % 2 != 0 {\n    fail NotEven(value: n)\n  }\n  return n / 2\n}\n\npure recovers func halfOrZero(n: Int) Int => half(n) or recover 0\n\nrecovers func describe(n: Int) String {\n  return match half(n) {\n    success(v) => \"half of ${n} is ${v}\"\n    failure(f) => {\n      report f\n      give \"${n} has no half\"\n    }\n  }\n}\n\nrecovers func main(console: Console) {\n  console.print(\"${halfOrZero(7)} ${halfOrZero(8)}\")\n  console.print(describe(6))\n  console.print(describe(3))\n}",
+  "output": "0 4\nhalf of 6 is 3\n3 has no half",
+  "notes": [
+   {
+    "title": "Errors are declared",
+    "text": "An error has a stable code and a typed payload.",
+    "lines": [
+     3,
+     4,
+     5,
+     6
+    ]
+   },
+   {
+    "title": "Failing is in the signature",
+    "text": "`try` says `half` can fail, and `fail` is where it does.",
+    "lines": [
+     8,
+     10
+    ]
+   },
+   {
+    "title": "Recover in place",
+    "text": "`or recover 0` handles the failure on the spot.",
+    "lines": [
+     15
+    ]
+   },
+   {
+    "title": "Or match on the outcome",
+    "text": "`match` sees success and failure as two explicit cases.",
+    "lines": [
+     18,
+     19,
+     20
+    ]
+   },
+   {
+    "title": "Nothing is lost",
+    "text": "`report f` records the failure before carrying on with a value.",
+    "lines": [
+     21,
+     22
+    ]
+   },
+   {
+    "title": "Recovery is visible",
+    "text": "`recovers` is transitive: a function that absorbs a failure says so, and so does every function that reaches one, up to `main`.",
+    "lines": [
+     15,
+     17,
+     27
+    ]
+   }
+  ],
+  "sha256": "5daff6af22c1f09a419db8c3ab4d6a960f4d0cc07f9f9fd1fc25f272e0c588b0"
+ }
+]

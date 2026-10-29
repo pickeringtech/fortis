@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Observation schemas and statements (LR 13) · Fortis</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body class="mode-agent" data-root="../..">
+<header class="top">
+  <a class="brand" href="../../index.html">Fortis</a>
+  <span class="badge">Agent mode</span>
+  <input id="search" type="search" placeholder="Search both modes" autocomplete="off" aria-label="Search">
+</header>
+<div id="results" hidden></div>
+<div class="layout">
+<nav class="side"><details><summary>Guide (human mode)</summary><ul><li><a href="../guide/README.html">The Fortis guide</a></li><li><a href="../guide/tour.html">A tour of Fortis</a></li><li><a href="../guide/03-lexical.html">Lexical structure</a></li><li><a href="../guide/04-modules.html">Modules and packages</a></li><li><a href="../guide/05-statements.html">Statements and expressions</a></li><li><a href="../guide/06-types.html">Types</a></li><li><a href="../guide/06-proofs.html">Proving arithmetic and indexing</a></li><li><a href="../guide/07-ownership.html">Ownership</a></li><li><a href="../guide/08-functions.html">Functions and closures</a></li><li><a href="../guide/09-classes.html">Classes, interfaces, mixins and enums</a></li><li><a href="../guide/10-outcomes.html">Outcomes and failures</a></li><li><a href="../guide/11-effects.html">Effects and contracts</a></li><li><a href="../guide/12-async.html">Cleanup, async and concurrency</a></li><li><a href="../guide/13-observation.html">Observation</a></li><li><a href="../guide/14-tests.html">Tests</a></li><li><a href="../guide/15-runtime.html">The core runtime</a></li><li><a href="../guide/16-kits.html">Kits and declaration heads</a></li><li><a href="../guide/embedded-languages.html">Embedded languages</a></li><li><a href="../guide/appendix-a-keywords.html">Appendix A: Keywords</a></li><li><a href="../guide/appendix-b-decisions.html">Appendix B: Closed decisions</a></li><li><a href="../guide/appendix-c-lowering.html">Appendix C: Lowering to Rust</a></li><li><a href="../guide/appendix-d-rules.html">Appendix D: Rule index</a></li><li><a href="../guide/worked-examples.html">Worked examples</a></li><li><a href="../guide/from-rust.html">Notes for readers coming from Rust</a></li><li><a href="../guide/from-typescript.html">Notes for readers coming from TypeScript</a></li><li><a href="../guide/from-python.html">Notes for readers coming from Python</a></li><li><a href="../guide/glossary.html">Glossary</a></li><li><a href="../guide/known-limitations.html">Known limitations of v0.0.2</a></li></ul></details><details open><summary>Agent mode</summary><ul><li><a href="README.html">Fortis for agents</a></li><li><a href="known-limitations.html">Known limitations of v0.0.2</a></li><li><a href="records.html">Records</a></li><li><a href="codes.html">Diagnostic codes</a></li><li><a href="01-overview.html">Overview: design invariants and notation (LR 1, LR 2)</a></li><li><a href="03-lexical.html">Lexical structure (LR 3)</a></li><li><a href="04-modules.html">Modules and packages (LR 4)</a></li><li><a href="05-statements.html">Statements and expressions (LR 5)</a></li><li><a href="06-types.html">Types (LR 6)</a></li><li><a href="06-proofs.html">Proofs for arithmetic and indexing (LR 6.3, 6.4, 6.7)</a></li><li><a href="07-ownership.html">Ownership (LR 7)</a></li><li><a href="08-functions.html">Functions and closures (LR 8)</a></li><li><a href="09-classes.html">Classes, interfaces, mixins and enums (LR 9)</a></li><li><a href="10-outcomes.html">Outcomes and failures (LR 10)</a></li><li><a href="11-effects.html">Effects and contracts (LR 11)</a></li><li><a href="12-async.html">Cleanup, async and concurrency (LR 12)</a></li><li class=current><a href="13-observation.html">Observation schemas and statements (LR 13)</a></li><li><a href="14-tests.html">Test declarations (LR 14)</a></li><li><a href="15-runtime.html">Core runtime inventory (LR 15)</a></li><li><a href="16-kits.html">Reserved declaration heads for kits (LR 16)</a></li><li><a href="embedded-languages.html">Embedded languages (LR 16)</a></li><li><a href="appendix-a-keywords.html">Keyword inventory (LR A)</a></li><li><a href="appendix-b-decisions.html">Closed decisions (LR B)</a></li><li><a href="appendix-c-lowering.html">Lowering reference and the Rust-expressible subset (LR C)</a></li><li><a href="appendix-d-rules.html">Rule index (LR D)</a></li><li><a href="glossary.html">Glossary (agent mode)</a></li><li><a href="library.html">The core library</a></li><li><a href="../../skills/fortis-code/SKILL.html">fortis-code</a></li></ul></details><details><summary>Specification</summary><ul><li><a href="../Fortis_Specification.html">Fortis — Specification Overview</a></li><li><a href="../Fortis_Language_Reference.html">Fortis Language Reference</a></li><li><a href="../Fortis_Platform_Specification.html">Fortis Platform Specification</a></li></ul></details></nav>
+<main>
+<p class="mode-switch"><a class="counterpart" href="../guide/13-observation.html">Human mode: Observation</a></p>
+<h1 id="observation-schemas-and-statements-lr-13">Observation schemas and statements (LR 13)<a class="anchor" href="#observation-schemas-and-statements-lr-13" aria-label="link">#</a></h1>
+<p><em>Agent mode. Human mode: <a href="../guide/13-observation.html">Observation</a>. Source of truth: <a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>.</em></p>
+<blockquote><p>Preview: observation schemas, <code>capture</code> and <code>record</code> (<a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>) arrive in v0.5. Log statements, <code>log.info</code>, <code>log.warn</code> and <code>log.error</code> (<a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>), are in v0.0.2.</p></blockquote>
+<h2 id="rules">Rules<a class="anchor" href="#rules" aria-label="link">#</a></h2>
+<div class="table"><table><thead><tr><th>Rule</th><th>Statement</th><th>LR</th></tr></thead><tbody><tr id="LANG-13-01"><td><a class="rule" href="../Fortis_Language_Reference.html#LANG-13-01">LANG-13-01</a></td><td><code>capture field = e</code> snapshots <code>e</code> at the statement, copying it into the activation's frame; <code>e</code> is pure, infallible, non-suspending and of the field's declared type; it takes a read loan for the statement only. <code>record Name(field: v, …)</code> has the same requirement for its arguments.</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr><tr id="LANG-13-02"><td><a class="rule" href="../Fortis_Language_Reference.html#LANG-13-02">LANG-13-02</a></td><td>Each <code>required: all</code> field is assigned on every path before every exit; <code>required: success</code> / <code>failure</code> before every exit of that class; at most one <code>capture</code> per field per path; no <code>capture</code> in a loop body. Exits include <code>fail</code>, <code>return</code>, <code>await</code> (a cancellation edge) and cancellation.</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr><tr id="LANG-13-03"><td><a class="rule" href="../Fortis_Language_Reference.html#LANG-13-03">LANG-13-03</a></td><td>Frame contents are bounded by the schema: a <code>String</code> field declares a bound; a longer value is truncated or omitted as the schema declares, and the frame records which.</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr><tr id="LANG-13-04"><td><a class="rule" href="../Fortis_Language_Reference.html#LANG-13-04">LANG-13-04</a></td><td><code>log.info(m)</code>, <code>log.warn(m)</code> and <code>log.error(m)</code> write one <code>log</code> record (level, message, function) to the diagnostic plane, standard error, never standard output; <code>m</code> is a <code>StringView</code>; no capability is needed, and the statement has the <code>io</code> effect, so a <code>pure</code> function cannot log. <code>log</code> is not a keyword: where a binding or declaration named <code>log</code> is in scope, <code>log.info(...)</code> is an ordinary call. Record a failure with <code>report e</code>, not a log; log what is not a failure (X-345, X-147).</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr></tbody></table></div>
+<h2 id="declarations-and-statements">Declarations and statements<a class="anchor" href="#declarations-and-statements" aria-label="link">#</a></h2>
+<div class="table"><table><thead><tr><th>Form</th><th>Meaning</th><th>LR</th></tr></thead><tbody><tr><td><code>observation Name { … }</code> with one item per line: <code>version: n</code> (optional), each <code>field: T required: all|success|failure|none</code>, and <code>encoding: bounded(n)</code></td><td>schema; <code>version</code> defaults to 1; every field type <code>Encodable</code> (recursively, as derivation)</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>, <a class="cite" href="../Fortis_Language_Reference.html#610-generics-and-built-in-interfaces">LR 6.10</a></td></tr><tr><td><code>@observe(Name)</code> above a function head</td><td>the core aspect attaching the schema; the frame's fields are the schema's</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>, <a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a></td></tr><tr><td><code>capture field = e</code></td><td>assign the frame field once</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr><tr><td><code>record Name(field: v, …)</code></td><td>emit one event per execution; allowed in loops</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr><tr><td>start, end, duration, outcome class</td><td>generated by the compiler; never written in source</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr><tr><td>cancelled before start</td><td>a frame marked <code>not_started</code>, no captured fields</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr><tr><td><code>log.info(m)</code>, <code>log.warn(m)</code>, <code>log.error(m)</code></td><td>one <code>log</code> record (<code>level</code>, <code>message</code>, <code>function</code>) per execution, to standard error: text on a terminal (<code>warn: could not take 9 nuts</code>), a JSON line otherwise; never standard output</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>, <a class="cite" href="../Fortis_Language_Reference.html#117-observation-plane">LR 11.7</a></td></tr></tbody></table></div>
+<p>Effects: observation does not change a function's effect summary; records go to the diagnostic plane, which feeds nothing back (<a class="cite" href="../Fortis_Language_Reference.html#117-observation-plane">LR 11.7</a>). A <code>pure</code> function may be observed. A log statement is the exception: it has the <code>io</code> effect, like <code>report</code>, so a <code>pure</code> function cannot log; it needs no capability (<a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>, <a class="cite" href="../Fortis_Language_Reference.html#116-capabilities">LR 11.6</a>). Output: the default task reporter writes frames without field values to standard error; field values leave only through the Telemetry kit, or on the record stream under the development plan <code>FORTIS_TELEMETRY=permit-all</code> (<a class="cite" href="../Fortis_Language_Reference.html#15-core-runtime-inventory">LR 15</a>).</p>
+<h2 id="diagnostics">Diagnostics<a class="anchor" href="#diagnostics" aria-label="link">#</a></h2>
+<div class="table"><table><thead><tr><th>Code</th><th>Trigger</th><th>Correction</th><th>LR</th></tr></thead><tbody><tr id="E-OBS-001"><td><a class="code" href="codes.html#E-OBS-001">E-OBS-001</a></td><td>a required field unassigned on an applicable exit (<code>return</code>, <code>fail</code>, an <code>await</code>, the end)</td><td><code>capture</code> the field before that exit; for an <code>await</code>, before the <code>await</code></td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr><tr id="E-OBS-010"><td><a class="code" href="codes.html#E-OBS-010">E-OBS-010</a></td><td>a second <code>capture</code> of one field on one path</td><td>keep one <code>capture</code>; compute the value first</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr><tr id="E-OBS-011"><td><a class="code" href="codes.html#E-OBS-011">E-OBS-011</a></td><td><code>capture</code> inside a loop body</td><td>capture once after the loop, or use <code>record</code> for per-iteration events</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr><tr id="E-OBS-012"><td><a class="code" href="codes.html#E-OBS-012">E-OBS-012</a></td><td><code>capture</code>/<code>record</code> whose expression has an effect; a field the schema lacks; <code>capture</code> with no schema attached</td><td>bind the fallible or suspending value on its own line and capture the binding; fix the field name; attach <code>@observe(Schema)</code></td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a></td></tr><tr id="E-TYP-090"><td><a class="code" href="codes.html#E-TYP-090">E-TYP-090</a></td><td>a schema field type that is not <code>Encodable</code> (<code>Secret[T]</code>, an authority, a loan, a closure, …)</td><td>capture an <code>Encodable</code> projection, never the secret or resource</td><td><a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>, <a class="cite" href="../Fortis_Language_Reference.html#610-generics-and-built-in-interfaces">LR 6.10</a></td></tr></tbody></table></div>
+<h2 id="correction-patterns">Correction patterns<a class="anchor" href="#correction-patterns" aria-label="link">#</a></h2>
+<h3 id="e-obs-001-required-field-missing-on-a-failure-exit-lr-13">E-OBS-001: required field missing on a failure exit (LR 13)<a class="anchor" href="#e-obs-001-required-field-missing-on-a-failure-exit-lr-13" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OBS-001</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Rejected</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"shop.rejected"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">observation</span> <span class="t-type">Payment</span> <span class="t-punctuation">{</span>
+  <span class="t-name">amount</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">all</span>
+  <span class="t-name">reason</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-keyword">failure</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">observe</span><span class="t-punctuation">(</span><span class="t-type">Payment</span><span class="t-punctuation">)</span>
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">pay</span><span class="t-punctuation">(</span><span class="t-name">amount</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">10000</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">capture</span> <span class="t-name">amount</span> <span class="t-punctuation">=</span> <span class="t-name">amount</span>
+  <span class="t-keyword">if</span> <span class="t-name">amount</span> <span class="t-punctuation">==</span> <span class="t-number">0</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Rejected</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>          <span class="t-comment">// reject: E-OBS-001</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">amount</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"pay"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">pay</span><span class="t-punctuation">(</span><span class="t-number">5</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">5</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Rejected</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"shop.rejected"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">observation</span> <span class="t-type">Payment</span> <span class="t-punctuation">{</span>
+  <span class="t-name">amount</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">all</span>
+  <span class="t-name">reason</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-keyword">failure</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">observe</span><span class="t-punctuation">(</span><span class="t-type">Payment</span><span class="t-punctuation">)</span>
+<span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">pay</span><span class="t-punctuation">(</span><span class="t-name">amount</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">10000</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">capture</span> <span class="t-name">amount</span> <span class="t-punctuation">=</span> <span class="t-name">amount</span>
+  <span class="t-keyword">if</span> <span class="t-name">amount</span> <span class="t-punctuation">==</span> <span class="t-number">0</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">capture</span> <span class="t-name">reason</span> <span class="t-punctuation">=</span> <span class="t-number">1</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Rejected</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">amount</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"pay"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">pay</span><span class="t-punctuation">(</span><span class="t-number">5</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">5</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="e-obs-001-required-field-after-an-await-lr-13-lr-124">E-OBS-001: required field after an <code>await</code> (LR 13, LR 12.4)<a class="anchor" href="#e-obs-001-required-field-after-an-await-lr-13-lr-124" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OBS-001</span>
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">pause</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">observation</span> <span class="t-type">Wait</span> <span class="t-punctuation">{</span>
+  <span class="t-name">tier</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">all</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">observe</span><span class="t-punctuation">(</span><span class="t-type">Wait</span><span class="t-punctuation">)</span>
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">slow</span><span class="t-punctuation">(</span><span class="t-name">tier</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">await</span> <span class="t-name">pause</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>              <span class="t-comment">// reject: E-OBS-001</span>
+  <span class="t-keyword">capture</span> <span class="t-name">tier</span> <span class="t-punctuation">=</span> <span class="t-name">tier</span>
+  <span class="t-keyword">return</span> <span class="t-name">tier</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"slow"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-keyword">true</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Clock</span><span class="t-punctuation">,</span> <span class="t-type">Console</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">observation</span> <span class="t-type">Wait</span> <span class="t-punctuation">{</span>
+  <span class="t-name">tier</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">all</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">observe</span><span class="t-punctuation">(</span><span class="t-type">Wait</span><span class="t-punctuation">)</span>
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">slow</span><span class="t-punctuation">(</span><span class="t-name">clock</span><span class="t-punctuation">:</span> <span class="t-type">Clock</span><span class="t-punctuation">,</span> <span class="t-name">tier</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">capture</span> <span class="t-name">tier</span> <span class="t-punctuation">=</span> <span class="t-name">tier</span>
+  <span class="t-keyword">await</span> <span class="t-name">clock</span><span class="t-punctuation">.</span><span class="t-name">sleep</span><span class="t-punctuation">(</span><span class="t-number">5ms</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">return</span> <span class="t-name">tier</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">async</span> <span class="t-keyword">func</span> <span class="t-name">main</span><span class="t-punctuation">(</span><span class="t-name">clock</span><span class="t-punctuation">:</span> <span class="t-type">Clock</span><span class="t-punctuation">,</span> <span class="t-name">console</span><span class="t-punctuation">:</span> <span class="t-type">Console</span><span class="t-punctuation">)</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">t</span> <span class="t-punctuation">=</span> <span class="t-keyword">await</span> <span class="t-name">slow</span><span class="t-punctuation">(</span><span class="t-name">clock</span><span class="t-punctuation">,</span> <span class="t-number">2</span><span class="t-punctuation">)</span>
+  <span class="t-name">console</span><span class="t-punctuation">.</span><span class="t-name">print</span><span class="t-punctuation">(</span><span class="t-string">"tier ${t}"</span><span class="t-punctuation">)</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code"><span class="lang">output</span><pre><code>tier 2</code></pre></div>
+<h3 id="e-obs-010-captured-twice-lr-13">E-OBS-010: captured twice (LR 13)<a class="anchor" href="#e-obs-010-captured-twice-lr-13" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OBS-010</span>
+<span class="t-keyword">observation</span> <span class="t-type">Trace</span> <span class="t-punctuation">{</span>
+  <span class="t-name">tier</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">all</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">observe</span><span class="t-punctuation">(</span><span class="t-type">Trace</span><span class="t-punctuation">)</span>
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">process</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">100</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">capture</span> <span class="t-name">tier</span> <span class="t-punctuation">=</span> <span class="t-name">n</span>
+  <span class="t-keyword">capture</span> <span class="t-name">tier</span> <span class="t-punctuation">=</span> <span class="t-name">n</span> <span class="t-punctuation">+</span> <span class="t-number">1</span>       <span class="t-comment">// reject: E-OBS-010</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"process"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">process</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">1</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">observation</span> <span class="t-type">Trace</span> <span class="t-punctuation">{</span>
+  <span class="t-name">tier</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">all</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">observe</span><span class="t-punctuation">(</span><span class="t-type">Trace</span><span class="t-punctuation">)</span>
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">process</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">100</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">tier</span> <span class="t-punctuation">=</span> <span class="t-name">n</span> <span class="t-punctuation">+</span> <span class="t-number">1</span>
+  <span class="t-keyword">capture</span> <span class="t-name">tier</span> <span class="t-punctuation">=</span> <span class="t-name">tier</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"process"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">process</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">1</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="e-obs-011-capture-in-a-loop-lr-13">E-OBS-011: capture in a loop (LR 13)<a class="anchor" href="#e-obs-011-capture-in-a-loop-lr-13" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OBS-011</span>
+<span class="t-keyword">observation</span> <span class="t-type">Batch</span> <span class="t-punctuation">{</span>
+  <span class="t-name">last</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">none</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">observe</span><span class="t-punctuation">(</span><span class="t-type">Batch</span><span class="t-punctuation">)</span>
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">sum</span><span class="t-punctuation">(</span><span class="t-name">items</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">100</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">]</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">total</span> <span class="t-punctuation">=</span> <span class="t-number">0</span>
+  <span class="t-keyword">for</span> <span class="t-name">item</span> <span class="t-keyword">in</span> <span class="t-name">items</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">capture</span> <span class="t-name">last</span> <span class="t-punctuation">=</span> <span class="t-name">item</span>      <span class="t-comment">// reject: E-OBS-011</span>
+    <span class="t-name">total</span> <span class="t-punctuation">=</span> <span class="t-type">Int</span><span class="t-punctuation">.</span><span class="t-name">saturatingAdd</span><span class="t-punctuation">(</span><span class="t-name">total</span><span class="t-punctuation">,</span> <span class="t-name">item</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">total</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"sum"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">sum</span><span class="t-punctuation">(</span><span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">of</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">,</span> <span class="t-number">2</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">3</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">observation</span> <span class="t-type">Batch</span> <span class="t-punctuation">{</span>
+  <span class="t-name">count</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">all</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">observation</span> <span class="t-type">Item</span> <span class="t-punctuation">{</span>
+  <span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">all</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">observe</span><span class="t-punctuation">(</span><span class="t-type">Batch</span><span class="t-punctuation">)</span>
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">sum</span><span class="t-punctuation">(</span><span class="t-name">items</span><span class="t-punctuation">:</span> <span class="t-type">List</span><span class="t-punctuation">[</span><span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">100</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">]</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">capture</span> <span class="t-name">count</span> <span class="t-punctuation">=</span> <span class="t-name">items</span><span class="t-punctuation">.</span><span class="t-name">count</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-keyword">let</span> <span class="t-keyword">mut</span> <span class="t-name">total</span> <span class="t-punctuation">=</span> <span class="t-number">0</span>
+  <span class="t-keyword">for</span> <span class="t-name">item</span> <span class="t-keyword">in</span> <span class="t-name">items</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">record</span> <span class="t-type">Item</span><span class="t-punctuation">(</span><span class="t-name">value</span><span class="t-punctuation">:</span> <span class="t-name">item</span><span class="t-punctuation">)</span>
+    <span class="t-name">total</span> <span class="t-punctuation">=</span> <span class="t-type">Int</span><span class="t-punctuation">.</span><span class="t-name">saturatingAdd</span><span class="t-punctuation">(</span><span class="t-name">total</span><span class="t-punctuation">,</span> <span class="t-name">item</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">total</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"sum"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">sum</span><span class="t-punctuation">(</span><span class="t-type">List</span><span class="t-punctuation">.</span><span class="t-name">of</span><span class="t-punctuation">(</span><span class="t-number">1</span><span class="t-punctuation">,</span> <span class="t-number">2</span><span class="t-punctuation">)</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">3</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="e-obs-012-an-effectful-capture-expression-lr-13">E-OBS-012: an effectful capture expression (LR 13)<a class="anchor" href="#e-obs-012-an-effectful-capture-expression-lr-13" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-OBS-012</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Odd</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.odd"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">100</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">==</span> <span class="t-number">1</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Odd</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">observation</span> <span class="t-type">Trace</span> <span class="t-punctuation">{</span>
+  <span class="t-name">half</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">none</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">observe</span><span class="t-punctuation">(</span><span class="t-type">Trace</span><span class="t-punctuation">)</span>
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">process</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">100</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">capture</span> <span class="t-name">half</span> <span class="t-punctuation">=</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>     <span class="t-comment">// reject: E-OBS-012</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"process"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">process</span><span class="t-punctuation">(</span><span class="t-number">4</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">4</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">export</span> <span class="t-keyword">error</span> <span class="t-type">Odd</span> <span class="t-punctuation">{</span>
+  <span class="t-name">code</span><span class="t-punctuation">:</span> <span class="t-string">"demo.odd"</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">100</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">if</span> <span class="t-name">n</span> <span class="t-punctuation">%</span> <span class="t-number">2</span> <span class="t-punctuation">==</span> <span class="t-number">1</span> <span class="t-punctuation">{</span>
+    <span class="t-keyword">fail</span> <span class="t-type">Odd</span><span class="t-punctuation">(</span><span class="t-punctuation">)</span>
+  <span class="t-punctuation">}</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span> <span class="t-punctuation">/</span> <span class="t-number">2</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">observation</span> <span class="t-type">Trace</span> <span class="t-punctuation">{</span>
+  <span class="t-name">half</span><span class="t-punctuation">:</span> <span class="t-type">Int</span>        <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">none</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">observe</span><span class="t-punctuation">(</span><span class="t-type">Trace</span><span class="t-punctuation">)</span>
+<span class="t-keyword">pure</span> <span class="t-keyword">try</span> <span class="t-keyword">func</span> <span class="t-name">process</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">:</span> <span class="t-type">Int</span><span class="t-punctuation">&lt;</span><span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">100</span><span class="t-punctuation">&gt;</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">let</span> <span class="t-name">h</span> <span class="t-punctuation">=</span> <span class="t-name">half</span><span class="t-punctuation">(</span><span class="t-name">n</span><span class="t-punctuation">)</span> <span class="t-keyword">or</span> <span class="t-keyword">fail</span>
+  <span class="t-keyword">capture</span> <span class="t-name">half</span> <span class="t-punctuation">=</span> <span class="t-name">h</span>
+  <span class="t-keyword">return</span> <span class="t-name">n</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"process"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">process</span><span class="t-punctuation">(</span><span class="t-number">4</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">4</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h3 id="e-typ-090-a-field-that-is-not-encodable-lr-13-lr-610">E-TYP-090: a field that is not <code>Encodable</code> (LR 13, LR 6.10)<a class="anchor" href="#e-typ-090-a-field-that-is-not-encodable-lr-13-lr-610" aria-label="link">#</a></h3>
+<div class="code reject"><span class="lang">Fortis</span><pre><code><span class="t-comment">// reject: E-TYP-090</span>
+<span class="t-keyword">import</span> <span class="t-name">fortis</span><span class="t-punctuation">.</span><span class="t-name">host</span> <span class="t-punctuation">{</span> <span class="t-type">Secret</span> <span class="t-punctuation">}</span>
+
+<span class="t-keyword">observation</span> <span class="t-type">Login</span> <span class="t-punctuation">{</span>          <span class="t-comment">// reject: E-TYP-090</span>
+  <span class="t-name">password</span><span class="t-punctuation">:</span> <span class="t-type">Secret</span><span class="t-punctuation">[</span><span class="t-type">String</span><span class="t-punctuation">]</span>   <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">all</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"nothing"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-keyword">true</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<div class="code accept"><span class="lang">Fortis</span><pre><code><span class="t-comment">// accept</span>
+<span class="t-keyword">observation</span> <span class="t-type">Login</span> <span class="t-punctuation">{</span>
+  <span class="t-name">user</span><span class="t-punctuation">:</span> <span class="t-type">String</span><span class="t-punctuation">&lt;</span><span class="t-name">scalars</span><span class="t-punctuation">:</span> <span class="t-number">0</span><span class="t-punctuation">..</span><span class="t-number">64</span><span class="t-punctuation">&gt;</span>   <span class="t-keyword">required</span><span class="t-punctuation">:</span> <span class="t-name">all</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-punctuation">@</span><span class="t-name">observe</span><span class="t-punctuation">(</span><span class="t-type">Login</span><span class="t-punctuation">)</span>
+<span class="t-keyword">pure</span> <span class="t-keyword">func</span> <span class="t-name">login</span><span class="t-punctuation">(</span><span class="t-name">user</span><span class="t-punctuation">:</span> <span class="t-type">String</span><span class="t-punctuation">)</span> <span class="t-type">Int</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">capture</span> <span class="t-name">user</span> <span class="t-punctuation">=</span> <span class="t-name">user</span>
+  <span class="t-keyword">return</span> <span class="t-number">1</span>
+<span class="t-punctuation">}</span>
+
+<span class="t-keyword">test</span> <span class="t-string">"login"</span> <span class="t-punctuation">{</span>
+  <span class="t-keyword">expect</span> <span class="t-name">login</span><span class="t-punctuation">(</span><span class="t-string">"ada"</span><span class="t-punctuation">)</span> <span class="t-punctuation">==</span> <span class="t-number">1</span>
+<span class="t-punctuation">}</span></code></pre></div>
+<h2 id="facts-used-when-writing-code">Facts used when writing code<a class="anchor" href="#facts-used-when-writing-code" aria-label="link">#</a></h2>
+<ul><li>A <code>String</code> field must be bounded: <code>String&lt;scalars: 0..n&gt;</code> (<a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>).</li><li><code>capture</code> takes a read loan for its statement and copies; later mutation does not change the frame (<a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>).</li><li><code>required: success</code> fields need not be assigned on failure exits, and the reverse (<a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>).</li><li>A mapped failure (an aspect's <code>on failure</code> that returns a value) is a success exit of the outer function; the frame is shared by hooks and body (<a class="cite" href="../Fortis_Language_Reference.html#118-aspects">LR 11.8</a>).</li><li>Optimisation preserves required records (trace equivalence); non-required instrumentation may be elided (<a class="cite" href="../Fortis_Language_Reference.html#117-observation-plane">LR 11.7</a>).</li><li>Logs (<a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>) are for what is not a failure: progress, a summary, a fallback taken. A failure is recorded with <code>report e</code> alone, never logged as well. The program's own output stays <code>console.print</code>. <code>m</code> is a <code>StringView</code>: a literal, an interpolated literal or a <code>String</code>.</li><li><code>log</code> is not a keyword: where a binding or declaration named <code>log</code> is in scope, <code>log.info(…)</code> is an ordinary call; <code>log</code> used any other way with nothing declared is <a class="code" href="codes.html#E-NAM-001"><code>E-NAM-001</code></a> (<a class="cite" href="../Fortis_Language_Reference.html#13-observation-schemas-and-statements">LR 13</a>).</li><li>Open defects: no backend supplies the duration (D-28); native writes no <code>not_started</code> frame (D-27).</li></ul>
+<footer>Built from the repository at 0b33d59b9662 by <code>conformance/tools/site.py</code>; every example on this page is checked by <code>conformance/tools/docset_check.py</code>.</footer>
+</main>
+</div>
+<script src="../../search.js"></script>
+<script src="../../site.js"></script>
+</body>
+</html>
