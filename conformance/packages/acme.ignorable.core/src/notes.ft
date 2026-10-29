@@ -1,0 +1,7 @@
+// accept
+// `@ignorable` here is the core aspect (5.5, 11.8; X-345): a caller may drop `note`'s result without `discard`, in
+// any module, whatever `ignorable` names there (D-314).
+@ignorable
+export func note(seen: editable Set[Int], n: Int) Bool {
+  return seen.add(n)
+}

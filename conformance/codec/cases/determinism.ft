@@ -1,20 +1,19 @@
 // LANG-06-06: Map and Set iteration order is deterministic per build. 300 keys arrive in a seeded pseudo-random
 // order, a third of them are written twice, and the program prints a digest of both iteration orders and the
 // canonical text of each. codec_check.py runs it 100 times under different interpreter hash seeds.
-import fortis.host { Host, Console, Random }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  summarise(caps.random.seeded(29), caps.console)
+import fortis.host { Console, Random }
+func main(random: Random, console: Console) {
+  summarise(random.seeded(29), console)
 }
-func summarise(random: Random, out: Console) Void {
+func summarise(random: Random, out: Console) {
   let mut words: Map[String, Int] = Map.default()
   let mut seen: Set[String] = Set.default()
   let mut numbers: Set[Int] = Set.default()
   for i in 0..<300 {
     let k = random.below(1000)
-    editable words.set("w${k}", i)
-    discard editable seen.add("w${k}")
-    discard editable numbers.add(500 - k)
+    words.set("w${k}", i)
+    discard seen.add("w${k}")
+    discard numbers.add(500 - k)
   }
   let mut order = ""
   for k in seen {

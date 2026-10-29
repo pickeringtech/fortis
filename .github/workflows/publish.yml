@@ -1,0 +1,147 @@
+# Publishes a release to the public repository, pickeringtech/fortis, as one commit with the release's tag: the
+# public tree of the tag (docs/delivery/tools/public_tree.py), checked on its own first. release.yml calls it at a
+# release's tag (vX.Y.Z, never a release candidate) once the release tier has passed. It is run by hand only for a
+# release made before the public repository existed (v0.0.1): that tag is exported by this commit's rules, and its
+# local paths and links to unpublished files are rewritten (public_tree.py --sanitise), which the commit message
+# says. It runs only in the maintainers' repository, pickeringtech/fortis-internal.
+#
+# The push uses the public repository's deploy key, with write access, from the secret PUBLIC_REPO_DEPLOY_KEY.
+# Releases are published in order, each commit following the last: a tag the public repository already has is left
+# alone, and a version older than its latest is refused.
+#
+# Actions are pinned to full commit SHAs, with the version they were taken from in a comment.
+name: Publish
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+    secrets:
+      PUBLIC_REPO_DEPLOY_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "the release's tag, vX.Y.Z"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'pickeringtech/fortis-internal'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: The tag names a release
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release's tag: $TAG"; exit 1; }
+      # The tools are this workflow's own commit (the tag itself when release.yml calls it); the release is the tag
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          path: tools
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          path: release
+          persist-credentials: false
+      - run: rustc -V && cargo -V
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install Pillow (the website step draws the social-preview image)
+        run: python3 -m pip install --quiet -r tools/.github/requirements-ci.txt
+      - name: Export the public tree
+        run: |
+          if [ -e release/docs/delivery/tools/public_tree.py ]; then
+            python3 -I tools/docs/delivery/tools/public_tree.py --root release --export "$RUNNER_TEMP/public"
+          else
+            # a release made before the public tree existed
+            python3 -I tools/docs/delivery/tools/public_tree.py --root release --export "$RUNNER_TEMP/public" --sanitise | tee "$RUNNER_TEMP/sanitise.log"
+          fi
+      - name: Allow unprivileged user namespaces (the sandbox checks run the tools in a new namespace)
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      # The checks run in a copy, so that what they build and write never reaches the published commit
+      - name: The public tree, checked on its own
+        run: |
+          cp -a "$RUNNER_TEMP/public" "$RUNNER_TEMP/check"
+          python3 -I tools/conformance/tools/hygiene_check.py --root "$RUNNER_TEMP/check"
+          if [ -e "$RUNNER_TEMP/check/conformance/tools/gate.py" ]; then
+            python3 -I tools/docs/delivery/tools/public_tree.py --check "$RUNNER_TEMP/check" --deadline 100 --tier quick --jobs "$(nproc)" --json build/gate-public.json
+          else
+            echo "$TAG predates the public gate: its release check ran when it was released; here, hygiene and gitleaks"
+          fi
+      # gitleaks 8.30.1, checked against the release's published SHA-256 before it runs, with this commit's config
+      - name: Secrets over the public tree
+        run: |
+          curl -sSfL -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks && rm gitleaks.tar.gz
+          ./gitleaks dir "$RUNNER_TEMP/public" --config tools/.gitleaks.toml --no-banner --redact
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: gate-report-public
+          path: |
+            ${{ runner.temp }}/check/build/gate-public.json
+            ${{ runner.temp }}/sanitise.log
+          retention-days: 90
+          if-no-files-found: ignore
+      - name: Push the release to pickeringtech/fortis
+        env:
+          DEPLOY_KEY: ${{ secrets.PUBLIC_REPO_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          [ -n "$DEPLOY_KEY" ] || { echo "PUBLIC_REPO_DEPLOY_KEY is not set"; exit 1; }
+          install -m 700 -d "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/ssh/key" && chmod 600 "$RUNNER_TEMP/ssh/key"
+          # GitHub's published host key (docs.github.com, "GitHub's SSH key fingerprints")
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > "$RUNNER_TEMP/ssh/known_hosts"
+          export GIT_SSH_COMMAND="ssh -i $RUNNER_TEMP/ssh/key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$RUNNER_TEMP/ssh/known_hosts"
+          remote=git@github.com:pickeringtech/fortis.git
+          if [ -n "$(git ls-remote --tags "$remote" "refs/tags/$TAG")" ]; then
+            echo "pickeringtech/fortis already has $TAG; nothing to publish"
+            exit 0
+          fi
+          latest="$(git ls-remote --tags --refs "$remote" 'v*' | sed 's#.*refs/tags/##' | sort -V | tail -n 1)"
+          if [ -n "$latest" ] && [ "$(printf '%s\n%s\n' "$latest" "$TAG" | sort -V | tail -n 1)" != "$TAG" ]; then
+            echo "pickeringtech/fortis is at $latest, newer than $TAG: releases are published in order"
+            exit 1
+          fi
+          internal="$(git -C release rev-parse HEAD)"
+          released="$(git -C release log -1 --format=%cs HEAD)"
+          body="The public tree of Fortis $TAG, released on $released. The release notes are docs/releases/$TAG.md. Exported from the maintainers' repository at $internal."
+          if [ -e "$RUNNER_TEMP/sanitise.log" ]; then
+            changed="$(grep -c '^sanitise ' "$RUNNER_TEMP/sanitise.log" || true)"
+            body="$body
+
+          $TAG was released before this repository existed, so it is exported by the rules of the first release published here, and $changed lines differ from the tag: absolute local paths in recorded results are now relative to the checkout, and links to the maintainers' planning files, which are not published, are now plain text."
+          fi
+          repo="$RUNNER_TEMP/repo"
+          git init -q -b master "$repo"
+          cd "$repo"
+          git config user.name "fortis-release"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "$remote"
+          if [ -n "$(git ls-remote --heads origin master)" ]; then
+            git fetch -q --depth 1 origin master
+            git reset -q --soft FETCH_HEAD        # the new commit follows the last release
+          fi
+          git read-tree --empty                   # the index holds exactly the public tree, nothing carried over
+          cp -a "$RUNNER_TEMP/public/." .
+          git add -A -f                           # every exported file is tracked in the release, ignore rules or not
+          git commit -q -m "Fortis $TAG" -m "$body"
+          git tag -a "$TAG" -m "Fortis $TAG, released on $released"
+          git push origin master "refs/tags/$TAG"
+          echo "published $TAG as $(git rev-parse --short=12 HEAD)"

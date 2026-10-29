@@ -10,7 +10,7 @@ func total(xs: List[Int], ys: owned List[Int]) Int {
     sum = Int.wrappingAdd(sum, y)
   }
   let mut cursor = alias xs.iterate()
-  let first = editable cursor.next()
+  let first = cursor.next()
   let v = match first {
     present(item) => item
     null => 0

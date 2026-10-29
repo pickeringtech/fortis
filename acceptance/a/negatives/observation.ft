@@ -3,7 +3,7 @@
 // change: a required field captured only after a failure exit
 // Application A: reads the stock and order feeds through the FileSystem capability, builds the ledger, applies
 // the orders and prints a summary. It imports no kit package: the language core and fortis.host only.
-import fortis.host { Host, Console, FileSystem, Path }
+import fortis.host { Console, FileSystem, Path }
 import acme.stock.ids { SkuId, lineValue, total }
 import acme.stock.feed { Entry, entry, segment, segmentCount, lineCount, checksum, nameField }
 import acme.stock.ledger { Item, Ledger, Summary, close, pairTotal }
@@ -33,12 +33,12 @@ try func stockItems(text: StringView, out: Console) List[Item] {
         recover null
       }
       if e != null {
-        editable items.push(Item(sku: e.sku, name: String.from(nameField(line) or fail), quantity: e.quantity))
+        items.push(Item(sku: e.sku, name: String.from(nameField(line) or fail), quantity: e.quantity))
       }
     }
   }
   capture accepted = items.count()
-  return move items
+  return items
 }
 
 // Parses the order feed; the fourth field (the customer) is not needed.
@@ -54,19 +54,18 @@ try func orderEntries(text: StringView, out: Console) List[Entry] {
         recover null
       }
       if e != null {
-        editable entries.push(move e)
+        entries.push(move e)
       }
     }
   }
-  return move entries
+  return entries
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  run(caps.fileSystem, caps.console) or fail
+try func main(fileSystem: FileSystem, console: Console) {
+  run(fileSystem, console) or fail
 }
 
-try func run(fs: FileSystem, out: Console) Void {
+try func run(fs: FileSystem, out: Console) {
   defer {
     out.print("run finished")
   }
@@ -78,7 +77,7 @@ try func run(fs: FileSystem, out: Console) Void {
   let stock = stockItems(stockText, out) or fail
   let mut ledger = Ledger.empty()
   for item in move stock {
-    editable ledger.add(move item)
+    ledger.add(move item)
   }
   out.print("ledger: ${ledger.count()} items, ${ledger.countBelow(10)} below 10")
   let first = SkuId.validate(1001) or fail
@@ -94,7 +93,7 @@ try func run(fs: FileSystem, out: Console) Void {
   out.print("units held: ${units}")
   // linear outcomes: every result of the batch is consumed exactly once
   let orders = orderEntries(fs.readText(ordersPath) or fail, out) or fail
-  let results = editable ledger.takeAll(orders)
+  let results = ledger.takeAll(orders)
   let mut filled = 0
   let mut refused = 0
   move results.consumeEach(fn mut[editable filled, editable refused, alias out](r: owned Outcome[Int<0..10000>]) Void {
@@ -110,10 +109,10 @@ try func run(fs: FileSystem, out: Console) Void {
     }
   })
   out.print("orders: ${filled} filled, ${refused} refused")
-  // checked totals: a value per item, then an unbounded sum through the checked API
+  // checked totals: a value per item, then an unbounded sum through a checked operator
   let mut values: List[Int<0..10000000000>] = List.default()
   for item in ledger.items {
-    editable values.push(lineValue(item.quantity, 250))
+    values.push(lineValue(item.quantity, 250))
   }
   out.print("stock value: ${total(values) or fail} cents")
   // fn once: the closing step consumes the ledger it captured

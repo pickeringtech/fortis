@@ -2,16 +2,15 @@
 // requires: runtime
 // covers: LANG-06-04
 // Money.greaterThan is a total order within one currency; amounts in different currencies are incomparable.
-import fortis.host { Host }
+import fortis.host { Console }
 import fortis.money { Money, Currency, CurrencyMismatch }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let ten = Money.of(Currency.GBP, 10d)
-  let five = Money.of(Currency.GBP, 5.00d)
-  caps.console.print("${Money.greaterThan(ten, five)}")
-  caps.console.print("${Money.greaterThan(five, ten)}")
-  caps.console.print("${Money.greaterThan(ten, Money.of(Currency.GBP, 10.00d))}")
-  caps.console.print("${Money.greaterThan(Money.of(Currency.GBP, 10.00d), ten)}")
-  caps.console.print("${Money.greaterThan(ten, Money.of(Currency.USD, 1d))}")
-  caps.console.print("${Money.greaterThan(Money.of(Currency.USD, 1d), ten)}")
+func main(console: Console) {
+  let ten = Money.of(GBP, 10d)
+  let five = Money.of(GBP, 5.00d)
+  console.print("${Money.greaterThan(ten, five)}")
+  console.print("${Money.greaterThan(five, ten)}")
+  console.print("${Money.greaterThan(ten, Money.of(GBP, 10.00d))}")
+  console.print("${Money.greaterThan(Money.of(GBP, 10.00d), ten)}")
+  console.print("${Money.greaterThan(ten, Money.of(USD, 1d))}")
+  console.print("${Money.greaterThan(Money.of(USD, 1d), ten)}")
 }

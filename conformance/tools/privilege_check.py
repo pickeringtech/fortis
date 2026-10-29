@@ -3,7 +3,8 @@ external effect a program has is authorised explicitly.
 
 `python3 -I conformance/tools/privilege_check.py [--json]`
 
-Each context runs under the restrictions its declaration (docs/delivery/privileges.json) states, and must still do
+Each context runs under the restrictions its declaration (the delivery plan's privileges table, a maintainers'
+planning file; without it the declaration check is skipped) states, and must still do
 its job:
 
 - **check, fmt, view** (and the agent skill, which uses only these and `test`): a new network namespace and a
@@ -64,8 +65,12 @@ def main(argv):
         problems += not ok
         print(f"{'PASS' if ok else 'FAIL'} {name}" + ("" if ok else f": {str(detail)[:300]}"))
 
-    decl = json.load(open(os.path.join(ROOT, "docs", "delivery", "privileges.json"), encoding="utf-8"))
-    expect("every context has a privilege declaration", {c["context"] for c in decl["contexts"]} >= {"check", "fmt", "view", "test", "build", "agent", "generator"})
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import planning
+    decl_path = planning.optional(planning.PRIVILEGES, "privilege", "checking the declarations (every context declared; no generator context)")
+    if decl_path:
+        decl = json.load(open(decl_path, encoding="utf-8"))
+        expect("every context has a privilege declaration", {c["context"] for c in decl["contexts"]} >= {"check", "fmt", "view", "test", "build", "agent", "generator"})
     # check, fmt, view: sandboxed, and they never write
     before = snapshot()
     r = subprocess.run([FORTISC, "check", "--format", "json", "examples/apps/orders"], capture_output=True, text=True, cwd=ROOT, preexec_fn=sandbox, timeout=600)
@@ -118,8 +123,9 @@ def main(argv):
     expect("the agent skill uses only fortis view, check, fmt and test", set(commands) <= {"view", "check", "fmt", "test"}, commands)
     links = [os.path.join(ROOT, d, "skills", "fortis-code") for d in (".claude", ".agents", ".grok")]
     expect("the skill is installed as project-scope links only", all(os.path.islink(l) and os.path.realpath(l) == os.path.join(ROOT, "skills", "fortis-code") for l in links if os.path.lexists(l)) and any(os.path.lexists(l) for l in links))
-    gen = next(c for c in decl["contexts"] if c["context"] == "generator")
-    expect("generator context: none in Language 1.0 (declared)", gen.get("present") is False)
+    if decl_path:
+        gen = next(c for c in decl["contexts"] if c["context"] == "generator")
+        expect("generator context: none in Language 1.0 (declared)", gen.get("present") is False)
     if "--json" in argv:
         os.makedirs(os.path.join(ROOT, "build"), exist_ok=True)
         json.dump({"rule": "PROG-SEC-02", "checks": rows}, open(os.path.join(ROOT, "build", "privilege.json"), "w"), indent=1)

@@ -8,3 +8,4 @@ description = "The Fortis formatter (DEL-41, DEL-43): canonical layout, and the 
 [dependencies]
 fortis-syntax = { path = "../fortis-syntax" }
 fortis-types = { path = "../fortis-types" }
+fortis-names = { path = "../fortis-names" }

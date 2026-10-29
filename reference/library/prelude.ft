@@ -113,11 +113,11 @@ export class List[T] {
   export trusted pure func default() List[T]
   export trusted pure func of(...items: owned T) List[T]
   export trusted pure func count(self) Int
-  export trusted func push(editable self, item: owned T) Void
+  export trusted func push(editable self, item: owned T)
   export trusted func pop(editable self) T?
   export trusted pure func get(self, index: Int) (alias T from self)?
   export trusted pure try func at(self, index: Int) T
-  export trusted try func set(editable self, index: Int, value: owned T) Void
+  export trusted try func set(editable self, index: Int, value: owned T)
   export trusted pure func isEmpty(self) Bool
   export trusted pure func first(self) (alias T from self)?
   export trusted pure func reversed(self) List[T] where T implements Copyable
@@ -126,7 +126,7 @@ export class List[T] {
   export trusted pure func map[U](self, f: pure fn(T) U) List[U]
   export trusted pure func filter(self, keep: pure fn(T) Bool) List[T] where T implements Copyable
   export trusted pure func iterate(self) ListCursor[T] from self
-  export trusted func consumeEach(owned self, visit: fn mut(owned T) Void) Void
+  export trusted func consumeEach(owned self, visit: fn mut(owned T) Void)
 }
 export class ListCursor[T] implements Iterator[T] {
   export trusted pure func next(editable self) (alias T from self)?
@@ -140,12 +140,12 @@ export class ListView[T] {
 export class Array[T, N] {
   export trusted pure func filled(value: T) Array[T, N]
   export trusted pure func count(self) Int
-  export trusted func set(editable self, index: Int, value: owned T) Void
+  export trusted func set(editable self, index: Int, value: owned T)
 }
 export class Map[K, V] {
   export trusted pure func default() Map[K, V]
   export trusted pure func get(self, key: K) (alias V from self)?
-  export trusted func set(editable self, key: owned K, value: owned V) Void
+  export trusted func set(editable self, key: owned K, value: owned V)
   export trusted pure func count(self) Int
 }
 export class OrderedMap[K, V] {}
@@ -162,7 +162,7 @@ export class VariantMap[E, V] {}
 // ---- outcomes and failures (10) ----
 export class Must {
   export trusted pure func create() Must
-  export trusted pure func discharge(m: owned Must) Void
+  export trusted pure func discharge(m: owned Must)
 }
 export class Outcome[T] {
   export trusted pure func success(value: owned T) Outcome[T]
@@ -181,7 +181,7 @@ export trusted pure func annotate(f: owned Failure, note: StringView) Failure
 // ---- concurrency (12) ----
 export class Future[T] {}
 export class Task[T] implements Abandonable {
-  export trusted func abandon(owned self) Void
+  export trusted func abandon(owned self)
 }
 export class Cancellation {}
 export class TaskDefect {}
@@ -206,28 +206,28 @@ export class Mutex[T] {
 }
 export class MutexGuard[T] {
   export trusted pure func get(self) T where T implements Copyable
-  export trusted func set(self, value: owned T) Void
+  export trusted func set(self, value: owned T)
   export trusted func replace(self, value: owned T) T
 }
 export class AtomicInt {
   export trusted pure func create(value: Int) AtomicInt
   export trusted pure func load(self) Int
-  export trusted func store(self, value: Int) Void
+  export trusted func store(self, value: Int)
   export trusted func fetchAdd(self, delta: Int) Int
 }
 export class AtomicBool {
   export trusted pure func create(value: Bool) AtomicBool
   export trusted pure func load(self) Bool
-  export trusted func store(self, value: Bool) Void
+  export trusted func store(self, value: Bool)
 }
 export class Scope {
   export trusted func launch[T](self, work: owned Future[T]) Task[T]
   export trusted func launchParallel[T](self, work: owned Future[T]) Task[T]
   export trusted func launchBlocking[T](self, work: owned fn once() T) Task[T]
-  export trusted func detach[T](self, task: owned Task[T], supervisor: Supervisor) Void
+  export trusted func detach[T](self, task: owned Task[T], supervisor: Supervisor)
 }
 export trusted async func join[A, B](a: owned Future[A], b: owned Future[B]) (A, B)
-export trusted func checkpoint() Void
+export trusted func checkpoint()
 // Fault injection for the conformance corpus (10.8): a defect of the named class terminates the task at once.
 // Not a language feature: the reference toolchain's one hook for the defect taxonomy tests.
 export trusted func injectDefect(kind: StringView) Never
@@ -235,6 +235,10 @@ export trusted func injectDefect(kind: StringView) Never
 // ---- observation (13): the core aspect that attaches a schema to a function ----
 export class ObservationSchema {}
 export aspect observe(schema: ObservationSchema) {
+  metadata
+}
+// the core aspect `@ignorable` (5.5, 11.8; X-345): callers may drop the function's non-linear result without `discard`
+export aspect ignorable() {
   metadata
 }
 
@@ -251,13 +255,13 @@ export interface Equatable {
   pure func equals(self, other: Self) Bool
 }
 export interface Hashable requires Equatable {
-  pure func hash(self, into: editable Hasher) Void
+  pure func hash(self, into: editable Hasher)
 }
 export interface Comparable requires Equatable {
   pure func compare(self, other: Self) Ordering
 }
 export interface Displayable {
-  pure func display(self, into: editable Builder) Void
+  pure func display(self, into: editable Builder)
 }
 export interface Iterable[T, I] where I implements Iterator[T] {
   pure func iterate(self) I from self
@@ -274,13 +278,13 @@ export interface Consumer[T] {
 export interface Copyable {}
 export interface Shareable {}
 export interface Abandonable {
-  func abandon(owned self) Void
+  func abandon(owned self)
 }
 export interface Default {
   pure func default() Self
 }
 export interface Encodable {
-  pure func encode(self, into: editable Encoder) Void
+  pure func encode(self, into: editable Encoder)
 }
 export interface Decodable {
   try func decode(source: editable Decoder) Self
@@ -292,8 +296,8 @@ export interface From[S] {
 }
 export class Builder {
   export trusted pure func create() Builder
-  export trusted func append(editable self, text: StringView) Void
-  export trusted func appendLine(editable self, text: StringView) Void
-  export trusted func appendScalar(editable self, s: Scalar) Void
+  export trusted func append(editable self, text: StringView)
+  export trusted func appendLine(editable self, text: StringView)
+  export trusted func appendScalar(editable self, s: Scalar)
   export trusted pure func finish(self) String
 }

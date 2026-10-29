@@ -38,7 +38,7 @@ export func lambda_in_loop(xs: ListView[Int]) Int {
   for i in 0..<xs.count() {
     let unused = fn() Void {
       let mut xs: List[Int] = List.of(1)
-      let gone = editable xs.pop()
+      let gone = xs.pop()
     }
     total = Int.wrappingAdd(total, xs[i])
   }
@@ -119,7 +119,7 @@ export func ranged(b: editable Box) Int {
   let mut total = 0
   for i in 0..<b.items.count() {
     total = Int.wrappingAdd(total, b.items[i])
-    editable b.other.push(i)
+    b.other.push(i)
   }
   return total
 }

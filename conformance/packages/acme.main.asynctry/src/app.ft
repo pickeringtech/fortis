@@ -1,7 +1,6 @@
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export async try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("ok")
+async try func main(console: Console) {
+  console.print("ok")
 }

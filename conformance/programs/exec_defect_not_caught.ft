@@ -2,7 +2,7 @@
 // requires: runtime
 // covers: LANG-10-06
 // 10.8: a defect is never a Failure: the catch block does not run and no recovery value is produced.
-import fortis.host { Host }
+import fortis.host { Console }
 export error Bad {
   code: "demo.bad"
 }
@@ -12,12 +12,11 @@ try func risky(n: Int) Int {
   }
   injectDefect("out_of_memory")
 }
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("before")
+recovers func main(console: Console) {
+  console.print("before")
   let v = risky(1) catch e {
-    caps.console.print("caught ${e.code}")
+    console.print("caught ${e.code}")
     recover 0
   }
-  caps.console.print("after ${v}")
+  console.print("after ${v}")
 }

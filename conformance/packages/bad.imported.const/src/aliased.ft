@@ -3,6 +3,6 @@
 // `vals.limit` is the same constant: the alias spelling is checked on the initialiser's type too.
 import bad.imported.const.vals as vals
 
-func take() Void {
+func take() {
   let s: String = vals.limit             // reject: E-TYP-040
 }

@@ -63,6 +63,18 @@ pub struct Frame {
     /// the closure a consuming call (`move f(…)`, launched work) owns: destroyed when the frame ends, after its
     /// owned parameters, or with the future if the frame never runs (7.9, X-250; D-30)
     pub consumed: Option<Value>,
+    /// the `let` locals that hold a loan rather than own their value: bound or assigned a value that lends (an
+    /// `alias` or `editable` place, a `get`, a result declared `from` a parameter, the present side of a `??`).
+    /// Their end destroys nothing; the owner's does (7.3, 7.9; D-338, D-350)
+    pub lent: HashSet<LocalId>,
+    /// the pattern bindings whose type is a loan but which took a value of its own from an aggregate their pattern
+    /// owned: a tuple or record element that holds an owned value (a `??` whose fallback is owned). They own it, and
+    /// their end destroys it (7.9; D-366)
+    pub owned: HashSet<LocalId>,
+    /// whether the value the frame's `return` gave is a loan (true until a `return` says otherwise): a result declared
+    /// `from` a parameter is bound by the caller as this says, so a value of the callee's own (a `??` whose fallback
+    /// it moved or made, a moved local) is owned where it lands (7.9; D-373)
+    pub ret_lent: bool,
 }
 
 const MAX_DEPTH: usize = 2000;
@@ -118,6 +130,12 @@ pub struct Vm<'p> {
     /// whether this run has created the capabilities (11.6): shared with the run's tasks through the scheduler, so a
     /// second creation anywhere in the run is the runtime-invariant defect (10.8; D-110)
     pub caps_made: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    /// whether the value the last `give` or `recover` gave is a loan (the side of an `if`, a block or a `match` that
+    /// gave it lends), so a binding of that expression holds the loan rather than owns it (7.9; D-338)
+    gave_lent: bool,
+    /// whether the last call that ran gave a loan (a `from` result, an intrinsic's) or a value of its own, which the
+    /// binding that receives the result then owns (7.9; D-373)
+    ret_lent: bool,
 }
 
 impl<'p> Vm<'p> {
@@ -149,6 +167,8 @@ impl<'p> Vm<'p> {
             gen: None,
             root: 0,
             caps_made: Default::default(),
+            gave_lent: false,
+            ret_lent: true,
         }
     }
 
@@ -225,7 +245,7 @@ impl<'p> Vm<'p> {
                 (false, v) => v,
             };
         }
-        Ok((ni, Frame { locals, func: ni, consumed: frame.consumed }))
+        Ok((ni, Frame { locals, func: ni, consumed: frame.consumed, lent: HashSet::new(), owned: HashSet::new(), ret_lent: true }))
     }
 
     /// The interpreter's name for a function in records: `main`, `parse`, `Type.method`.
@@ -243,8 +263,14 @@ impl<'p> Vm<'p> {
     /// Call a function: bind its arguments, then run its body; an `async` function's call binds and returns a
     /// Future without running (12.3).
     pub fn call(&mut self, fi: usize, args: Vec<(String, Value)>, captures: &[Value]) -> R<Value> {
+        self.call_with(fi, args, captures, &[])
+    }
+
+    /// A closure's call: `owned` says, per capture, whether the closure owns it (a `copy` or an owned `move` capture)
+    /// or holds a loan (an `alias` or `editable` capture, a loan moved in), which its body then holds (7.9; D-374).
+    pub fn call_with(&mut self, fi: usize, args: Vec<(String, Value)>, captures: &[Value], owned: &[bool]) -> R<Value> {
         self.step()?;
-        let frame = self.bind_call(fi, args, captures)?;
+        let frame = self.bind_call(fi, args, captures, owned)?;
         let f = &self.prog.functions[fi];
         if f.has("async") && f.body.is_some() {
             let code = self.code_of(fi);
@@ -254,7 +280,7 @@ impl<'p> Vm<'p> {
     }
 
     /// A function's frame with its captures and parameters bound (defaults evaluated at the call).
-    pub fn bind_call(&mut self, fi: usize, args: Vec<(String, Value)>, captures: &[Value]) -> R<Frame> {
+    pub fn bind_call(&mut self, fi: usize, args: Vec<(String, Value)>, captures: &[Value], owned: &[bool]) -> R<Frame> {
         let f = &self.prog.functions[fi];
         if f.body.is_none() {
             return dynamic(format!("call to the trusted function `{}`, which has no body", f.name));
@@ -262,10 +288,15 @@ impl<'p> Vm<'p> {
         if self.depth >= MAX_DEPTH {
             return defect("stack_exhaustion");
         }
-        let mut frame = Frame { locals: vec![Value::Void; f.locals.len()], func: fi, consumed: None };
+        let mut frame = Frame { locals: vec![Value::Void; f.locals.len()], func: fi, consumed: None, lent: HashSet::new(), owned: HashSet::new(), ret_lent: true };
         if let Some(c) = &f.closure {
-            for (cd, v) in c.captures.iter().zip(captures.iter()) {
+            for (i, (cd, v)) in c.captures.iter().zip(captures.iter()).enumerate() {
                 frame.locals[cd.local as usize] = v.clone();
+                // a capture the closure does not own is a loan its body holds: moving it on (into a tuple, a
+                // binding) moves the loan, and nothing destroys what it lends (7.9; D-374)
+                if owned.get(i).map_or(false, |o| !o) {
+                    frame.lent.insert(cd.local);
+                }
             }
         }
         let mut given: Vec<(String, Value)> = args;
@@ -324,10 +355,11 @@ impl<'p> Vm<'p> {
                 if matches!(v, Value::Moved) {
                     continue;
                 }
-                if let Some(t) = self.has_cleanup(&v) {
+                if let Some(t) = self.cleanup_runs(&v) {
                     self.trace.push(format!("drop {t}"));
                 }
-                if let Err(e) = self.destroy(v) {
+                let ty = &self.prog.functions[fi].locals[l as usize].ty;
+                if let Err(e) = self.destroy_typed(v, ty) {
                     r = Err(e);
                     break;
                 }
@@ -384,6 +416,8 @@ impl<'p> Vm<'p> {
             let truncated = telemetry::bound_fields(&mut shown, &bounds);
             self.observation_truncated(schema, Some(&Self::source_name(f)), &shown, Some(outcome), &truncated);
         }
+        // last, after the frame's own destructors ran their calls: the caller reads it as the call's result (D-373)
+        self.ret_lent = frame.ret_lent;
         result
     }
 
@@ -427,7 +461,8 @@ impl<'p> Vm<'p> {
                 let func = &self.prog.functions[fi];
                 let named: Vec<(String, Value)> = func.params.iter().map(|p| p.name.clone()).zip(args).collect();
                 let caps = c.captures.clone();
-                self.call(fi, named, &caps)
+                let owned = c.owned.clone();
+                self.call_with(fi, named, &caps, &owned)
             }
             Value::Func(i) => {
                 let named: Vec<(String, Value)> = self.prog.functions[*i].params.iter().map(|p| p.name.clone()).zip(args).collect();
@@ -435,7 +470,9 @@ impl<'p> Vm<'p> {
             }
             Value::Intrinsic(name) => {
                 let name = name.clone();
-                crate::intrinsics::call(self, &name, args)
+                let r = crate::intrinsics::call(self, &name, args);
+                self.ret_lent = true; // an intrinsic that lends lends (D-373)
+                r
             }
             Value::Cell(c) => {
                 let v = c.borrow().clone();
@@ -459,8 +496,9 @@ impl<'p> Vm<'p> {
         let fi = self.resolve(c.func, c.code.as_deref())?;
         let named: Vec<(String, Value)> = self.prog.functions[fi].params.iter().map(|p| p.name.clone()).zip(args).collect();
         let caps = c.captures.clone();
+        let owned = c.owned.clone();
         self.step()?;
-        let mut frame = self.bind_call(fi, named, &caps)?;
+        let mut frame = self.bind_call(fi, named, &caps, &owned)?;
         frame.consumed = Some(Value::Closure(c));
         let f = &self.prog.functions[fi];
         if f.has("async") && f.body.is_some() {
@@ -594,17 +632,23 @@ impl<'p> Vm<'p> {
         let unwinding = matches!(r, Err(Exit::Flow(Flow::Fail(_))) | Err(Exit::Halt(Halt::Cancel)));
         let ex = self.exit_block(fr, b, unwinding, scope, &registered);
         match (r, ex) {
+            // a deferred block's dynamic check failure or defect stops the task however the block itself left: a `return`
+            // carrying the block's result must not hide it, so a missed check fails loudly (12.1; D-391)
+            (Err(Exit::Flow(_)), Err(e @ Exit::Halt(_))) => Err(e),
             (Err(e), _) => Err(e),
             (Ok(()), Err(e)) => Err(e),
             (Ok(()), Ok(())) => Ok(()),
         }
     }
 
-    fn has_cleanup(&self, v: &Value) -> Option<String> {
+    /// The class whose `cleanup` destroying this value runs: a class value that declares one and that its owner has
+    /// not destroyed yet. A destruction is announced in the trace exactly when it runs that `cleanup` (D-351). Only
+    /// an owner destroys, so the caller has already decided that the value is owned (7.9; D-338, D-348).
+    fn cleanup_runs(&self, v: &Value) -> Option<String> {
         if let Value::Obj(o) = v.deref() {
-            let ty = o.borrow().ty.clone();
-            if self.types.get(&*ty).map_or(false, |t| t.cleanup.is_some()) {
-                return Some(ty.to_string());
+            let o = o.borrow();
+            if !o.destroyed && self.types.get(&*o.ty).map_or(false, |t| t.cleanup.is_some()) {
+                return Some(o.ty.to_string());
             }
         }
         None
@@ -619,13 +663,372 @@ impl<'p> Vm<'p> {
         false
     }
 
+    /// An expression that can lend: `alias p` or `editable p`, or a value whose type is a loan or an optional loan
+    /// (`xs.get(0)`, `m.get(k)`, a cursor's `next()`, a call whose result is declared `from` a parameter, a `??`
+    /// with a loan on one side).
+    fn lends(init: &Expr) -> bool {
+        matches!(init.kind, ExprKind::Place(_, Use::Alias | Use::Editable)) || Self::loan_ty(&init.ty)
+    }
+
+    /// A type whose value is a loan: a loan, or an optional loan (`(alias T from xs)?`).
+    fn loan_ty(ty: &fortis_types::types::Type) -> bool {
+        use fortis_types::types::Type;
+        match ty {
+            Type::Loan { .. } => true,
+            Type::Optional(i) => Self::loan_ty(i),
+            _ => false,
+        }
+    }
+
+    /// A type whose value holds a loan somewhere: a loan, or a tuple, a record or an optional with one in it. Such an
+    /// aggregate owns its other parts, and destroying it destroys only those (7.9; D-349).
+    fn holds_loan_ty(ty: &fortis_types::types::Type) -> bool {
+        use fortis_types::types::Type;
+        match ty {
+            Type::Loan { .. } => true,
+            Type::Optional(i) => Self::holds_loan_ty(i),
+            Type::Tuple(ts) => ts.iter().any(Self::holds_loan_ty),
+            Type::Record(fs) => fs.iter().any(|(_, t)| Self::holds_loan_ty(t)),
+            _ => false,
+        }
+    }
+
+    /// Evaluate the value a `let` binds or an assignment stores, and whether it is a loan the local then holds rather
+    /// than a value it owns. An expression that cannot lend gives an owned value. One that can lend but can also give
+    /// an owned value (a `??` whose fallback moves or makes one, an `if`, a block, a `match`, a `catch` or an
+    /// `or recover` whose sides differ) is decided by the side that gave the value (7.3, 7.9; D-338, D-348). A
+    /// loan-carrying value (a guard, a cursor) is owned by its binding even when it is declared `from` its origin
+    /// (7.7), so dropping a guard unlocks.
+    fn eval_held(&mut self, fr: &mut Frame, e: &Expr) -> R<(Value, bool)> {
+        if !Self::lends(e) {
+            return Ok((self.eval(fr, e)?, false));
+        }
+        let (v, lent) = match &e.kind {
+            // a moved place gives what it owned (a loan, when the local held one, or when the aggregate it was part of
+            // borrowed that part); a copy is owned
+            ExprKind::Place(p, Use::Move) => {
+                let held = if p.proj.is_empty() { self.holds_loan(fr, p.local) } else { self.part_lent(fr, p, &e.ty) };
+                (self.eval(fr, e)?, held)
+            }
+            ExprKind::Place(_, Use::Copy) => (self.eval(fr, e)?, false),
+            ExprKind::Coalesce(a, b) => {
+                let (v, lent) = self.eval_held(fr, a)?;
+                if matches!(v.deref(), Value::Null) {
+                    self.eval_held(fr, b)?
+                } else {
+                    (v, lent)
+                }
+            }
+            ExprKind::Present(a) => self.eval_held(fr, a)?,
+            ExprKind::OrRecover(a, b) => {
+                let v = self.eval(fr, a)?;
+                self.hit(a.as_ref() as *const Expr as usize, v.is_failure() as u32);
+                if v.is_failure() {
+                    self.eval_held(fr, b)?
+                } else {
+                    (v, true)
+                }
+            }
+            ExprKind::Catch { value, bind, handler } => {
+                let v = self.eval(fr, value)?;
+                self.hit(value.as_ref() as *const Expr as usize, v.is_failure() as u32);
+                if !v.is_failure() {
+                    (v, true)
+                } else {
+                    fr.locals[*bind as usize] = v;
+                    self.gave_lent = true;
+                    match self.block(fr, handler) {
+                        Err(Exit::Flow(Flow::Recover(r))) => (r, self.gave_lent),
+                        Ok(()) => return dynamic("catch block fell through without recover/return/fail"),
+                        Err(e) => return Err(e),
+                    }
+                }
+            }
+            ExprKind::If { .. } | ExprKind::Block(_) | ExprKind::Match { .. } => {
+                // the `give` (or a `match` arm's expression) that ends the branch taken says what it gave
+                self.gave_lent = true;
+                let v = self.eval(fr, e)?;
+                (v, self.gave_lent)
+            }
+            // a call whose result is declared `from` a parameter gives the loan the callee returned, or a value of
+            // the callee's own (a `??` whose fallback it moved or made, a moved local), which the binding that
+            // receives it then owns; the callee's `return` says which, an intrinsic always lends (7.9; D-373)
+            ExprKind::Call { .. } => {
+                let v = self.eval(fr, e)?;
+                (v, self.ret_lent)
+            }
+            _ => (self.eval(fr, e)?, true),
+        };
+        let carried = matches!(v.deref(), Value::Guard(_) | Value::Cursor(_));
+        Ok((v, lent && !carried))
+    }
+
+    /// What a `return` gives: a loan, or a value of the function's own, decided by the expression and the value and
+    /// never by the type alone, since a library body's typed IR need not say `from` (`List.first` is
+    /// `=> self.get(0)`). The function's own is a moved place the frame owns, a copy, a value constructed here (a
+    /// tuple or a record, which keeps the loan mask of its parts, a class or variant value, a closure, a literal, an
+    /// arithmetic or string result), a `??` or `present` side that is one, a branch that gave one, an outcome
+    /// expression whose value side or whose handler's `recover` gave one (D-385), or a call the callee reported as
+    /// its own; anything else (a place read, a lending intrinsic, a value whose kind does not say) is a loan, as
+    /// every `from` result was before (D-373, D-381).
+    fn ret_held(&mut self, fr: &mut Frame, e: &Expr) -> R<(Value, bool)> {
+        let (v, lent) = match &e.kind {
+            ExprKind::Place(p, Use::Move) => {
+                let held = if p.proj.is_empty() { self.holds_loan(fr, p.local) } else { self.part_lent(fr, p, &e.ty) };
+                (self.eval(fr, e)?, held)
+            }
+            ExprKind::Place(_, Use::Copy) => (self.eval(fr, e)?, false),
+            ExprKind::Tuple(_)
+            | ExprKind::Record(_)
+            | ExprKind::Construct { .. }
+            | ExprKind::Variant { .. }
+            | ExprKind::MakeFailure { .. }
+            | ExprKind::Closure { .. }
+            | ExprKind::Const(_)
+            | ExprKind::Interpolate(_)
+            | ExprKind::Binary(..)
+            | ExprKind::Unary(..)
+            | ExprKind::Wrap { .. } => (self.eval(fr, e)?, false),
+            ExprKind::Coalesce(a, b) => {
+                let (v, lent) = self.ret_held(fr, a)?;
+                if matches!(v.deref(), Value::Null) {
+                    self.ret_held(fr, b)?
+                } else {
+                    (v, lent)
+                }
+            }
+            ExprKind::Present(a) => self.ret_held(fr, a)?,
+            // an outcome expression gives its value side, or what its handler recovered, each decided by its own
+            // expression as a `??` side is (D-385)
+            ExprKind::OrFail(a) => {
+                let (v, lent) = self.ret_held(fr, a)?;
+                if v.is_failure() {
+                    return Err(Exit::Flow(Flow::Fail(v)));
+                }
+                (v, lent)
+            }
+            ExprKind::OrRecover(a, b) => {
+                let (v, lent) = self.ret_held(fr, a)?;
+                self.hit(a.as_ref() as *const Expr as usize, v.is_failure() as u32);
+                if v.is_failure() {
+                    self.ret_held(fr, b)?
+                } else {
+                    (v, lent)
+                }
+            }
+            ExprKind::Catch { value, bind, handler } => {
+                let (v, lent) = self.ret_held(fr, value)?;
+                self.hit(value.as_ref() as *const Expr as usize, v.is_failure() as u32);
+                if !v.is_failure() {
+                    (v, lent)
+                } else {
+                    fr.locals[*bind as usize] = v;
+                    self.gave_lent = true;
+                    match self.block(fr, handler) {
+                        Err(Exit::Flow(Flow::Recover(r))) => (r, self.gave_lent),
+                        Ok(()) => return dynamic("catch block fell through without recover/return/fail"),
+                        Err(e) => return Err(e),
+                    }
+                }
+            }
+            ExprKind::If { .. } | ExprKind::Block(_) | ExprKind::Match { .. } => {
+                self.gave_lent = true;
+                let v = self.eval(fr, e)?;
+                (v, self.gave_lent)
+            }
+            ExprKind::Call { .. } => {
+                let v = self.eval(fr, e)?;
+                (v, self.ret_lent)
+            }
+            _ => (self.eval(fr, e)?, true),
+        };
+        let carried = matches!(v.deref(), Value::Guard(_) | Value::Cursor(_));
+        Ok((v, lent && !carried))
+    }
+
+    /// Whether a part of a local (a tuple element, a record field, at any depth) is a loan: the local holds a loan,
+    /// or the aggregate the part is in recorded it as one. Where nothing was recorded, the part's type decides
+    /// (7.9; D-349, D-366).
+    fn part_lent(&self, fr: &Frame, p: &Place, ty: &fortis_types::types::Type) -> bool {
+        if self.holds_loan(fr, p.local) {
+            return true;
+        }
+        let mut v = fr.locals[p.local as usize].deref();
+        for pr in &p.proj {
+            let (lent, next) = match (pr, &v) {
+                (Proj::Tuple(i), Value::Tuple(t)) => (lent_part(&t.lent, *i as usize), t.get(*i as usize).cloned()),
+                (Proj::Field(f), Value::Record(r)) => {
+                    let r = r.borrow();
+                    match r.fields.iter().position(|(k, _)| &**k == f) {
+                        Some(i) => (lent_part(&r.lent, i), Some(r.fields[i].1.clone())),
+                        None => (None, None),
+                    }
+                }
+                _ => (None, None),
+            };
+            match (lent, next) {
+                (Some(true), _) => return true,
+                (Some(false), Some(n)) => v = n.deref(),
+                _ => return Self::loan_ty(ty),
+            }
+        }
+        false
+    }
+
+    /// The record literal a place's last projection is a field of, and that field's index, when it is one.
+    fn record_field(&self, fr: &Frame, p: &Place) -> Option<(Shared<RecordVal>, usize)> {
+        let Some(Proj::Field(f)) = p.proj.last() else { return None };
+        let mut v = fr.locals[p.local as usize].deref();
+        for pr in &p.proj[..p.proj.len() - 1] {
+            v = self.project(v, pr).ok()?;
+        }
+        match v.deref() {
+            Value::Record(r) => {
+                let i = r.borrow().fields.iter().position(|(k, _)| &**k == f)?;
+                Some((r, i))
+            }
+            _ => None,
+        }
+    }
+
+    /// The bindings of a pattern matched against a value: where the statement owns that value (a `let` pattern of a
+    /// moved or new value, a `match` on one), a binding whose type is a loan owns what it took when the aggregate it
+    /// took it from owned that part, and its end destroys it; otherwise it holds a loan (7.9; D-366).
+    fn claim_owned_parts(&self, fr: &mut Frame, p: &Pattern, v: &Value, owned: bool) {
+        let v = v.deref();
+        match p {
+            Pattern::Bind(l) | Pattern::Otherwise(Some(l)) => {
+                if owned && Self::loan_ty(self.local_ty(fr, *l)) {
+                    fr.owned.insert(*l);
+                } else {
+                    fr.owned.remove(l);
+                }
+            }
+            Pattern::Present(i) => self.claim_owned_parts(fr, i, &v, owned),
+            Pattern::Tuple(ps) => {
+                let Value::Tuple(t) = &v else { return };
+                for (i, (sp, x)) in ps.iter().zip(t.iter()).enumerate() {
+                    self.claim_owned_parts(fr, sp, x, owned && lent_part(&t.lent, i) == Some(false));
+                }
+            }
+            Pattern::Record(fs) => {
+                let Value::Record(r) = &v else { return };
+                let parts: Vec<(Value, bool)> = {
+                    let r = r.borrow();
+                    fs.iter()
+                        .map(|(n, _)| match r.fields.iter().position(|(k, _)| &**k == n) {
+                            Some(i) => (r.fields[i].1.clone(), lent_part(&r.lent, i) == Some(false)),
+                            None => (Value::Null, false),
+                        })
+                        .collect()
+                };
+                for ((_, sp), (x, part)) in fs.iter().zip(parts) {
+                    self.claim_owned_parts(fr, sp, &x, owned && part);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Record whether a `let` local holds a loan of the value just stored in it.
+    fn hold(fr: &mut Frame, local: LocalId, lent: bool) {
+        if lent {
+            fr.lent.insert(local);
+        } else {
+            fr.lent.remove(&local);
+        }
+    }
+
+    /// A local that holds a loan at its block's exit: a `let` bound or last assigned a value that lends, or a pattern
+    /// binding of a loan (a borrowed element of a destructured tuple or record). Its end destroys nothing (7.9). A
+    /// pattern binding that took a value an owned aggregate held in a loan's place owns it (D-366).
+    fn holds_loan(&self, fr: &Frame, l: LocalId) -> bool {
+        if fr.lent.contains(&l) {
+            return true;
+        }
+        if fr.owned.contains(&l) {
+            return false;
+        }
+        let d = &self.prog.functions[fr.func].locals[l as usize];
+        d.kind == LocalKind::Binding && Self::loan_ty(&d.ty)
+    }
+
+    /// The declared type of a local of the running function.
+    fn local_ty(&self, fr: &Frame, l: LocalId) -> &'p fortis_types::types::Type {
+        &self.prog.functions[fr.func].locals[l as usize].ty
+    }
+
+    /// Destroy a value its owner holds, with the type its owner declares. A loan in it is not the owner's: a tuple
+    /// or a record that holds a loan beside owned parts destroys only those (7.9; D-349). The owner has already
+    /// decided that the value itself is owned: a local whose type is a loan can own what a `??` fallback or an `if`
+    /// moved into it.
+    fn destroy_typed(&mut self, v: Value, ty: &fortis_types::types::Type) -> R<()> {
+        if Self::loan_ty(ty) {
+            return self.destroy(v);
+        }
+        self.destroy_part(v, ty)
+    }
+
+    /// A part of an owned value: a loan part destroys nothing.
+    fn destroy_part(&mut self, v: Value, ty: &fortis_types::types::Type) -> R<()> {
+        use fortis_types::types::Type;
+        if !Self::holds_loan_ty(ty) {
+            return self.destroy(v);
+        }
+        match (ty, v) {
+            (Type::Loan { .. }, _) => Ok(()),
+            (_, Value::Moved | Value::Null | Value::Void) => Ok(()),
+            (_, Value::Cell(c)) => {
+                let inner = std::mem::replace(&mut *c.borrow_mut(), Value::Moved);
+                self.destroy_part(inner, ty)
+            }
+            (Type::Optional(i), v) => self.destroy_part(v, i),
+            (Type::Tuple(ts), Value::Tuple(items)) => {
+                if let Ok(t) = Rc::try_unwrap(items) {
+                    let TupleVal { items, lent } = t;
+                    for (i, (x, t)) in items.into_iter().zip(ts.iter()).enumerate() {
+                        self.destroy_element(x, t, lent_part(&lent, i))?;
+                    }
+                }
+                Ok(())
+            }
+            (Type::Record(ts), Value::Record(fs)) => {
+                if Rc::strong_count(&fs) == 1 {
+                    let RecordVal { fields, lent } = std::mem::take(&mut *fs.borrow_mut());
+                    for (i, (n, x)) in fields.into_iter().enumerate() {
+                        match ts.iter().find(|(k, _)| k.as_str() == &*n) {
+                            Some((_, t)) => self.destroy_element(x, t, lent_part(&lent, i))?,
+                            None if lent_part(&lent, i) == Some(true) => {}
+                            None => self.destroy(x)?,
+                        }
+                    }
+                }
+                Ok(())
+            }
+            (_, v) => self.destroy(v),
+        }
+    }
+
+    /// An element or a field of an owned aggregate, as the aggregate recorded it when it was built: a loan destroys
+    /// nothing, and a value of its own is destroyed even where its type is a loan (a `??` whose fallback is owned).
+    /// Where nothing was recorded, its type decides (7.9; D-349, D-366).
+    fn destroy_element(&mut self, x: Value, ty: &fortis_types::types::Type, lent: Option<bool>) -> R<()> {
+        match lent {
+            Some(true) => Ok(()),
+            Some(false) => self.destroy_typed(x, ty),
+            None => self.destroy_part(x, ty),
+        }
+    }
+
     /// Block exit (5.1, 12.2, 12.4): the block's loans end and the tasks launched on a scope declared in it are
     /// cancelled and joined; then the registered deferred blocks LIFO; then, when unwinding, `abandon` on every
     /// live Abandonable local in reverse initialisation order; then locals drop in reverse order.
     fn exit_block(&mut self, fr: &mut Frame, b: &Block, unwinding: bool, scope: Option<&crate::value::ScopeVal>, registered: &[usize]) -> R<()> {
-        let abandon: Vec<LocalId> = if unwinding { b.locals.iter().copied().filter(|l| self.abandonable(&fr.locals[*l as usize])).collect() } else { vec![] };
+        // a local that holds a loan is not abandoned, not announced and not destroyed: its owner is (D-338)
+        let lent: Vec<LocalId> = b.locals.iter().copied().filter(|l| self.holds_loan(fr, *l)).collect();
+        let abandon: Vec<LocalId> = if unwinding { b.locals.iter().copied().filter(|l| !lent.contains(l) && self.abandonable(&fr.locals[*l as usize])).collect() } else { vec![] };
         let scope_tasks = scope.map_or(false, |s| !s.tasks.borrow().is_empty());
-        let noisy = !registered.is_empty() || scope_tasks || !abandon.is_empty() || b.locals.iter().any(|l| self.has_cleanup(&fr.locals[*l as usize]).is_some());
+        let noisy = !registered.is_empty() || scope_tasks || !abandon.is_empty() || b.locals.iter().any(|l| !lent.contains(l) && self.cleanup_runs(&fr.locals[*l as usize]).is_some());
         if noisy {
             self.trace.push("loans-end".into());
         }
@@ -651,8 +1054,15 @@ impl<'p> Vm<'p> {
                 self.call(fi, vec![("self".into(), v)], &[])?;
             }
         }
+        // the block's loans end before its owners are destroyed: their handles go and nothing is destroyed, so an owner
+        // never waits on a loan's handle (7.9; D-348)
+        for l in &lent {
+            fr.locals[*l as usize] = Value::Moved;
+            fr.lent.remove(l);
+        }
         for l in b.locals.iter().rev() {
             let v = std::mem::replace(&mut fr.locals[*l as usize], Value::Moved);
+            fr.owned.remove(l);
             if matches!(v, Value::Moved) {
                 continue;
             }
@@ -663,10 +1073,11 @@ impl<'p> Vm<'p> {
                 }
                 v => v,
             };
-            if let Some(t) = self.has_cleanup(&v) {
+            if let Some(t) = self.cleanup_runs(&v) {
                 self.trace.push(format!("drop {t}"));
             }
-            self.destroy(v)?;
+            let ty = self.local_ty(fr, *l);
+            self.destroy_typed(v, ty)?;
         }
         Ok(())
     }
@@ -700,10 +1111,18 @@ impl<'p> Vm<'p> {
             }
             Value::Obj(o) => {
                 // a class value: its own cleanup if declared, then its fields in declaration order (7.9), whether
-                // or not the class declares a cleanup. Cleanup runs for every destroy; only the last owner drains
-                // the fields, so a live alias keeps them (D-306). The fields are moved out, not cloned: a nested
-                // list, map, tuple or enum is then the unique owner of its contents and destroys them.
-                self.run_cleanup(&o)?;
+                // or not the class declares a cleanup. Only an owner destroys: a loan, an alias or a view (a `get`,
+                // an `alias` binding, a `from` result, a borrowed element of a tuple) never reaches here, whoever
+                // else still holds a handle, so `cleanup` runs once, when the owner goes, and never again (12.2;
+                // D-338, D-348).
+                if !o.borrow().destroyed {
+                    o.borrow_mut().destroyed = true;
+                    self.run_cleanup(&o)?;
+                }
+                // The fields are moved out, not cloned: a nested list, map, tuple or enum is then the unique owner of
+                // its contents and destroys them (D-306). A block's loans end before its owners are destroyed, so the
+                // owner holds the last handle; only a program the checker should have refused (a second owner,
+                // D-352) still shares it here, and the fields then stay for that handle's destruction.
                 if Rc::strong_count(&o) == 1 {
                     let fields = std::mem::take(&mut o.borrow_mut().fields);
                     for (_, f) in fields {
@@ -755,19 +1174,25 @@ impl<'p> Vm<'p> {
                 }
             }
             Value::Tuple(items) => {
-                // move the elements out so a nested tuple or other aggregate is the unique owner (D-306)
-                if let Ok(xs) = Rc::try_unwrap(items) {
-                    for x in xs {
-                        self.destroy(x)?;
+                // move the elements out so a nested tuple or other aggregate is the unique owner (D-306); an element
+                // it borrows is its owner's (D-349, D-366)
+                if let Ok(t) = Rc::try_unwrap(items) {
+                    let TupleVal { items, lent } = t;
+                    for (i, x) in items.into_iter().enumerate() {
+                        if lent_part(&lent, i) != Some(true) {
+                            self.destroy(x)?;
+                        }
                     }
                 }
             }
             Value::Record(fs) => {
-                // a record literal: its fields in written order (7.9)
+                // a record literal: its fields in written order (7.9), except a field it borrows
                 if Rc::strong_count(&fs) == 1 {
-                    let fs = std::mem::take(&mut *fs.borrow_mut());
-                    for (_, x) in fs {
-                        self.destroy(x)?;
+                    let RecordVal { fields, lent } = std::mem::take(&mut *fs.borrow_mut());
+                    for (i, (_, x)) in fields.into_iter().enumerate() {
+                        if lent_part(&lent, i) != Some(true) {
+                            self.destroy(x)?;
+                        }
                     }
                 }
             }
@@ -783,11 +1208,20 @@ impl<'p> Vm<'p> {
             Value::Closure(c) => {
                 // a closure owns its `copy`, `move` and bare captures: destroying it destroys those its body has not
                 // moved out, in capture-list order; `alias` and `editable` captures are loans (7.9, X-250; D-30)
-                for (v, owned) in c.captures.iter().zip(c.owned.iter()) {
+                // A capture that holds a tuple with a loan in it destroys only what it owns (D-349).
+                let prog = self.prog;
+                let tys: Vec<Option<&fortis_types::types::Type>> = match prog.functions.get(c.func).and_then(|f| f.closure.as_ref().map(|cl| (f, cl))) {
+                    Some((f, cl)) if c.code.is_none() => cl.captures.iter().map(|x| f.locals.get(x.local as usize).map(|d| &d.ty)).collect(),
+                    _ => vec![],
+                };
+                for (i, (v, owned)) in c.captures.iter().zip(c.owned.iter()).enumerate() {
                     if let (true, Value::Cell(cell)) = (*owned, v) {
                         let inner = std::mem::replace(&mut *cell.borrow_mut(), Value::Moved);
                         if !matches!(inner, Value::Moved) {
-                            self.destroy(inner)?;
+                            match tys.get(i).copied().flatten() {
+                                Some(ty) => self.destroy_typed(inner, ty)?,
+                                None => self.destroy(inner)?,
+                            }
                         }
                     }
                 }
@@ -900,6 +1334,60 @@ impl<'p> Vm<'p> {
         }
     }
 
+    /// `destroy_except` with the type the value's owner declares: a loan in it, bound or not, is not destroyed
+    /// (7.9; D-349).
+    fn destroy_except_typed(&mut self, v: Value, ty: &fortis_types::types::Type, bound: &HashSet<usize>) -> R<()> {
+        use fortis_types::types::Type;
+        if !Self::holds_loan_ty(ty) {
+            return self.destroy_except(v, bound);
+        }
+        let id = Self::value_id(&v);
+        if id != 0 && bound.contains(&id) {
+            return Ok(());
+        }
+        match (ty, v) {
+            (Type::Loan { .. }, _) => Ok(()),
+            (_, Value::Moved | Value::Null | Value::Void) => Ok(()),
+            (_, Value::Cell(c)) => {
+                let inner = std::mem::replace(&mut *c.borrow_mut(), Value::Moved);
+                self.destroy_except_typed(inner, ty, bound)
+            }
+            (Type::Optional(i), v) => self.destroy_except_typed(v, i, bound),
+            (Type::Tuple(ts), Value::Tuple(items)) => {
+                if let Ok(t) = Rc::try_unwrap(items) {
+                    let TupleVal { items, lent } = t;
+                    for (i, (x, t)) in items.into_iter().zip(ts.iter()).enumerate() {
+                        self.destroy_except_element(x, t, lent_part(&lent, i), bound)?;
+                    }
+                }
+                Ok(())
+            }
+            (Type::Record(ts), Value::Record(fs)) => {
+                if Rc::strong_count(&fs) == 1 {
+                    let RecordVal { fields, lent } = std::mem::take(&mut *fs.borrow_mut());
+                    for (i, (n, x)) in fields.into_iter().enumerate() {
+                        match ts.iter().find(|(k, _)| k.as_str() == &*n) {
+                            Some((_, t)) => self.destroy_except_element(x, t, lent_part(&lent, i), bound)?,
+                            None if lent_part(&lent, i) == Some(true) => {}
+                            None => self.destroy_except(x, bound)?,
+                        }
+                    }
+                }
+                Ok(())
+            }
+            (_, v) => self.destroy_except(v, bound),
+        }
+    }
+
+    /// `destroy_element` that spares what a pattern bound (D-305, D-366).
+    fn destroy_except_element(&mut self, x: Value, ty: &fortis_types::types::Type, lent: Option<bool>, bound: &HashSet<usize>) -> R<()> {
+        match lent {
+            Some(true) => Ok(()),
+            Some(false) if Self::loan_ty(ty) => self.destroy_except(x, bound),
+            Some(false) | None => self.destroy_except_typed(x, ty, bound),
+        }
+    }
+
     /// Destroy `v`, sparing allocations in `bound` even when they sit inside an aggregate the pattern did not
     /// bind. A tuple is partitioned element by element, including inside a nested tuple: a bound element keeps
     /// its owner and an unbound sibling drops here (7.9, D-301). The aggregate is opened and the parts are
@@ -915,9 +1403,12 @@ impl<'p> Vm<'p> {
         }
         match v {
             Value::Tuple(items) => {
-                if let Ok(xs) = Rc::try_unwrap(items) {
-                    for x in xs {
-                        self.destroy_except(x, bound)?;
+                if let Ok(t) = Rc::try_unwrap(items) {
+                    let TupleVal { items, lent } = t;
+                    for (i, x) in items.into_iter().enumerate() {
+                        if lent_part(&lent, i) != Some(true) {
+                            self.destroy_except(x, bound)?;
+                        }
                     }
                 }
                 Ok(())
@@ -941,9 +1432,11 @@ impl<'p> Vm<'p> {
             }
             Value::Record(fs) => {
                 if Rc::strong_count(&fs) == 1 {
-                    let fs = std::mem::take(&mut *fs.borrow_mut());
-                    for (_, x) in fs {
-                        self.destroy_except(x, bound)?;
+                    let RecordVal { fields, lent } = std::mem::take(&mut *fs.borrow_mut());
+                    for (i, (_, x)) in fields.into_iter().enumerate() {
+                        if lent_part(&lent, i) != Some(true) {
+                            self.destroy_except(x, bound)?;
+                        }
                     }
                 }
                 Ok(())
@@ -959,10 +1452,10 @@ impl<'p> Vm<'p> {
                 Ok(())
             }
             Value::Obj(o) => {
-                if Rc::strong_count(&o) != 1 {
-                    return self.destroy(Value::Obj(o));
+                if !o.borrow().destroyed {
+                    o.borrow_mut().destroyed = true;
+                    self.run_cleanup(&o)?;
                 }
-                self.run_cleanup(&o)?;
                 if Rc::strong_count(&o) == 1 {
                     let fields = std::mem::take(&mut o.borrow_mut().fields);
                     for (_, f) in fields {
@@ -1082,6 +1575,8 @@ impl<'p> Vm<'p> {
             if let Some(t) = temp_local {
                 fr.locals[t as usize] = Value::Moved;
             }
+            // the binding owns the whole value and holds its one handle, so the binding's end is the last (D-338)
+            *v = Value::Moved;
             return Ok(None);
         }
         // the temporary shares this handle; drop it before opening, or the value is not unique and its nested
@@ -1120,7 +1615,7 @@ impl<'p> Vm<'p> {
         }
         // another arm binds, so this wildcard arm drops the moved scrutinee now. The trace stays with the
         // binding that took the value on the other path (7.9).
-        self.destroy(std::mem::replace(v, Value::Moved))
+        self.destroy_typed(std::mem::replace(v, Value::Moved), &scrutinee.ty)
     }
 
     /// An owning arm's bindings die at the end of the arm, in reverse binding order (7.9, 9.8). `carried` is
@@ -1134,20 +1629,35 @@ impl<'p> Vm<'p> {
             }
         }
         for &l in locals.iter().rev() {
+            // a binding of a borrowed part (an element of the scrutinee that is itself a loan) holds that loan: its
+            // end destroys nothing (7.9; D-349)
+            let lent = self.holds_loan(fr, l);
+            fr.owned.remove(&l);
             let v = std::mem::replace(&mut fr.locals[l as usize], Value::Moved);
             let v = match v {
                 Value::Cell(c) => std::mem::replace(&mut *c.borrow_mut(), Value::Moved),
                 v => v,
             };
-            if matches!(v, Value::Moved | Value::Void) {
+            if lent || matches!(v, Value::Moved | Value::Void) {
                 continue;
             }
-            if let Some(ty) = self.has_cleanup(&v) {
+            if let Some(ty) = self.cleanup_runs(&v) {
                 self.trace.push(format!("drop {ty}"));
             }
-            self.destroy(v)?;
+            let ty = self.local_ty(fr, l);
+            self.destroy_typed(v, ty)?;
         }
         Ok(())
+    }
+
+    /// Bindings that hold loans (a borrowed scrutinee's arm, a `for` over a borrowed collection) end without
+    /// destroying anything: their slots let go of their handles, so the owner's destruction is the last handle's
+    /// and runs `cleanup` once (12.2; D-338).
+    fn end_loans(fr: &mut Frame, locals: &[LocalId]) {
+        for &l in locals {
+            fr.locals[l as usize] = Value::Moved;
+            fr.owned.remove(&l);
+        }
     }
 
     fn carried_id(r: &Result<(), Exit>) -> usize {
@@ -1171,10 +1681,11 @@ impl<'p> Vm<'p> {
                 if matches!(v, Value::Moved | Value::Void) {
                     continue;
                 }
-                if let Some(ty) = self.has_cleanup(&v) {
+                if let Some(ty) = self.cleanup_runs(&v) {
                     self.trace.push(format!("drop {ty}"));
                 }
-                if let Err(e) = self.destroy(v) {
+                let ty = self.local_ty(fr, t);
+                if let Err(e) = self.destroy_typed(v, ty) {
                     r = Err(e);
                     break;
                 }
@@ -1186,7 +1697,9 @@ impl<'p> Vm<'p> {
     fn stmt_kind(&mut self, fr: &mut Frame, s: &Stmt) -> R<()> {
         match &s.kind {
             StmtKind::Let { local, init } => {
-                let v = self.eval(fr, init)?;
+                // a local bound to a loan holds it, and its end destroys nothing (7.3, 7.9; D-338)
+                let (v, lent) = self.eval_held(fr, init)?;
+                Self::hold(fr, *local, lent);
                 let decl = &self.prog.functions[fr.func].locals[*local as usize];
                 fr.locals[*local as usize] = if decl.boxed { Value::Cell(shared(v)) } else { v };
                 Ok(())
@@ -1196,18 +1709,48 @@ impl<'p> Vm<'p> {
                 if !self.pattern(fr, pattern, &v)? {
                     return dynamic("destructuring pattern did not match");
                 }
-                // the bindings own what they took; the rest of the moved source drops at this statement (7.9, D-305)
+                let owning = !matches!(&init.kind, ExprKind::Place(_, Use::Read | Use::Alias | Use::Editable));
+                self.claim_owned_parts(fr, pattern, &v, owning);
+                // the bindings own what they took; the rest of the moved source drops at this statement (7.9, D-305),
+                // except a part it borrows (D-349)
                 let bound = self.pattern_bound_ids(fr, pattern);
-                self.destroy_except(v, &bound)?;
+                self.destroy_except_typed(v, &init.ty, &bound)?;
                 Ok(())
             }
             StmtKind::Assign { place, value, drop_old } => {
-                let v = self.eval(fr, value)?;
+                // a whole local: the old value is dropped only when the local owns it, not when it holds a loan; the
+                // local then holds what the new value is, a loan or a value of its own (7.9; D-350)
+                let whole = place.proj.is_empty().then_some(place.local);
+                // a field of a record literal: the record holds what the new value is, a loan or a value of its own,
+                // and the old value is destroyed only when the record owned it (7.9; D-366)
+                let field = if whole.is_none() { self.record_field(fr, place) } else { None };
+                let field_lent = field.as_ref().map_or(false, |(r, i)| lent_part(&r.borrow().lent, *i).unwrap_or_else(|| Self::loan_ty(&value.ty)));
+                let (v, lent) = if whole.is_some() || field.is_some() { self.eval_held(fr, value)? } else { (self.eval(fr, value)?, false) };
+                let held = whole.map_or(field_lent, |l| fr.lent.contains(&l));
                 let old = self.store(fr, place, v)?;
-                if *drop_old {
+                if let Some(l) = whole {
+                    Self::hold(fr, l, lent);
+                }
+                if let Some((r, i)) = &field {
+                    let mut r = r.borrow_mut();
+                    if let Some(m) = &r.lent {
+                        let mut m = m.to_vec();
+                        if let Some(slot) = m.get_mut(*i) {
+                            *slot = lent;
+                        }
+                        r.lent = Some(Rc::from(m));
+                    }
+                }
+                if *drop_old && !held {
                     if let Some(o) = old {
                         if !matches!(o, Value::Moved) {
-                            self.destroy(o)?;
+                            match whole {
+                                Some(l) => {
+                                    let ty = self.local_ty(fr, l);
+                                    self.destroy_typed(o, ty)?;
+                                }
+                                None => self.destroy(o)?,
+                            }
                         }
                     }
                 }
@@ -1229,8 +1772,13 @@ impl<'p> Vm<'p> {
             StmtKind::Discard(e) => {
                 // `discard move p` consumes the place now (7.9). A read or a statement temporary does not:
                 // the temporary dies at the end of the statement.
-                if let ExprKind::Place(_, Use::Move) = &e.kind {
+                if let ExprKind::Place(p, Use::Move) = &e.kind {
+                    // a local that holds a loan owns nothing to destroy (7.9; D-338)
+                    let held = p.proj.is_empty() && self.holds_loan(fr, p.local);
                     let v = self.eval(fr, e)?;
+                    if held {
+                        return Ok(());
+                    }
                     if let Value::Future(f) = &v {
                         if f.task.get().is_none() && f.work.borrow().is_some() {
                             let fname = f.fname.clone();
@@ -1239,10 +1787,10 @@ impl<'p> Vm<'p> {
                             return Ok(());
                         }
                     }
-                    if let Some(t) = self.has_cleanup(&v) {
+                    if let Some(t) = self.cleanup_runs(&v) {
                         self.trace.push(format!("drop {t}"));
                     }
-                    self.destroy(v)?;
+                    self.destroy_typed(v, &e.ty)?;
                     return Ok(());
                 }
                 self.eval(fr, e)?;
@@ -1274,17 +1822,26 @@ impl<'p> Vm<'p> {
             StmtKind::Continue(l) => Err(Exit::Flow(Flow::Continue(l.clone()))),
             StmtKind::Return(e) => {
                 let v = match e {
-                    Some(e) => self.eval(fr, e)?,
+                    Some(e) => {
+                        // whether the value returned is a loan or the function's own travels to the caller, which
+                        // binds a `from` result as the value says (D-373)
+                        let (v, lent) = self.ret_held(fr, e)?;
+                        fr.ret_lent = lent;
+                        v
+                    }
                     None => Value::Void,
                 };
                 Err(Exit::Flow(Flow::Return(v)))
             }
             StmtKind::Give(e) => {
-                let v = self.eval(fr, e)?;
+                // whether the value given is a loan travels with it to the binding that receives it (D-338)
+                let (v, lent) = self.eval_held(fr, e)?;
+                self.gave_lent = lent;
                 Err(Exit::Flow(Flow::Give(v)))
             }
             StmtKind::Recover(e) => {
-                let v = self.eval(fr, e)?;
+                let (v, lent) = self.eval_held(fr, e)?;
+                self.gave_lent = lent;
                 Err(Exit::Flow(Flow::Recover(v)))
             }
             StmtKind::Fail(e) => {
@@ -1303,15 +1860,19 @@ impl<'p> Vm<'p> {
                 };
                 let owning = temp_local.is_some() || matches!(&scrutinee.kind, ExprKind::Place(_, Use::Move));
                 for a in arms {
+                    // an arm that does not run lets go of what its pattern bound: those slots are not owners (D-338)
                     if !self.pattern(fr, &a.pattern, &v)? {
+                        Self::end_loans(fr, &a.locals);
                         continue;
                     }
                     if let Some(g) = &a.guard {
                         let gv = self.eval(fr, g)?;
                         if !self.truth(&gv)? {
+                            Self::end_loans(fr, &a.locals);
                             continue;
                         }
                     }
+                    self.claim_owned_parts(fr, &a.pattern, &v, owning);
                     let rest = self.claim_scrutinee(fr, temp_local, owning, &mut v, a)?;
                     let r = match &a.body {
                         ArmBody::Expr(e) => self.eval(fr, e).map(|_| ()),
@@ -1321,12 +1882,14 @@ impl<'p> Vm<'p> {
                     if owning && !halt {
                         let carried = Self::carried_id(&r);
                         self.drop_arm_bindings(fr, &a.locals, carried)?;
+                    } else {
+                        Self::end_loans(fr, &a.locals);
                     }
                     if let Some(rest) = rest {
                         // a moved scrutinee: what no binding took drops after the arm (7.9); a defect runs no
                         // cleanup (10.8)
                         if !halt {
-                            self.destroy(rest)?;
+                            self.destroy_typed(rest, &scrutinee.ty)?;
                         }
                     }
                     self.finish_unbound_scrutinee(fr, scrutinee, &mut v, owning, a.locals.is_empty(), any_binds, temp_local, halt)?;
@@ -1385,7 +1948,7 @@ impl<'p> Vm<'p> {
                 let old = self.store(fr, p, Value::Moved)?;
                 if let Some(v) = old {
                     if !matches!(v, Value::Moved | Value::Void) {
-                        if let Some(t) = self.has_cleanup(&v) {
+                        if let Some(t) = self.cleanup_runs(&v) {
                             self.trace.push(format!("drop {t}"));
                         }
                         self.destroy(v)?;
@@ -1403,13 +1966,14 @@ impl<'p> Vm<'p> {
                         return Ok(());
                     }
                     let (a, b) = (self.show(&av)?, self.show(&bv)?);
-                    return dynamic(format!("expect:actual={a} expected={sym} {b}"));
+                    // the failing expect's line rides with the evidence: `expect:LINE:actual=… expected=…` (14)
+                    return dynamic(format!("expect:{}:actual={a} expected={sym} {b}", cond.line));
                 }
                 let c = self.eval(fr, cond)?;
                 if self.truth(&c)? {
                     return Ok(());
                 }
-                dynamic("expect:actual=false expected=true".to_string())
+                dynamic(format!("expect:{}:actual=false expected=true", cond.line))
             }
         }
     }
@@ -1424,7 +1988,7 @@ impl<'p> Vm<'p> {
             }
             Value::Map(m) => {
                 let taken = std::mem::take(&mut *m.borrow_mut());
-                Ok(taken.entries.into_iter().map(|(k, v)| Value::Tuple(Rc::new(vec![k, v]))).collect())
+                Ok(taken.entries.into_iter().map(|(k, v)| Value::Tuple(Rc::new(TupleVal::from(vec![k, v])))).collect())
             }
             other => dynamic(format!("for over a non-collection value ({})", other.type_name())),
         }
@@ -1480,23 +2044,35 @@ impl<'p> Vm<'p> {
                     let items = match c.deref() {
                         Value::List(xs) | Value::Array(xs) => xs.borrow().clone(),
                         Value::Set(m) => m.borrow().entries.iter().map(|(k, _)| k.clone()).collect(),
-                        Value::Map(m) => m.borrow().entries.iter().map(|(k, v)| Value::Tuple(Rc::new(vec![k.clone(), v.clone()]))).collect(),
+                        Value::Map(m) => m.borrow().entries.iter().map(|(k, v)| Value::Tuple(Rc::new(TupleVal::from(vec![k.clone(), v.clone()])))).collect(),
                         other => return dynamic(format!("for over a non-collection value ({})", other.type_name())),
                     };
+                    // the binding holds a loan of each item: it ends with the loop, however the loop ends, and
+                    // destroys nothing, so the collection's owner runs each item's cleanup once (12.2; D-338)
+                    let mut r = Ok(());
                     for item in items {
                         if let Some(b) = binding {
                             let boxed = self.prog.functions[fr.func].locals[b as usize].boxed;
                             fr.locals[b as usize] = if boxed { Value::Cell(shared(item)) } else { item };
                         }
-                        self.step()?;
+                        if let Err(e) = self.step() {
+                            r = Err(e);
+                            break;
+                        }
                         match self.block(fr, body) {
                             Ok(()) => {}
-                            Err(Exit::Flow(Flow::Break(l))) if l.is_none() || l == *label => return Ok(()),
+                            Err(Exit::Flow(Flow::Break(l))) if l.is_none() || l == *label => break,
                             Err(Exit::Flow(Flow::Continue(l))) if l.is_none() || l == *label => {}
-                            Err(e) => return Err(e),
+                            Err(e) => {
+                                r = Err(e);
+                                break;
+                            }
                         }
                     }
-                    return Ok(());
+                    if let Some(b) = binding {
+                        Self::end_loans(fr, &[b]);
+                    }
+                    return r;
                 }
                 self.take_for_items(c)?
             }
@@ -1592,6 +2168,8 @@ impl<'p> Vm<'p> {
             let file = self.decl_files.get(&origin).cloned().unwrap_or_else(|| self.file.clone());
             let annotations: Vec<String> = fv.annotations.iter().map(display).collect();
             let reported = if self.cleanup_depth > 0 { "cleanup".to_string() } else { where_.to_string() };
+            // the message template rendered with the payload as the record shows it (10.3; D-340)
+            let message = fortis_runtime::failure::render_message(&fv.message, &payload);
             // the same record the interpreter writes (json.dumps sort_keys). The harness keeps the flat
             // `record:` line; this line is what a failing `main` reports on stderr (LR 4.6, D-325).
             let line = fortis_diag::Json::obj([
@@ -1599,7 +2177,7 @@ impl<'p> Vm<'p> {
                 ("cause", fortis_diag::Json::Arr(chain.iter().map(|c| fortis_diag::Json::str(c.as_str())).collect())),
                 ("code", fortis_diag::Json::str(&*fv.code)),
                 ("kind", fortis_diag::Json::str("runtime-failure")),
-                ("message", fortis_diag::Json::str(&*fv.message)),
+                ("message", fortis_diag::Json::str(&message)),
                 ("origin", fortis_diag::Json::obj([("file", fortis_diag::Json::str(&file)), ("function", fortis_diag::Json::str(&origin))])),
                 ("payload", fortis_diag::Json::obj(payload.iter().map(|(k, v)| (k.as_str(), fortis_diag::Json::str(v.as_str()))))),
                 ("reported_by", fortis_diag::Json::str(&reported)),
@@ -1610,7 +2188,7 @@ impl<'p> Vm<'p> {
             self.emit(vec![
                 ("kind".into(), "runtime-failure".into()),
                 ("code".into(), fv.code.to_string()),
-                ("message".into(), fv.message.to_string()),
+                ("message".into(), message.clone()),
                 ("payload".into(), payload.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(",")),
                 ("function".into(), origin),
                 ("cause".into(), chain.join(",")),
@@ -1796,6 +2374,7 @@ impl<'p> Vm<'p> {
             Value::Tuple(rc) => rc,
             other => return Err((other, "move of an element of a non-tuple".into())),
         };
+        // the tuple is rebuilt with the same record of which elements it borrows (D-366)
         let mut items = match Rc::try_unwrap(rc) {
             Ok(items) => items,
             Err(rc) => return Err((Value::Tuple(rc), "cannot move an element out of a tuple that is still shared".into())),
@@ -1927,7 +2506,7 @@ impl<'p> Vm<'p> {
                 for (n, v) in vs {
                     out.push((Rc::from(n), v));
                 }
-                Ok(Value::Obj(shared(Obj { ty: Rc::from(ty.as_str()), fields: out })))
+                Ok(Value::Obj(shared(Obj::new(Rc::from(ty.as_str()), out))))
             }
             ExprKind::Variant { ty, variant, fields } => {
                 let mut vs = Vec::new();
@@ -1948,24 +2527,37 @@ impl<'p> Vm<'p> {
                 let origin = self.stack.last().cloned().unwrap_or_else(|| "main".into());
                 Ok(Value::Failure(shared(FailureVal { code: Rc::from(code), payload: vs, origin: Rc::from(origin), message: Rc::from(message), cause: None, annotations: vec![] })))
             }
+            // a tuple or record literal records which of its parts are loans, decided as a `let` decides what its
+            // local holds: by the value each part's expression gave, so a part whose type is a loan but whose value
+            // is the aggregate's own (a `??` whose fallback is owned, an `if` that moved a value in, a moved binding
+            // that owns its value) is destroyed with it (7.9; D-349, D-366)
             ExprKind::Tuple(es) => {
-                let mut vs = Vec::new();
+                let mut vs = Vec::with_capacity(es.len());
+                let mut lent = Vec::with_capacity(es.len());
                 for x in es {
-                    vs.push(self.eval(fr, x)?);
+                    let (v, l) = self.eval_held(fr, x)?;
+                    vs.push(v);
+                    lent.push(l);
                 }
-                Ok(Value::Tuple(Rc::new(vs)))
+                Ok(Value::Tuple(Rc::new(TupleVal::new(vs, Some(Rc::from(lent))))))
             }
             ExprKind::Record(fs) => {
-                let mut vs = Vec::new();
+                let mut vs = Vec::with_capacity(fs.len());
+                let mut lent = Vec::with_capacity(fs.len());
                 for (n, x) in fs {
-                    vs.push((Rc::from(n.as_str()), self.eval(fr, x)?));
+                    let (v, l) = self.eval_held(fr, x)?;
+                    vs.push((Rc::from(n.as_str()), v));
+                    lent.push(l);
                 }
-                Ok(Value::Record(shared(vs)))
+                Ok(Value::Record(shared(RecordVal::new(vs, Some(Rc::from(lent))))))
             }
             ExprKind::Closure { func, captures } => {
                 let fi = self.func_index(func)?;
                 let mut cs = Vec::new();
+                let mut lent = Vec::with_capacity(captures.len());
                 for c in captures {
+                    // a loan moved into the closure stays a loan: the closure holds it and destroys nothing (D-338)
+                    lent.push(matches!(&c.kind, ExprKind::Place(p, Use::Move) if p.proj.is_empty() && self.holds_loan(fr, p.local)));
                     cs.push(self.eval(fr, c)?);
                 }
                 // a by-reference capture shares its binding's cell; a by-value one gets a cell of its own, owned by
@@ -1974,9 +2566,10 @@ impl<'p> Vm<'p> {
                 let mut owned = Vec::with_capacity(cs.len());
                 let cs = cs
                     .into_iter()
+                    .zip(lent)
                     .zip(modes.iter().chain(std::iter::repeat(&CaptureMode::Implicit)))
-                    .map(|(v, m)| {
-                        owned.push(matches!(m, CaptureMode::Copy | CaptureMode::Value | CaptureMode::Move));
+                    .map(|((v, lent), m)| {
+                        owned.push(matches!(m, CaptureMode::Value | CaptureMode::Move) && !lent || matches!(m, CaptureMode::Copy));
                         match m {
                             CaptureMode::Implicit | CaptureMode::Alias | CaptureMode::Editable => match v {
                                 Value::Cell(_) => v,
@@ -2088,18 +2681,27 @@ impl<'p> Vm<'p> {
                 let owning = temp_local.is_some() || matches!(&scrutinee.kind, ExprKind::Place(_, Use::Move));
                 for (ai, a) in arms.iter().enumerate() {
                     if !self.pattern(fr, &a.pattern, &v)? {
+                        Self::end_loans(fr, &a.locals);
                         continue;
                     }
                     if let Some(g) = &a.guard {
                         let gv = self.eval(fr, g)?;
                         if !self.truth(&gv)? {
+                            Self::end_loans(fr, &a.locals);
                             continue;
                         }
                     }
                     self.hit(scrutinee.as_ref() as *const Expr as usize, ai as u32);
+                    // a binding of a part the owned scrutinee held as its own owns it, as in the statement form
+                    // (7.9; D-366, D-372)
+                    self.claim_owned_parts(fr, &a.pattern, &v, owning);
                     let rest = self.claim_scrutinee(fr, temp_local, owning, &mut v, a)?;
                     let r = match &a.body {
-                        ArmBody::Expr(x) => self.eval(fr, x),
+                        // an expression arm gives its value as a `give` would, a loan or not (D-338)
+                        ArmBody::Expr(x) => self.eval_held(fr, x).map(|(v, lent)| {
+                            self.gave_lent = lent;
+                            v
+                        }),
                         ArmBody::Block(b) => self.block_value(fr, b),
                     };
                     let halt = matches!(r, Err(Exit::Halt(Halt::Defect(_) | Halt::Shutdown)));
@@ -2110,10 +2712,12 @@ impl<'p> Vm<'p> {
                             _ => 0,
                         };
                         self.drop_arm_bindings(fr, &a.locals, carried)?;
+                    } else {
+                        Self::end_loans(fr, &a.locals);
                     }
                     if let Some(rest) = rest {
                         if !halt {
-                            self.destroy(rest)?;
+                            self.destroy_typed(rest, &scrutinee.ty)?;
                         }
                     }
                     self.finish_unbound_scrutinee(fr, scrutinee, &mut v, owning, a.locals.is_empty(), any_binds, temp_local, halt)?;
@@ -2216,7 +2820,7 @@ impl<'p> Vm<'p> {
             Some(c) => c,
             None => return dynamic(format!("no constant `{g}`")),
         };
-        let mut fr = Frame { locals: vec![], func: 0, consumed: None };
+        let mut fr = Frame { locals: vec![], func: 0, consumed: None, lent: HashSet::new(), owned: HashSet::new(), ret_lent: true };
         let v = self.eval(&mut fr, &c.value)?;
         self.consts.insert(key.into_owned(), v.clone());
         Ok(v)
@@ -2248,7 +2852,9 @@ impl<'p> Vm<'p> {
                     }
                 }
                 let pos = crate::intrinsics::gather(vals);
-                crate::intrinsics::call(self, name, pos)
+                let r = crate::intrinsics::call(self, name, pos);
+                self.ret_lent = true; // an intrinsic that lends (`get`, a cursor's `next`) lends (D-373)
+                r
             }
             Callee::Virtual { method } => {
                 let mut vals = vals;
@@ -2263,7 +2869,9 @@ impl<'p> Vm<'p> {
                     Value::Func(fi) => self.call(fi, vals, &[]),
                     Value::Intrinsic(n) => {
                         let pos = crate::intrinsics::gather(vals);
-                        crate::intrinsics::call(self, &n, pos)
+                        let r = crate::intrinsics::call(self, &n, pos);
+                        self.ret_lent = true; // an intrinsic that lends lends (D-373)
+                        r
                     }
                     _ => dynamic("dispatch"),
                 }

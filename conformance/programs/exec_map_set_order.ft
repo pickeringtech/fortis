@@ -2,24 +2,23 @@
 // requires: runtime
 // covers: LANG-06-06
 // Map and Set iterate in first-insertion order; replacing a value keeps its key's position (6.6).
-import fortis.host { Host }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+import fortis.host { Console }
+func main(console: Console) {
   let mut names: Set[String] = Set.default()
-  discard editable names.add("c")
-  discard editable names.add("a")
-  discard editable names.add("c")
-  discard editable names.add("b")
+  discard names.add("c")
+  discard names.add("a")
+  discard names.add("c")
+  discard names.add("b")
   let mut ages: Map[String, Int] = Map.default()
-  editable ages.set("c", 3)
-  editable ages.set("a", 1)
-  editable ages.set("b", 2)
-  editable ages.set("c", 30)
+  ages.set("c", 3)
+  ages.set("a", 1)
+  ages.set("b", 2)
+  ages.set("c", 30)
   let mut numbers: Set[Int] = Set.default()
-  discard editable numbers.add(9)
-  discard editable numbers.add(-4)
-  discard editable numbers.add(7)
-  discard editable numbers.add(9)
+  discard numbers.add(9)
+  discard numbers.add(-4)
+  discard numbers.add(7)
+  discard numbers.add(9)
   let mut a = ""
   let mut sep = ""
   for n in names {
@@ -39,7 +38,7 @@ export func main(args: List[String]) Void {
     c = "${c}${sep}${n}"
     sep = ","
   }
-  caps.console.print(a)
-  caps.console.print(b)
-  caps.console.print(c)
+  console.print(a)
+  console.print(b)
+  console.print(c)
 }

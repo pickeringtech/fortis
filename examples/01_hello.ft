@@ -1,12 +1,11 @@
-// Hello: capabilities come from main, output goes through the Console capability.
+// Hello: `main` declares the capabilities it needs as parameters; output goes through the Console capability.
 // Run: bin/fortis run examples/01_hello.ft
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("hello from Fortis")
-  caps.console.print("arguments: ${args.count()}")
+func main(console: Console, args: List[String]) {
+  console.print("hello from Fortis")
+  console.print("arguments: ${args.count()}")
   for i in 1..3 {
-    caps.console.print("tick ${i}")
+    console.print("tick ${i}")
   }
 }

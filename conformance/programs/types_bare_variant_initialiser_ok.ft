@@ -1,0 +1,29 @@
+// accept
+// covers: LANG-09-05
+// 9.7 (X-345): a field initialiser is a position whose expected type is the field's type, so a variant of that enum is
+// written bare there, with or without a payload, as it is in a constructor argument. A class or module constant with a
+// declared type and a parameter default take the bare form the same way; the qualified form is still accepted.
+enum Hue {
+  Red
+  Green
+  Blue
+}
+
+enum Shape {
+  Dot
+  Square(side: Int)
+}
+
+class Paint {
+  hue: Hue = Red
+  shape: Shape = Square(side: 3)
+  edge: Shape = Dot
+  other: Hue = Hue.Blue
+  const base: Hue = Green
+
+  func tinted(self, h: Hue = Blue) Paint => Paint(hue: h, shape: self.shape)
+}
+
+const fallback: Hue = Green
+
+func shown(h: Hue = Blue) Hue => h

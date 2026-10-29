@@ -12,7 +12,7 @@ export class FileSystem implements Authority {
   // intrinsic: the UTF-8 contents of path below this root; fails `fs.outside_root` when the path is absolute or escapes the root, `fs.not_found`, `fs.not_a_file` or `fs.invalid_text`. Development adapter: the root is a fresh empty temporary directory per run, or FORTIS_DEV_ROOT when set; blocks the calling thread (the `block` effect, 11.1)
   export trusted try func readText(self, path: Path) String
   // intrinsic: replaces the contents of path with text, creating the file; fails `fs.outside_root` or `fs.not_found` (missing parent directory); blocks the calling thread (the `block` effect, 11.1)
-  export trusted try func writeAll(self, path: Path, text: StringView) Void
+  export trusted try func writeAll(self, path: Path, text: StringView)
   // intrinsic: the bytes of path; fails `fs.outside_root`, `fs.not_found` or `fs.not_a_file`; blocks the calling thread (the `block` effect, 11.1)
   export trusted try func readAll(self, path: Path) Bytes
   // intrinsic: an open file for reading; fails `fs.outside_root` or `fs.not_found`; blocks the calling thread (the `block` effect, 11.1)
@@ -26,9 +26,9 @@ export class File {
   // intrinsic: the remaining bytes of a file opened for reading; fails `fs.closed` after close and `fs.wrong_mode` on a file opened for writing; blocks the calling thread (the `block` effect, 11.1)
   export trusted try func readAll(editable self) Bytes
   // intrinsic: appends data to a file opened for writing; fails `fs.closed` after close and `fs.wrong_mode` on a file opened for reading; blocks the calling thread (the `block` effect, 11.1)
-  export trusted try func writeAll(editable self, data: BytesView) Void
+  export trusted try func writeAll(editable self, data: BytesView)
   // intrinsic: closes the file; closing twice has no effect; dropping an open file closes it
-  export trusted func close(editable self) Void
+  export trusted func close(editable self)
 }
 export class Network implements Authority {
   // intrinsic: the address of host. Development adapter: offline; `localhost` resolves to 127.0.0.1 and every other host fails `network.unreachable`; blocks the calling thread (the `block` effect, 11.1)
@@ -36,7 +36,7 @@ export class Network implements Authority {
 }
 export class Clock implements Authority {
   // intrinsic: suspends the task for duration of the clock's time (a cancellation point, 12.4). Development adapter: virtual time on the controlled scheduler
-  export trusted async func sleep(self, duration: Duration) Void
+  export trusted async func sleep(self, duration: Duration)
   // intrinsic: the current instant in UTC (nondet). Development adapter: the system clock; a frozen clock returns its instant
   export trusted func now(self) Timestamp
   // intrinsic: a clock whose now() is always instant (for tests and replay)
@@ -61,7 +61,7 @@ export class Process implements Authority {
 export class Supervisor implements Authority {}
 export class Console implements Authority {
   // intrinsic: writes text and a line feed to standard output
-  export trusted func print(self, text: StringView) Void
+  export trusted func print(self, text: StringView)
 }
 export class RawSql implements Authority {
   // intrinsic: runs one SQL statement and returns the affected row count. Development adapter: has no database; every statement fails `sql.unavailable`; blocks the calling thread (the `block` effect, 11.1)

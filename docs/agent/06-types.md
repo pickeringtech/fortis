@@ -5,7 +5,7 @@
 operators and indexing (LR 6.3, 6.4, 6.7) are in [Proofs](06-proofs.md), the complete reference for Language 1.0's
 interval domain; SP-18's further rules are a later edition (X-146).*
 
-> Preview: refinements (LR 6.3), newtypes (LR 6.9) and generics (LR 6.10) arrive in v0.1. Normalisation, case mapping and the collections beyond `List`, `Map` and `Set` (LR 6.6, LR 6.7) arrive in v0.4.
+> Preview: refinements (LR 6.3), newtypes (LR 6.9) and generics (LR 6.10) arrive in v0.1. Normalisation, case mapping and the collections beyond `List`, `Map` and `Set` (LR 6.6, LR 6.7) arrive in v0.4. `derive Default` (LR 6.10) is in v0.0.2.
 
 ## Rules
 
@@ -57,9 +57,11 @@ generics over `N`. `List.of(...items: T)` is the only variadic form (standard li
   `Bytes<length: 0..65536>`, `List[T]<length: 0..100>`; type position only (LR 6.3).
 - `T.validate(x)` and `Int<0..100>.validate(x)` are pure, return `Outcome[T]`, fail (by the prelude contract) `refinement.out_of_range`
   (code observed from the toolchain; LR 6.3 names only the outcome).
-- Integer families (LR 6.4): checked `Int.add/sub/mul/div/rem/shiftLeft` → `Outcome`, failing
-  `numeric.overflow`, `numeric.divide_by_zero`, `numeric.shift_range`; `wrapping…` and `saturating…` are total.
-  Division truncates toward zero; `%` has the dividend's sign; `>>` arithmetic on signed, logical on unsigned.
+- Integer arithmetic (LR 6.4): an operator the checker cannot prove safe is written as the left operand of an
+  outcome operator, `a * b + c or fail`, and is the checked operation, failing `numeric.overflow`,
+  `numeric.divide_by_zero`, `numeric.shift_range` (X-345). The named families, on `Int` only (the
+  sized integer types have none yet; v0.4): checked `Int.add/sub/mul/div/rem/shiftLeft` → `Outcome` (the same
+  operations; `fortis fmt` writes the operator where the two are equivalent); `wrapping…` and `saturating…` are total. Division truncates toward zero; `%` has the dividend's sign; `>>` arithmetic on signed, logical on unsigned.
 - The success value of a checked intrinsic has the interval of the operation on its operands (LR 6.3, X-93), so
   `Int.div(-7, 2) or recover 0` is `E-REF-001` (0 is outside `[-3, -3]`); annotate the binding `Int`.
 - Floats (LR 6.5): no `Equatable`/`Hashable`/`Comparable`; `==` is IEEE; keys via `Float.totalOrder(x)` or
@@ -75,7 +77,8 @@ generics over `N`. `List.of(...items: T)` is the only variadic form (standard li
   self)?`, `at(i)` → `Outcome[T]`; `set(i, v)` → `Outcome[Void]`; `push(item)` → `Void`; `pop()` → `T?`; `map`/`filter`/
   `countWhere` take `pure fn`; `filter`/`reversed`/`concat` need `T: Copyable`. `Map.set/get/count`,
   `Set.add` (→ `Bool`, true when new) `/contains/count`; iteration in first-insertion order, replacement keeps the
-  position.
+  position. `get` on a `Map[String, V]` takes a `StringView` key, so `counts.get(word)` takes a view or a `String`
+  with no `copy` or `String.from`; `set` takes an owned key.
 - Optionals (LR 6.8): `T` → `T?` implicit; `??` lazy; `a?.f`; `match` with `present(x)` / `null`; narrowing after
   `x != null`, after `if x == null { return … }`, and in `x != null && e`.
 - Tuples `t.0`; records `{ name: a }`; `VariantMap[E, V]` literal `{ Found: 200, NotFound: 404 }` with one entry
@@ -86,7 +89,8 @@ generics over `N`. `List.of(...items: T)` is the only variadic form (standard li
   `Float` is not Hashable, LR 6.5).
 - Generics (LR 6.10): `[T]`, `where T implements I` after the return type; type arguments are always inferred, never written at a call.
 - Derivable (LR 6.10): `Equatable`, `Hashable`, `Comparable` (declaration order), `Displayable`, `Encodable`,
-  `Decodable`, `Codec`; `Default` (field initialisers first); `From[S]` (fields copied by name). `x.to()` where the
+  `Decodable`, `Codec`; `Default` (field initialisers first; a class gets `Name.default()`, no arguments);
+  `From[S]` (fields copied by name). `x.to()` where the
   target type is known, else `T.from(x)`.
 - Canonical codec (LR 6.10): `toText()`/`fromText(input)` (JSON, declaration order), `toBytes()`/
   `fromBytes(input)`; failures `codec.invalid`, `codec.unknown_field`, or the refinement's own failure. Encodable
@@ -130,7 +134,7 @@ pure try func fromInput(raw: Int) Int {
 }
 
 test "lookup" {
-  let found = fromInput(5) or fail
+  let found = fromInput(5)
   expect found == 1
 }
 ```
@@ -167,7 +171,7 @@ test "limit" {
 // reject: E-REF-003
 pure func grow(start: List[Int]<length: 0..3>) Int {
   let mut items = copy start
-  editable items.push(1)              // reject: E-REF-003
+  items.push(1)                       // reject: E-REF-003
   return items.count()
 }
 
@@ -180,12 +184,12 @@ test "grow" {
 // accept
 pure try func three() List[Int]<length: 0..3> {
   let mut items: List[Int] = List.default()
-  editable items.push(1)
+  items.push(1)
   return List[Int]<length: 0..3>.validate(move items) or fail
 }
 
 test "three" {
-  let items = three() or fail
+  let items = three()
   expect items.count() == 1
 }
 ```
@@ -281,7 +285,7 @@ test "ratio" {
 type BasisPoints = Int<0..10000>
 
 test "ratio" {
-  let half = BasisPoints.validate(5000) or fail
+  let half = BasisPoints.validate(5000)
   expect half == BasisPoints(5000)
 }
 ```

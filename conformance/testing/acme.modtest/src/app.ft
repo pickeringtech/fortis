@@ -2,7 +2,7 @@
 // modules import each other in a chain (app -> calc -> numbers).
 import acme.modtest.calc { quadruple }
 
-export func main(args: List[String]) Void {
+func main() {
   // the test runners never run main; this package's fixture is its modules' tests
 }
 

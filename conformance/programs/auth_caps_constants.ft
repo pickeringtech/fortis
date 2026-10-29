@@ -18,12 +18,12 @@ class Holder {
   const inner: Capabilities = Host.capabilities()        // reject: E-TYP-040 — a class constant
 }
 
-func sneak(made: Capabilities = Host.capabilities()) Void {     // reject: E-TYP-040 — a parameter default
+func sneak(made: Capabilities = Host.capabilities()) {     // reject: E-TYP-040 — a parameter default
 }
 
 func wrong(n: Int = "text") Int => n                     // reject: E-TYP-040 — a default of the wrong type
 
-func again(entry: fn(List[String]) Void = main) Void {   // reject: E-EFF-010 — a default naming the entry main
+func again(entry: fn(List[String]) Void = main) {   // reject: E-EFF-010 — a default naming the entry main
 }
 
 const entryAgain: fn(List[String]) Void = main           // reject: E-EFF-010 — a constant naming it
@@ -45,14 +45,13 @@ aspect tagged(n: Int) {
 }
 
 @tagged(Host.capabilities())                             // reject: E-TYP-150 — an aspect argument makes no call
-func tagged_fn() Void {
+func tagged_fn() {
 }
 
 noalloc func clean() Int => 1
 const xs: List[Int] = List.of(1, 2)
 noalloc func caller() Int => clean()                     // a constant's effects are no function's
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main() {
   let k = fine()
 }

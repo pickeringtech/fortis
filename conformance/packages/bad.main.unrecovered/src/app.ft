@@ -6,7 +6,7 @@ import fortis.host { Host }
 // a failure discharged without a report: the `recovers` effect (10.4)
 recovers func clamped(value: Int) Int<0..100> => Int<0..100>.validate(value) or recover 0
 
-export func main(args: List[String]) Void {
+export func main(args: List[String]) {
   let caps = Host.capabilities()
   caps.console.print("${clamped(42)}")     // reject: E-EFF-001 — main discharges a failure without `recovers`
 }

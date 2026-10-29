@@ -1,0 +1,88 @@
+// reject: E-OWN-051 (at the marked lines)
+// covers: LANG-07-06
+// D-385, 7.6: a `from` result is a loan, so an outcome expression that produces it must lend on every side: its
+// value side, and every `recover` of its handler, since the caller receives whichever side the call took. A
+// recovery that is a value of the function's own (`or recover move d`, `recover move d` in a `catch` handler at any
+// depth of its statements, `present` of one, a call whose result is owned, the last recovery of a chain) would be
+// held by the caller as a loan of what ends with the call: E-OWN-051, at the returned expression. Both checkers
+// accepted every form; the interpreter ran the fallback's cleanup, the VM lost it and native code refused the
+// program (rustc E0308).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+error Missing {
+  code: "fixture.missing"
+}
+
+try func lookup(xs: List[Token], want: StringView) (alias Token from xs)? {
+  for x in alias xs {
+    if x.label == want {
+      return present(x)
+    }
+  }
+  fail Missing()
+}
+
+recovers func orRecover(xs: List[Token], d: owned Token, want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or recover move d           // reject: E-OWN-051 — the recovery is a value of the function's own
+}
+
+recovers func caught(xs: List[Token], d: owned Token, want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) catch e {                   // reject: E-OWN-051 — the handler recovers one
+    report e
+    recover move d
+  }
+}
+
+recovers func body(xs: List[Token], d: owned Token, want: StringView) (alias Token from xs)? => lookup(alias xs, want) or recover move d   // reject: E-OWN-051 — an expression body
+
+recovers func nested(xs: List[Token], d: owned Token, want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) catch e {                   // reject: E-OWN-051 — a `recover` after the handler's `if`
+    report e
+    if xs.count() > 5 {
+      recover xs.get(0)
+    }
+    recover move d
+  }
+}
+
+recovers func wrapped(xs: List[Token], d: owned Token, want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) catch e {                   // reject: E-OWN-051 — `present` of a `??` that moves its fallback
+    report e
+    recover present(xs.get(0) ?? move d)
+  }
+}
+
+recovers func chained(xs: List[Token], d: owned Token, want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or recover lookup(alias xs, "x0") or recover move d   // reject: E-OWN-051 — the last recovery of a chain
+}
+
+recovers func made(xs: List[Token], console: Shared[Console], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or recover make(console, "made")   // reject: E-OWN-051 — a call whose result is owned
+}
+
+try func build(xs: List[Token], console: Shared[Console]) Token {
+  if xs.count() > 9 {
+    fail Missing()
+  }
+  return make(console, "built")
+}
+
+recovers func ownedSide(xs: List[Token], console: Shared[Console]) (alias Token from xs)? {
+  return build(xs, console) or recover xs.get(0)            // reject: E-OWN-051 — the value side is a value of the function's own
+}
+
+func main(console: Console) {
+  console.print("loans")
+}

@@ -1,0 +1,91 @@
+// execute: v hi|v dd|v dd|m mv|m dd|i it|i dd|n yo|n dd|f it|f dd
+// requires: runtime
+// covers: LANG-05-07, LANG-06-08
+// D-345, 5.4, 5.7: a lent `??` whose sides are both borrowed (a loan on the left, a place lent on the right, or
+// another such `??`) is the value an `if` expression gives: `give xs.get(0) ?? alias d`. Native code held it in a
+// temporary of the `give` statement, which ended before the binding used it (rustc E0716); it is now a reference
+// into what the two sides borrow. Through a list's text, a map's value, a class item, a nested `??` and a function
+// whose result is lent `from` its parameter; the same output on the interpreter, the VM and native.
+import fortis.host { Console }
+
+class Item {
+  name: String
+}
+
+func show(console: Console, label: StringView, s: String) {
+  console.print("${label} ${s}")
+}
+
+func firstOf(xs: List[Item]) (alias Item from xs)? {
+  return xs.get(0)
+}
+
+func pick(console: Console, c: Bool, xs: List[String], d: String) {
+  let v = if c {
+    give xs.get(0) ?? alias d
+  } else {
+    give alias d
+  }
+  show(console, "v", v)
+}
+
+func lookup(console: Console, m: Map[String, String], d: String) {
+  let v = if m.count() >= 0 {
+    give m.get("k") ?? alias d
+  } else {
+    give alias d
+  }
+  show(console, "m", v)
+}
+
+func item(console: Console, xs: List[Item], d: Item) {
+  let v = if xs.count() >= 0 {
+    give xs.get(0) ?? alias d
+  } else {
+    give alias d
+  }
+  console.print("i ${v.name}")
+}
+
+func nested(console: Console, xs: List[String], ys: List[String], d: String) {
+  let v = if xs.count() >= 0 {
+    give xs.get(0) ?? ys.get(0) ?? alias d
+  } else {
+    give alias d
+  }
+  show(console, "n", v)
+}
+
+func through(console: Console, xs: List[Item], d: Item) {
+  let v = if xs.count() >= 0 {
+    give firstOf(alias xs) ?? alias d
+  } else {
+    give alias d
+  }
+  console.print("f ${v.name}")
+}
+
+func main(console: Console) {
+  let mut xs: List[String] = List.default()
+  xs.push(String.from("hi"))
+  let none: List[String] = List.default()
+  let mut ys: List[String] = List.default()
+  ys.push(String.from("yo"))
+  pick(console, true, xs, String.from("dd"))
+  pick(console, true, none, String.from("dd"))
+  pick(console, false, xs, String.from("dd"))
+  let mut m: Map[String, String] = Map.default()
+  m.set(String.from("k"), String.from("mv"))
+  let noMap: Map[String, String] = Map.default()
+  lookup(console, m, String.from("dd"))
+  lookup(console, noMap, String.from("dd"))
+  let mut items: List[Item] = List.default()
+  items.push(Item(name: String.from("it")))
+  let noItems: List[Item] = List.default()
+  item(console, items, Item(name: String.from("dd")))
+  item(console, noItems, Item(name: String.from("dd")))
+  nested(console, none, ys, String.from("dd"))
+  nested(console, none, none, String.from("dd"))
+  through(console, items, Item(name: String.from("dd")))
+  through(console, noItems, Item(name: String.from("dd")))
+}

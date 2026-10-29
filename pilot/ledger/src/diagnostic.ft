@@ -66,28 +66,8 @@ export pure func problemCode(problem: Problem) StringView from static {
 // The severity of each kind of problem.
 export pure func severityOf(problem: Problem) Severity {
   return match problem {
-    DateOutOfOrder => Severity.Warning
-    DuplicateCommodity => Severity.Warning
-    DuplicateAccount => Severity.Warning
-    MalformedDate => Severity.Error
-    InvalidDate => Severity.Error
-    MalformedAmount => Severity.Error
-    TooPrecise => Severity.Error
-    BadCommodityCode => Severity.Error
-    BadAccountName => Severity.Error
-    UnknownDirective => Severity.Error
-    MalformedDirective => Severity.Error
-    MalformedHeader => Severity.Error
-    MalformedPosting => Severity.Error
-    PostingOutsideTransaction => Severity.Error
-    UndeclaredAccount => Severity.Error
-    UnknownCommodity => Severity.Error
-    Unbalanced => Severity.Error
-    TwoElidedPostings => Severity.Error
-    NothingToInfer => Severity.Error
-    TooFewPostings => Severity.Error
-    Overflow => Severity.Error
-    Unexpected => Severity.Error
+    DateOutOfOrder | DuplicateCommodity | DuplicateAccount => Warning
+    MalformedDate | InvalidDate | MalformedAmount | TooPrecise | BadCommodityCode | BadAccountName | UnknownDirective | MalformedDirective | MalformedHeader | MalformedPosting | PostingOutsideTransaction | UndeclaredAccount | UnknownCommodity | Unbalanced | TwoElidedPostings | NothingToInfer | TooFewPostings | Overflow | Unexpected => Error
   }
 }
 
@@ -106,7 +86,7 @@ export class Diagnostic {
     return "line ${self.line}: ${level} ${problemCode(self.problem)}: ${self.detail}"
   }
 
-  export pure func isError(self) Bool => severityOf(self.problem) == Severity.Error
+  export pure func isError(self) Bool => severityOf(self.problem) == Error
 }
 
 // The problems of one journal, at most one per line.
@@ -118,10 +98,10 @@ export class Diagnostics {
 
   // Records a problem; returns false, and records nothing, when the line already has one.
   export pure func note(editable self, line: LineNo, problem: Problem, detail: owned String) Bool {
-    if !(editable self.reported.add(line)) {
+    if !(self.reported.add(line)) {
       return false
     }
-    editable self.items.push(Diagnostic(line: line, problem: problem, detail: move detail))
+    self.items.push(Diagnostic(line, problem, detail: move detail))
     return true
   }
 
@@ -142,9 +122,9 @@ export class Diagnostics {
   }
 
   // Adds every problem of another collection whose line has none yet.
-  export pure func merge(editable self, other: Diagnostics) Void {
+  export pure func merge(editable self, other: Diagnostics) {
     for d in other.items {
-      discard editable self.note(d.line, d.problem, copy d.detail)
+      discard self.note(d.line, d.problem, copy d.detail)
     }
   }
 }
@@ -168,14 +148,14 @@ test "codes and severities" cases {
   "duplicate":      { problem: Problem.DuplicateAccount, code: "account.duplicate", serious: false }
 } as row {
   expect problemCode(row.problem) == row.code
-  expect (severityOf(row.problem) == Severity.Error) == row.serious
+  expect (severityOf(row.problem) == Error) == row.serious
 }
 
 test "one problem per line, the first wins" {
   let mut found = Diagnostics.empty()
-  expect editable found.note(LineNo(3), Problem.MalformedAmount, "first")
-  expect !(editable found.note(LineNo(3), Problem.Unbalanced, "second"))
-  expect editable found.note(LineNo(1), Problem.DateOutOfOrder, "third")
+  expect found.note(LineNo(3), MalformedAmount, "first")
+  expect !(found.note(LineNo(3), Unbalanced, "second"))
+  expect found.note(LineNo(1), DateOutOfOrder, "third")
   expect found.count() == 2
   expect found.hasLine(LineNo(3))
   expect !found.hasLine(LineNo(2))
@@ -185,41 +165,41 @@ test "one problem per line, the first wins" {
 
 test "problems come out in line order" {
   let mut found = Diagnostics.empty()
-  discard editable found.note(LineNo(9), Problem.Unbalanced, "nine")
-  discard editable found.note(LineNo(2), Problem.MalformedDate, "two")
-  discard editable found.note(LineNo(5), Problem.TooFewPostings, "five")
+  discard found.note(LineNo(9), Unbalanced, "nine")
+  discard found.note(LineNo(2), MalformedDate, "two")
+  discard found.note(LineNo(5), TooFewPostings, "five")
   let ordered = found.inLineOrder()
-  expect (ordered.at(0) or fail).line == LineNo(2)
-  expect (ordered.at(1) or fail).line == LineNo(5)
-  expect (ordered.at(2) or fail).line == LineNo(9)
+  expect ordered.at(0).line == LineNo(2)
+  expect ordered.at(1).line == LineNo(5)
+  expect ordered.at(2).line == LineNo(9)
 }
 
 test "rendering" {
-  let d = Diagnostic(line: LineNo(12), problem: Problem.MalformedAmount, detail: "\"12.3.4\" is not an amount")
+  let d = Diagnostic(line: LineNo(12), problem: MalformedAmount, detail: "\"12.3.4\" is not an amount")
   expect d.render() == "line 12: error amount.malformed: \"12.3.4\" is not an amount"
-  let w = Diagnostic(line: LineNo(4), problem: Problem.DateOutOfOrder, detail: "earlier than line 2")
+  let w = Diagnostic(line: LineNo(4), problem: DateOutOfOrder, detail: "earlier than line 2")
   expect w.render() == "line 4: warning date.out_of_order: earlier than line 2"
 }
 
 test "merging keeps the first problem of a line" {
   let mut first = Diagnostics.empty()
-  discard editable first.note(LineNo(1), Problem.MalformedDate, "a")
+  discard first.note(LineNo(1), MalformedDate, "a")
   let mut second = Diagnostics.empty()
-  discard editable second.note(LineNo(1), Problem.Unbalanced, "b")
-  discard editable second.note(LineNo(2), Problem.Unbalanced, "c")
-  editable first.merge(second)
+  discard second.note(LineNo(1), Unbalanced, "b")
+  discard second.note(LineNo(2), Unbalanced, "c")
+  first.merge(second)
   expect first.count() == 2
   let ordered = first.inLineOrder()
-  expect (ordered.at(0) or fail).problem == Problem.MalformedDate
+  expect ordered.at(0).problem == MalformedDate
 }
 
 property "a line is reported at most once" forall (lines: List[Int<1..20>]) {
   let mut found = Diagnostics.empty()
   let mut distinct: Set[Int] = Set.default()
   for n in lines {
-    let line = LineNo.validate(n) or fail
-    discard editable found.note(line, Problem.MalformedPosting, "x")
-    discard editable distinct.add(n)
+    let line = LineNo.validate(n)
+    discard found.note(line, MalformedPosting, "x")
+    discard distinct.add(n)
   }
   expect found.count() == distinct.count()
 }

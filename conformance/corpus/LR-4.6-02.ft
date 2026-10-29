@@ -1,0 +1,7 @@
+// accept
+import fortis.host { Console, FileSystem, Path }
+try func main(console: Console, files: FileSystem) Void {
+  let path = Path.parse("greeting.txt") or fail
+  files.writeAll(path, "hello from main") or fail
+  console.print(files.readText(path) or fail)
+}

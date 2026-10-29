@@ -193,9 +193,9 @@ class Builder:
             join = self.new()
             any_open = False
             for arm in [_a for _a in children(m) if name(_a) == "matchArm"]:
-                pat = find(arm, "pattern")
+                pats = [c for c in children(arm) if name(c) == "pattern"]       # the alternatives of `A | B` (9.8)
                 ab = self.new()
-                self.edge(cur, canon(pat), ab)
+                self.edge(cur, " | ".join(canon(p) for p in pats), ab)
                 body = [c for c in children(arm) if name(c) in ("expr", "block")][-1]
                 if name(body) == "block":
                     end = self.block(body, ab, exit_)

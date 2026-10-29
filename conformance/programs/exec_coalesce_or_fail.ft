@@ -1,0 +1,51 @@
+// execute: d 5|coalN|f 5|g 9|h 6|given|named 3|fail:demo.boom
+// requires: runtime
+// covers: LANG-06-08, LANG-10-02
+// `??` whose fallback propagates a failure (`or fail`, a checked region of v0.0.2): the fallback runs only when the
+// left side is null, and its failure leaves the enclosing `try` function, on the interpreter, the VM and native.
+// Native code used to put the fallback in a closure, where the `?` of `or fail` does not compile (v0.0.2-rc.1
+// review, stream C).
+import fortis.host { Console }
+
+export error Boom {
+  code: "demo.boom"
+}
+
+func tick(console: Console, label: StringView, n: Int) Int {
+  console.print(label)
+  return n
+}
+
+try func boom(n: Int) Int {
+  if n < 0 {
+    fail Boom()
+  }
+  return n
+}
+
+try func named(n: Int) String {
+  let k = boom(n) or fail
+  return "named ${k}"
+}
+
+try func pick(s: String?, n: Int) String {
+  return copy s ?? (named(n) or fail)                 // a read parameter's text is copied to be returned (D-341)
+}
+
+try func main(console: Console) {
+  let c: Int? = 5
+  let d = c ?? (tick(console, "coal", 2) + 1 or fail)
+  console.print("d ${d}")
+  let e: Int? = null
+  let f = e ?? (tick(console, "coalN", 2) + 3 or fail)
+  console.print("f ${f}")
+  let g = e ?? (boom(9) or fail)
+  console.print("g ${g}")
+  let h = c ?? (boom(-1) or fail)
+  console.print("h ${Int.wrappingAdd(h, 1)}")
+  let given: String? = String.from("given")
+  console.print(pick(given, -1) or fail)
+  console.print(pick(null, 3) or fail)
+  let last = e ?? (boom(-1) or fail)
+  console.print("never ${last}")
+}

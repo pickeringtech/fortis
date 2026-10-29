@@ -3,8 +3,8 @@
 <!-- covers: LR E -->
 *Agent mode. Human mode: [Glossary](../guide/glossary.md).*
 
-One meaning per term; where a word has two meanings both rows are listed. A bundle of packages is a kit
-(PROG-PRD-38). The Language Reference's glossary is LR E; this page adds the in-language terms.
+One meaning per term; where a word has two meanings both rows are listed. A bundle of packages is a kit.
+The Language Reference's glossary is LR E; this page adds the in-language terms.
 
 ## System
 
@@ -12,11 +12,11 @@ One meaning per term; where a word has two meanings both rows are listed. A bund
 |---|---|---|
 | package | unit of distribution, versioning, visibility: `project.yaml`, lockfile, `src/`; two versions are two packages | LR 4.1 |
 | module | one `.ft` file under `src/`; name = path below `src/` with `.` separators; declarations and constants only | LR 4.2 |
-| kit | named, versioned bundle of packages shipped with the distribution; extends Fortis only by libraries, aspects, heads, embedding bindings, verifiers; never changes core semantics | PROG-PRD-38, PROG-FND-07 |
+| kit | named, versioned bundle of packages shipped with the distribution; extends Fortis only by libraries, aspects, heads, embedding bindings, verifiers; never changes core semantics | LR 16 |
 | compatibility set | the standard packages at the versions tested together; a standard dependency names the set's version | LR 4.1 |
-| toolchain component | daemon, LSP, SDK generators: tools, not kits | PROG-PRD-38 |
-| backend | interpreter (`fortis run`, the reference), development VM (`fortisc vm`), native (`fortis build`); must agree | LR 1, Programme 6 |
-| build mode | `dev` (VM), `native-dev`, `release`; optimisation and debug settings belong to a mode | Programme 5.4 |
+| toolchain component | daemon, LSP, SDK generators: tools, not kits | LR 16 |
+| backend | interpreter (`fortis run`, the reference), development VM (`fortisc vm`), native (`fortis build`); must agree | LR 1 |
+| build mode | `dev` (VM), `native-dev`, `release`; optimisation and debug settings belong to a mode | LR 1 |
 | lint level | baseline (an unused import warns) or strict (it is an error) | LR 4.3 |
 | target feature set | which standard modules exist for a target (`core`, `alloc`, `host`, `async`, `web`, `browser`) | LR 11.6 |
 
@@ -34,8 +34,8 @@ One meaning per term; where a word has two meanings both rows are listed. A bund
 | newtype | `type Name = Repr`; nominal, private representation | LR 6.9 |
 | refinement | predicate in `<…>` on a built-in type | LR 6.3 |
 | binding (name) | name introduced by `let`, `let mut`, a parameter, a pattern or a capture | LR 5.1, LR 7.2 |
-| binding (embedded language) | versioned package giving a language fenced blocks via the embedding protocol; meaning compiler-fixed, checking a verifier (SP-23, not yet in the LR) | PROG-PRD-30 |
-| verifier | stricter-only package: reads the checked program, returns records never code; pure, deterministic, bounded, no capability | PROG-PRD-36 |
+| binding (embedded language) | versioned package giving a language fenced blocks via the embedding protocol; meaning compiler-fixed, checking a verifier (SP-23, not yet in the LR) | [Embedded languages](embedded-languages.md) |
+| verifier | stricter-only package: reads the checked program, returns records never code; pure, deterministic, bounded, no capability | [Embedded languages](embedded-languages.md) |
 
 ## Ownership
 
@@ -45,7 +45,7 @@ One meaning per term; where a word has two meanings both rows are listed. A bund
 | owner | binding holding a value until it is moved out | LR 7.2 |
 | loan | `alias` (read) or `editable` (exclusive) reference to a place; lexical | LR 7.3 |
 | child loan | a loan taken through a loan-holding binding, recorded against the owner | LR 7.3 |
-| marker | `copy`, `alias`, `move`, `editable` before a place | LR 7.5 |
+| marker | `copy`, `alias`, `move`, `editable` before a place; left out where the declaration already shows it (an `editable self` receiver on a `let mut` root, `return local`) | LR 7.5 |
 | loan-carrying value | standard views and cursors; store a read loan; owned by their binding | LR 7.7 |
 | trivial | duplicated implicitly, never marked | LR 6.11 |
 | copyable | supports `copy` | LR 6.11 |
@@ -57,6 +57,7 @@ One meaning per term; where a word has two meanings both rows are listed. A bund
 | Term | Definition | Source |
 |---|---|---|
 | outcome | `Outcome[T]` from a `try` function; linear | LR 10.1 |
+| checked region | `Int` arithmetic as the left operand of `or fail`/`or recover`/`catch`; an unproved operator in it is the checked operation | LR 6.4 |
 | failure | `Failure`: code, payload, origin, cause chain; linear | LR 10.3 |
 | obligation | the duty to consume a linear value | LR 7.1, LR 10.1 |
 | defect | broken-assumption condition (stack, memory, trusted contract, runtime invariant); never caught | LR 10.8 |
@@ -65,7 +66,7 @@ One meaning per term; where a word has two meanings both rows are listed. A bund
 | write footprint | `editable` parameters a function writes through | LR 11.3 |
 | fresh storage | created in this activation, not yet reachable from a parameter, capture or `self` | LR 11.1 |
 | authority | value implementing `Authority`; required for `io` | LR 11.6 |
-| capability | process-wide authority from `Host.capabilities()` (ten types) | LR 11.6 |
+| capability | process-wide authority (ten types), supplied to the entry `main`'s parameters by type | LR 11.6, LR 4.6 |
 | per-activation authority | minted by a kit adapter from a capability for one unit of work | LR 11.6 |
 | trusted | bodiless standard intrinsic; claims reported as trusted, never proved | LR 11.3 |
 
@@ -79,6 +80,7 @@ One meaning per term; where a word has two meanings both rows are listed. A bund
 | observation schema | `observation` declaration of typed frame fields | LR 13 |
 | observation frame | one activation's captured fields | LR 13 |
 | event | one `record` execution | LR 13 |
-| task reporter | diagnostic-plane sink for reports and frames | LR 15 |
+| task reporter | diagnostic-plane sink for reports, logs and frames | LR 15 |
+| log record | one `log.info`/`log.warn`/`log.error` execution: level, message, function; standard error, never standard output | LR 13 |
 | diagnostic plane | output channel nothing can read back | LR 11.7 |
-| record (tool output) | schema-valid object; text on a terminal, JSON line otherwise | Programme 7.4 |
+| record (tool output) | schema-valid object; text on a terminal, JSON line otherwise | [records](records.md) |

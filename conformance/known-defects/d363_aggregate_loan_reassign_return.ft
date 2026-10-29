@@ -1,0 +1,35 @@
+// D-363: LR 7.3 lets a `let mut` binding that holds a loan inside an optional, a tuple or a record be reassigned,
+// and a function return a tuple that holds a loan, held by the binding that receives it. Both checkers reject the
+// tuple forms with E-OWN-002 (`pair` must be owned): they accept only the optional (`t = xs.get(1)`). A valid
+// program rejected; the D-348 and D-341 rules, new in v0.0.2, treat a tuple that holds a loan as owned. v0.0.1
+// accepted both and ran the element's cleanup three times.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func first(xs: List[Token]) ((alias Token from xs)?, Int) {
+  return (xs.get(0), 1)
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  let mut pair = (xs.get(0), 1)
+  pair = (xs.get(0), 2)
+  console.print("p ${pair.0?.label ?? "none"} ${pair.1}")
+  let p = first(xs)
+  console.print("f ${p.0?.label ?? "none"} ${p.1}")
+  console.print("end")
+}

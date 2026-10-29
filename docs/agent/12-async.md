@@ -48,7 +48,7 @@ At every block exit, including cancellation and `or fail`:
 - Cancellation points: `await` (cooperative); `await` and `checkpoint()` (parallel and blocking pools). Cancellation
   is not a failure: not catchable, recoverable or matchable.
 - No linear value live across a cancellation point unless it implements `Abandonable`
-  (`func abandon(owned self) Void`: synchronous, non-failing, non-suspending). An `Abandonable` local may also be
+  (`func abandon(owned self)`: synchronous, non-failing, non-suspending). An `Abandonable` local may also be
   live at `or fail` (the unwind abandons it); a normal exit must still consume it. `Task` implements it.
 - The futures and tasks being awaited are not "live across" their own `await`.
 
@@ -108,7 +108,7 @@ export error FlushFailed {
   code: "demo.flush"
 }
 
-try func flush() Void {
+try func flush() {
   fail FlushFailed()
 }
 
@@ -120,7 +120,7 @@ try func work(n: Int) Int {
 }
 
 test "work" {
-  expect (work(1) or fail) == 1
+  expect work(1) == 1
 }
 ```
 
@@ -130,7 +130,7 @@ export error FlushFailed {
   code: "demo.flush"
 }
 
-try func flush() Void {
+try func flush() {
   fail FlushFailed()
 }
 
@@ -155,17 +155,17 @@ test "work" {
 // reject: E-DEF-002
 export class Handle {
   export open: Bool
-  export func close(editable self) Void {
+  export func close(editable self) {
     self.open = false
   }
 }
 
-func keep(h: owned Handle) Void {
+func keep(h: owned Handle) {
 }
 
-func run() Void {
+func run() {
   let mut input = Handle(open: true)
-  defer { editable input.close() }
+  defer { input.close() }
   keep(move input)                    // reject: E-DEF-002
 }
 
@@ -179,17 +179,17 @@ test "run" {
 // accept
 export class Handle {
   export open: Bool
-  export func close(editable self) Void {
+  export func close(editable self) {
     self.open = false
   }
 }
 
-func keep(h: owned Handle) Void {
+func keep(h: owned Handle) {
 }
 
-func run() Void {
+func run() {
   let mut input = Handle(open: true)
-  editable input.close()
+  input.close()
   keep(move input)
 }
 
@@ -248,7 +248,7 @@ async func run(n: Int) Int {
   return n
 }
 
-export async func main(args: List[String]) Void {
+async func main() {
   discard await run(1)
 }
 ```
@@ -262,7 +262,7 @@ async func run(n: Int) Int {
   return await pending
 }
 
-export async func main(args: List[String]) Void {
+async func main() {
   discard await run(1)
 }
 ```
@@ -282,7 +282,7 @@ try func parse(n: Int) Int {
   return n
 }
 
-async func pause() Void {
+async func pause() {
 }
 
 async try func run(n: Int) Int {
@@ -291,7 +291,7 @@ async try func run(n: Int) Int {
   return pending or fail
 }
 
-export async try func main(args: List[String]) Void {
+async try func main() {
   discard await run(3) or fail
 }
 ```
@@ -309,7 +309,7 @@ try func parse(n: Int) Int {
   return n
 }
 
-async func pause() Void {
+async func pause() {
 }
 
 async try func run(n: Int) Int {
@@ -318,7 +318,7 @@ async try func run(n: Int) Int {
   return value
 }
 
-export async try func main(args: List[String]) Void {
+async try func main() {
   discard await run(3) or fail
 }
 ```
@@ -336,7 +336,7 @@ async func run(n: Int) Task[Int] {
   }
 }
 
-export async func main(args: List[String]) Void {
+async func main() {
 }
 ```
 
@@ -351,7 +351,7 @@ async func run(n: Int) Int {
   }
 }
 
-export async func main(args: List[String]) Void {
+async func main() {
   discard await run(2)
 }
 ```
@@ -360,7 +360,7 @@ export async func main(args: List[String]) Void {
 
 ```fortis
 // reject: E-ASY-002
-async func pause() Void {
+async func pause() {
 }
 
 async try func run(m: Mutex[Int]) Int {
@@ -369,7 +369,7 @@ async try func run(m: Mutex[Int]) Int {
   return 0
 }
 
-export async try func main(args: List[String]) Void {
+async try func main() {
   let m = Mutex.create(1)
   discard await run(m) or fail
 }
@@ -377,7 +377,7 @@ export async try func main(args: List[String]) Void {
 
 ```fortis
 // accept
-async func pause() Void {
+async func pause() {
 }
 
 async try func run(m: Mutex[Int]) Int {
@@ -388,7 +388,7 @@ async try func run(m: Mutex[Int]) Int {
   return 0
 }
 
-export async try func main(args: List[String]) Void {
+async try func main() {
   let m = Mutex.create(1)
   discard await run(m) or fail
 }
@@ -406,7 +406,7 @@ async func pools() Int {
   }
 }
 
-export async func main(args: List[String]) Void {
+async func main() {
   discard await pools()
 }
 ```
@@ -421,7 +421,7 @@ async func pools() Int {
   }
 }
 
-export async func main(args: List[String]) Void {
+async func main() {
   discard await pools()
 }
 ```

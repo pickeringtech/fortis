@@ -41,7 +41,7 @@ func compute(console: Console, n: Int) Int {
 @guarded(limit: 500)
 try func risky(console: Console, n: Int) Int => n
 
-export recovers func main(args: List[String]) Void {
+recovers func main() {
   let caps = Host.capabilities()
   caps.console.print("result ${compute(caps.console, 7)}")
   let r = risky(caps.console, 1) or recover -2

@@ -2,14 +2,13 @@
 // requires: runtime
 // covers: LANG-06-04
 // Money.zero has scale 0; adding keeps the larger scale.
-import fortis.host { Host }
+import fortis.host { Console }
 import fortis.money { Money, Currency, CurrencyMismatch }
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let nothing = Money.zero(Currency.GBP)
-  caps.console.print("${nothing.amount}")
-  let some = Money.add(nothing, Money.of(Currency.GBP, 1.10d)) or fail
-  caps.console.print("${some.amount}")
-  let again = Money.add(Money.of(Currency.GBP, 1.10d), nothing) or fail
-  caps.console.print("${again.amount}")
+try func main(console: Console) {
+  let nothing = Money.zero(GBP)
+  console.print("${nothing.amount}")
+  let some = Money.add(nothing, Money.of(GBP, 1.10d)) or fail
+  console.print("${some.amount}")
+  let again = Money.add(Money.of(GBP, 1.10d), nothing) or fail
+  console.print("${again.amount}")
 }

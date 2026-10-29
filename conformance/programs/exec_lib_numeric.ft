@@ -2,18 +2,17 @@
 // requires: runtime
 // covers: LANG-06-04
 // fortis.numeric and fortis.collections bodies: abs saturates at Int.min; sorted is a stable merge sort.
-import fortis.host { Host }
+import fortis.host { Console }
 import fortis.numeric { abs, min, max }
 import fortis.collections { sorted }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${abs(-5)}")
-  caps.console.print("${abs(-9223372036854775807 - 1)}")
-  caps.console.print("${abs(0)}")
-  caps.console.print("${min(2, 7)}")
-  caps.console.print("${max(2, 7)}")
-  caps.console.print("${sorted(List.of(5, 3, 9, 1, 8, 2))}")
+func main(console: Console) {
+  console.print("${abs(-5)}")
+  console.print("${abs(-9223372036854775807 - 1)}")
+  console.print("${abs(0)}")
+  console.print("${min(2, 7)}")
+  console.print("${max(2, 7)}")
+  console.print("${sorted(List.of(5, 3, 9, 1, 8, 2))}")
   let none: List[Int] = List.default()
-  caps.console.print("${sorted(none)}")
-  caps.console.print("${sorted(List.of(4))}")
+  console.print("${sorted(none)}")
+  console.print("${sorted(List.of(4))}")
 }

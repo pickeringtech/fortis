@@ -22,7 +22,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, ".."))
 FORTISC = os.path.join(ROOT, "compiler", "target", "release", "fortisc")
 WORKLOADS = [("check-50k", 50000, 5.0), ("check-500k", 500000, 30.0)]
-# the manifests the preregistration records (benchmarks/PREREGISTRATION-DEL-40.md)
+# the manifests the preregistration records (DEL-40's preregistration)
 MANIFESTS = {
     "check-50k": "57cc5e973dde9d3f815ee22ad6e9cf06ab51a49b137da7ce8b779fc40a6fb354",
     "check-500k": "d853dd3623af2fa649dc7413bc279b6ece039c7f4bec3a5d6ed1dd8aaa28b219",

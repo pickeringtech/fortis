@@ -1,0 +1,38 @@
+// A test's `or fail` goes, and the parentheses around it go too only where they held nothing else: `(a + b or fail)
+// * c` becomes `(a + b) * c`, which `a + b * c` is not. Around a call alone, or a sum a comparison takes whole, they
+// go (14; X-345, R7; D-324). fmt_check runs these tests before and after the migration, and both pass.
+export error Negative {
+  code: "demo.negative"
+}
+
+func hide(n: Int) Int => n
+
+try func half(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n / 2
+}
+
+test "a product of a sum keeps the sum's parentheses" {
+  let a = hide(2)
+  let b = hide(3)
+  let c = hide(4)
+  let n = (a + b or fail) * c
+  expect n == 20
+}
+
+test "a quotient and a difference keep theirs" {
+  let a = hide(8)
+  let b = hide(4)
+  let c = hide(2)
+  expect (a + b or fail) / c == 6
+  expect a - (b - c or fail) == 6
+}
+
+test "a call or a whole comparand loses them" {
+  let a = hide(2)
+  expect (half(8) or fail) == 4
+  expect (a + 1 or fail) == 3
+  expect (half(a + 6 or fail) or fail) * 2 == 8
+}

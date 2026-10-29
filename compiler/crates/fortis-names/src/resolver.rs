@@ -11,11 +11,11 @@ use fortis_syntax::view::{declarations, imports, DeclInfo, C, N};
 use fortis_syntax::{parse_from, Parsed};
 
 use crate::library::{members_of, Library, LibraryModule};
+use crate::reading;
 
 /// The entry point's modifiers (LR 4.6): the four forms, each of which may also carry `recovers` (X-155); the
 /// grammar's modifier order is async, try, recovers.
 pub const ENTRY_FORMS: &[&str] = &["", "async", "try", "async try", "recovers", "async recovers", "try recovers", "async try recovers"];
-const ENTRY_SIGNATURE: &str = "( args : List [ String ] ) Void";
 
 /// The declaration heads whose kit this toolchain does not install (LR 16, Platform 1.2; X-231): (head word,
 /// kit, the package that defines it). The Dependency injection kit's `context` is installed (fortis-di).
@@ -123,44 +123,61 @@ impl<'l> Resolver<'l> {
     }
 
     /// A module checked on its own is the entry module of an implicit one-module application (`fortis run
-    /// FILE.ft` runs its `main`): an exported `main` it declares must have one of the four forms of LR 4.6, each
-    /// of which may also carry `recovers` (X-155). A module of a package is judged by the manifest's `entry`
-    /// instead (resolve.rs `check_entry`); a module with no exported `main` is a library module (D-51.2).
+    /// FILE.ft` runs its `main`): the `main` it declares, exported or not (X-345), must have one of the four forms of
+    /// LR 4.6, each of which may also carry `recovers` (X-155), and each parameter must be one the runtime supplies by
+    /// type (`E-NAM-005`, `E-NAM-006`). A module of a package is judged by the manifest's `entry` instead (resolve.rs
+    /// `check_entry`); a module with no `main` function and no exported `main` is a library module (D-51.2).
     fn check_entry(&mut self, decls: &[DeclInfo]) {
         if !self.entry {
             return;
         }
-        // any exported declaration named main is the entry point (LR 4.6). A module that exports none is a
-        // library module. One that exports a non-function is not: the entry must be a function of 4.6.
-        let Some(main) = decls.iter().find(|d| d.name.as_deref() == Some("main") && d.exported) else { return };
+        // the function named main is the entry point (LR 4.6), `export` implied. A module that has none, and exports
+        // no other declaration named main, is a library module. An exported non-function main is not: the entry must
+        // be a function of 4.6.
+        let mains: Vec<&DeclInfo> = decls.iter().filter(|d| d.name.as_deref() == Some("main") && (d.kind == "func" || d.exported)).collect();
+        let Some(main) = mains.iter().find(|d| d.kind == "func").or(mains.first()).copied() else { return };
+        let form = reading::ENTRY_FORM;
         if main.kind != "func" {
             let Some(tok) = &main.token else { return };
-            self.rec("E-NAM-001", format!("exported main is a {}, not one of the forms of 4.6", main.kind), "LANG-04-06", tok, Self::nf("main", vec!["export [async] [try] [recovers] func main(args: List[String]) Void".into()]));
+            self.rec("E-NAM-001", format!("exported main is a {}, not one of the forms of 4.6", main.kind), "LANG-04-06", tok, Self::nf("main", vec![form.into()]));
             return;
         }
         let Some(head) = main.node.find("funcHead") else { return };
         let words = head.find("modifiers").map(|mm| mm.tokens().iter().map(|t| t.text.clone()).collect::<Vec<_>>().join(" ")).unwrap_or_default();
         let Some(sig) = head.find("funcSignature") else { return };
-        let text = sig.tokens().iter().map(|t| t.text.clone()).collect::<Vec<_>>().join(" ");
-        let form = "export [async] [try] [recovers] func main(args: List[String]) Void";
-        if ENTRY_FORMS.contains(&words.as_str()) && text == ENTRY_SIGNATURE {
-            // the token text can match while `List`, `String` or `Void` names a module-level declaration or
-            // import. 4.6's forms use the prelude types (D-51.2)
-            if let Some(n) = self.entry_type_shadowed() {
-                let Some(tok) = &main.token else { return };
-                self.rec("E-NAM-001", format!("main's `{n}` is not the prelude {n}, so the signature is not one of the forms of 4.6"), "LANG-04-06", tok, Self::nf("main", vec![form.into()]));
-            }
+        let ret = sig.find("returnType").map(|r| r.tokens().iter().map(|t| t.text.clone()).collect::<Vec<_>>().join(" ")).unwrap_or_default();
+        if !ENTRY_FORMS.contains(&words.as_str()) || !(ret == "Void" || ret.is_empty()) || sig.find("typeParams").is_some() || sig.find("whereClause").is_some() {
+            let text = sig.tokens().iter().map(|t| t.text.clone()).collect::<Vec<_>>().join(" ");
+            let Some(tok) = &main.token else { return };
+            self.rec("E-NAM-001", format!("main has signature `{words} func main{text}`, not one of the forms of 4.6"), "LANG-04-06", tok, Self::nf("main", vec![form.into()]));
             return;
         }
-        let Some(tok) = &main.token else { return };
-        self.rec("E-NAM-001", format!("main has signature `{words} func main{text}`, not one of the forms of 4.6"), "LANG-04-06", tok, Self::nf("main", vec![form.into()]));
+        // the token text can match while `Void` names a module-level declaration or import. 4.6's forms use the
+        // prelude's Void, and its `List[String]` the prelude's List and String (D-51.2)
+        if let Some(n) = self.entry_type_shadowed(&["Void"]) {
+            let Some(tok) = &main.token else { return };
+            self.rec("E-NAM-001", format!("main's `{n}` is not the prelude {n}, so the signature is not one of the forms of 4.6"), "LANG-04-06", tok, Self::nf("main", vec![form.into()]));
+            return;
+        }
+        let module_scope = self.module_scope;
+        let origin = |n: &str| -> Option<String> {
+            let info = self.scopes[module_scope].names.get(n)?;
+            if info.kind == "module" && !info.path.is_empty() {
+                return Some(format!("alias:{}", info.path));
+            }
+            Some(info.origin.clone())
+        };
+        let findings = reading::param_findings(sig, &origin);
+        for (code, msg, tok, fields) in findings {
+            self.rec(code, msg, "LANG-04-06", tok, fields);
+        }
     }
 
     /// The first of 4.6's `List`, `String` and `Void` that a module-level binding has replaced. An unbound name is
     /// the prelude's when the prelude is loaded, and a missing prelude is not reported here.
-    fn entry_type_shadowed(&self) -> Option<String> {
+    fn entry_type_shadowed(&self, which: &[&str]) -> Option<String> {
         let names = &self.scopes[self.module_scope].names;
-        for n in ["List", "String", "Void"] {
+        for &n in which {
             if let Some(info) = names.get(n) {
                 if info.origin != "prelude" {
                     return Some(n.to_string());
@@ -330,8 +347,10 @@ impl<'l> Resolver<'l> {
             }
             return;
         }
-        let empty = BTreeSet::new();
-        self.check_types_in(node, scope, &empty);
+        self.check_types_beside(node, scope);
+        if kind == "error" {
+            self.check_error_message(node);
+        }
         for c in node.kids() {
             if let Some(n) = c.node() {
                 if n.name() == "constExpr" || n.name() == "expr" {
@@ -354,14 +373,14 @@ impl<'l> Resolver<'l> {
             return;
         }
         for fd in m.child_nodes("fieldDecl") {
-            self.check_types_in(fd, s, &empty);
-            if let Some(ce) = fd.find("constExpr") {
+            self.check_types_beside(fd, s);
+            if let Some(ce) = fd.child_node("constExpr") {
                 self.resolve_expr(C::N(ce), s);
             }
         }
         if let Some(cd) = m.find("constDecl") {
-            self.check_types_in(cd, s, &empty);
-            if let Some(ce) = cd.find("constExpr") {
+            self.check_types_beside(cd, s);
+            if let Some(ce) = cd.child_node("constExpr") {
                 self.resolve_expr(C::N(ce), s);
             }
         }
@@ -403,7 +422,6 @@ impl<'l> Resolver<'l> {
     fn declare_params(&mut self, pl: N, scope: usize) {
         let mut ps = pl.find_all("param");
         ps.extend(pl.find_all("lambdaParam"));
-        let empty = BTreeSet::new();
         for p in ps {
             if let Some(rp) = p.find("restParam") {
                 self.declare(scope, &rp.tokens()[1].text, info("param"));
@@ -422,8 +440,8 @@ impl<'l> Resolver<'l> {
             if p.find("selfParam").is_some() {
                 self.declare(scope, "self", info("self"));
             }
-            self.check_types_in(p, scope, &empty);
-            if let Some(ce) = p.find("constExpr") {
+            self.check_types_beside(p, scope);
+            if let Some(ce) = p.child_node("constExpr") {
                 self.resolve_expr(C::N(ce), scope);
             }
         }
@@ -597,7 +615,19 @@ impl<'l> Resolver<'l> {
                 }
             }
             "block" => self.resolve_block(inner, scope),
-            "exprStmt" => self.resolve_expr(C::N(inner), scope),
+            "exprStmt" => match reading::log_call(inner) {
+                // a log statement (LR 13): `log` names nothing here, so it is the statement, not a name
+                Some((_, level, al)) if self.lookup(scope, "log").is_none() => {
+                    if !reading::LOG_LEVELS.contains(&level.text.as_str()) {
+                        let cands = reading::LOG_LEVELS.iter().map(|l| format!("log.{l}")).collect();
+                        self.rec("E-NAM-001", format!("`log.{}` is not a log statement: the levels are info, warn and error (13)", level.text), "LANG-13-04", level, Self::nf(&format!("log.{}", level.text), cands));
+                    }
+                    if let Some(al) = al {
+                        self.resolve_expr(C::N(al), scope);
+                    }
+                }
+                _ => self.resolve_expr(C::N(inner), scope),
+            },
             _ => {
                 for c in inner.kids() {
                     if c.is("expr") {
@@ -751,6 +781,44 @@ impl<'l> Resolver<'l> {
         self.check_origins(node, scope, skip);
     }
 
+    /// The types of a declaration with an initialiser (a field, a constant, a parameter): every child but its own
+    /// `constExpr`, which `resolve_expr` reads as a value, so a bare variant there takes the declared type (9.7).
+    /// An error's `message` is a template whose `${name}` may name only the payload's fields (LR 10.3; D-340): any
+    /// other name is undeclared there, and the rendered message would show it unfilled.
+    fn check_error_message(&mut self, node: N) {
+        let ts = node.direct_tokens();
+        let Some(tok) = (0..ts.len().saturating_sub(2)).find(|&i| ts[i].text == "message" && ts[i + 1].text == ":" && ts[i + 2].kind == Kind::Str).map(|i| ts[i + 2].clone()) else { return };
+        let payload: Vec<String> = node.find("fieldList").map(|fl| fl.direct_tokens().into_iter().filter(|t| t.kind == Kind::Lower).map(|t| t.text.clone()).collect()).unwrap_or_default();
+        let ename = ts.iter().find(|t| t.kind == Kind::Upper).map(|t| t.text.clone()).unwrap_or_default();
+        let mut rest: &str = if tok.text.len() >= 2 { &tok.text[1..tok.text.len() - 1] } else { "" };
+        while let Some(at) = rest.find("${") {
+            let after = &rest[at + 2..];
+            let Some(end) = after.find('}') else { break };
+            let nm = after[..end].to_string();
+            rest = &after[end + 1..];
+            if !payload.contains(&nm) {
+                self.rec(
+                    "E-NAM-001",
+                    format!("the message of error {ename} names `${{{nm}}}`, which is not a payload field: a message template may name only the payload's fields (10.3)"),
+                    "LANG-04-05",
+                    &tok,
+                    Self::nf(&nm, payload.clone()),
+                );
+            }
+        }
+    }
+
+    fn check_types_beside(&mut self, node: N, scope: usize) {
+        let empty = BTreeSet::new();
+        for c in node.kids() {
+            if let Some(n) = c.node() {
+                if n.name() != "constExpr" {
+                    self.check_types_in(n, scope, &empty);
+                }
+            }
+        }
+    }
+
     /// One typeRef's own root: `[alias "."] UpperIdent` (its type arguments are typeRefs of their own).
     fn check_typeref(&mut self, tr: N, scope: usize) {
         let ts = tr.direct_tokens();
@@ -876,7 +944,10 @@ impl<'l> Resolver<'l> {
                 if let Some(rt) = node.child_node("type") {
                     self.check_types_in(rt, s, &empty);
                 }
-                if let Some(body) = node.child_node("funcBody") {
+                // an expression body written without a return type has no `funcBody`: its `=>` and expression are
+                // the lambda's own (8.2, X-345), and the first `expr` under the lambda is that body
+                let body = node.child_node("funcBody").or_else(|| node.direct_tokens().iter().any(|t| t.text == "=>").then_some(node));
+                if let Some(body) = body {
                     let b = body.kid(0).and_then(|c| c.node()).filter(|n| n.name() == "block");
                     if let Some(b) = b {
                         self.resolve_block(b, s);
@@ -895,9 +966,14 @@ impl<'l> Resolver<'l> {
                 }
                 for arm in node.child_nodes("matchArm") {
                     let s = self.scope(Some(scope));
-                    if let Some(pat) = arm.find("pattern") {
+                    // the alternatives of an or-pattern `A | B` (9.8): a name declared once
+                    let mut seen: Vec<String> = Vec::new();
+                    for pat in arm.child_nodes("pattern") {
                         for b in pattern_bindings(pat) {
-                            self.declare_binding(b, s, "pattern");
+                            if !seen.contains(&b.text) {
+                                seen.push(b.text.clone());
+                                self.declare_binding(b, s, "pattern");
+                            }
                         }
                     }
                     for c in arm.kids() {
@@ -1038,6 +1114,26 @@ impl<'l> Resolver<'l> {
             }
             "constTerm" => {
                 let ts = node.direct_tokens();
+                if let Some(C::N(tr)) = node.kid(0) {
+                    let trs = tr.direct_tokens();
+                    let bare = tr.name() == "typeRef"
+                        && trs.first().is_some_and(|t| t.kind == Kind::Upper && self.enum_variants.contains(&t.text) && self.lookup(scope, &t.text).is_none())
+                        && !ts.iter().any(|t| t.text == ".");
+                    if bare {
+                        // a bare enum variant, in a field, constant or parameter default whose declared type the typer
+                        // checks it against (LR 9.7), as in an expression
+                        for sub in tr.find_all("typeRef") {
+                            if !sub.same(tr) {
+                                self.check_typeref(sub, scope);
+                            }
+                        }
+                        self.check_origins(tr, scope, &empty);
+                        for c in node.kids().into_iter().skip(1) {
+                            self.resolve_expr(c, scope);
+                        }
+                        return;
+                    }
+                }
                 if let Some(t0) = ts.first() {
                     if t0.kind == Kind::Lower {
                         let qualified = ts.len() > 1 && ts[1].text == ".";
@@ -1078,7 +1174,9 @@ pub fn pattern_bindings<'a>(pat: N<'a>) -> Vec<&'a Token> {
     if ts.len() == 1 && ts[0].kind == Kind::Lower && ts[0].text != "_" {
         out.push(ts[0]);
     }
-    for pf in pat.find_all("patternField") {
+    let pfs = pat.child_node("patternFields").map(|n| n.child_nodes("patternField")).unwrap_or_default();
+    for pf in pfs {
+        // its own fields: a nested pattern's are its sub-pattern's
         if let Some(sub) = pf.find("pattern") {
             out.extend(pattern_bindings(sub));
         }

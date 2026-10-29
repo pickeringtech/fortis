@@ -4,29 +4,27 @@
 // covers: LANG-07-07
 // An owned parameter that one branch moves is destroyed at the function's exit when that branch is
 // not taken, without a loans-end for the function itself (7.9, D-181).
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Res {
   export id: Int
   export console: Shared[Console]
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
 
-func eat(r: owned Res) Void {
+func eat(r: owned Res) {
   discard r
 }
 
-func branch(r: owned Res, flag: Bool) Void {
+func branch(r: owned Res, flag: Bool) {
   if flag {
     eat(move r)
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   branch(Res(id: 7, console: console.retain()), false)
   console.print("done")

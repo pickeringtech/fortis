@@ -105,11 +105,13 @@ pub struct Sig<'a> {
     pub body: Option<N<'a>>,
     pub type_params: Vec<String>,
     pub where_: Vec<(String, NamedT)>,
+    /// the `@ignorable` application on the declaration, if any (5.5, X-345)
+    pub ignorable: Option<&'a Token>,
 }
 
 impl<'a> Sig<'a> {
     pub fn simple(name: &str, params: Vec<(String, Type, String)>, ret: Type, modifiers: Vec<String>) -> Sig<'a> {
-        Sig { name: name.into(), params, ret, receiver: None, modifiers, contracts: vec![], exported: true, node: None, body: None, type_params: vec![], where_: vec![] }
+        Sig { name: name.into(), params, ret, receiver: None, modifiers, contracts: vec![], exported: true, node: None, body: None, type_params: vec![], where_: vec![], ignorable: None }
     }
     pub fn has_mod(&self, m: &str) -> bool {
         self.modifiers.iter().any(|x| x == m)
@@ -519,6 +521,11 @@ impl<'a> DeclChecker<'a> {
                 }
             }
         }
+        // `@ignorable` is the core aspect only where the name resolves to the prelude's: a module that declares or
+        // imports an aspect `ignorable` applies its own, which exempts no result (5.5, 11.8; D-314)
+        let core_ignorable = module == "fortis.prelude"
+            || (!local_aspects.contains_key("ignorable")
+                && !imports(mtree).iter().any(|i| i.path.join(".") != "fortis.prelude" && i.members.as_ref().map_or(false, |m| m.iter().any(|x| x == "ignorable"))));
         for d in &all {
             if ["head", "test", "property", "implement"].contains(&d.kind) {
                 if d.kind == "implement" && !library {
@@ -554,7 +561,22 @@ impl<'a> DeclChecker<'a> {
                     }
                 }
             }
-            let decl = if d.kind == "aspect" { local_aspects[&name].clone() } else { Rc::new(self.load_decl(d, module, package)) };
+            let decl = if d.kind == "aspect" {
+                local_aspects[&name].clone()
+            } else {
+                let mut decl = self.load_decl(d, module, package);
+                if !core_ignorable {
+                    if let Some(sig) = decl.sig.as_mut() {
+                        sig.ignorable = None;
+                    }
+                    for m in decl.methods.keys().cloned().collect::<Vec<_>>() {
+                        if let Some(sig) = decl.methods.get_mut(&m) {
+                            sig.ignorable = None;
+                        }
+                    }
+                }
+                Rc::new(decl)
+            };
             self.table.decls.insert(&key, decl);
         }
     }
@@ -731,7 +753,8 @@ impl<'a> DeclChecker<'a> {
                     continue;
                 }
                 if let Some(head) = m.find("methodHead") {
-                    let sig = self.signature(head, exp, m.find("funcBody"));
+                    let mut sig = self.signature(head, exp, m.find("funcBody"));
+                    sig.ignorable = ignorable_use(&m.child_nodes("aspectUse"));
                     if decl.methods.contains(&sig.name) || decl.fields.contains(&sig.name) {
                         let t0 = head.tokens()[0];
                         self.rec("E-TYP-070", format!("member `{}` of {nm} is declared twice", sig.name), "LANG-09-01", Some(t0), Self::typ_fields("one member", "two", &sig.name), "violated");
@@ -818,7 +841,17 @@ impl<'a> DeclChecker<'a> {
                 }
             }
         } else if kind == "func" {
-            decl.sig = Some(self.signature(node.find("funcHead").unwrap(), d.exported, node.find("funcBody")));
+            let mut sig = self.signature(node.find("funcHead").unwrap(), d.exported, node.find("funcBody"));
+            sig.ignorable = ignorable_use(&d.aspects);
+            if nm == "main" && self.entry_module.as_deref() == Some(module) {
+                // the entry `main` owns the capabilities the runtime supplies to its parameters (4.6, X-345, Q7)
+                for p in sig.params.iter_mut() {
+                    if p.2.is_empty() && matches!(&p.1, Type::Named(n) if fortis_names::reading::CAPABILITY_TYPES.contains(&n.name.as_str())) {
+                        p.2 = "owned".into();
+                    }
+                }
+            }
+            decl.sig = Some(sig);
         } else if kind == "const" {
             decl.alias = Some(match node.find("type") {
                 Some(t) => self.type_of(Some(t)),
@@ -937,13 +970,17 @@ impl<'a> DeclChecker<'a> {
                 params.push((nm.text.clone(), t, if variadic { format!("...{mode}") } else { mode }));
             }
         }
-        let ret = self.type_of(sig.and_then(|s| s.find("returnType")).and_then(|r| r.find("type")));
+        // a head without a return type returns Void (8.1, X-345)
+        let ret = match sig.map(|s| s.find("returnType")) {
+            Some(None) => void(),
+            rt => self.type_of(rt.flatten().and_then(|r| r.find("type"))),
+        };
         self.type_params = saved;
         let where_ = match sig.and_then(|s| s.find("whereClause")) {
             Some(wc) => self.where_of(wc),
             None => vec![],
         };
-        Sig { name: fname, params, ret, receiver, modifiers, contracts, exported, node: Some(head), body, type_params: tparams, where_ }
+        Sig { name: fname, params, ret, receiver, modifiers, contracts, exported, node: Some(head), body, type_params: tparams, where_, ignorable: None }
     }
 
     pub fn type_arg(&mut self, ta: N<'a>) -> Type {
@@ -1648,7 +1685,8 @@ impl<'a> DeclChecker<'a> {
             return self.is_shareable_seen(t, &mut Vec::new(), home);
         }
         match t {
-            Type::Refined { base, .. } => self.implements_seen(&base.as_type(), iface, seen, home),
+            // a refined type has its representation's default only when its refinement admits it (6.10): 0, or empty
+            Type::Refined { base, lo, hi, .. } => (iface != "Default" || (lo.map_or(true, |l| l <= 0) && hi.map_or(true, |h| h >= 0))) && self.implements_seen(&base.as_type(), iface, seen, home),
             Type::Optional(i) => {
                 if iface == "Default" {
                     return true;
@@ -1812,6 +1850,7 @@ impl<'a> DeclChecker<'a> {
                 self.check_type_decl(&d);
             } else if d.kind == "interface" {
                 self.check_interface(&d);
+
             }
             self.check_value_types(&d);
             self.check_trusted(&d);
@@ -2079,6 +2118,98 @@ impl<'a> DeclChecker<'a> {
         }
     }
 
+    /// Whether `derive Default` can build a field of this type that has no initialiser (6.10; D-242): a type with a
+    /// default that every backend builds. A type parameter has none, since a class has no `where` clause to require
+    /// one; nor have the prelude's `Array`, `FixedList`, `FixedMap` and `OrderedMap`, known by their declaration and
+    /// not their spelling, so a user's class named `Array` is judged as itself. A newtype is unfolded to its
+    /// representation, at any depth. Elsewhere `implements` keeps treating a type parameter as implementing every
+    /// interface.
+    fn derivable_default(&self, t: &Type) -> bool {
+        self.derivable_default_seen(t, &mut Vec::new(), None)
+    }
+
+    fn derivable_default_seen(&self, t: &Type, seen: &mut Vec<(String, String)>, home: Option<&Table<'a>>) -> bool {
+        // the prelude's containers whose default no backend builds yet (6.10; D-242, X-345)
+        const NO_DEFAULT_CONTAINERS: &[&str] = &["Array", "FixedList", "FixedMap", "OrderedMap"];
+        match t {
+            Type::TypeParam(_) => return false,
+            Type::Refined { base, lo, hi, .. } => {
+                if !(lo.map_or(true, |l| l <= 0) && hi.map_or(true, |h| h >= 0)) {
+                    return false;
+                }
+                return self.derivable_default_seen(&base.as_type(), seen, home);
+            }
+            Type::Named(n) => {
+                if let Some(d) = self.resolve_named(n, home).filter(|d| d.kind != "unknown") {
+                    let key = Self::fact_key(n, &d);
+                    if seen.contains(&key) {
+                        return false;
+                    }
+                    let prelude = d.module == "fortis.prelude" && d.type_identity().is_empty();
+                    if prelude && NO_DEFAULT_CONTAINERS.contains(&d.name.as_str()) {
+                        return false;
+                    }
+                    if d.kind == "type" {
+                        let Some(alias) = d.alias.clone() else { return false };
+                        seen.push(key);
+                        let next = self.next_home(&d, home);
+                        let r = self.derivable_default_seen(&alias, seen, next.get());
+                        seen.pop();
+                        return r;
+                    }
+                    if !prelude && (COPYABLE_CONTAINERS.contains(&n.name.as_str()) || builtin_implements(&n.name, "Default")) {
+                        // a declaration spelled as a built-in type is judged by what it declares (a user's `class Array`)
+                        return d.implements.iter().any(|i| i.name == "Default") || d.derives.iter().any(|(x, _)| x == "Default") || self.block_implements(n, "Default");
+                    }
+                }
+            }
+            _ => {}
+        }
+        self.implements_seen(t, "Default", &mut Vec::new(), home)
+    }
+
+    /// The declarations a derived default would build again before it finished (6.10; D-335, D-336), or None. `path`
+    /// holds the classes and newtypes whose defaults are being built, each as ((module, name), name): a newtype is
+    /// unfolded to its representation and a class that derives Default to its fields without an initialiser. Reaching
+    /// one already on the path is the cycle, named from that declaration back to itself. `T?` defaults to null, and a
+    /// class that implements Default gives its own `default()`, so either ends the walk.
+    fn default_cycle(&self, t: &Type, path: &mut Vec<((String, String), String)>, home: Option<&Table<'a>>) -> Option<Vec<String>> {
+        let n = match t {
+            Type::Refined { base, .. } => return self.default_cycle(&base.as_type(), path, home),
+            Type::Named(n) => n,
+            _ => return None,
+        };
+        let d = self.resolve_named(n, home).filter(|d| d.kind != "unknown")?;
+        if d.module == "fortis.prelude" && d.type_identity().is_empty() {
+            return None;
+        }
+        let key = (d.module.clone(), d.name.clone());
+        if let Some(i) = path.iter().position(|(k, _)| *k == key) {
+            let mut cycle: Vec<String> = path[i..].iter().map(|(_, n)| n.clone()).collect();
+            cycle.push(d.name.clone());
+            return Some(cycle);
+        }
+        let next = self.next_home(&d, home);
+        path.push((key, d.name.clone()));
+        let mut found = None;
+        if d.kind == "type" {
+            if let Some(alias) = d.alias.clone() {
+                found = self.default_cycle(&alias, path, next.get());
+            }
+        } else if d.kind == "class" && d.derives.iter().any(|(x, _)| x == "Default") {
+            for (ft, _, has_default) in d.fields.values() {
+                if !has_default {
+                    found = self.default_cycle(ft, path, next.get());
+                    if found.is_some() {
+                        break;
+                    }
+                }
+            }
+        }
+        path.pop();
+        found
+    }
+
     fn check_type_decl(&mut self, d: &DeclRef<'a>) {
         let tok = tok_of(d);
         let self_t = named_of_decl(d, d.type_params.iter().map(|p| Type::TypeParam(p.clone())).collect());
@@ -2120,8 +2251,32 @@ impl<'a> DeclChecker<'a> {
                 continue;
             }
             if iface == "Default" {
+                if d.kind == "enum" {
+                    // an enum has no fields to build its default from, and no variant is declared the default (6.10; D-242)
+                    self.rec(
+                        "E-TYP-090",
+                        format!("derive Default: enum {} has no default to derive, since nothing chooses its variant; implement Default and return the variant", d.name),
+                        "LANG-06-07",
+                        Some(&tok),
+                        Self::typ_fields("a class whose fields have defaults", "an enum", &d.name),
+                        "violated",
+                    );
+                    continue;
+                }
                 for (fname, (ft, _, has_default)) in d.fields.iter() {
-                    if !has_default && !self.implements(ft, "Default") {
+                    let cycle = if *has_default { None } else { self.default_cycle(ft, &mut vec![((d.module.clone(), d.name.clone()), d.name.clone())], None) };
+                    if let Some(cycle) = cycle {
+                        // a default that holds itself has no end: no backend could build it (6.10; D-335, D-336)
+                        let chain = cycle.join(" -> ");
+                        self.rec(
+                            "E-TYP-090",
+                            format!("derive Default: field `{fname}: {}` builds the default of {} again before it is finished ({chain}); give the field an initialiser or an optional type", ft.show(), cycle[0]),
+                            "LANG-06-07",
+                            Some(&tok),
+                            Self::typ_fields("a default that does not contain itself", &chain, fname),
+                            "violated",
+                        );
+                    } else if !has_default && !self.derivable_default(ft) {
                         self.rec(
                             "E-TYP-090",
                             format!("derive Default: field `{fname}: {}` has no initialiser and its type has no Default", ft.show()),
@@ -2564,4 +2719,9 @@ pub fn return_compatible(iface_t: &Type, impl_t: &Type) -> bool {
         (Type::Refined { .. }, Type::Named(_)) => false,
         _ => iface_t == impl_t,
     }
+}
+
+/// The name token of an `@ignorable` application among a declaration's aspect uses (5.5, 11.8; X-345).
+pub fn ignorable_use<'a>(uses: &[N<'a>]) -> Option<&'a Token> {
+    uses.iter().filter_map(|u| u.direct_tokens().get(1).copied()).find(|t| t.text == "ignorable")
 }

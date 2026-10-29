@@ -1,0 +1,67 @@
+// accept
+// covers: LANG-07-06
+// D-385, 7.6: an outcome expression lends when its value side and every `recover` lend: a recovery that reads the
+// parameter (`or recover xs.get(0)`, a `recover` in a `catch` handler, a chain of lending recoveries), a `null`
+// recovery, which holds nothing, `or fail`, and a handler that fails or returns, which produce nothing.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+error Missing {
+  code: "fixture.missing"
+}
+
+try func lookup(xs: List[Token], want: StringView) (alias Token from xs)? {
+  for x in alias xs {
+    if x.label == want {
+      return present(x)
+    }
+  }
+  fail Missing()
+}
+
+recovers func viaOr(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or recover xs.get(0)
+}
+
+recovers func viaCatch(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) catch e {
+    report e
+    recover xs.get(0)
+  }
+}
+
+recovers func viaNull(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or recover null
+}
+
+recovers func viaChain(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or recover lookup(alias xs, "x0") or recover xs.get(0)
+}
+
+try func viaFail(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or fail
+}
+
+try func viaRefail(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) catch e {
+    fail move e
+  }
+}
+
+recovers func viaReturn(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) catch e {
+    report e
+    return xs.get(0)
+  }
+}
+
+func main(console: Console) {
+  console.print("loans")
+}

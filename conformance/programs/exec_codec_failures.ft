@@ -3,7 +3,7 @@
 // covers: LANG-06-10, LANG-06-03
 // DEL-29 criterion 3: malformed input fails `codec.invalid`, an undeclared key `codec.unknown_field`, and a value
 // outside a refinement or nominal type fails that type's validation, in both formats; a good input decodes.
-import fortis.host { Host }
+import fortis.host { Console }
 export type Percent = Int<0..100>
 export type Name = String<scalars: 1..8>
 export class Entry derive Codec {
@@ -23,9 +23,8 @@ recovers func bytesCode(input: BytesView) String {
   }
   return "ok ${e.score}"
 }
-export try recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let out = alias caps.console
+try recovers func main(console: Console) {
+  let out = alias console
   out.print(code("{\"name\":\"a\",\"score\":1"))                            // truncated
   out.print(code("{\"name\":\"a\",\"score\":1,\"tags\":[]} x"))             // trailing text
   out.print(code("{\"name\":\"a\",\"score\":\"1\",\"tags\":[]}"))           // wrong kind

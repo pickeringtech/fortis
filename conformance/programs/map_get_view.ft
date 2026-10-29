@@ -1,0 +1,26 @@
+// execute: the: 2, cat: 1, dog: 0|3 3
+// requires: runtime
+// covers: LANG-06-06
+// `Map[String, V].get` takes its key as a `StringView` (6.7; X-345, R11): a view, a literal, a `String` and its copy
+// all look up the same entry, with no allocation to make a key that is thrown away.
+import fortis.host { Console }
+
+func count(counts: Map[String, Int], word: StringView) Int {
+  return counts.get(word) ?? 0
+}
+
+func main(console: Console) {
+  let mut counts: Map[String, Int] = Map.default()
+  counts.set("the", 2)
+  counts.set("cat", 1)
+  let words: List[StringView] = List.of("the", "cat", "dog")
+  let mut shown: List[String] = List.default()
+  for w in words {
+    shown.push("${w}: ${count(counts, w)}")
+  }
+  console.print("${shown.get(0) ?? ""}, ${shown.get(1) ?? ""}, ${shown.get(2) ?? ""}")
+  let mut ages: Map[String, Int] = Map.default()
+  ages.set("ada", 3)
+  let key = String.from("ada")
+  console.print("${ages.get(key) ?? 0} ${ages.get(copy key) ?? 0}")
+}

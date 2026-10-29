@@ -146,9 +146,10 @@ def main(argv):
         saved = os.path.join(work, "deep.json")
         open(saved, "w").write('{"test": "x", "inputs": ' + "[" * 100000 + "]" * 100000 + "}")
         r = subprocess.run([FORTISC, "test", "--format", "json", "conformance/testing/modes.ft", "--replay", saved], capture_output=True, text=True, cwd=ROOT, timeout=600)
-        res = [json.loads(l) for l in r.stdout.splitlines() if '"test-result"' in l]
+        res = [json.loads(l) for l in r.stderr.splitlines() if '"test-result"' in l]
+        crashed = "overflowed" in "\n".join(l for l in r.stderr.splitlines() if not l.startswith("{"))
         expect("JSON quota: a saved input nested 100,000 deep is refused with E-LIM-005, without a crash",
-               r.returncode == 1 and res and "E-LIM-005" in res[0]["evidence"]["actual"] and "overflowed" not in r.stderr, (r.stdout + r.stderr)[-300:])
+               r.returncode == 1 and res and "E-LIM-005" in res[0]["evidence"]["actual"] and not crashed, (r.stdout + r.stderr)[-300:])
     finally:
         shutil.rmtree(work, ignore_errors=True)
     for parser, quota, code_ in INVENTORY:

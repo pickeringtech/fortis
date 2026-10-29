@@ -1,0 +1,7 @@
+// accept
+import fortis.host { Console }
+func main(console: Console) Void {
+  log.info("starting")
+  console.print("the result")
+  log.warn("finished with a warning")
+}

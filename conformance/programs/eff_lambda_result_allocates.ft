@@ -8,6 +8,6 @@ func make(r: Int) fn() fn(Int) Int {
   }
 }
 
-export func main(args: List[String]) Void {
+func main() {
   let f = make(1)
 }

@@ -23,5 +23,5 @@ implement Counted for Tally {
   trusted pure func count(self) Int => 1                  // reject: E-EFF-001 — an implement block's member
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }

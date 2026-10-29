@@ -1,4 +1,4 @@
-// D-184 (docs/delivery/defects.json): a task launched from a closure's call is named differently on every backend,
+// D-184: a task launched from a closure's call is named differently on every backend,
 // so the executor traces disagree although the output agrees (`closure 3`): the interpreter names it `lambda#1`, the
 // VM `lambda@<line>:<column>#1`, native `work#1`. (Natively the launch owns the call's temporary, X-251, also for an
 // optional parameter and an editable closure's call: all three print `closure 3|optional 4|editable 3`.)

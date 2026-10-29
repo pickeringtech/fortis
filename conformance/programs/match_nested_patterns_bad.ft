@@ -1,0 +1,65 @@
+// reject: E-MAT-001 (at the marked lines)
+// covers: LANG-09-05
+// 9.8: patterns nest, and each variant pattern names its own fields. A variant that only refutable nested patterns
+// match is covered when they cover its payload together; `Next(tail: End(…))` alone leaves `Next(tail: Next(…))`, so
+// `Next` is reported, with or without an or-pattern.
+enum Chain {
+  End(value: Int)
+  Next(tail: Chain)
+}
+
+func shallow(c: Chain) Int {
+  return match c {                                   // reject: E-MAT-001 — `Next(tail: Next(…))` is not covered
+    End(value: _) => 1
+    Next(tail: End(value: _)) => 2
+  }
+}
+
+func alternatives(c: Chain) Int {
+  return match c {                                   // reject: E-MAT-001 — `Next(tail: Next(…))` is not covered
+    End(value: _) | Next(tail: End(value: _)) => 1
+  }
+}
+
+enum Leaf {
+  X
+  Y
+}
+
+enum Mid {
+  M(leaf: Leaf)
+  N
+}
+
+enum Top {
+  T(mid: Mid)
+  U
+}
+
+func positional(t: Top) Int {
+  return match t {                                   // reject: E-MAT-001 — `T(M(Y))` is not covered
+    T(M(X)) => 1
+    T(N) => 3
+    U => 4
+  }
+}
+
+func joined(t: Top) Int {
+  return match t {                                   // reject: E-MAT-001 — `T(M(Y))` is not covered
+    T(M(X)) | T(N) | U => 1
+  }
+}
+
+func complete(t: Top) Int {
+  return match t {
+    T(M(X)) | T(M(Y)) | T(N) | U => 1
+  }
+}
+
+func covered(c: Chain) Int {
+  return match c {
+    End(value: _) | Next(tail: End(value: _)) => 1
+    Next(tail: Next(tail: End(value: _))) => 2
+    Next(tail: Next(tail: Next(tail: _))) => 3
+  }
+}

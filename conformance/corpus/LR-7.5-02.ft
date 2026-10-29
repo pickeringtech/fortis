@@ -1,0 +1,16 @@
+// accept
+export class Tally {
+  order: List[String]
+  export func add(editable self, word: StringView) {
+    self.order.push(String.from(word))       // the method's own editable self
+  }
+}
+func fill(t: editable Tally) {
+  t.add("a")                                 // an editable parameter
+}
+func build() Tally {
+  let mut t = Tally(order: List.default())
+  t.add("b")                                 // a let mut binding
+  fill(editable t)                           // an argument keeps its marker
+  return t                                   // a local: the return moves it
+}

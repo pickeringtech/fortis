@@ -1,0 +1,12 @@
+// accept
+@ignorable
+func remember(seen: editable Set[Int], n: Int) Bool {
+  return editable seen.add(n)
+}
+
+func collect() Int {
+  let mut seen: Set[Int] = Set.default()
+  remember(editable seen, 3)
+  discard remember(editable seen, 3)
+  return 1
+}

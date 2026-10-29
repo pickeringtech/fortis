@@ -1,0 +1,17 @@
+// reject: E-OWN-053 (at the marked line)
+// SP-08 lazy edge, representation 2: the consumer lives at the request level and its provider borrows the
+// enclosing application level, so nothing borrows itself; the provider still stores a loan (7.7, X-137), and
+// caching the first construction would also write into the application level through the read loan every
+// request holds, which only a Mutex the source never wrote could allow.
+export class Repo {
+  size: Int = 1
+}
+export class ProductionApplication {
+  repo: Repo?
+}
+export class ProviderOfRepo[lifetime r] {    // reject: E-OWN-053 — the provider would store a loan of the enclosing level
+  outer: alias ProductionApplication from r
+}
+export class RequestService {
+  size: Int
+}

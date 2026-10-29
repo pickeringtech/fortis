@@ -1,9 +1,8 @@
 // reject: E-EFF-010 (at the marked line)
 // covers: LANG-11-07
 // D-110: the entry `main` is not a value either: a function value of it could be called again (11.6).
-import fortis.host { Host }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+import fortis.host { Console }
+func main(console: Console) {
   let again = alias main                   // reject: E-EFF-010 — the entry main is referenced
-  caps.console.print("run")
+  console.print("run")
 }

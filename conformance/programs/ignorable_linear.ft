@@ -1,0 +1,8 @@
+// reject: E-TYP-150 (at the marked line)
+// covers: LANG-11-09
+// A `Failure` is linear: a function returning one cannot be `@ignorable`, since its callers could never drop it
+// (5.5, 11.8; X-345).
+@ignorable                                         // reject: E-TYP-150 — a Failure cannot be dropped
+func keep(f: owned Failure) Failure {
+  return move f
+}

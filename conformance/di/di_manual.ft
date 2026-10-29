@@ -2,7 +2,7 @@
 // covers: PLAT-03-01, PLAT-03-07
 // An `inject` slot is a parameter of the class's generated constructor, so a consumer can be built by hand (a test
 // passes its own dependencies) exactly as the context builds it.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Rate {
   percent: Int
@@ -23,11 +23,10 @@ context Testing {
   provide Tax
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let wired = Production.application().tax()
   let manual = Tax(rate: Rate(percent: 20))
-  caps.console.print("wired ${wired.on(30)}")
-  caps.console.print("manual ${manual.on(30)}")
-  caps.console.print("test ${Testing.application().tax().on(20)}")
+  console.print("wired ${wired.on(30)}")
+  console.print("manual ${manual.on(30)}")
+  console.print("test ${Testing.application().tax().on(20)}")
 }

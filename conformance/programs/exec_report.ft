@@ -1,7 +1,7 @@
 // execute: recovered|after
 // requires: runtime
 // covers: LANG-10-03
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Glitch {
   code: "demo.glitch"
@@ -11,14 +11,13 @@ try func flaky() Int {
   fail Glitch()
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let v = flaky() catch e {
     report e
     recover 1
   }
   if v == 1 {
-    caps.console.print("recovered")
+    console.print("recovered")
   }
-  caps.console.print("after")
+  console.print("after")
 }

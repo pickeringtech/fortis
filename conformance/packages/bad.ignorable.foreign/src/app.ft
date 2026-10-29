@@ -1,0 +1,9 @@
+// reject: E-TYP-140 (at the marked line)
+// `count` carries the `ignorable` its own module declares, which is not the core aspect: where the name means the
+// prelude's here, the call statement still needs `discard` (5.5, 11.8; D-314).
+import bad.ignorable.foreign.notes { count }
+
+func tally() {
+  count(3)                                // reject: E-TYP-140 — the module's own aspect exempts nothing
+  discard count(4)
+}

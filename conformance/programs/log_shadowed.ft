@@ -1,0 +1,19 @@
+// execute: kept: noted
+// requires: runtime
+// covers: LANG-13-04
+// `log` is not a keyword (13; X-345): where a binding named `log` is in scope, `log.info(...)` is a call of its
+// method, as before, and writes no log record.
+import fortis.host { Console }
+
+class Journal {
+  export lines: List[String]
+  func info(editable self, text: StringView) {
+    self.lines.push(String.from(text))
+  }
+}
+
+func main(console: Console) {
+  let mut log = Journal(lines: List.default())
+  log.info("noted")
+  console.print("kept: ${log.lines.get(0) ?? ""}")
+}

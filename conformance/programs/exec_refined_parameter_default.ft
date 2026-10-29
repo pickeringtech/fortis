@@ -3,7 +3,7 @@
 // covers: LANG-05-08
 // A parameter's default and a constant's value are the expressions after their `=`, never a bound of their
 // refined type: `size: Int<1..100> = 20` binds 20, not 1, and so does `const pageSize: Int<1..100> = 20` (D-53).
-import fortis.host { Host }
+import fortis.host { Console }
 
 const pageSize: Int<1..100> = 20
 
@@ -21,11 +21,10 @@ class Shelf {
   export depth: Int<1..10> = 7
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${page(50)} ${page(50, size: 10)} ${page(size: 5, items: 3)}")
-  caps.console.print("${pageSize}")
+func main(console: Console) {
+  console.print("${page(50)} ${page(50, size: 10)} ${page(size: 5, items: 3)}")
+  console.print("${pageSize}")
   let s = Shelf()
-  caps.console.print("${s.width} ${s.depth}")
-  caps.console.print("${scaled()}")
+  console.print("${s.width} ${s.depth}")
+  console.print("${scaled()}")
 }

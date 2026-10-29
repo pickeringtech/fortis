@@ -1,8 +1,8 @@
-// Repro (FRICTION entry 20): a comparison narrows a place in the branches of an `if` statement but not in the
-// branches of an `if` expression. Both checkers accept `statementForm` and reject `expressionForm` with
-// E-REF-001 at line 20 ("returned value has interval [-9, 9], which is not within Int<0..9>"), although each branch of
-// the expression is in [0, 9] (`0 - d` with d in [-9, -1], or `d` with d in [0, 9]).
-// Docs: agent/06-proofs.md is a stub; it promises "Narrowing: ... else-negation" without saying where it applies.
+// Repro (FRICTION entry 20; D-52.9): a comparison narrowed a place in the branches of an `if` statement but not in the
+// branches of an `if` expression: both checkers accepted `statementForm` and rejected `expressionForm` with E-REF-001
+// ("returned value has interval [-9, 9], which is not within Int<0..9>"), although each branch of the expression is in
+// [0, 9] (`0 - d` with d in [-9, -1], or `d` with d in [0, 9]). It no longer reproduces: at v0.0.2-rc.9, and at v0.0.1,
+// both checkers accept both forms and the test passes (the wide review's re-check).
 
 pure func statementForm(n: Int) Int<0..9> {
   let d = n % 10

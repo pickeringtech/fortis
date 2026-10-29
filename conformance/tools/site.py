@@ -34,12 +34,13 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, HERE)
-from cite_check import SPECS, CITE, doc_pages, spec_sections  # noqa: E402
+from cite_check import SPECS, CITE, doc_pages, present_specs, spec_sections  # noqa: E402
+import planning  # noqa: E402
 
 FORTISC = os.path.join(ROOT, "compiler", "target", "release", "fortisc")
 ASSETS = os.path.join(ROOT, "docs", "site")
 SPEC_PAGES = ["docs/Fortis_Specification.md", "docs/Fortis_Language_Reference.md", "docs/Fortis_Platform_Specification.md",
-              "docs/Fortis_Delivery_Programme.md"]
+              planning.PROGRAMME]
 RULE_ID = re.compile(r"\b(LANG-\d\d-\d\d|PROG-[A-Z]{3}-\d\d|PLAT-\d\d-\d\d)\b")
 CODE_ID = re.compile(r"\bE-[A-Z]{2,3}-\d{3}\b")
 
@@ -336,7 +337,7 @@ class Linker:
                 m = re.match(r"^\|\s*`?(E-[A-Z]{2,3}-\d{3})`?\s*\|", l)
                 if m:
                     self.code_ids.add(m.group(1))
-        self.sections = {doc: spec_sections(path) for doc, path in SPECS.items()}
+        self.sections = {doc: spec_sections(path) for doc, path in present_specs("site").items()}
         self.copies = set()
 
     def rel(self, page, target_page, anchor=""):
@@ -369,7 +370,7 @@ class Linker:
                 if k % 2:
                     out.append(part)
                     continue
-                sec = self.sections[doc].get(part)
+                sec = self.sections[doc].get(part) if doc in self.sections else None
                 label = f"{doc} {part}" if k == 0 else part
                 if sec and page != path:
                     out.append(keep(f'<a class="cite" href="{self.rel(page, path[:-3] + ".html", sec[2])}">{label}</a>'))
@@ -381,7 +382,9 @@ class Linker:
 
         def rule(m):
             rid = m.group(1)
-            doc = {"LANG": "docs/Fortis_Language_Reference.md", "PROG": "docs/Fortis_Delivery_Programme.md", "PLAT": "docs/Fortis_Platform_Specification.md"}[rid.split("-")[0]]
+            doc = {"LANG": "docs/Fortis_Language_Reference.md", "PROG": planning.PROGRAMME, "PLAT": "docs/Fortis_Platform_Specification.md"}[rid.split("-")[0]]
+            if not os.path.exists(os.path.join(ROOT, doc)):
+                return rid          # a PROG- rule, in a checkout without the Delivery Programme: the ID stays as words
             if doc == page:
                 return keep(f'<a class="rule" href="#{rid}">{rid}</a>')
             return keep(f'<a class="rule" href="{self.rel(page, doc[:-3] + ".html", rid)}">{rid}</a>')
@@ -662,6 +665,8 @@ def check_links(out_dir):
             for href in re.findall(r'\b(?:href|src)="([^"]*)"', text):
                 n += 1
                 href = html.unescape(href)
+                if href.rstrip("/") == "https://fortis.picktech.co.uk":
+                    continue  # the published site (website/) renders these same documents, so linking to it is not external
                 if re.match(r"^[a-z]+:", href):
                     problems.append((os.path.relpath(path, out_dir), href, "external link"))
                     continue

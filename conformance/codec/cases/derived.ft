@@ -1,6 +1,6 @@
 // Ten derived codec types: each value is written as <name>.json and <name>.bin into the development
 // FileSystem and decoded back from both; every printed line must end "true true".
-import fortis.host { Host, Console, FileSystem, Path }
+import fortis.host { Console, FileSystem, Path }
 import fortis.money { Money, Currency }
 export class Point derive Equatable, Codec {
   export x: Int
@@ -42,19 +42,18 @@ export class Order derive Codec {
   export total: Money
   export discount: Percent?
 }
-try func save(fs: FileSystem, name: String, text: String, bytes: Bytes) Void {
+try func save(fs: FileSystem, name: String, text: String, bytes: Bytes) {
   let tp = Path.parse("${name}.json") or fail
   fs.writeAll(tp, text) or fail
   let bp = Path.parse("${name}.bin") or fail
   let mut f = fs.create(bp) or fail
-  defer { editable f.close() }
-  editable f.writeAll(bytes) or fail
+  defer { f.close() }
+  f.writeAll(bytes) or fail
 }
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  roundTrips(caps.fileSystem, caps.console) or fail
+try func main(fileSystem: FileSystem, console: Console) {
+  roundTrips(fileSystem, console) or fail
 }
-try func roundTrips(fs: FileSystem, out: Console) Void {
+try func roundTrips(fs: FileSystem, out: Console) {
   let p = Point(x: -3, y: 4)
   save(fs, "point", p.toText(), p.toBytes()) or fail
   let p1 = Point.fromText(p.toText()) or fail
@@ -80,7 +79,7 @@ try func roundTrips(fs: FileSystem, out: Console) Void {
   let n1 = Name.fromText(n.toText()) or fail
   let n2 = Name.fromBytes(n.toBytes()) or fail
   out.print("name ${n1 == n} ${n2 == n}")
-  let pr = Pair[String, Colour](first: "fill", second: Colour.Blue)
+  let pr = Pair[String, Colour](first: "fill", second: Blue)
   save(fs, "pair", pr.toText(), pr.toBytes()) or fail
   let pr1 = Pair[String, Colour].fromText(pr.toText()) or fail
   let pr2 = Pair[String, Colour].fromBytes(pr.toBytes()) or fail
@@ -91,11 +90,11 @@ try func roundTrips(fs: FileSystem, out: Console) Void {
   let who2 = Account.fromBytes(who.toBytes()) or fail
   out.print("account ${who1 == who} ${who2 == who}")
   let mut counts: Map[String, Int] = Map.default()
-  editable counts.set("pears", 4)
-  editable counts.set("apples", 9)
+  counts.set("pears", 4)
+  counts.set("apples", 9)
   let mut tags: Set[String] = Set.default()
-  discard editable tags.add("fresh")
-  discard editable tags.add("local")
+  discard tags.add("fresh")
+  discard tags.add("local")
   let inv = Inventory(counts: move counts, tags: move tags)
   save(fs, "inventory", inv.toText(), inv.toBytes()) or fail
   let inv1 = Inventory.fromText(inv.toText()) or fail
@@ -107,7 +106,7 @@ try func roundTrips(fs: FileSystem, out: Console) Void {
   let seg2 = Segment.fromBytes(seg.toBytes()) or fail
   out.print("segment ${seg1.toText() == seg.toText()} ${seg2.toText() == seg.toText()}")
   let placed = Timestamp.add(Timestamp.epoch(), Duration.seconds(86400)) or fail
-  let o = Order(shapes: List.of(Shape.Circle(radius: 1.25d), Shape.Empty), placed: placed, window: Duration.minutes(30), total: Money.of(Currency.EUR, 42.00d), discount: Percent(10))
+  let o = Order(shapes: List.of(Circle(radius: 1.25d), Empty), placed, window: Duration.minutes(30), total: Money.of(EUR, 42.00d), discount: Percent(10))
   save(fs, "order", o.toText(), o.toBytes()) or fail
   let o1 = Order.fromText(o.toText()) or fail
   let o2 = Order.fromBytes(o.toBytes()) or fail

@@ -5,24 +5,24 @@
 // 5.7, 7.9: a condition's `&&` and `||` evaluate the right operand only when the left needs it. A temporary
 // that operand would create is not created when the operand is skipped, and one that is created dies when
 // the condition finishes, before the branch.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
   export func open(self) Bool {
     return self.id != 0
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
 
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   if false && Handle.make(1, alias console).open() {
     console.print("no")
   }
@@ -36,9 +36,7 @@ func run(console: Shared[Console]) Void {
   console.print("after")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
 }

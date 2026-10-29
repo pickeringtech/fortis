@@ -3,7 +3,7 @@
 // covers: LANG-11-01, LANG-12-05
 // D-113: `async` code reaches the blocking file-system operations through `launchBlocking`, whose work the pool runs
 // (11.3: its `block` is not imported), so the cooperative executor never blocks.
-import fortis.host { Host, Capabilities, FileSystem, Path }
+import fortis.host { FileSystem, Path, Console }
 
 try func roundTrip(fs: FileSystem) String {
   let p = Path.parse("notes.txt") or fail
@@ -18,9 +18,7 @@ async try func load(fs: owned FileSystem) String {
   }
 }
 
-export async try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(fileSystem: fs, environment: env, secretAccess: access, console: console, network: net, clock: clock, random: rnd, process: proc, supervisor: sup, rawSql: sql) = move caps
+async try func main(fs: FileSystem, console: Console) {
   console.print("written")
   let text = await load(move fs) or fail
   console.print("read back: ${text}")

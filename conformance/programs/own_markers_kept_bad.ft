@@ -1,0 +1,26 @@
+// reject: E-OWN-001 (at the marked lines)
+// covers: LANG-07-01, LANG-08-02
+// X-345 (R3): only receivers and returned locals lose markers. `copy` and `alias` in bindings, the markers of a
+// capture list and the markers of arguments stay, because each says something the line does not otherwise show:
+// a duplicate, a loan, a change made by the callee, a transfer. A `let mut` argument still needs them.
+export class Item {
+  export name: String
+}
+export class Holder {
+  export item: Item
+}
+func change(i: editable Item) {
+  i.name = String.from("changed")
+}
+func keep(i: owned Item) {
+}
+func run() {
+  let mut a = Item(name: String.from("a"))
+  let b = a                                          // reject: E-OWN-001: a binding copies, loans or moves
+  let h = Holder(item: a)                            // reject: E-OWN-001: so does a field initialiser
+  let mut c = Item(name: String.from("c"))
+  c = a                                              // reject: E-OWN-001: and an assignment
+  let f = fn[a]() Int => 1                           // reject: E-OWN-001: a capture of a non-trivial value
+  change(a)                                          // reject: E-OWN-001: an editable argument, even of a let mut
+  keep(a)                                            // reject: E-OWN-001: an owned argument
+}

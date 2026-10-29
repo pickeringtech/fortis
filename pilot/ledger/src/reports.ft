@@ -53,22 +53,22 @@ pure func holdingLines(label: StringView, width: Int<0..1000>, holdings: Holding
   let mut lines: List[String] = List.default()
   let amounts = holdings.asAmounts()
   if amounts.isEmpty() {
-    editable lines.push("  ${padRight(label, width)}${padLeft("0", amountWidth)}")
-    return move lines
+    lines.push("  ${padRight(label, width)}${padLeft("0", amountWidth)}")
+    return lines
   }
   let mut first = true
   for amount in amounts {
     let shown = if first { give String.from(label) } else { give String.empty() }
-    editable lines.push("  ${padRight(shown, width)}${amountCell(amount, commodities)}")
+    lines.push("  ${padRight(shown, width)}${amountCell(amount, commodities)}")
     first = false
   }
-  return move lines
+  return lines
 }
 
 // Appends every line of `more` to `lines`.
-pure func appendAll(lines: editable List[String], more: ListView[String]) Void {
+pure func appendAll(lines: editable List[String], more: ListView[String]) {
   for line in more {
-    editable lines.push(copy line)
+    lines.push(copy line)
   }
 }
 
@@ -82,14 +82,14 @@ export pure try func balanceReport(journal: Journal) List[String] {
   let labels = names.map(fn(n: AccountName) String => n.text())
   let width = nameWidth(labels)
   let mut lines: List[String] = List.default()
-  editable lines.push("Balances by account")
+  lines.push("Balances by account")
   for name in names {
     appendAll(editable lines, holdingLines(name.text(), width, balances.of(name.text()), journal.commodities))
   }
-  editable lines.push(rule(clampWidth(Int.saturatingAdd(width, amountWidth))))
+  lines.push(rule(clampWidth(Int.saturatingAdd(width, amountWidth))))
   let total = balances.total() or fail
   appendAll(editable lines, holdingLines("total", width, total, journal.commodities))
-  return move lines
+  return lines
 }
 
 // Balances rolled up the account tree: each top-level class with its total, then every account below it,
@@ -100,20 +100,20 @@ export pure try func treeReport(journal: Journal) List[String] {
   let names = tree.accounts()
   let mut labels: List[String] = List.default()
   for name in names {
-    editable labels.push(treeLabel(name))
+    labels.push(treeLabel(name))
   }
   let width = nameWidth(labels)
   let mut lines: List[String] = List.default()
-  editable lines.push("Balances by account tree")
+  lines.push("Balances by account tree")
   let mut i = 0
   for name in names {
     let label = labels.get(i)
     if label != null {
       appendAll(editable lines, holdingLines(label, width, tree.of(name.text()), journal.commodities))
     }
-    i = Int.add(i, 1) or fail
+    i = i + 1 or fail
   }
-  return move lines
+  return lines
 }
 
 // The tree label of an account: its class name at the top, otherwise its last segment indented by depth.
@@ -134,8 +134,8 @@ export pure try func trialBalance(journal: Journal) List[String] {
   let labels = names.map(fn(n: AccountName) String => n.text())
   let width = nameWidth(labels)
   let mut lines: List[String] = List.default()
-  editable lines.push("Trial balance")
-  editable lines.push("  ${padRight("account", width)}${padLeft("debit", amountWidth)}${padLeft("credit", amountWidth)}")
+  lines.push("Trial balance")
+  lines.push("  ${padRight("account", width)}${padLeft("debit", amountWidth)}${padLeft("credit", amountWidth)}")
   let mut debits = Holdings.empty()
   let mut credits = Holdings.empty()
   for name in names {
@@ -143,24 +143,24 @@ export pure try func trialBalance(journal: Journal) List[String] {
     for amount in balances.of(name.text()).asAmounts() {
       let shown = if first { give name.text() } else { give String.empty() }
       if amount.minor > 0 {
-        editable debits.add(copy amount.code, amount.minor) or fail
-        editable lines.push("  ${padRight(shown, width)}${amountCell(amount, journal.commodities)}${blankCell()}")
+        debits.add(copy amount.code, amount.minor) or fail
+        lines.push("  ${padRight(shown, width)}${amountCell(amount, journal.commodities)}${blankCell()}")
       } else {
-        let positive = Amount(minor: Int.sub(0, amount.minor) or fail, code: copy amount.code)
-        editable credits.add(copy amount.code, positive.minor) or fail
-        editable lines.push("  ${padRight(shown, width)}${blankCell()}${amountCell(positive, journal.commodities)}")
+        let positive = Amount(minor: 0 - amount.minor or fail, code: copy amount.code)
+        credits.add(copy amount.code, positive.minor) or fail
+        lines.push("  ${padRight(shown, width)}${blankCell()}${amountCell(positive, journal.commodities)}")
       }
       first = false
     }
   }
-  editable lines.push(rule(clampWidth(Int.saturatingAdd(width, Int.saturatingMul(amountWidth, 2)))))
+  lines.push(rule(clampWidth(Int.saturatingAdd(width, Int.saturatingMul(amountWidth, 2)))))
   let mut codes: List[CommodityCode] = List.default()
   for code in debits.codes() {
-    editable codes.push(copy code)
+    codes.push(copy code)
   }
   for code in credits.codes() {
     if debits.amountOf(copy code) == 0 {
-      editable codes.push(copy code)
+      codes.push(copy code)
     }
   }
   let mut first = true
@@ -168,15 +168,15 @@ export pure try func trialBalance(journal: Journal) List[String] {
     let shown = if first { give "total" } else { give "" }
     let debit = Amount(minor: debits.amountOf(copy code), code: copy code)
     let credit = Amount(minor: credits.amountOf(copy code), code: copy code)
-    editable lines.push("  ${padRight(shown, width)}${amountCell(debit, journal.commodities)}${amountCell(credit, journal.commodities)}")
+    lines.push("  ${padRight(shown, width)}${amountCell(debit, journal.commodities)}${amountCell(credit, journal.commodities)}")
     first = false
   }
   if debits.sameAs(credits) {
-    editable lines.push("  debits equal credits")
+    lines.push("  debits equal credits")
   } else {
-    editable lines.push("  OUT OF BALANCE: debits and credits differ")
+    lines.push("  OUT OF BALANCE: debits and credits differ")
   }
-  return move lines
+  return lines
 }
 
 // An income statement for a period: income (shown as positive amounts), expenses, and the net income, each
@@ -185,65 +185,65 @@ export pure try func incomeStatement(journal: Journal, period: Period) List[Stri
   let balances = balancesOf(journal, period) or fail
   let mut labels: List[String] = List.default()
   for name in balances.accounts() {
-    editable labels.push(name.text())
+    labels.push(name.text())
   }
-  editable labels.push("total income")
-  editable labels.push("total expenses")
+  labels.push("total income")
+  labels.push("total expenses")
   let width = nameWidth(labels)
   let mut lines: List[String] = List.default()
-  editable lines.push("Income statement, ${period.first.iso()} to ${period.last.iso()}")
+  lines.push("Income statement, ${period.first.iso()} to ${period.last.iso()}")
   let mut income = Holdings.empty()
   let mut expenses = Holdings.empty()
-  editable lines.push("Income")
+  lines.push("Income")
   for name in balances.accounts() {
-    if name.kind() == AccountClass.Income {
+    if name.kind() == Income {
       let earned = balances.of(name.text()).negated() or fail
-      editable income.addAll(earned) or fail
+      income.addAll(earned) or fail
       appendAll(editable lines, holdingLines(name.text(), width, earned, journal.commodities))
     }
   }
   appendAll(editable lines, holdingLines("total income", width, income, journal.commodities))
-  editable lines.push("Expenses")
+  lines.push("Expenses")
   for name in balances.accounts() {
-    if name.kind() == AccountClass.Expenses {
+    if name.kind() == Expenses {
       let spent = balances.of(name.text())
-      editable expenses.addAll(spent) or fail
+      expenses.addAll(spent) or fail
       appendAll(editable lines, holdingLines(name.text(), width, spent, journal.commodities))
     }
   }
   appendAll(editable lines, holdingLines("total expenses", width, expenses, journal.commodities))
-  editable lines.push(rule(clampWidth(Int.saturatingAdd(width, amountWidth))))
+  lines.push(rule(clampWidth(Int.saturatingAdd(width, amountWidth))))
   let mut net = Holdings.empty()
-  editable net.addAll(income) or fail
+  net.addAll(income) or fail
   let spentBack = expenses.negated() or fail
-  editable net.addAll(spentBack) or fail
+  net.addAll(spentBack) or fail
   appendAll(editable lines, holdingLines("net income", width, net, journal.commodities))
-  return move lines
+  return lines
 }
 
 // The register of an account: every posting to it, or to an account below it, in journal order, with the
 // running balance of the posting's commodity.
 export pure try func register(journal: Journal, account: AccountName) List[String] {
   let mut lines: List[String] = List.default()
-  editable lines.push("Register of ${account.text()}")
+  lines.push("Register of ${account.text()}")
   let mut running = Holdings.empty()
   let mut count = 0
   for t in journal.transactions {
     for p in t.postings {
       if p.account.isWithin(account.text()) {
-        editable running.add(copy p.amount.code, p.amount.minor) or fail
+        running.add(copy p.amount.code, p.amount.minor) or fail
         let balance = Amount(minor: running.amountOf(copy p.amount.code), code: copy p.amount.code)
         let description = fitted(t.description, 22) or fail
         let below = if p.account == account { give "" } else { give " (${p.account.text()})" }
-        editable lines.push("  ${t.date.iso()} ${flagMark(t.flag)} ${padRight(description, 22)}${amountCell(p.amount, journal.commodities)}${amountCell(balance, journal.commodities)}${below}")
-        count = Int.add(count, 1) or fail
+        lines.push("  ${t.date.iso()} ${flagMark(t.flag)} ${padRight(description, 22)}${amountCell(p.amount, journal.commodities)}${amountCell(balance, journal.commodities)}${below}")
+        count = count + 1 or fail
       }
     }
   }
   if count == 0 {
-    editable lines.push("  no postings")
+    lines.push("  no postings")
   }
-  return move lines
+  return lines
 }
 
 // The text cut to at most `width` scalars, with `~` marking a cut.
@@ -252,7 +252,7 @@ pure try func fitted(text: StringView, width: Int<1..1000>) String {
   if n <= width {
     return String.from(text)
   }
-  let keep = Int.sub(width, 1) or fail
+  let keep = width - 1
   let head = text.slice(0, keep) or fail
   return "${head}~"
 }
@@ -307,8 +307,8 @@ pure try recovers func journalForReports() Journal {
 }
 
 test "balances by account" {
-  let journal = journalForReports() or fail
-  let lines = balanceReport(journal) or fail
+  let journal = journalForReports()
+  let lines = balanceReport(journal)
   let expected: List[String] = List.of(
     "Balances by account",
     "  assets:bank:current             2,900.00 GBP",
@@ -327,8 +327,8 @@ test "balances by account" {
 }
 
 test "balances by account tree" {
-  let journal = journalForReports() or fail
-  let lines = treeReport(journal) or fail
+  let journal = journalForReports()
+  let lines = treeReport(journal)
   let expected: List[String] = List.of(
     "Balances by account tree",
     "  Assets                          2,995.00 GBP",
@@ -353,8 +353,8 @@ test "balances by account tree" {
 }
 
 test "trial balance" {
-  let journal = journalForReports() or fail
-  let lines = trialBalance(journal) or fail
+  let journal = journalForReports()
+  let lines = trialBalance(journal)
   let expected: List[String] = List.of(
     "Trial balance",
     "  account                                debit            credit",
@@ -376,9 +376,9 @@ test "trial balance" {
 }
 
 test "income statement for a period" {
-  let journal = journalForReports() or fail
-  let january = Period(first: Date.of(2026, 1, 1) or fail, last: Date.of(2026, 1, 31) or fail)
-  let lines = incomeStatement(journal, january) or fail
+  let journal = journalForReports()
+  let january = Period(first: Date.of(2026, 1, 1), last: Date.of(2026, 1, 31))
+  let lines = incomeStatement(journal, january)
   let expected: List[String] = List.of(
     "Income statement, 2026-01-01 to 2026-01-31",
     "Income",
@@ -394,17 +394,17 @@ test "income statement for a period" {
 }
 
 test "an income statement with no activity" {
-  let journal = journalForReports() or fail
-  let march = Period(first: Date.of(2026, 3, 1) or fail, last: Date.of(2026, 3, 31) or fail)
-  let lines = incomeStatement(journal, march) or fail
-  expect (lines.at(2) or fail) == "  total income                               0"
-  expect (lines.at(Int.saturatingSub(lines.count(), 1)) or fail) == "  net income                                 0"
+  let journal = journalForReports()
+  let march = Period(first: Date.of(2026, 3, 1), last: Date.of(2026, 3, 31))
+  let lines = incomeStatement(journal, march)
+  expect lines.at(2) == "  total income                               0"
+  expect lines.at(Int.saturatingSub(lines.count(), 1)) == "  net income                                 0"
 }
 
 test "register of an account" {
-  let journal = journalForReports() or fail
-  let cash = AccountName.parse("assets:cash") or fail
-  let lines = register(journal, cash) or fail
+  let journal = journalForReports()
+  let cash = AccountName.parse("assets:cash")
+  let lines = register(journal, cash)
   let expected: List[String] = List.of(
     "Register of assets:cash",
     "  2026-02-02 ! Cash machine                  100.00 GBP        100.00 GBP",
@@ -415,29 +415,29 @@ test "register of an account" {
 }
 
 test "register of a parent account names the account below" {
-  let journal = journalForReports() or fail
-  let assets = AccountName.parse("assets") or fail
-  let lines = register(journal, assets) or fail
+  let journal = journalForReports()
+  let assets = AccountName.parse("assets")
+  let lines = register(journal, assets)
   expect lines.count() == 7
-  expect (lines.at(1) or fail) == "  2026-01-01 * Opening balance             1,000.00 GBP      1,000.00 GBP (assets:bank:current)"
+  expect lines.at(1) == "  2026-01-01 * Opening balance             1,000.00 GBP      1,000.00 GBP (assets:bank:current)"
 }
 
 test "register of an account without postings" {
-  let journal = journalForReports() or fail
-  let card = AccountName.parse("liabilities:card:old") or fail
-  let lines = register(journal, card) or fail
+  let journal = journalForReports()
+  let card = AccountName.parse("liabilities:card:old")
+  let lines = register(journal, card)
   expect lines.count() == 2
-  expect (lines.at(1) or fail) == "  no postings"
+  expect lines.at(1) == "  no postings"
 }
 
 test "summary line" {
-  let journal = journalForReports() or fail
+  let journal = journalForReports()
   expect summary(journal) == "5 transactions, 12 postings, 7 accounts, 2026-01-01 to 2026-02-03"
 }
 
 property "fitted text never exceeds its width" forall (width: Int<1..40>, length: Int<0..60>) {
   let text = repeat("x", length)
-  let cut = fitted(text, width) or fail
+  let cut = fitted(text, width)
   expect cut.scalarCount() <= width
   if length <= width {
     expect cut == text

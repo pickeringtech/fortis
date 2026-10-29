@@ -4,7 +4,7 @@
 // D-61: an implementation that writes the interface member's claims, directly or through its own contract, satisfies
 // them; its body is then checked against them, so a caller through the interface may rely on `noalloc` and `pure`.
 // (Natively, calls through `dynamic` or a bounded type parameter do not build yet: D-148.)
-import fortis.host { Host }
+import fortis.host { Console }
 
 export contract Lean {
   pure
@@ -26,10 +26,9 @@ export class Triple implements Measured {
   Lean func size(self) Int => 6
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let p = Pair(left: 1, right: 2)
   let t = Triple(first: 1)
-  caps.console.print("${p.size()}")
-  caps.console.print("${t.size()}")
+  console.print("${p.size()}")
+  console.print("${t.size()}")
 }

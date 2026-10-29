@@ -1,0 +1,45 @@
+// reject: E-OWN-001 (at the marked lines)
+// covers: LANG-07-01, LANG-08-02
+// X-345 (R1, R2): an unmarked receiver is accepted exactly where `editable` could be written, and rejected where it
+// could not, whatever the receiver's type (D-303): a `let` binding, a read parameter, a binding holding a read loan
+// and the `self` of a read method cannot change, and neither can a trivial value held by one of them.
+export class Tally {
+  order: List[String]
+  export func add(editable self, word: StringView) {
+    self.order.push(String.from(word))
+  }
+  export func peek(self) Int {
+    self.order.push(String.from("x"))                // reject: E-OWN-001: the receiver is the read `self`
+    return self.order.count()
+  }
+}
+
+export trivial class Point {
+  export x: Int
+  export func shift(editable self) {
+    self.x = Int.saturatingAdd(self.x, 1)
+  }
+}
+
+func readOnly(t: Tally, p: Point) {
+  t.add("a")                                         // reject: E-OWN-001: a read parameter
+  p.shift()                                          // reject: E-OWN-001: a trivial read parameter too
+}
+
+func run() Int {
+  let fixed = Tally(order: List.default())
+  fixed.add("b")                                     // reject: E-OWN-001: a `let` binding, not `let mut`
+  let p = Point(x: 0)
+  p.shift()                                          // reject: E-OWN-001: a trivial value in a `let` binding
+  let mut t = Tally(order: List.default())
+  {
+    let r = alias t
+    r.add("c")                                       // reject: E-OWN-001: a read loan cannot change its owner
+  }
+  let mut n = 0
+  let setter = fn mut[editable n]() Void {
+    n = 1
+  }
+  setter()                                           // reject: E-OWN-001: a `fn mut` held by a `let` binding
+  return p.x
+}

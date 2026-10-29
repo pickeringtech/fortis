@@ -1,0 +1,32 @@
+// execute: after first|end
+// reports: log:level=info,message=first item,function=viaFirst|log:level=info,message=in place item,function=viaFirst|log:level=info,message=drop item,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-338, 7.6, 12.2: a library function with a Fortis body whose result is declared `from` its receiver
+// (`List.first`, `(alias T from self)?`) gives a loan. A binding of it, and the result used in place, own nothing:
+// the element's cleanup runs once, when the list's owner ends. The interpreter took such a result for a new value,
+// a temporary of the statement, and destroyed it there or at the binding's end.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  cleanup(editable self) {
+    log.info("drop ${self.label}")
+  }
+}
+
+func viaFirst(console: Console, xs: List[Token]) {
+  {
+    let t = xs.first()
+    log.info("first ${t?.label ?? "none"}")
+  }
+  log.info("in place ${xs.first()?.label ?? "none"}")
+  console.print("after first")
+}
+
+func main(console: Console) {
+  let mut toks: List[Token] = List.default()
+  toks.push(Token(label: String.from("item")))
+  viaFirst(console, toks)
+  console.print("end")
+}

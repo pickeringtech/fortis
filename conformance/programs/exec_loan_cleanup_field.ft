@@ -1,0 +1,52 @@
+// execute: param held|loan deep|local local|drop local|end|drop deep|drop held
+// reports: log:level=info,message=drop local,function=cleanup Token|log:level=info,message=drop deep,function=cleanup Token|log:level=info,message=drop held,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-338, 7.3, 12.2: a field reached through a loan is a loan of that field: `alias h.tok` through a read
+// parameter, through a binding that holds a loan, and of a local owner's field, nested two deep. None of them owns
+// the field, so its cleanup runs once, when the value that holds it ends.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+class Holder {
+  tok: Token
+}
+
+class Outer {
+  holder: Holder
+}
+
+func throughParam(console: Shared[Console], h: Holder) {
+  let t = alias h.tok
+  console.print("param ${t.label}")
+}
+
+func throughLoan(console: Shared[Console], o: Outer) {
+  let h = alias o.holder
+  let t = alias h.tok
+  console.print("loan ${t.label}")
+}
+
+func localOwner(console: Shared[Console]) {
+  let o = Outer(holder: Holder(tok: Token(label: String.from("local"), console: console.retain())))
+  let t = alias o.holder.tok
+  console.print("local ${t.label}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let h = Holder(tok: Token(label: String.from("held"), console: console.retain()))
+  let o = Outer(holder: Holder(tok: Token(label: String.from("deep"), console: console.retain())))
+  throughParam(console, h)
+  throughLoan(console, o)
+  localOwner(console)
+  console.print("end")
+}

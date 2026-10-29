@@ -4,7 +4,7 @@
 // A class value's fields are in declaration order whatever order the constructor call gives them in, and a default
 // is a field like any other: a derived `Displayable` prints them in that order. The interpreter once printed them
 // in the order given, with defaulted fields last (D-53).
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Settings derive Displayable {
   export retries: Int<0..10> = 3
@@ -16,9 +16,8 @@ class Pair derive Displayable {
   export right: Int
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${Settings(verbose: true)}")
-  caps.console.print("${Settings(verbose: false, retries: 5)}")
-  caps.console.print("${Pair(right: 2, left: 1)}")
+func main(console: Console) {
+  console.print("${Settings(verbose: true)}")
+  console.print("${Settings(verbose: false, retries: 5)}")
+  console.print("${Pair(right: 2, left: 1)}")
 }

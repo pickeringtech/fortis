@@ -1,0 +1,17 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-14-03
+// Outside a test nothing changes (14; X-345): an outcome where its success type is expected is still a type error.
+export error Negative {
+  code: "demo.negative"
+}
+
+try func half(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n / 2
+}
+
+try func quarter(n: Int) Int {
+  return half(half(n))                             // reject: E-TYP-040 — half expects Int, got Outcome[Int]
+}

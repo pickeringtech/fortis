@@ -1,0 +1,39 @@
+// D-413: on the VM, an owned value recovered by a `catch` expression in a discarded statement (`discard (g() catch e
+// { report e; recover make(console, "fb") })`, where `g` fails and `Token` prints `drop ${self.label}` in its
+// `cleanup`) is never destroyed: both checkers accept the program, the interpreter and native code print
+// `drop fb|end` (the record of the reported failure first), and the VM prints `end` alone, with no `drop Token` in
+// its trace, exit 0 on all three. The `or recover` form (`discard (g() or recover make(console, "fb"))`) prints
+// `drop fb|end` on the VM too, and the `let` form (`let x = g() catch …`) prints `bound fb|drop fb|end`: only a
+// `catch` whose value is a discarded statement temporary loses its cleanup (fortis-vm `machine.rs`, the discard of a
+// non-place expression, with the catch's evaluation path). v0.0.1's VM behaved the same. Found by the
+// v0.0.2-rc.10 re-check (Kimi K3 on OpenCode).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+error Missing {
+  code: "probe.missing"
+}
+
+try func g() Token {
+  fail Missing()
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  discard (g() catch e {
+    report e
+    recover make(console, "fb")
+  })
+  console.print("end")
+}

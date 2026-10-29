@@ -1,0 +1,26 @@
+// execute: working|release 2|release 1|done
+// requires: runtime
+// covers: LANG-04-06
+// `main` owns its capability parameters (4.6; X-345, Q7): it may move one into a `Shared`, which several owners then
+// hold, each printing from its methods and its cleanup (7.8, 11.6).
+import fortis.host { Console }
+
+class Resource {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("release ${self.id}")
+  }
+}
+
+func work(console: Shared[Console]) {
+  let first = Resource(id: 1, console: console.retain())
+  let second = Resource(id: 2, console: console.retain())
+  console.print("working")
+}
+
+func main(console: Console) {
+  let shared = Shared.create(move console)
+  work(shared)
+  shared.print("done")
+}

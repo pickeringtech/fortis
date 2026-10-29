@@ -1,0 +1,70 @@
+// execute: param slotted|after param|guarded local|after local|drop local|optional item|given item|after optional|end|drop item|drop slotted
+// reports: log:level=info,message=drop local,function=cleanup Token|log:level=info,message=drop item,function=cleanup Token|log:level=info,message=drop slotted,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-09-06
+// D-338, 7.5, 9.8, 12.2: `match` of a borrowed value lends it, and its arms' bindings hold loans of its parts: an
+// enum parameter, a local enum read in place, an optional loan (`xs.get(0)`), an arm whose guard fails after its
+// pattern bound, and a `match` expression that gives a binding back. None of them runs a cleanup; each value's
+// runs once, when its owner ends. The VM runs a cleanup for a value's last handle only, so an arm's bindings let go
+// of their handles when the arm ends or its guard fails: had they kept them, the owner's cleanup would not run.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+enum Slot {
+  Full(t: Token)
+  Empty
+}
+
+func param(console: Shared[Console], s: Slot) {
+  match s {
+    Full(t) => { console.print("param ${t.label}") }
+    Empty => {}
+  }
+  console.print("after param")
+}
+
+func local(console: Shared[Console]) {
+  let s = Slot.Full(t: Token(label: String.from("local"), console: console.retain()))
+  match s {
+    Full(t) when t.label == "other" => { console.print("never") }
+    Full(t) => { console.print("guarded ${t.label}") }
+    Empty => {}
+  }
+  console.print("after local")
+}
+
+func optional(console: Shared[Console], xs: List[Token]) {
+  match xs.get(0) {
+    present(t) => { console.print("optional ${t.label}") }
+    null => {}
+  }
+  let given = match xs.get(0) {
+    present(t) => {
+      give t
+    }
+    null => {
+      give xs.get(1)
+    }
+  }
+  console.print("given ${given?.label ?? "none"}")
+  console.print("after optional")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let s = Slot.Full(t: Token(label: String.from("slotted"), console: console.retain()))
+  let mut toks: List[Token] = List.default()
+  toks.push(Token(label: String.from("item"), console: console.retain()))
+  param(console, s)
+  local(console)
+  optional(console, toks)
+  console.print("end")
+}

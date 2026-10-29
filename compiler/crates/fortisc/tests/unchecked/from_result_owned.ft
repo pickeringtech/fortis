@@ -1,0 +1,40 @@
+// backstop: bound c-fb|drop c-fb|after bind|call c-fb2 c-own|drop c-fb2|drop c-own|after call
+// D-373: a function whose result is declared `from` a parameter returns `empty.get(0) ?? move d`, a value of its own
+// where its type lends (both checkers once accepted it; E-OWN-051 now). The caller's binding, and the tuple a second
+// call's result is an element of, held it as a loan, so its cleanup never ran on the interpreter or the VM. A `from`
+// result the callee's `return` gave as a value of its own is owned by whatever receives it, by the value and not
+// the type, so the cleanup runs once even where a check is missed.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func pick(empty: List[Token], d: owned Token) alias Token from empty {
+  return empty.get(0) ?? move d
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  let d = make(console, "c-fb")
+  {
+    let t = pick(alias empty, move d)
+    console.print("bound ${t.label}")
+  }
+  console.print("after bind")
+  let e = make(console, "c-fb2")
+  {
+    let pair = (pick(alias empty, move e), make(console, "c-own"))
+    console.print("call ${pair.0.label} ${pair.1.label}")
+  }
+  console.print("after call")
+}

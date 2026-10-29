@@ -6,7 +6,8 @@ production toolchain (PROG-TST-08, Programme 8.1).
 The examples are the `fortis` blocks of the three documents (Language Reference, Platform Specification, Overview),
 extracted with their markers into `conformance/corpus` (conformance/tools/extract.py; `extract.py --check` keeps the
 corpus equal to the documents). A block is in the G1 subset when its stage is `core` (it imports no kit) and none
-of its features is excluded by `docs/delivery/subsets.json`. A block importing an example package (`acme.…`) is the
+of its features is excluded by the delivery plan's subsets table (or its public copy, conformance/subsets.json, in
+a checkout without that planning file). A block importing an example package (`acme.…`) is the
 root module of a package depending on the documentation packages (`conformance/doc-packages`), and is checked and
 run as that package. For each G1 block:
 
@@ -97,7 +98,7 @@ def fortisc(*args):
 
 def main(argv):
     manifest = json.load(open(os.path.join(ROOT, "conformance", "corpus", "manifest.json"), encoding="utf-8"))["fixtures"]
-    excluded = g1_subset()
+    excluded = g1_subset("docs")
     rows, problems = [], 0
     for fx in manifest:
         path = fx["path"]

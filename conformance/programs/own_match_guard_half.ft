@@ -10,7 +10,7 @@ recovers func consume(o: owned Outcome[Int]) Bool {
   return false
 }
 
-recovers func guardMiss(n: Int) Void {
+recovers func guardMiss(n: Int) {
   let o = make()                          // reject: E-OBL-001 — consumed only when the guard runs
   match n {
     0 when consume(move o) => {
@@ -22,7 +22,7 @@ recovers func guardMiss(n: Int) Void {
   }
 }
 
-recovers func guardThenIf(n: Int) Void {
+recovers func guardThenIf(n: Int) {
   let o = make()                          // reject: E-OBL-001 — an inner join must not drop the half
   match n {
     0 when consume(move o) => {
@@ -34,7 +34,7 @@ recovers func guardThenIf(n: Int) Void {
   }
 }
 
-recovers func twoGuards(n: Int) Void {
+recovers func twoGuards(n: Int) {
   let o = make()                          // reject: E-OBL-001 — o is consumed on one path only
   let p = make()                          // reject: E-OBL-001 — p is consumed on one path only
   match n {
@@ -47,7 +47,7 @@ recovers func twoGuards(n: Int) Void {
   }
 }
 
-recovers func replaced(n: Int) Void {
+recovers func replaced(n: Int) {
   let o = make()                          // reject: E-OBL-001 — an irrefutable guard must not clear the earlier half
   match n {
     0 when consume(move o) => {
@@ -59,7 +59,7 @@ recovers func replaced(n: Int) Void {
   }
 }
 
-recovers func oneArm(n: Int) Void {
+recovers func oneArm(n: Int) {
   let o = make()                          // reject: E-OBL-001 — consumed in one arm only
   match n {
     0 => {

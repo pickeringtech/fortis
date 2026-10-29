@@ -2,7 +2,7 @@
 // requires: runtime
 // covers: LANG-05-05
 // Every path of a non-Void function ends in `return` or `fail` (5.5).
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Bad {
   code: "demo.bad"
@@ -34,10 +34,9 @@ recovers func run(n: Int) String {
   return "${v}"
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(sign(-5))
-  caps.console.print(sign(0))
-  caps.console.print(sign(9))
-  caps.console.print(run(11))
+recovers func main(console: Console) {
+  console.print(sign(-5))
+  console.print(sign(0))
+  console.print(sign(9))
+  console.print(run(11))
 }

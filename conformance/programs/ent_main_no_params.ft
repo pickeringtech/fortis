@@ -1,0 +1,11 @@
+// execute: ready
+// requires: runtime
+// covers: LANG-04-06, LANG-11-07
+// A `main` that takes no parameters may still create its capabilities itself: `Host.capabilities()` stays accepted
+// in a `main` that takes no capability parameter (4.6, 11.6; X-345).
+import fortis.host { Host }
+
+func main() Void {
+  let caps = Host.capabilities()
+  caps.console.print("ready")
+}

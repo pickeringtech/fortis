@@ -5,8 +5,8 @@ try func half(n: Int) Int => n
 
 try func both(a: Int, b: Int) List[Int] {
   let mut results: List[Outcome[Int]] = List.default()
-  editable results.push(half(a))
-  editable results.push(half(b))
+  results.push(half(a))
+  results.push(half(b))
   let values = Outcome.collect(move results) or fail
-  return move values
+  return values
 }

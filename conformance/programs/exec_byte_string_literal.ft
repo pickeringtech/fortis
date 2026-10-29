@@ -3,16 +3,15 @@
 // covers: LANG-03-05
 // A byte string literal `b"…"` is a `BytesView` of static ASCII bytes (3.5); an escape stands for one byte
 // (`\n` is 10). The interpreter once could not evaluate the literal at all (D-53).
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let magic = b"FTS1"
-  caps.console.print("${magic.byteCount()} bytes")
-  caps.console.print("${magic.get(0) ?? 0}")
+  console.print("${magic.byteCount()} bytes")
+  console.print("${magic.get(0) ?? 0}")
   let line = b"a\nb"
-  caps.console.print("${line.byteCount()} bytes")
-  caps.console.print("${line.get(1) ?? 0}")
+  console.print("${line.byteCount()} bytes")
+  console.print("${line.get(1) ?? 0}")
   let empty = b""
-  caps.console.print("${empty.byteCount()} bytes")
+  console.print("${empty.byteCount()} bytes")
 }

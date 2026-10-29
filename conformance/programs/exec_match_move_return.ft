@@ -5,16 +5,16 @@
 // 9.8, 7.9: a consuming match that returns destroys the arm's bindings, then the fields matched by `_`, before the
 // enclosing `defer`. A wildcard-only match has no `drop` trace (the class declares no cleanup). Binding every
 // field stays reverse-init order, still before the defer.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
@@ -26,7 +26,7 @@ export class Pair {
 
 func pair(console: Shared[Console]) Pair => Pair(first: Handle.make(1, alias console), second: Handle.make(2, alias console))
 
-func returned(console: Shared[Console]) Void {
+func returned(console: Shared[Console]) {
   defer { console.print("defer") }
   let p = pair(alias console)
   match move p {
@@ -37,7 +37,7 @@ func returned(console: Shared[Console]) Void {
   }
 }
 
-func wildcardOnly(console: Shared[Console]) Void {
+func wildcardOnly(console: Shared[Console]) {
   defer { console.print("defer") }
   let p = pair(alias console)
   match move p {
@@ -48,7 +48,7 @@ func wildcardOnly(console: Shared[Console]) Void {
   }
 }
 
-func bothBound(console: Shared[Console]) Void {
+func bothBound(console: Shared[Console]) {
   defer { console.print("defer") }
   let p = pair(alias console)
   match move p {
@@ -59,7 +59,7 @@ func bothBound(console: Shared[Console]) Void {
   }
 }
 
-func guardReturns(console: Shared[Console]) Void {
+func guardReturns(console: Shared[Console]) {
   defer { console.print("defer") }
   let p = pair(alias console)
   match move p {
@@ -71,16 +71,14 @@ func guardReturns(console: Shared[Console]) Void {
   }
 }
 
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   returned(alias console)
   wildcardOnly(alias console)
   bothBound(alias console)
   guardReturns(alias console)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
 }

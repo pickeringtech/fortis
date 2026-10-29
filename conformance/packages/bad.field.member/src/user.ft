@@ -3,7 +3,7 @@
 // `Counter` is known through `Holder.counter`'s declared type, whether or not this module imports it (D-54.11).
 import bad.field.member.outer { make }
 
-export func main(args: List[String]) Void {
+func main() {
   let h = make()
   let n = h.counter.bogus()              // reject: E-NAM-001 — Counter has no method bogus
 }

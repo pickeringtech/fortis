@@ -1,5 +1,7 @@
-// D-251: both unprefixed variants are accepted (LR 9.7) and run on the interpreter (prints 2|1); the VM and native
-// refuse `Green` ("type `Green` used as a value") and `List.of(Red)` ("type `Red` has no declaration").
+// D-251: on this master both checkers reject the unprefixed `Green`, whose name is also a class's, with E-TYP-040
+// (type Green is used as a value), so the program does not reach the VM; `List.of(Red)` expected as `List[Light]`
+// is accepted and prints 1 on the interpreter, the VM and native (LR 9.7). The backend refusals the record names
+// ("type `Green` used as a value", "type `Red` has no declaration") do not reproduce; its note says so.
 import fortis.host { Host }
 
 enum Light derive Equatable {

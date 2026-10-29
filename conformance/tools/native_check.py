@@ -73,7 +73,7 @@ def main(argv):
     interp = {r["path"]: r for r in json.load(open(os.path.join(ROOT, "conformance", "execution", "results.json"), encoding="utf-8"))["results"]}
     # `--core`: every core-stage whole program (DEL-39), not only the G1 subset
     core = "--core" in argv
-    excluded = {"kit", "package"} if core else g1_subset()
+    excluded = {"kit", "package"} if core else g1_subset("native")
     results = json.load(open(os.path.join(ROOT, "conformance", "results.json"), encoding="utf-8"))["results"]
     accept = sorted({r["path"] for r in results if r["path"].endswith(".ft") and r["verdict"] == "accept" and r.get("status") in ("PASS", "INFO") and "statements" not in (r.get("detail") or "")})
     execs = sorted(interp)

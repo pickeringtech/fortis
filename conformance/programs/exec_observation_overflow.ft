@@ -4,14 +4,13 @@
 // covers: LANG-13-03
 // PROG-NFR-13: the reporter buffers at most 1000 records; the 1000th slot becomes one visible overflow record
 // whose dropped count grows (1200 events: 999 kept, 201 dropped).
-import fortis.host { Host }
+import fortis.host { Console }
 observation Sample {
   value: Int                         required: all
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   for i in 1..1200 {
     record Sample(value: i)
   }
-  caps.console.print("done")
+  console.print("done")
 }

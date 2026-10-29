@@ -6,6 +6,6 @@ contract FastCalculation {
   pure
   noalloc
 }
-FastCalculation func shout(c: Console, msg: StringView) Void {
+FastCalculation func shout(c: Console, msg: StringView) {
   c.print(msg)                             // reject: E-EFF-001 — io under pure
 }

@@ -16,5 +16,5 @@ pure func build(c: Customer) Summary {
   let s = Summary(...copy c)
   let t = Summary(name: "x", age: 3)
   let u = Summary(...copy c, tier: 2)
-  return move u
+  return u
 }

@@ -1,0 +1,20 @@
+// accept
+// This module's own aspect `ignorable` does not change what `note`'s declaration means: `note` is the core
+// `@ignorable` where it is declared, so its result may be dropped here too (5.5, 11.8; D-314).
+import acme.ignorable.core.notes { note }
+
+aspect ignorable() {
+  metadata
+}
+
+@ignorable
+func size(seen: Set[Int]) Int {
+  return seen.count()
+}
+
+func recorded() Int {
+  let mut seen: Set[Int] = Set.default()
+  note(editable seen, 1)
+  note(editable seen, 1)
+  return size(seen)
+}

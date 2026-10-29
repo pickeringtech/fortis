@@ -1,0 +1,7 @@
+// reject: E-EFF-001 (at the marked line)
+// covers: LANG-13-04
+// A log statement has the `io` effect, like `report` (13, 11.1): a `pure` function cannot log.
+pure func double(n: Int) Int {
+  log.info("doubling")                             // reject: E-EFF-001 — io in a pure function
+  return Int.wrappingAdd(n, n)
+}

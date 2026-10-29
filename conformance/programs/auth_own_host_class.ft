@@ -8,6 +8,6 @@ class Host {
 
 pure func count() Int => Host.capabilities()
 
-export func main(args: List[String]) Void {
+func main() {
   let n = count()
 }

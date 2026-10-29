@@ -1,0 +1,60 @@
+// execute: done
+// reports: log:level=info,message=in a lambda,function=lambda@35:11|log:level=info,message=back in main,function=main|log:level=warn,message=nested,function=lambda@39:17|log:level=info,message=outer,function=lambda@38:11|log:level=info,message=dropped,function=cleanup Box|log:level=info,message=after a cleanup,function=main|log:level=info,message=dropped,function=cleanup Box|log:level=info,message=after unwinding,function=main|log:level=info,message=failing,function=lambda@50:15|log:level=info,message=after a failed lambda,function=main|log:level=info,message=in a method,function=total|log:level=info,message=done,function=main|log:level=info,message=dropped,function=cleanup Box
+// requires: runtime
+// covers: LANG-13-04
+// D-323: a log record names the function that wrote it, as the IR names it, on every backend: a lambda is
+// `lambda@LINE:COLUMN` of its `fn`, a nested lambda its own, a cleanup `cleanup Box`. The caller's name comes back
+// when the lambda or the cleanup ends, normally or by a failure: a cleanup that runs while a failure unwinds, and a
+// lambda that fails, leave `main` writing after them.
+import fortis.host { Console }
+
+export error Bad {
+  code: "demo.bad"
+}
+
+class Box derive Default {
+  export n: Int
+  cleanup(editable self) {
+    log.info("dropped")
+  }
+  export func total(self) Int {
+    log.info("in a method")
+    return self.n
+  }
+}
+
+try func risky(n: Int) Int {
+  let b = Box.default()
+  if n < 0 {
+    fail Bad()
+  }
+  return n
+}
+
+recovers func main(console: Console) {
+  let f = fn() Void { log.info("in a lambda") }
+  f()
+  log.info("back in main")
+  let g = fn() Void {
+    let inner = fn() Void { log.warn("nested") }
+    inner()
+    log.info("outer")
+  }
+  g()
+  {
+    let b = Box.default()
+  }
+  log.info("after a cleanup")
+  let v = risky(-1) or recover 0
+  log.info("after unwinding")
+  let h = try fn() Int {
+    log.info("failing")
+    fail Bad()
+  }
+  let w = h() or recover 0
+  log.info("after a failed lambda")
+  let k = Box(n: Int.wrappingAdd(v, w))
+  discard k.total()
+  log.info("done")
+  console.print("done")
+}

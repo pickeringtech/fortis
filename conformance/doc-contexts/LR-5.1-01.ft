@@ -1,4 +1,4 @@
 // context: LR-5.1-01 (Language Reference 5.1, bindings)
-func example() Void {
+func example() {
   // {{example}}
 }

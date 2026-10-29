@@ -1,0 +1,53 @@
+// accept
+// covers: LANG-07-04, LANG-07-05
+// D-303: the unmarked receivers of own_unmarked_loan_receiver_bad.ft, once the read loan's block has ended: a
+// binding holding an exclusive loan and a trivial value each take the exclusive loan `editable r.m(…)` would, and
+// nothing conflicts with it. A `move` capture of a `fn mut` may change, so its receiver is unmarked too. (An exclusive
+// `from` result is accepted the same way, but does not build natively, D-185, so it is checked only by the reject
+// fixture.)
+export class Tally {
+  export order: List[String]
+  export func add(editable self, word: StringView) Void {
+    self.order.push(String.from(word))
+  }
+}
+
+export trivial class Point {
+  export x: Int
+  export func shift(editable self) Void {
+    self.x = Int.saturatingAdd(self.x, 1)
+  }
+}
+
+func loanBinding() Int {
+  let mut t = Tally(order: List.default())
+  {
+    let r = editable t
+    {
+      let seen = alias r.order                       // a read loan through `r`: its block ends it
+    }
+    discard r.order.count()
+    r.add("x")
+    editable r.add("y")
+  }
+  return t.order.count()
+}
+
+func trivialValue() Int {
+  let mut p = Point(x: 0)
+  {
+    let q = alias p
+    discard q.x
+  }
+  p.shift()
+  return p.x
+}
+
+func moveCapture() Int {
+  let t = Tally(order: List.default())
+  let mut fill = fn mut[move t]() Int {
+    t.add("z")
+    return t.order.count()
+  }
+  return fill()
+}

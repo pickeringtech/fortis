@@ -5,14 +5,14 @@
 // it by hand shows what its own `display` appends, also as a field of a derived display and an item of a list. A
 // type without a hand-written `display` keeps the derived form, and a method that is merely named `display` (not
 // Displayable's) is an ordinary method.
-import fortis.host { Host }
+import fortis.host { Console }
 import fortis.text { Builder }
 
 export class Tag implements Displayable {
   export name: String
-  export pure func display(self, into: editable Builder) Void {
-    editable into.append("#")
-    editable into.append(self.name)
+  export pure func display(self, into: editable Builder) {
+    into.append("#")
+    into.append(self.name)
   }
 }
 
@@ -20,10 +20,10 @@ export enum Level implements Displayable {
   High
   Low(depth: Int)
 
-  export pure func display(self, into: editable Builder) Void {
+  export pure func display(self, into: editable Builder) {
     match self {
-      High => editable into.append("<high>")
-      Low(depth: d) => editable into.append("<low ${d}>")
+      High => into.append("<high>")
+      Low(depth: d) => into.append("<low ${d}>")
     }
   }
 }
@@ -39,9 +39,9 @@ export class Plain derive Displayable {
 
 export class Painter {
   export n: Int
-  export func display(editable self, into: editable Builder) Void {
+  export func display(editable self, into: editable Builder) {
     self.n = Int.wrappingAdd(self.n, 1)
-    editable into.append("painted")
+    into.append("painted")
   }
 }
 
@@ -50,23 +50,22 @@ export class Counter {
   export func display(self) Int => self.n
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let t = Tag(name: String.from("ada"))
-  caps.console.print("tag ${t}")
+  console.print("tag ${t}")
   let high = Level.High
-  caps.console.print("level ${high}")
+  console.print("level ${high}")
   let low: Level = Low(depth: 2)
-  caps.console.print("level ${low}")
-  let p = Pair(first: Tag(name: String.from("ada")), level: Level.High)
-  caps.console.print("pair ${p}")
+  console.print("level ${low}")
+  let p = Pair(first: Tag(name: String.from("ada")), level: High)
+  console.print("pair ${p}")
   let tags = List.of(Tag(name: String.from("ada")), Tag(name: String.from("bob")))
-  caps.console.print("list ${tags}")
-  caps.console.print("plain ${Plain(n: 1)}")
+  console.print("list ${tags}")
+  console.print("plain ${Plain(n: 1)}")
   let counter = Counter(n: 4)
-  caps.console.print("counter ${counter.display()}")
+  console.print("counter ${counter.display()}")
   let mut painter = Painter(n: 4)
   let mut b = Builder.create()
-  editable painter.display(editable b)
-  caps.console.print("painter ${painter.n}")
+  painter.display(editable b)
+  console.print("painter ${painter.n}")
 }

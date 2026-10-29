@@ -3,6 +3,6 @@
 // An imported unannotated constant has its initialiser's type (D-54.4), so an Int is not a String.
 import bad.imported.const.vals { limit }
 
-export func main(args: List[String]) Void {
+func main() {
   let s: String = limit                  // reject: E-TYP-040
 }

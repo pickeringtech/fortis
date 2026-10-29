@@ -3,12 +3,12 @@
 // covers: LANG-05-02, LANG-07-07
 // A read-mode `fn` parameter borrows the closure (7.9, D-181). Its captures are destroyed with the
 // caller's block, after the statements that follow the call, not when the call returns.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Res {
   export id: Int
   export console: Shared[Console]
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
@@ -17,16 +17,14 @@ func call(f: fn() Int) Int {
   return f()
 }
 
-func passed(console: Shared[Console]) Void {
+func passed(console: Shared[Console]) {
   let r = Res(id: 1, console: console.retain())
   let f = pure noalloc fn[move r]() Int => r.id
   discard call(f)
   console.print("after")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   passed(console)
   console.print("done")

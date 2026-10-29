@@ -5,32 +5,32 @@
 // 5.7, 7.9: a call result used only as a receiver or a read argument is a temporary. It is destroyed at the
 // end of the full statement, after the call returns, in reverse creation order. A value bound to a name is
 // not one: it lives until its binding's block exits.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  export func ping(self) Void {
+  export func ping(self) {
     self.console.print("ping ${self.id}")
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
 
-func see(h: Handle, console: Shared[Console]) Void {
+func see(h: Handle, console: Shared[Console]) {
   console.print("see ${h.id}")
 }
 
-func both(a: Handle, b: Handle, console: Shared[Console]) Void {
+func both(a: Handle, b: Handle, console: Shared[Console]) {
   console.print("both")
 }
 
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   Handle.make(1, alias console).ping()
   see(Handle.make(2, alias console), console)
   both(Handle.make(3, alias console), Handle.make(4, alias console), console)
@@ -39,9 +39,7 @@ func run(console: Shared[Console]) Void {
   console.print("still")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
 }

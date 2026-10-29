@@ -3,5 +3,5 @@
 export pure noalloc func add(a: Int, b: Int) Int => Int.wrappingAdd(a, b)
 export async try func fetch(id: Int) Int => id
 export pure try func parse(text: StringView) Int => 1
-func nothing() Void {
+func nothing() {
 }

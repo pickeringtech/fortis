@@ -3,7 +3,7 @@
 // requires: runtime
 // covers: LANG-10-03
 // annotate keeps the single obligation and adds a note; Failures.aggregate makes one failure of many (10.6).
-import fortis.host { Host }
+import fortis.host { Console }
 export error Odd {
   code: "demo.odd"
 }
@@ -13,8 +13,7 @@ try func check(n: Int) Int {
   }
   return n
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut failures: List[Failure] = List.default()
   for i in List.of(1, 3) {
     match check(i) {
@@ -22,16 +21,16 @@ export func main(args: List[String]) Void {
         discard v
       }
       failure(f) => {
-        editable failures.push(move f)
+        failures.push(move f)
       }
     }
   }
   let all = Failures.aggregate(move failures)
-  caps.console.print(all.code)
+  console.print(all.code)
   report all
   let one = check(5) catch e {
     report annotate(move e, "loading account")
     recover 0
   }
-  caps.console.print("done")
+  console.print("done")
 }

@@ -1,0 +1,60 @@
+// execute: same same|drop same|inner outer|middle outer|after nested|drop outer|editing edited|after editing|count 1|end|drop listed|drop edited
+// reports: log:level=info,message=drop same,function=cleanup Token|log:level=info,message=drop outer,function=cleanup Token|log:level=info,message=drop listed,function=cleanup Token|log:level=info,message=drop edited,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-338, 7.3, 12.2: a binding written `alias p` or `editable p` holds a loan of `p` and owns nothing: its end runs
+// no cleanup, whether it lends a local of its own block, a local of an enclosing block, another loan, a parameter,
+// or a list of values with cleanups. Each value's cleanup runs once, when its owner ends. The interpreter ran it
+// again for each such binding, and destroyed every element of a lent list.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func sameBlock(console: Shared[Console]) {
+  let own = Token(label: String.from("same"), console: console.retain())
+  let a = alias own
+  console.print("same ${a.label}")
+}
+
+func nested(console: Shared[Console]) {
+  let own = Token(label: String.from("outer"), console: console.retain())
+  {
+    let a = alias own
+    {
+      let b = alias a
+      console.print("inner ${b.label}")
+    }
+    console.print("middle ${a.label}")
+  }
+  console.print("after nested")
+}
+
+func editing(console: Shared[Console], t: editable Token) {
+  let r = editable t
+  console.print("editing ${r.label}")
+}
+
+func wholeList(console: Shared[Console], xs: List[Token]) {
+  let all = alias xs
+  console.print("count ${all.count()}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  sameBlock(console)
+  nested(console)
+  let mut e = Token(label: String.from("edited"), console: console.retain())
+  editing(console, editable e)
+  console.print("after editing")
+  let mut toks: List[Token] = List.default()
+  toks.push(Token(label: String.from("listed"), console: console.retain()))
+  wholeList(console, toks)
+  console.print("end")
+}

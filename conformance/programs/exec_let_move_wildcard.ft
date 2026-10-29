@@ -6,16 +6,16 @@
 // the let, with no `drop` trace, and the binding is destroyed at the end of the block, after loans end. A pattern
 // that binds nothing still consumes the place: every field matched by `_` is destroyed at the let, in declaration
 // order, and the let traces nothing.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
@@ -25,26 +25,24 @@ export class Pair {
   export second: Handle
 }
 
-func bound(console: Shared[Console]) Void {
+func bound(console: Shared[Console]) {
   let p = Pair(first: Handle.make(1, alias console), second: Handle.make(2, alias console))
   let Pair(first: a, second: _) = move p
   console.print("after ${a.id}")
 }
 
-func allWild(console: Shared[Console]) Void {
+func allWild(console: Shared[Console]) {
   let p = Pair(first: Handle.make(1, alias console), second: Handle.make(2, alias console))
   let Pair(first: _, second: _) = move p
   console.print("after")
 }
 
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   bound(alias console)
   allWild(alias console)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
 }

@@ -170,11 +170,11 @@ Variants: `HalfEven`, `HalfAwayFromZero`, `TowardZero`, `AwayFromZero`.
 | `trusted pure func default() List[T]` | an empty list with no allocation until the first push; O(1) |
 | `trusted pure func of(...items: owned T) List[T]` | a list holding the arguments in order; allocates once; O(n) |
 | `trusted pure func count(self) Int` | the number of elements; O(1) |
-| `trusted func push(editable self, item: owned T) Void` | appends item; amortised O(1) (capacity doubles), worst case O(n) for the growth step |
+| `trusted func push(editable self, item: owned T)` | appends item; amortised O(1) (capacity doubles), worst case O(n) for the growth step |
 | `trusted func pop(editable self) T?` | removes and returns the last element, null when empty; O(1) |
 | `trusted pure func get(self, index: Int) (alias T from self)?` | a read loan of the element at index, null outside [0, count); O(1) |
 | `trusted pure try func at(self, index: Int) T` | the element at index; fails `collection.index` outside [0, count); O(1) |
-| `trusted try func set(editable self, index: Int, value: owned T) Void` | replaces the element at index, dropping the old value; fails `collection.index`; O(1) |
+| `trusted try func set(editable self, index: Int, value: owned T)` | replaces the element at index, dropping the old value; fails `collection.index`; O(1) |
 | `pure func isEmpty(self) Bool` | — |
 | `pure func first(self) (alias T from self)?` | — |
 | `pure func reversed(self) List[T] where T implements Copyable` | — |
@@ -183,7 +183,7 @@ Variants: `HalfEven`, `HalfAwayFromZero`, `TowardZero`, `AwayFromZero`.
 | `pure func map[U](self, f: pure fn(T) U) List[U]` | — |
 | `pure func filter(self, keep: pure fn(T) Bool) List[T] where T implements Copyable` | — |
 | `trusted pure func iterate(self) ListCursor[T] from self` | a cursor over read loans of the elements in order; O(1) to create, O(1) per step |
-| `trusted func consumeEach(owned self, visit: fn mut(owned T) Void) Void` | consumes the list (10.7): no early exit, so no element is left unvisited; an empty list makes no calls intrinsic: calls visit once per element in order, transferring each element out; O(n) plus the callback per element |
+| `trusted func consumeEach(owned self, visit: fn mut(owned T) Void)` | consumes the list (10.7): no early exit, so no element is left unvisited; an empty list makes no calls intrinsic: calls visit once per element in order, transferring each element out; O(n) plus the callback per element |
 
 ### `class ListCursor[T] implements Iterator[T]`
 
@@ -206,15 +206,15 @@ Variants: `HalfEven`, `HalfAwayFromZero`, `TowardZero`, `AwayFromZero`.
 |---|---|
 | `trusted pure func filled(value: T) Array[T, N]` | N copies of value; O(N), inline storage |
 | `trusted pure func count(self) Int` | N; O(1) |
-| `trusted func set(editable self, index: Int, value: owned T) Void` | replaces the element at index; O(1) |
+| `trusted func set(editable self, index: Int, value: owned T)` | replaces the element at index; O(1) |
 
 ### `class Map[K, V]`
 
 | Declaration | Contract |
 |---|---|
 | `trusted pure func default() Map[K, V]` | an empty map; O(1) |
-| `trusted pure func get(self, key: K) (alias V from self)?` | a read loan of the value for key, null when absent; expected O(1) under the release's fixed hash function |
-| `trusted func set(editable self, key: owned K, value: owned V) Void` | inserts or replaces the value for key, dropping a replaced value; amortised expected O(1) |
+| `trusted pure func get(self, key: K) (alias V from self)?` | a read loan of the value for key, null when absent (on a Map[String, V] the key is a StringView, which hashes and compares as the String with its text: LR 6.7, X-345); expected O(1) under the release's fixed hash function |
+| `trusted func set(editable self, key: owned K, value: owned V)` | inserts or replaces the value for key, dropping a replaced value; amortised expected O(1) |
 | `trusted pure func count(self) Int` | the number of keys; O(1) |
 
 ### `class OrderedMap[K, V]`
@@ -239,7 +239,7 @@ Variants: `HalfEven`, `HalfAwayFromZero`, `TowardZero`, `AwayFromZero`.
 | Declaration | Contract |
 |---|---|
 | `trusted pure func create() Must` | a zero-sized linear witness; O(1), no allocation |
-| `trusted pure func discharge(m: owned Must) Void` | consumes the witness; O(1) |
+| `trusted pure func discharge(m: owned Must)` | consumes the witness; O(1) |
 
 ### `class Outcome[T]`
 
@@ -265,7 +265,7 @@ Variants: `HalfEven`, `HalfAwayFromZero`, `TowardZero`, `AwayFromZero`.
 
 | Declaration | Contract |
 |---|---|
-| `trusted func abandon(owned self) Void` | cancels the task and waits for it to finish (12.4); its result is consumed by the scope |
+| `trusted func abandon(owned self)` | cancels the task and waits for it to finish (12.4); its result is consumed by the scope |
 
 ### `class Cancellation`
 
@@ -303,7 +303,7 @@ Variants: `Completed(value: T)`, `Cancelled(reason: Cancellation)`, `Defect(info
 | Declaration | Contract |
 |---|---|
 | `trusted pure func get(self) T where T implements Copyable` | a copy of the protected value, read through the exclusive guard (12.7); allocates when the value owns heap storage |
-| `trusted func set(self, value: owned T) Void` | replaces the protected value with value and drops the old one; a write to storage shared between tasks (`mutate`, 11.1) |
+| `trusted func set(self, value: owned T)` | replaces the protected value with value and drops the old one; a write to storage shared between tasks (`mutate`, 11.1) |
 | `trusted func replace(self, value: owned T) T` | replaces the protected value with value and returns the old one, which the caller now owns; a write to storage shared between tasks (`mutate`, 11.1) |
 
 ### `class AtomicInt`
@@ -312,7 +312,7 @@ Variants: `Completed(value: T)`, `Cancelled(reason: Cancellation)`, `Defect(info
 |---|---|
 | `trusted pure func create(value: Int) AtomicInt` | an atomic integer holding value; O(1) |
 | `trusted pure func load(self) Int` | the current value (seqcst); O(1) |
-| `trusted func store(self, value: Int) Void` | replaces the value (seqcst); O(1) |
+| `trusted func store(self, value: Int)` | replaces the value (seqcst); O(1) |
 | `trusted func fetchAdd(self, delta: Int) Int` | adds delta with wrapping and returns the previous value (seqcst); O(1) |
 
 ### `class AtomicBool`
@@ -321,7 +321,7 @@ Variants: `Completed(value: T)`, `Cancelled(reason: Cancellation)`, `Defect(info
 |---|---|
 | `trusted pure func create(value: Bool) AtomicBool` | an atomic boolean holding value; O(1) |
 | `trusted pure func load(self) Bool` | the current value (seqcst); O(1) |
-| `trusted func store(self, value: Bool) Void` | replaces the value (seqcst); O(1) |
+| `trusted func store(self, value: Bool)` | replaces the value (seqcst); O(1) |
 
 ### `class Scope`
 
@@ -330,7 +330,7 @@ Variants: `Completed(value: T)`, `Cancelled(reason: Cancellation)`, `Defect(info
 | `trusted func launch[T](self, work: owned Future[T]) Task[T]` | a task running work on the cooperative executor of this scope (12.5); O(1) |
 | `trusted func launchParallel[T](self, work: owned Future[T]) Task[T]` | a task running work on the parallel pool (12.5); the environment is Shareable; O(1) |
 | `trusted func launchBlocking[T](self, work: owned fn once() T) Task[T]` | a task running work on the bounded blocking pool (12.5); O(1) |
-| `trusted func detach[T](self, task: owned Task[T], supervisor: Supervisor) Void` | removes task from the scope and hands its join obligation to supervisor (12.5); O(1) |
+| `trusted func detach[T](self, task: owned Task[T], supervisor: Supervisor)` | removes task from the scope and hands its join obligation to supervisor (12.5); O(1) |
 
 ### `class ObservationSchema`
 
@@ -354,7 +354,7 @@ Variants: `Less`, `Equal`, `Greater`.
 
 | Declaration | Contract |
 |---|---|
-| `pure func hash(self, into: editable Hasher) Void` | — |
+| `pure func hash(self, into: editable Hasher)` | — |
 
 ### `interface Comparable requires Equatable`
 
@@ -366,7 +366,7 @@ Variants: `Less`, `Equal`, `Greater`.
 
 | Declaration | Contract |
 |---|---|
-| `pure func display(self, into: editable Builder) Void` | — |
+| `pure func display(self, into: editable Builder)` | — |
 
 ### `interface Iterable[T, I] where I implements Iterator[T]`
 
@@ -400,7 +400,7 @@ Variants: `Less`, `Equal`, `Greater`.
 
 | Declaration | Contract |
 |---|---|
-| `func abandon(owned self) Void` | — |
+| `func abandon(owned self)` | — |
 
 ### `interface Default`
 
@@ -412,7 +412,7 @@ Variants: `Less`, `Equal`, `Greater`.
 
 | Declaration | Contract |
 |---|---|
-| `pure func encode(self, into: editable Encoder) Void` | — |
+| `pure func encode(self, into: editable Encoder)` | — |
 
 ### `interface Decodable`
 
@@ -435,9 +435,9 @@ Variants: `Less`, `Equal`, `Greater`.
 | Declaration | Contract |
 |---|---|
 | `trusted pure func create() Builder` | an empty builder; O(1) |
-| `trusted func append(editable self, text: StringView) Void` | appends the view; amortised O(len) |
-| `trusted func appendLine(editable self, text: StringView) Void` | appends the view and a line feed; amortised O(len) |
-| `trusted func appendScalar(editable self, s: Scalar) Void` | appends one scalar; amortised O(1) |
+| `trusted func append(editable self, text: StringView)` | appends the view; amortised O(len) |
+| `trusted func appendLine(editable self, text: StringView)` | appends the view and a line feed; amortised O(len) |
+| `trusted func appendScalar(editable self, s: Scalar)` | appends one scalar; amortised O(1) |
 | `trusted pure func finish(self) String` | the accumulated text as an owned String; O(total length) |
 
 ### Functions and aspects
@@ -446,9 +446,10 @@ Variants: `Less`, `Equal`, `Greater`.
 |---|---|
 | `trusted pure func annotate(f: owned Failure, note: StringView) Failure` | f with note added to its annotation trail; the result carries the single obligation of f; O(1) amortised |
 | `trusted async func join[A, B](a: owned Future[A], b: owned Future[B]) (A, B)` | runs both futures to completion inside the parent and returns both results (12.5) |
-| `trusted func checkpoint() Void` | a cancellation point for parallel and blocking tasks (12.4); no effect in cooperative tasks |
+| `trusted func checkpoint()` | a cancellation point for parallel and blocking tasks (12.4); no effect in cooperative tasks |
 | `trusted func injectDefect(kind: StringView) Never` | the conformance corpus's fault-injection hook (LR 10.8); not part of the language |
 | `aspect observe(schema: ObservationSchema)` | — |
+| `aspect ignorable()` | the core aspect `@ignorable` (5.5, 11.8; X-345): callers may drop the function's non-linear result without `discard` |
 
 ## `fortis.text`
 
@@ -459,9 +460,9 @@ Text building, scalars and graphemes (LR 6.6).
 | Declaration | Contract |
 |---|---|
 | `trusted pure func create() Builder` | an empty builder; O(1) |
-| `trusted func append(editable self, text: StringView) Void` | appends the view; amortised O(len) |
-| `trusted func appendLine(editable self, text: StringView) Void` | appends the view and a line feed; amortised O(len) |
-| `trusted func appendScalar(editable self, s: Scalar) Void` | appends one scalar; amortised O(1) |
+| `trusted func append(editable self, text: StringView)` | appends the view; amortised O(len) |
+| `trusted func appendLine(editable self, text: StringView)` | appends the view and a line feed; amortised O(len) |
+| `trusted func appendScalar(editable self, s: Scalar)` | appends one scalar; amortised O(1) |
 | `trusted pure func finish(self) String` | the accumulated text as an owned String; O(total length) |
 
 ### `class Scalar`
@@ -576,7 +577,7 @@ The capabilities, `Path`, `Secret` and `reveal` (LR 11.6, LR 15).
 | Declaration | Contract |
 |---|---|
 | `trusted try func readText(self, path: Path) String` | the UTF-8 contents of path below this root; fails `fs.outside_root` when the path is absolute or escapes the root, `fs.not_found`, `fs.not_a_file` or `fs.invalid_text`. Development adapter: the root is a fresh empty temporary directory per run, or FORTIS_DEV_ROOT when set; blocks the calling thread (the `block` effect, 11.1) |
-| `trusted try func writeAll(self, path: Path, text: StringView) Void` | replaces the contents of path with text, creating the file; fails `fs.outside_root` or `fs.not_found` (missing parent directory); blocks the calling thread (the `block` effect, 11.1) |
+| `trusted try func writeAll(self, path: Path, text: StringView)` | replaces the contents of path with text, creating the file; fails `fs.outside_root` or `fs.not_found` (missing parent directory); blocks the calling thread (the `block` effect, 11.1) |
 | `trusted try func readAll(self, path: Path) Bytes` | the bytes of path; fails `fs.outside_root`, `fs.not_found` or `fs.not_a_file`; blocks the calling thread (the `block` effect, 11.1) |
 | `trusted try func open(self, path: Path) File` | an open file for reading; fails `fs.outside_root` or `fs.not_found`; blocks the calling thread (the `block` effect, 11.1) |
 | `trusted try func create(self, path: Path) File` | an open file for writing, created or truncated; fails `fs.outside_root` or `fs.not_found`; blocks the calling thread (the `block` effect, 11.1) |
@@ -587,8 +588,8 @@ The capabilities, `Path`, `Secret` and `reveal` (LR 11.6, LR 15).
 | Declaration | Contract |
 |---|---|
 | `trusted try func readAll(editable self) Bytes` | the remaining bytes of a file opened for reading; fails `fs.closed` after close and `fs.wrong_mode` on a file opened for writing; blocks the calling thread (the `block` effect, 11.1) |
-| `trusted try func writeAll(editable self, data: BytesView) Void` | appends data to a file opened for writing; fails `fs.closed` after close and `fs.wrong_mode` on a file opened for reading; blocks the calling thread (the `block` effect, 11.1) |
-| `trusted func close(editable self) Void` | closes the file; closing twice has no effect; dropping an open file closes it |
+| `trusted try func writeAll(editable self, data: BytesView)` | appends data to a file opened for writing; fails `fs.closed` after close and `fs.wrong_mode` on a file opened for reading; blocks the calling thread (the `block` effect, 11.1) |
+| `trusted func close(editable self)` | closes the file; closing twice has no effect; dropping an open file closes it |
 
 ### `class Network implements Authority`
 
@@ -600,7 +601,7 @@ The capabilities, `Path`, `Secret` and `reveal` (LR 11.6, LR 15).
 
 | Declaration | Contract |
 |---|---|
-| `trusted async func sleep(self, duration: Duration) Void` | suspends the task for duration of the clock's time (a cancellation point, 12.4). Development adapter: virtual time on the controlled scheduler |
+| `trusted async func sleep(self, duration: Duration)` | suspends the task for duration of the clock's time (a cancellation point, 12.4). Development adapter: virtual time on the controlled scheduler |
 | `trusted func now(self) Timestamp` | the current instant in UTC (nondet). Development adapter: the system clock; a frozen clock returns its instant |
 | `trusted func frozen(self, instant: Timestamp) Clock` | a clock whose now() is always instant (for tests and replay) |
 | `trusted try func elapsedSince(self, earlier: Timestamp) Duration` | now() minus earlier; fails `clock.future` when earlier is after now() |
@@ -630,7 +631,7 @@ The capabilities, `Path`, `Secret` and `reveal` (LR 11.6, LR 15).
 
 | Declaration | Contract |
 |---|---|
-| `trusted func print(self, text: StringView) Void` | writes text and a line feed to standard output |
+| `trusted func print(self, text: StringView)` | writes text and a line feed to standard output |
 
 ### `class RawSql implements Authority`
 

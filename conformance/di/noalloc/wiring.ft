@@ -1,0 +1,68 @@
+// execute: 23|23|9
+// The wiring a `noalloc` handler uses: a held Shared instance (retained), a held trivial one (copied) and a
+// transient one (built). `handle` is `noalloc async` with owned parameters and suspends once, so the allocator probe
+// counts its construct, pending-poll, complete and drop phases (SP-04-async); `build` constructs a scope of trivial
+// instances inside `noalloc` code, and its scalar parameters let the probe also drop a never-polled future. No
+// provenance.
+import fortis.host { Host, Clock, Capabilities }
+
+export class Rates {
+  percent: Int
+}
+
+export trivial class Bias {
+  amount: Int
+}
+
+export trivial class Step {
+  size: Int = 1
+}
+
+export class Calculator {
+  inject rates: Shared[Rates]
+  inject bias: Bias
+  inject step: Step
+  export noalloc func apply(self, n: Int<0..1000>) Int => Int.wrappingAdd(Int.wrappingMul(n, self.rates.percent), Int.wrappingAdd(self.bias.amount, self.step.size))
+}
+
+export class Adder {
+  inject bias: Bias
+  inject step: Step
+  export noalloc func apply(self, n: Int<0..1000>) Int => Int.wrappingAdd(n, Int.wrappingAdd(self.bias.amount, self.step.size))
+}
+
+context Production(percent: Int) {
+  provide Shared[Rates] using instance Shared.create(Rates(percent: percent))
+  provide Bias using instance Bias(amount: 2)
+  provide Step
+  provide Calculator
+}
+
+context Light(amount: Int) {
+  provide Bias using instance Bias(amount: amount)
+  provide Step
+  provide Adder
+}
+
+noalloc async func handle(app: owned ProductionApplication, clock: owned Shared[Clock], n: Int<0..1000>) Int {
+  let c = app.calculator()
+  await clock.sleep(1ms)
+  return c.apply(n)
+}
+
+noalloc async func build(amount: Int, n: Int<0..1000>) Int {
+  let light = Light.application(amount)
+  return light.adder().apply(n)
+}
+
+export async func main(args: List[String]) {
+  let caps = Host.capabilities()
+  let Capabilities(console: console, fileSystem: fs, network: net, clock: clk, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let clock = Shared.create(move clk)
+  let first = await handle(Production.application(4), clock.retain(), 5)
+  let second = await handle(Production.application(4), clock.retain(), 5)
+  let third = await build(3, 5)
+  console.print("${first}")
+  console.print("${second}")
+  console.print("${third}")
+}

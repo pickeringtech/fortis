@@ -34,8 +34,8 @@ pub enum Value {
     Array(Shared<Vec<Value>>),
     Map(Shared<OrderedMap>),
     Set(Shared<OrderedMap>),
-    Tuple(Rc<Vec<Value>>),
-    Record(Shared<Vec<(Rc<str>, Value)>>),
+    Tuple(Rc<TupleVal>),
+    Record(Shared<RecordVal>),
     Obj(Shared<Obj>),
     Enum(Rc<EnumVal>),
     Failure(Shared<FailureVal>),
@@ -70,6 +70,83 @@ pub enum Value {
     Ready(Rc<Value>),
 }
 
+/// Which parts of an aggregate are loans: one flag per element or field, recorded by the tuple or record literal
+/// that built it from what each part's expression gave as the program ran. A part whose type is a loan can hold a
+/// value of its own (a `??` whose fallback is owned, an `if` that moved a value in, a binding that owns one), and
+/// the aggregate owns and destroys that value; a loan in it is its owner's (7.9; D-349, D-366). An aggregate made
+/// elsewhere (a library result, a decoded value) records none, and its owner decides by the declared type.
+pub type LentParts = Option<Rc<[bool]>>;
+
+/// A tuple's elements and which of them it borrows.
+#[derive(Clone, Debug, Default)]
+pub struct TupleVal {
+    pub items: Vec<Value>,
+    pub lent: LentParts,
+}
+
+impl TupleVal {
+    pub fn new(items: Vec<Value>, lent: LentParts) -> TupleVal {
+        TupleVal { items, lent }
+    }
+}
+
+impl From<Vec<Value>> for TupleVal {
+    fn from(items: Vec<Value>) -> TupleVal {
+        TupleVal { items, lent: None }
+    }
+}
+
+impl std::ops::Deref for TupleVal {
+    type Target = Vec<Value>;
+    fn deref(&self) -> &Vec<Value> {
+        &self.items
+    }
+}
+
+impl std::ops::DerefMut for TupleVal {
+    fn deref_mut(&mut self) -> &mut Vec<Value> {
+        &mut self.items
+    }
+}
+
+/// A record literal's fields, in written order, and which of them it borrows. An assignment to a field records
+/// what the new value is, a loan or a value of its own.
+#[derive(Clone, Debug, Default)]
+pub struct RecordVal {
+    pub fields: Vec<(Rc<str>, Value)>,
+    pub lent: LentParts,
+}
+
+impl RecordVal {
+    pub fn new(fields: Vec<(Rc<str>, Value)>, lent: LentParts) -> RecordVal {
+        RecordVal { fields, lent }
+    }
+}
+
+impl From<Vec<(Rc<str>, Value)>> for RecordVal {
+    fn from(fields: Vec<(Rc<str>, Value)>) -> RecordVal {
+        RecordVal { fields, lent: None }
+    }
+}
+
+impl std::ops::Deref for RecordVal {
+    type Target = Vec<(Rc<str>, Value)>;
+    fn deref(&self) -> &Vec<(Rc<str>, Value)> {
+        &self.fields
+    }
+}
+
+impl std::ops::DerefMut for RecordVal {
+    fn deref_mut(&mut self) -> &mut Vec<(Rc<str>, Value)> {
+        &mut self.fields
+    }
+}
+
+/// Whether part `i` of an aggregate is a loan, as recorded when it was built; `None` when nothing was recorded.
+pub fn lent_part(lent: &LentParts, i: usize) -> Option<bool> {
+    lent.as_ref().and_then(|m| m.get(i).copied())
+}
+
 #[derive(Debug)]
 pub struct FutureVal {
     pub fname: String,
@@ -101,9 +178,16 @@ pub struct ScopeVal {
 pub struct Obj {
     pub ty: Rc<str>,
     pub fields: Vec<(Rc<str>, Value)>,
+    /// its owner has destroyed it: its `cleanup` ran and its fields went. A second destruction, which only a
+    /// program the checker should have refused can reach (two owners of one value, D-352), does nothing, so
+    /// `cleanup` runs exactly once (7.9, 12.2; D-348)
+    pub destroyed: bool,
 }
 
 impl Obj {
+    pub fn new(ty: Rc<str>, fields: Vec<(Rc<str>, Value)>) -> Obj {
+        Obj { ty, fields, destroyed: false }
+    }
     pub fn get(&self, f: &str) -> Option<&Value> {
         self.fields.iter().find(|(n, _)| &**n == f).map(|(_, v)| v)
     }
@@ -390,11 +474,20 @@ pub fn deep_copy(v: &Value) -> Value {
             let m = m.borrow();
             Value::Set(shared(OrderedMap { index: m.index.clone(), entries: m.entries.iter().map(|(k, v)| (deep_copy(k), deep_copy(v))).collect() }))
         }
-        Value::Tuple(items) => Value::Tuple(Rc::new(items.iter().map(deep_copy).collect())),
-        Value::Record(fs) => Value::Record(shared(fs.borrow().iter().map(|(k, v)| (k.clone(), deep_copy(v))).collect())),
+        // a copy of an aggregate copies the parts it owns and holds the same loans, as a copy of a loan is that loan
+        // (7.9; D-349, D-366)
+        Value::Tuple(t) => {
+            let items = t.items.iter().enumerate().map(|(i, x)| if lent_part(&t.lent, i) == Some(true) { x.clone() } else { deep_copy(x) }).collect();
+            Value::Tuple(Rc::new(TupleVal::new(items, t.lent.clone())))
+        }
+        Value::Record(fs) => {
+            let r = fs.borrow();
+            let fields = r.fields.iter().enumerate().map(|(i, (k, v))| (k.clone(), if lent_part(&r.lent, i) == Some(true) { v.clone() } else { deep_copy(v) })).collect();
+            Value::Record(shared(RecordVal::new(fields, r.lent.clone())))
+        }
         Value::Obj(o) => {
             let o = o.borrow();
-            Value::Obj(shared(Obj { ty: o.ty.clone(), fields: o.fields.iter().map(|(k, v)| (k.clone(), deep_copy(v))).collect() }))
+            Value::Obj(shared(Obj::new(o.ty.clone(), o.fields.iter().map(|(k, v)| (k.clone(), deep_copy(v))).collect())))
         }
         Value::Enum(e) => Value::Enum(Rc::new(EnumVal { ty: e.ty.clone(), variant: e.variant.clone(), fields: e.fields.iter().map(|(k, v)| (k.clone(), deep_copy(v))).collect() })),
         Value::Failure(f) => {

@@ -1,0 +1,21 @@
+// D-399: `let arr: Array[Int, 3] = Array.filled(7)` passes both checkers (6.10: a type argument is fixed by the
+// call's expected type), and every backend then refuses it loudly: the interpreter stops with a dynamic failure
+// (`Array.filled needs the size N from the type (Array[T, N])`, exit 2; after a qualified `Array[Int, 3].filled`
+// has run in the same process it remembers that size instead), the VM refuses the program at build
+// (`unbuilt:line 11: Array.filled without a size in its type`, exit 1) and native code the same, for a binding's
+// annotation, a return type and a parameter alike. The qualified form `Array[Int, 3].filled(7)` runs on all
+// three. v0.0.1 behaved the same. Found by the v0.0.2-rc.9 wide review (Qwen 3.8).
+import fortis.host { Console }
+
+func viaReturn() Array[Int, 2] {
+  return Array.filled(9)
+}
+
+func main(console: Console) {
+  let arr: Array[Int, 3] = Array.filled(7)
+  console.print("arr ${arr.count()}")
+  let r = viaReturn()
+  console.print("r ${r.count()}")
+  let q = Array[Int, 3].filled(7)
+  console.print("q ${q.count()}")
+}

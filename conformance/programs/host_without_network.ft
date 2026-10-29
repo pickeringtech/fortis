@@ -5,5 +5,5 @@ import fortis.host { Host, Capabilities, Path }
 try func lookup(caps: Capabilities) String {
   return caps.network.resolve("localhost") or fail   // reject: E-EFF-010
 }
-export func main(args: List[String]) Void {
+func main() {
 }

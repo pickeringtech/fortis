@@ -1,0 +1,7 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-08-01, LANG-08-04
+// X-345 (R6): only a function or method head may leave out `Void`. A function type is a type and is written whole,
+// so `fn(Int) Void` keeps its result (8.4).
+func apply(f: fn(Int)) {                             // reject: E-SYN-000: a function type names its result
+  f(1)
+}

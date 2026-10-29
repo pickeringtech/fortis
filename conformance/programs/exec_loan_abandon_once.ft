@@ -1,0 +1,66 @@
+// execute: begin|lent|step|abandon tx|7|begin|lent|step|abandon tx|7
+// requires: runtime
+// covers: LANG-06-09, LANG-07-07
+// D-338, 12.4: a failure unwinds through a binding that holds a loan of an `Abandonable` value (`let r = alias tx`)
+// without abandoning it: the loan ends, and `tx`, its owner, is abandoned once. The loan is in a block of its own
+// and in the owner's block. The VM abandoned the loan and then the owner, the interpreter abandoned the loan and
+// then stopped with a dynamic error, and native code did not build (it passed the loan to `abandon(owned self)`).
+import fortis.host { Console }
+
+export error Odd {
+  code: "demo.odd"
+}
+
+export class Tx implements Abandonable {
+  witness: Must
+  export console: Shared[Console]
+  export func begin(console: Shared[Console]) Tx {
+    console.print("begin")
+    return Tx(witness: Must.create(), console: console.retain())
+  }
+  export func commit(owned self) {
+    self.console.print("commit")
+    let Tx(witness: w, console: c) = move self
+    Must.discharge(move w)
+  }
+  func abandon(owned self) {
+    self.console.print("abandon tx")
+    let Tx(witness: w, console: c) = move self
+    Must.discharge(move w)
+  }
+}
+
+try func step(console: Shared[Console], n: Int) Int {
+  console.print("step")
+  if n > 0 {
+    fail Odd()
+  }
+  return n
+}
+
+try func inner(console: Shared[Console]) Int {
+  let tx = Tx.begin(alias console)
+  {
+    let r = alias tx
+    console.print("lent")
+    let v = step(console, 1) or fail
+  }
+  move tx.commit()
+  return 0
+}
+
+try func same(console: Shared[Console]) Int {
+  let tx = Tx.begin(alias console)
+  let r = alias tx
+  console.print("lent")
+  let v = step(console, 1) or fail
+  fail Odd()
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let a = inner(console) or recover 7
+  console.print("${a}")
+  let b = same(console) or recover 7
+  console.print("${b}")
+}

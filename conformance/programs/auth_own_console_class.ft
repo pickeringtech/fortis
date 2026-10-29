@@ -30,7 +30,7 @@ func stamp2(f: Fake, caps: Capabilities) Timestamp => caps.clock.now()       // 
 
 func stamp(c: Console, caps: Capabilities) Timestamp => caps.clock.now()       // reject: E-EFF-010 — no authority
 
-export func main(args: List[String]) Void {
+func main() {
   let caps = Host.capabilities()
   let n = lines(Console(lines: 1))
 }

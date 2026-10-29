@@ -3,7 +3,7 @@
 // covers: LANG-09-01, LANG-09-03
 // Behaviour is shared through interfaces and composition, never inheritance; each implementation keeps the
 // interface's contract (9.1, 9.3).
-import fortis.host { Host }
+import fortis.host { Console }
 
 export interface Shape {
   pure func name(self) String
@@ -24,11 +24,10 @@ export class Square implements Shape {
 
 pure func total(a: Circle, b: Square) Int => Int.wrappingAdd(a.area(), b.area())
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let c = Circle(r: 3)
   let s = Square(side: 4)
-  caps.console.print(c.name())
-  caps.console.print(s.name())
-  caps.console.print("area ${Int.wrappingSub(total(c, s), 15)}")
+  console.print(c.name())
+  console.print(s.name())
+  console.print("area ${Int.wrappingSub(total(c, s), 15)}")
 }

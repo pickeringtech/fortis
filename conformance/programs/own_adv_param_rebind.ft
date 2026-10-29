@@ -3,7 +3,7 @@
 export class Box {
   export label: String
 }
-func run(b: Box, e: editable Box, o: owned Box) Void {
+func run(b: Box, e: editable Box, o: owned Box) {
   b = Box(label: "x")                      // reject: E-NAM-002
   e = Box(label: "y")                      // reject: E-NAM-002
   o = Box(label: "z")                      // reject: E-NAM-002

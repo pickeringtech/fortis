@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SP-07's apparatus check (spikes/SP-07/design.md 13): run the harness against each injected fault.
+"""SP-07's apparatus check (SP-07's design, section 13): run the harness against each injected fault.
 
     python3 conformance/tools/reload_mutations.py --json OUT --fault-fortisc PATH [harness options]
 

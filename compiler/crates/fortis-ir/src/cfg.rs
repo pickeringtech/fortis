@@ -210,9 +210,10 @@ impl Builder {
                 let join = self.new_block();
                 let mut any_open = false;
                 for arm in m.child_nodes("matchArm") {
-                    let pat = arm.find("pattern").unwrap();
+                    // the alternatives of an or-pattern `A | B` (9.8)
+                    let label = arm.child_nodes("pattern").into_iter().map(|p| canon(C::N(p))).collect::<Vec<_>>().join(" | ");
                     let ab = self.new_block();
-                    self.edge(cur, &canon(C::N(pat)), ab);
+                    self.edge(cur, &label, ab);
                     let body = arm.kids().into_iter().filter_map(|c| c.node()).filter(|c| c.name() == "expr" || c.name() == "block").last().unwrap();
                     let end = if body.name() == "block" {
                         self.block(body, Some(ab), exit)

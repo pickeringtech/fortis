@@ -1,16 +1,17 @@
-// Inferred lambda facts (LR 8.2): `pure` and `noalloc` are printed back when the summary has them.
+// Inferred lambda facts (LR 8.2, X-345): a lambda's inferred `pure` and `noalloc` are not printed back; the function
+// type it is passed to states what it must be. Written claims stay as written.
 import fortis.host { Console }
 
 func shapes(xs: List[Int], factor: Int, console: Console) Int {
-  // pure and non-allocating: both are printed
+  // pure and non-allocating: nothing is printed
   let scaled = xs.map(fn[factor](x: Int) Int => Int.wrappingMul(x, factor))
-  // pure but allocating (interpolation builds a String): only `pure`
-  let labels = xs.map(fn(x: Int) String => "item ${x}")
-  // writes to the console: not pure, and `noalloc` only if it does not allocate
+  // an expression body without its return type: the result type is inferred
+  let labels = xs.map(fn(x: Int) => "item ${x}")
+  // writes to the console: nothing is printed
   let shout = fn[alias console](x: Int) Void {
     console.print("seen")
   }
-  // `pure` already written: `noalloc` joins it in canonical order
+  // `pure` already written: it stays, and `noalloc` is not added
   let neg = pure fn(x: Int) Int => Int.wrappingSub(0, x)
   shout(1)
   return Int.wrappingAdd(Int.wrappingAdd(scaled.count(), labels.count()), neg(1))

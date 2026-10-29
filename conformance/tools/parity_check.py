@@ -2,7 +2,8 @@
 
 The three implementations are the definitional interpreter (with the reference checker in front of it), the
 development VM and the native lowering (both behind the production frontend). For every fixture of the G1
-subset (docs/delivery/subsets.json) that is a whole program over the core library:
+subset (the delivery plan's subsets table, or its public copy, conformance/subsets.json) that is a whole
+program over the core library:
 
 - **accept**: the reference checker accepts it; the VM builds and validates its IR; native lowers it to a
   `#![forbid(unsafe_code)]` crate that rustc builds.
@@ -23,7 +24,11 @@ trace on all three as well (the interpreter's, the VM's and native code's execut
 case of application A to agree. A native defect aborts the process (10.8): its output and trace stop at the defect,
 which is the permitted consequence when the lines before it are the interpreter's.
 
-  python3 -I conformance/tools/parity_check.py [--core] [--json] [-v]"""
+`--shard J/K` (the gate's CI shards) takes the J-th of K parts: every K-th fixture, from the J-th, and its share of
+the ownership corpus; part 1 also runs application A and the corpus's fragments. Its report is
+build/parity/report[-core]-JofK.json, and the K parts together check what one run checks.
+
+  python3 -I conformance/tools/parity_check.py [--core] [--json] [--shard J/K] [-v]"""
 from __future__ import annotations
 
 import hashlib
@@ -45,7 +50,7 @@ from vm_check import features, g1_subset, run_split  # noqa: E402
 from native_check import parse as parse_native, native_defect_consequence  # noqa: E402
 
 FAILED_BUILD = ("unlowered", "build-error", "unbuilt", "refused", "missing", "run-error")
-KINDS = ("runtime-failure", "defect", "observation-frame", "observation-event", "test-result")
+KINDS = ("runtime-failure", "defect", "observation-frame", "observation-event", "test-result", "log")
 
 
 def sha(path):
@@ -73,7 +78,11 @@ def parse_vm(out):
 
 
 def ownership_corpus():
-    text = open(os.path.join(ROOT, "spikes", "SP-01", "README.md"), encoding="utf-8").read()
+    """SP-01's ownership corpus: the programs its preregistration lists (a maintainers' spike record; without it,
+    only the Language Reference's LR 7.3-7.6 examples) and those examples."""
+    import planning
+    readme = planning.optional(planning.SPIKES + "/SP-01/README.md", "parity", "the programs of SP-01's preregistered ownership corpus")
+    text = open(readme, encoding="utf-8").read() if readme else ""
     progs = re.findall(r"^\| (conformance/programs/[\w]+\.ft) \|", text, re.M)
     lr = sorted(os.path.join("conformance", "corpus", f) for f in os.listdir(os.path.join(ROOT, "conformance", "corpus"))
                 if re.match(r"LR-7\.[3-6]-\d+\.ft$", f))
@@ -82,7 +91,7 @@ def ownership_corpus():
 
 def main(argv):
     core = "--core" in argv
-    excluded = {"kit", "package"} if core else g1_subset()
+    excluded = {"kit", "package"} if core else g1_subset("parity")
     checker = {r["path"]: r for r in json.load(open(os.path.join(ROOT, "conformance", "checker", "results.json"), encoding="utf-8"))["results"]}
     interp = {r["path"]: r for r in json.load(open(os.path.join(ROOT, "conformance", "execution", "results.json"), encoding="utf-8"))["results"]}
     fixtures = []
@@ -93,6 +102,9 @@ def main(argv):
         if set(features(src)) & excluded or not standalone(src):
             continue
         fixtures.append(p)
+    every = list(fixtures)
+    part, parts = (int(x) for x in argv[argv.index("--shard") + 1].split("/")) if "--shard" in argv else (1, 1)
+    fixtures = every[part - 1::parts]
     vm = parse_vm(run_split("vm", fixtures, timeout=7200))
     native = parse_native(run_split("native", fixtures, timeout=14400))
     rows = []
@@ -146,7 +158,11 @@ def main(argv):
                         problems.append(f"vm trace {v.get('trace', '')[:200]!r}, interpreter {it[:200]!r}")
                     if nt != it and not (aborted and it.startswith(nt)):
                         problems.append(f"native trace {nt[:200]!r}, interpreter {it[:200]!r}")
-                key = lambda x: (x.get("kind"), str(x.get("code", x.get("class", x.get("status", "")))))
+                # a log record (13, X-345) is compared by its level, message and writing function as well, and a
+                # reported failure by its rendered message (10.3; D-340)
+                key = lambda x: (x.get("kind"), str(x.get("code", x.get("class", x.get("status", x.get("level", ""))))),
+                                 (str(x.get("message", "")), str(x.get("function", ""))) if x.get("kind") == "log"
+                                 else (str(x.get("message", "")),) if x.get("kind") == "runtime-failure" else ())
                 ik = [key(x) for x in i.get("reports", []) if x.get("kind") in KINDS]
                 vk = [key(x) for x in v["records"] if x.get("kind") in KINDS]
                 nk = [key(x) for x in n["records"] if x.get("kind") in KINDS]
@@ -165,9 +181,11 @@ def main(argv):
         rows.append({"path": p, "sha256": sha(p), "verdict": r["verdict"], "reference": ref, "vm": vo, "native": no,
                      "agree": not problems, "problems": problems})
     # application A's G1 part
-    app = application_a(excluded, core)
+    app = application_a(excluded, core) if part == 1 else {"cases": [], "g1_cases": 0, "agree": 0, "unbuilt": [], "unbuilt_vm": [], "unbuilt_native": [],
+                                                           "outside_g1": [], "outside_cases": [], "ok": True, "in_part": 1}
     # SP-01's ownership corpus
-    own = ownership_corpus()
+    # this part's share: its own fixtures, and in part 1 the fragments, which are in no part
+    own = [p for p in ownership_corpus() if p in fixtures or (part == 1 and p not in every)]
     by = {x["path"]: x for x in rows}
     own_rows = []
     for p in own:
@@ -183,11 +201,13 @@ def main(argv):
         if not c["agree"]:
             print(f"DISAGREE application A {c['test']} {c['case']}: {c}")
     counts = {k: [sum(1 for x in rows if x["verdict"] == k), sum(1 for x in rows if x["verdict"] == k and x["agree"])] for k in ("accept", "reject", "execute")}
-    label = "core-stage" if core else "G1"
+    label = ("core-stage" if core else "G1") + (f" (part {part} of {parts})" if parts > 1 else "")
     print(f"{label} fixtures on all three: {len(rows)}, {sum(x['agree'] for x in rows)} agree, {sum(not x['agree'] for x in rows)} disagree")
     for k, (n, a) in counts.items():
         print(f"  {k}: {n}, {a} agree")
-    if core:
+    if part != 1:
+        print(f"application A: run by part 1 of {parts}")
+    elif core:
         print(f"application A: {app['g1_cases']} test cases, {app['agree']} agree on the interpreter, the VM and native; unbuilt: {app['unbuilt'] or 'none'}")
     else:
         print(f"application A: {app['g1_cases']} G1 test cases, {app['agree']} agree on the interpreter, the VM and native; outside G1 ({', '.join(app['outside_g1'])}): VM unbuilt {app['unbuilt_vm'] or 'none'}, native unbuilt {app['unbuilt_native'] or 'none'}, every built one agrees: {all(b['ok'] for b in app['outside_cases'])}")
@@ -196,7 +216,7 @@ def main(argv):
     ok = all(x["agree"] for x in rows) and app["ok"] and all(x["agree"] for x in oi)
     os.makedirs(OUT, exist_ok=True)
     if "--json" in argv:
-        json.dump({"rows": rows, "application_a": app, "ownership_corpus": own_rows, "counts": counts}, open(os.path.join(OUT, "report-core.json" if core else "report.json"), "w", encoding="utf-8"), indent=1)
+        json.dump({"rows": rows, "application_a": app, "ownership_corpus": own_rows, "counts": counts}, open(os.path.join(OUT, ("report-core" if core else "report") + (f"-{part}of{parts}" if parts > 1 else "") + ".json"), "w", encoding="utf-8"), indent=1)
     print("parity check: " + ("OK" if ok else "FAILED"))
     return 0 if ok else 1
 

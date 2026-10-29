@@ -6,5 +6,5 @@ func home(caps: Capabilities) Bool {
   let v = caps.environment.get("PATH")            // reject: E-EFF-010
   return true
 }
-export func main(args: List[String]) Void {
+func main() {
 }

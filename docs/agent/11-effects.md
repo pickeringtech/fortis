@@ -3,7 +3,7 @@
 <!-- covers: LR 11 -->
 *Agent mode. Human mode: [Effects and contracts](../guide/11-effects.md). Source of truth: LR 11.*
 
-> Preview: contracts (LR 11.5) arrive in v0.1. Effects, claims, noalloc and capabilities (LR 11.1, 11.2, 11.3, 11.4 and 11.6) arrive in v0.2. The observation plane and aspects (LR 11.7, 11.8) arrive in v0.5.
+> Preview: contracts (LR 11.5) arrive in v0.1. Effects, claims, noalloc and capabilities (LR 11.1, 11.2, 11.3, 11.4 and 11.6) arrive in v0.2. The observation plane and aspects (LR 11.7, 11.8) arrive in v0.5, except the diagnostic plane that `report` and the `log` statements write to (LR 11.7, LR 13), which is in v0.0.2. `main`'s capability parameters (LR 4.6, 11.6) and the core aspect `@ignorable` (LR 5.5, 11.8) are in v0.0.2.
 
 ## Rules
 
@@ -15,7 +15,7 @@
 | LANG-11-04 | A trusted summary is labelled `trusted`, never `proved`; `trusted` is rejected outside the `fortis` package. | LR 11.3 |
 | LANG-11-05 | `async`, `try` and `recovers` are written wherever the summary has the effect; across a module boundary only written `pure`/`noalloc` count; weakening an exported function's written modifiers is a reported API change. | LR 11.2, 11.3 |
 | LANG-11-06 | A contract contains only modifiers, `forbids <effect>`, `requires capability A` and `excludes capability A`; configuration never adds predicates. | LR 11.5 |
-| LANG-11-07 | `io` other than `report` requires an `Authority` parameter, except in `main` (which calls `Host.capabilities()`) and in an adapter's minting function, which itself requires the capability it derives the authority from, so every authority traces back to `main`; `Host.capabilities()` anywhere else, or twice, is rejected. | LR 11.6 |
+| LANG-11-07 | `io` other than `report` and the `log` statements requires an `Authority` parameter, except in the entry `main`, which receives the capabilities as parameters (or, declaring none, creates them with one direct `Host.capabilities()`), and in an adapter's minting function, which itself requires the capability it derives the authority from, so every authority traces back to `main`; `Host.capabilities()` anywhere else, twice, or in a `main` that takes a capability parameter, is rejected. | LR 11.6 |
 | LANG-11-08 | Contracts are applied in the modifier position, before single-word modifiers, without arguments; `@` applies aspects only. | LR 11.5 |
 | LANG-11-09 | Aspects have only the parts `needs`, `before`, `after`, `on failure`, `metadata`; they elaborate before checking (`before` in application order, `after` reversed, `on failure` innermost first) and the elaborated function passes every ordinary check. | LR 11.8 |
 
@@ -47,7 +47,8 @@ Source: LR 11.2. Order in a head: `[export] [Contract …] [pure] [noalloc] [asy
 - Callback parameter: contributes what its function type permits. A lambda literal with no `pure`-excluded effect
   has a `pure` type.
 - `cleanup` effects join every function that may drop the type.
-- `report` is `io` but needs no capability (LR 10.6); a `pure` function cannot report.
+- `report` and `log.info`/`log.warn`/`log.error` are `io` but need no capability (LR 11.6, LR 13); a `pure`
+  function cannot report or log.
 - Instrumentation (`capture`, `record`, completion records) does not change a summary (LR 11.7).
 
 ## Contract elements (LR 11.5)
@@ -65,8 +66,11 @@ and prints the expansion after it: `export FastCalculation pure noalloc func squ
 
 ## Authorities (LR 11.6)
 
-- Capabilities (process-wide, created only by `Host.capabilities()` in `main`, once): `FileSystem`, `Network`,
-  `Clock`, `Random`, `Environment`, `Process`, `Supervisor`, `Console`, `SecretAccess`, `RawSql`.
+- Capabilities (process-wide; created once, only for the entry `main`, which declares the ones it needs as
+  parameters, `func main(console: Console, files: FileSystem)`, LR 4.6): `FileSystem`, `Network`, `Clock`,
+  `Random`, `Environment`, `Process`, `Supervisor`, `Console`, `SecretAccess`, `RawSql`. Other functions take them
+  as ordinary parameters. Older code calls `Host.capabilities()` once in a `main` with no capability parameter;
+  that stays accepted, and `fortis fmt` rewrites it.
 - Per-activation authorities (`RequestContext`, `Identity`, `Db`, `Tx`, `TaskContext`, `Mail`): minted by a
   kit's adapter from a capability, passed as a parameter.
 - `Shared[A]` of an authority `A` satisfies the rule like `A`; share one capability as
@@ -87,15 +91,16 @@ and prints the expansion after it: `export FastCalculation pure noalloc func squ
 
 Arguments are compile-time constants: literals, record and variant-map literals, enum values, capture-free `fn`
 literals, declaration names. First parameter may be positional, the rest named. Specialisation:
-`aspect a(params, ...rest) = b(fixed: v, ...rest)`. No `around`, no body access. Core aspect: `observe(schema)`
-(LR 11.8, LR 13).
+`aspect a(params, ...rest) = b(fixed: v, ...rest)`. No `around`, no body access. Core aspects (LR 11.8):
+`observe(schema)` (LR 13), and `ignorable()`, applied as `@ignorable`, which lets a call statement drop the
+function's non-linear result without `discard` (LR 5.5).
 
 ## Diagnostics
 
 | Code | Trigger | Correction | LR |
 |---|---|---|---|
 | E-EFF-001 | summary exceeds the modifiers or contract: an effect `pure` excludes, `alloc` under `noalloc`, `suspend` without `async`, `fail` without `try`, `recovers` without `recovers`, a forbidden effect, a missing required or a present excluded authority | remove the effect; or, when the effect is intended, write the modifier its type needs (`async`, `try`, `recovers`). Dropping a written `pure`, `noalloc` or contract is an API change for whoever owns the claim, never a correction (LR 11.3) | LR 11.1, 11.3, 11.5 |
-| E-EFF-010 | `io` reached through a capability without an `Authority` parameter (`report` needs none); `Host.capabilities()` outside `main` or called twice | take the authority (`console: Console`) as a parameter; call `Host.capabilities()` once in `main` and pass values down | LR 11.6 |
+| E-EFF-010 | `io` reached through a capability without an `Authority` parameter (`report` and `log` need none); `Host.capabilities()` outside `main`, called twice, or in a `main` that takes a capability parameter | take the authority (`console: Console`) as a parameter; declare the capabilities `main` needs as its parameters and pass them down | LR 11.6 |
 | E-EFF-020 | `block` inside an `async` function (or anything it calls), such as `lockBlocking` | `await m.lock()`, or move the blocking work into `launchBlocking` | LR 11.1 |
 | E-EFF-030 | the application's telemetry policy attaches an allocating record to a `noalloc` function | change the policy at the reported site | LR 11.4 |
 | E-EFF-040 (warning) | `--api-baseline OLD`: an exported function lost a written `pure`/`noalloc` or gained `async`/`try`/`recovers` | intended: bump the API; otherwise restore the modifier | LR 11.3 |
@@ -109,29 +114,27 @@ literals, declaration names. First parameter may be positional, the rest named. 
 
 ```fortis
 // reject: E-EFF-001
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
-pure func greet(console: Console) Void {      // reject: E-EFF-001 (a pure function takes no capability)
+pure func greet(console: Console) {      // reject: E-EFF-001 (a pure function takes no capability)
   console.print("hello")              // reject: E-EFF-001
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  greet(caps.console)
+func main(console: Console) {
+  greet(console)
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
-func greet(console: Console) Void {
+func greet(console: Console) {
   console.print("hello")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  greet(caps.console)
+func main(console: Console) {
+  greet(console)
 }
 ```
 
@@ -190,7 +193,7 @@ test "half" {
 // reject: E-EFF-001
 class Cell {
   export value: Int
-  pure func set(editable self, value: Int) Void {
+  pure func set(editable self, value: Int) {
     self.value = value
   }
 }
@@ -198,9 +201,9 @@ class Cell {
 pure func viaClosure() Int {
   let mut cell = Cell(value: 0)
   let mut poke = fn mut[editable cell]() Void {
-    editable cell.set(2)
+    cell.set(2)
   }
-  editable poke()                     // reject: E-EFF-001
+  poke()                              // reject: E-EFF-001
   return 0
 }
 
@@ -213,14 +216,14 @@ test "closure" {
 // accept
 class Cell {
   export value: Int
-  pure func set(editable self, value: Int) Void {
+  pure func set(editable self, value: Int) {
     self.value = value
   }
 }
 
 pure func direct() Int {
   let mut cell = Cell(value: 0)
-  editable cell.set(2)
+  cell.set(2)
   return cell.value
 }
 
@@ -288,30 +291,31 @@ test "offline" {
 
 ### E-EFF-010: `Host.capabilities()` outside `main` (LR 11.6)
 
+Only the entry `main` receives capabilities; it declares them as parameters and lends them down.
+
 ```fortis
 // reject: E-EFF-010
 import fortis.host { Host }
 
-func sneak() Void {
+func sneak() {
   let caps = Host.capabilities()      // reject: E-EFF-010
 }
 
-export func main(args: List[String]) Void {
+func main() {
   sneak()
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
-func work(console: Console) Void {
+func work(console: Console) {
   console.print("work")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  work(caps.console)
+func main(console: Console) {
+  work(console)
 }
 ```
 
@@ -327,27 +331,26 @@ Reported at the I/O statement.
 // reject: E-EFF-010
 import fortis.host { Capabilities, Host }
 
-func log(caps: Capabilities, text: StringView) Void {
+func write(caps: Capabilities, text: StringView) {
   caps.console.print(text)            // reject: E-EFF-010
 }
 
-export func main(args: List[String]) Void {
+func main() {
   let caps = Host.capabilities()
-  log(caps, "hello")
+  write(caps, "hello")
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
-func log(console: Console, text: StringView) Void {
+func log(console: Console, text: StringView) {
   console.print(text)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  log(caps.console, "hello")
+func main(console: Console) {
+  log(console, "hello")
 }
 ```
 
@@ -366,7 +369,7 @@ async try func wait(m: Mutex[Int]) Int {
   return 0
 }
 
-export async try func main(args: List[String]) Void {
+async try func main() {
   let m = Mutex.create(1)
   let v = await wait(m) or fail       // reject: E-EFF-020
 }
@@ -381,7 +384,7 @@ async try func wait(m: Mutex[Int]) Int {
   return 0
 }
 
-export async try func main(args: List[String]) Void {
+async try func main() {
   let m = Mutex.create(1)
   let v = await wait(m) or fail
 }
@@ -403,14 +406,14 @@ export aspect logged(label: StringView) {
 @logged("count")                      // reject: E-TYP-150
 func count(n: Int) Int => n
 
-export func main(args: List[String]) Void {
+func main() {
   discard count(3)
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 export aspect logged(label: StringView) {
   needs console: Console
@@ -422,9 +425,8 @@ export aspect logged(label: StringView) {
 @logged("count")
 func count(console: Console, n: Int) Int => n
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  discard count(caps.console, 3)
+func main(console: Console) {
+  discard count(console, 3)
 }
 ```
 
@@ -451,7 +453,7 @@ try func produce(n: Int) Outcome[Int] {
   return Outcome.success(n)
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -475,7 +477,7 @@ try func produce(n: Int) Int {
 }
 
 test "produce" {
-  expect (produce(3) or fail) == 3
+  expect produce(3) == 3
 }
 ```
 

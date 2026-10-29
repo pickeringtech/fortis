@@ -3,6 +3,8 @@
 <!-- covers: LR 1 -->
 *Human mode. Source of truth: the LR; each note cites the section that states the rule.*
 
+> Preview: newtypes and mixins (LR 6.9, 9.6) arrive in v0.1 and property tests (LR 14) in v0.2; the examples under "Exceptions are outcomes", "Classes without inheritance" and "Tests are part of the language" that use them are checked and run today. The rest of these notes is in v0.0.2.
+
 Python checks a program while it runs; Fortis checks it before anything runs. Every binding has a type the checker
 knows, every function states the types it takes and returns, and a program the checker rejects never starts
 (LR 1, LR 8.1). In exchange, the questions a Python reviewer has to answer by reading carefully (can this call
@@ -14,11 +16,11 @@ will meet first.
 Blocks are delimited by braces, not indentation, and a newline ends a statement unless the line obviously
 continues (it ends in an operator or a comma, or the next line starts with `.`, `or`, `catch`, `??` and a few
 others); there are no semicolons (LR 3.2). Every parameter has a type and every function states its return type,
-including `Void` (LR 8.1). Local types are inferred.
+unless it returns nothing (LR 8.1). Local types are inferred.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func average(scores: ListView[Int<0..100>]) Int {
   let n = scores.count()
@@ -32,10 +34,9 @@ pure func average(scores: ListView[Int<0..100>]) Int {
   return total / n
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let scores: List[Int<0..100>] = List.of(72, 91, 64)
-  caps.console.print("average ${average(scores)}")
+  console.print("average ${average(scores)}")
 }
 ```
 
@@ -48,8 +49,8 @@ create a new variable (LR 5.1).
 
 The early `return` is not only for the empty case. Integer division must be proved safe, and after
 `if n <= 0 { return 0 }` the checker knows that `n` is at least 1 for the rest of the function, so `total / n`
-cannot divide by zero (LR 6.3, LR 6.4). Without the test, the division would be rejected and you would write the
-checked `Int.div` instead.
+cannot divide by zero (LR 6.3, LR 6.4). Without the test, the division would be rejected and you would handle its
+failure instead, `total / n or fail`, which fails with `numeric.divide_by_zero` (LR 6.4).
 
 ## Nothing is truthy
 
@@ -89,15 +90,14 @@ A value that may be absent has type `T?`, and `null` is its absent case (LR 6.8)
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut stock: Map[String, Int] = Map.default()
-  editable stock.set("tea", 4)
+  stock.set("tea", 4)
   let tea = stock.get("tea") ?? 0
   let coffee = stock.get("coffee") ?? 0
-  caps.console.print("tea ${tea}, coffee ${coffee}")
+  console.print("tea ${tea}, coffee ${coffee}")
 }
 ```
 
@@ -121,19 +121,18 @@ not fit:
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 type Percent = Int<0..100>
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   for raw in List.of(42, 250) {
     let p = Percent.validate(raw) catch e {
-      caps.console.print("${raw} rejected: ${e.code}")
+      console.print("${raw} rejected: ${e.code}")
       report e
       recover Percent(0)
     }
-    caps.console.print("stored ${p}")
+    console.print("stored ${p}")
   }
 }
 ```
@@ -157,7 +156,7 @@ rejected (`E-OWN-001`, LR 7.5):
 
 ```fortis
 // reject: E-OWN-001
-export func main(args: List[String]) Void {
+func main() {
   let a = List.of(1, 2, 3)
   let b = a                     // reject: E-OWN-001
 }
@@ -169,19 +168,18 @@ Changing a value through a call is also visible. A function that may modify its 
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-func addDefaults(items: editable List[String]) Void {
-  editable items.push("salt")
+func addDefaults(items: editable List[String]) {
+  items.push("salt")
 }
 
 func count(items: List[String]) Int => items.count()
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut shopping: List[String] = List.of("bread")
   addDefaults(editable shopping)
-  caps.console.print("${count(shopping)} items")
+  console.print("${count(shopping)} items")
 }
 ```
 
@@ -192,23 +190,22 @@ export func main(args: List[String]) Void {
 ## Integers have a size
 
 Python's integers grow without bound. `Int` is 64 bits, and arithmetic that might overflow is either proved safe
-by the checker or written with a named operation that says what happens: `Int.mul` fails with
-`numeric.overflow`, `Int.wrappingMul` wraps, `Int.saturatingMul` clamps (LR 6.4). `BigInt` is the unbounded
+by the checker or says what happens: `a * b or fail` fails with `numeric.overflow`, `Int.wrappingMul` wraps,
+`Int.saturatingMul` clamps (LR 6.4). `BigInt` is the unbounded
 integer, and it allocates (LR 6.2).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let big = 4611686018427387904
-  let doubled = Int.mul(big, 2) catch e {
-    caps.console.print("overflow: ${e.code}")
+  let doubled = big * 2 catch e {
+    console.print("overflow: ${e.code}")
     report e
     recover 0
   }
-  caps.console.print("saturating: ${Int.saturatingMul(big, 2)}")
+  console.print("saturating: ${Int.saturatingMul(big, 2)}")
 }
 ```
 
@@ -255,15 +252,14 @@ for each, and a trivial value such as an `Int` may be listed bare (LR 8.3).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let readings: List[Int<-100..100>] = List.of(-5, 12, 0, 40)
   let floor = 0
   let positive = readings.filter(fn[floor](r: Int<-100..100>) Bool => r > floor)
   let doubled = positive.map(fn(r: Int<-100..100>) Int => r * 2)
-  caps.console.print("${doubled}")
+  console.print("${doubled}")
 }
 ```
 
@@ -273,38 +269,38 @@ export func main(args: List[String]) Void {
 
 ## `print` needs a capability
 
-There is no global `print` and no global `open`. Input and output go through capability values that `main`
-obtains exactly once, with `Host.capabilities()`, and passes to the functions that need them (LR 11.6). A
-function that does I/O therefore names, in its signature, what it may touch; one that receives no authority can
-do no I/O except `report`, which writes only to the diagnostic plane and is the single `io` operation that needs
-no capability (LR 11.6, LR 10.6). Calling `Host.capabilities()` anywhere but `main` is `E-EFF-010`, and so is doing I/O in a
-function that takes no capability, so this attempt is reported twice (LR 11.6):
+There is no global `print` and no global `open`. Input and output go through capability values: `main` declares
+the ones it needs as parameters, the runtime supplies them, and `main` passes them to the functions that need them
+(LR 4.6, LR 11.6). A function that does I/O therefore names, in its signature, what it may touch. Diagnostics are
+different: `log.info`, `log.warn` and `log.error`, the counterpart of Python's `logging`, write a log record to
+standard error from any function, with no capability, and `report e` records a failure the same way (LR 13,
+LR 10.6). Creating capabilities anywhere but `main`, as `Host.capabilities()` does in older code, is `E-EFF-010`,
+and so is doing I/O in a function that takes no capability, so this attempt is reported twice (LR 11.6):
 
 ```fortis
 // reject: E-EFF-010
 import fortis.host { Host }
 
-func log(message: StringView) Void {
+func say(message: StringView) {
   let caps = Host.capabilities()          // reject: E-EFF-010
   caps.console.print(message)             // reject: E-EFF-010
 }
 
-export func main(args: List[String]) Void {
-  log("starting")
+func main() {
+  say("starting")
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Host, Console }
+import fortis.host { Console }
 
-func log(console: Console, message: StringView) Void {
+func say(console: Console, message: StringView) {
   console.print(message)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  log(caps.console, "starting")
+func main(console: Console) {
+  say(console, "starting")
 }
 ```
 
@@ -316,7 +312,7 @@ starting
 
 A Python module runs its top-level code on import. A Fortis module contains only declarations and constants, so
 importing it executes nothing, and there is no `if __name__ == "__main__"`: a program's entry point is the
-exported `main` of the entry module its manifest names (LR 4.2, LR 4.6).
+`main` of the entry module its manifest names (LR 4.2, LR 4.6).
 
 ## Tests are part of the language
 

@@ -11,7 +11,7 @@ func looped() Failure {
         discard v
       }
       failure(f) => {
-        editable failures.push(move f)
+        failures.push(move f)
       }
     }
   }
@@ -21,7 +21,7 @@ func looped_let() List[List[Int]] {
   let mut xs: List[List[Int]] = List.default()
   for i in List.of(1, 3) {
     let inner = List.of(i)
-    editable xs.push(move inner)
+    xs.push(move inner)
   }
-  return move xs
+  return xs
 }

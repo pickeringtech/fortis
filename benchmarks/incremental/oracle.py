@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The SP-12 invalidation oracle (spikes/SP-12/design.md 8): for each edit, the passes that must run and the passes
+"""The SP-12 invalidation oracle (SP-12's design, section 8): for each edit, the passes that must run and the passes
 that may, from the workload's manifest and the edit's description alone. It reads neither the daemon nor the checker.
 
 A pass is `(file, unit, pass)`. A *may* entry `(file, None, None)` stands for every pass of every unit of a module,

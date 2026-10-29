@@ -9,7 +9,7 @@ recovers func consume(o: owned Outcome[Int]) Bool {
   return false
 }
 
-recovers func everyArm(n: Int) Void {
+recovers func everyArm(n: Int) {
   let o = make()
   match n {
     0 => {
@@ -21,7 +21,7 @@ recovers func everyArm(n: Int) Void {
   }
 }
 
-recovers func guardAlways(n: Int) Void {
+recovers func guardAlways(n: Int) {
   let o = make()
   match n {
     _ when consume(move o) => {
@@ -31,7 +31,7 @@ recovers func guardAlways(n: Int) Void {
   }
 }
 
-recovers func laterGuard(n: Int) Void {
+recovers func laterGuard(n: Int) {
   let o = make()
   match n {
     0 => {

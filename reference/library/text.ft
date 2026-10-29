@@ -2,9 +2,9 @@
 // reachable through the prelude so that interpolation and `Displayable` can name them.
 export class Builder {
   export trusted pure func create() Builder
-  export trusted func append(editable self, text: StringView) Void
-  export trusted func appendLine(editable self, text: StringView) Void
-  export trusted func appendScalar(editable self, s: Scalar) Void
+  export trusted func append(editable self, text: StringView)
+  export trusted func appendLine(editable self, text: StringView)
+  export trusted func appendScalar(editable self, s: Scalar)
   export trusted pure func finish(self) String
 }
 export class Scalar {

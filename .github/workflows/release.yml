@@ -1,0 +1,282 @@
+# The release tier: at every `v*` tag (release candidates `vX.Y.Z-rc.N` included) and on demand, the full gate
+# (conformance/tools/gate.py --tier full --thorough), every native step included, split across machines, plus what
+# a release needs beyond the gate. Thorough rather than quick: clean builds with no caches, the release build of
+# the toolchain, and nothing retried: a flaky step fails the run and says so. A release candidate and a release need
+# this run to pass at their tag.
+#
+#   build             the release, debug and fault-switch builds of the toolchain, handed to the shards
+#   rust-tests        cargo test, in release and in debug
+#   checks-python     the gate's shards that need no compiled toolchain, from the start
+#   checks            the other shards, once the build is ready
+#   determinism       the compiler built from two clean clones, and a sample of native programs built twice, byte
+#                     for byte (build_check.py with its clones; determinism_check.py)
+#   gitleaks          secrets over the tree
+#   end-to-end        the end-to-end process suite, once it exists
+#   full              one status for the run
+#   publish           at a release's tag (vX.Y.Z, not a release candidate) in the maintainers' repository, once
+#                     everything above passed: publish.yml pushes the public tree, checked on its own, to the public
+#                     repository as one commit with the release's tag
+#   github-release    at a release's tag in the public repository, once everything above passed there: the GitHub
+#                     release, with the release notes
+#
+# Actions are pinned to full commit SHAs, with the version they were taken from in a comment.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # gate.py --tier full --thorough --plan-shards 10 --py-shards 1 shows the split; the matrix shard is the longest
+  SHARDS: 10
+  PY_SHARDS: 1
+  CARGO_TERM_COLOR: never
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - run: rustc -V && cargo -V
+      - name: The release build (fortisc, fortisd, fortis-query-db)
+        run: cargo build --release --manifest-path compiler/Cargo.toml -p fortisc -p fortis-query-db
+      - name: The debug build, which the full tier compares with the release build
+        run: cargo build --manifest-path compiler/Cargo.toml -p fortisc
+      - name: The build with the query database's fault switches
+        run: cargo build --release --manifest-path compiler/Cargo.toml -p fortisc --features qdb-faults --target-dir compiler/target/faults
+      - name: Pack the binaries
+        run: |
+          mkdir -p dist/compiler/target/release dist/compiler/target/debug
+          cp compiler/target/release/fortisc compiler/target/release/fortisd compiler/target/release/fortis-query-db dist/compiler/target/release/
+          cp compiler/target/debug/fortisc dist/compiler/target/debug/
+          tar -C dist -cf tools.tar compiler
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tools
+          path: tools.tar
+          retention-days: 7
+          compression-level: 1
+
+  rust-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [release, dev]
+    name: rust-tests (${{ matrix.profile }})
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - run: rustc -V && cargo -V
+      # cargo test leaves the query database's allocator test out; it runs on its own with one harness thread
+      # (compiler/query-db/tests/alloc_run.rs says why)
+      - name: cargo test
+        run: cargo test --profile "${{ matrix.profile }}" --manifest-path compiler/Cargo.toml
+      - name: cargo test, the allocator test
+        run: cargo test --profile "${{ matrix.profile }}" --manifest-path compiler/Cargo.toml -p fortis-query-db --test alloc -- --test-threads=1
+
+  checks-python:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1]
+    name: checks (${{ matrix.shard }})
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Run the shard
+        run: python3 -I conformance/tools/gate.py --tier full --thorough --shard "${{ matrix.shard }}/$SHARDS" --py-shards "$PY_SHARDS" --json "build/gate-shard-${{ matrix.shard }}.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: gate-shard-${{ matrix.shard }}
+          overwrite: true  # a re-run attempt replaces its earlier report, so the combine step never reads a stale one
+          path: build/gate-shard-${{ matrix.shard }}.json
+          retention-days: 90
+          if-no-files-found: ignore
+
+  checks:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [2, 3, 4, 5, 6, 7, 8, 9, 10]
+    name: checks (${{ matrix.shard }})
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: rustc -V && cargo -V
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install Pillow (the website step draws the social-preview image)
+        run: python3 -m pip install --quiet -r .github/requirements-ci.txt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: tools
+      - name: Unpack the binaries
+        run: tar -xf tools.tar && rm tools.tar
+      - name: Allow unprivileged user namespaces (the sandbox checks run the tools in a new namespace)
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Run the shard
+        run: python3 -I conformance/tools/gate.py --tier full --thorough --shard "${{ matrix.shard }}/$SHARDS" --py-shards "$PY_SHARDS" --json "build/gate-shard-${{ matrix.shard }}.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: gate-shard-${{ matrix.shard }}
+          overwrite: true  # a re-run attempt replaces its earlier report, so the combine step never reads a stale one
+          path: build/gate-shard-${{ matrix.shard }}.json
+          retention-days: 90
+          if-no-files-found: ignore
+
+  determinism:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # build_check.py clones this checkout twice and checks out its commit in each
+          fetch-depth: 0
+          persist-credentials: false
+      - run: rustc -V && cargo -V
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: The release build
+        run: cargo build --release --manifest-path compiler/Cargo.toml -p fortisc -p fortis-query-db
+      - name: Allow unprivileged user namespaces (the clones build with the network blocked in a new namespace)
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      # build_check.py without --no-clones: two clean clones each build the compiler, then the same application;
+      # both pairs must be byte-identical (the full tier's build step, in a checks shard, runs the same)
+      - name: The compiler and an application from two clean clones
+        run: python3 -I conformance/tools/build_check.py --json
+      - name: A sample of native programs, each built twice
+        run: python3 -I conformance/tools/determinism_check.py --json
+
+  gitleaks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # gitleaks 8.30.1, checked against the release's published SHA-256 before it runs
+      - name: Install gitleaks
+        run: |
+          curl -sSfL -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks && rm gitleaks.tar.gz
+      # .gitleaks.toml in the tree allow-lists the one known false positive, and says why
+      - name: Secrets over the tree
+        run: ./gitleaks dir . --no-banner --redact
+
+  # A placeholder until the end-to-end process suite exists: it is skipped, and the summary says so.
+  end-to-end:
+    if: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - run: echo "the end-to-end process suite is not written yet"
+
+  full:
+    needs: [build, rust-tests, checks-python, checks, determinism, gitleaks, end-to-end]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: gate-shard-*
+          path: build/shards
+          merge-multiple: true
+      - name: Combine the shards' reports
+        run: python3 -I conformance/tools/gate.py --combine build/shards/*.json --json build/gate.json
+      - name: Every job passed
+        run: |
+          echo "build ${{ needs.build.result }}; rust-tests ${{ needs.rust-tests.result }}; checks ${{ needs.checks-python.result }} and ${{ needs.checks.result }}; determinism ${{ needs.determinism.result }}; gitleaks ${{ needs.gitleaks.result }}; end-to-end ${{ needs.end-to-end.result }} (not written yet)"
+          for r in "${{ needs.build.result }}" "${{ needs.rust-tests.result }}" "${{ needs.checks-python.result }}" "${{ needs.checks.result }}" "${{ needs.determinism.result }}" "${{ needs.gitleaks.result }}"; do
+            [ "$r" = success ] || exit 1
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: gate-report-full
+          path: build/gate.json
+          retention-days: 90
+          if-no-files-found: ignore
+
+  # At a release's tag in the maintainers' repository, once everything above passed: publish.yml pushes the public
+  # tree, checked on its own, to pickeringtech/fortis as one commit with the same tag. A release candidate is never
+  # published.
+  publish:
+    needs: [full]
+    if: github.repository == 'pickeringtech/fortis-internal' && github.ref_type == 'tag' && !contains(github.ref_name, '-')
+    uses: ./.github/workflows/publish.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets:
+      PUBLIC_REPO_DEPLOY_KEY: ${{ secrets.PUBLIC_REPO_DEPLOY_KEY }}
+
+  # In the public repository, a release's tag that passed the release tier becomes a GitHub release, with the
+  # release notes from the tree.
+  github-release:
+    needs: [full]
+    if: github.repository == 'pickeringtech/fortis' && github.ref_type == 'tag' && !contains(github.ref_name, '-')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "the release $TAG exists already"
+            exit 0
+          fi
+          # The notes' relative links resolve in the tree, not on the release's page: point them at the tag's files
+          python3 -I - "$GITHUB_REPOSITORY" "$TAG" "docs/releases/$TAG.md" > "$RUNNER_TEMP/notes.md" <<'PY'
+          import posixpath, re, sys
+          repo, tag, notes = sys.argv[1:4]
+          def absolute(m):
+              target = m.group(2)
+              if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target) or target.startswith(("#", "/")):
+                  return m.group(0)
+              path, _, frag = target.partition("#")
+              full = posixpath.normpath(posixpath.join(posixpath.dirname(notes), path))
+              return f"{m.group(1)}(https://github.com/{repo}/blob/{tag}/{full}" + (f"#{frag})" if frag else ")")
+          print(re.sub(r"(\[[^\]]*\])\(([^)\s]+)\)", absolute, open(notes).read()), end="")
+          PY
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "Fortis $TAG" --notes-file "$RUNNER_TEMP/notes.md"

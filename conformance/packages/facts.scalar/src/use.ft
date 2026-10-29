@@ -1,7 +1,7 @@
 import fortis.text
 
-export try func take(word: StringView) Void {
+export try func take(word: StringView) {
   let third = word.scalarAt(2) or fail
   let mut out = text.Builder.create()
-  editable out.appendScalar(third)
+  out.appendScalar(third)
 }

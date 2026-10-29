@@ -107,6 +107,12 @@ pub fn leave_cleanup() {
     CLEANUP.with(|c| c.set(c.get().saturating_sub(1)));
 }
 
+/// A log statement (13, LANG-13-04): one `log` record on the diagnostic plane (standard error), never on the
+/// program's standard output.
+pub fn log<T: AsRef<str> + ?Sized>(level: &str, message: &T, function: &str) {
+    emit(vec![("kind", q("log")), ("level", q(level)), ("message", q(message.as_ref())), ("function", q(function)), ("rule", q("LANG-13-04"))]);
+}
+
 /// `report f` and an unhandled failure of `main` (10.6).
 pub fn report(f: &Failure, where_: &str) {
     let mut chain = Vec::new();
@@ -115,14 +121,17 @@ pub fn report(f: &Failure, where_: &str) {
         chain.push(q(x.code));
         c = x.cause.as_deref();
     }
-    let payload: Vec<String> = f.payload.iter().map(|(k, v)| format!("{}: {}", q(k), q(&v.show()))).collect();
+    let shown: Vec<(&str, String)> = f.payload.iter().map(|(k, v)| (*k, v.show())).collect();
+    let payload: Vec<String> = shown.iter().map(|(k, v)| format!("{}: {}", q(k), q(v))).collect();
+    // the message template rendered with the payload as the record shows it (10.3; D-340)
+    let message = fortis_runtime::failure::render_message(&f.message, &shown);
     let origin = if f.origin.is_empty() { where_.to_string() } else { f.origin.to_string() };
     let file = DECL_FILES.with(|m| m.borrow().get(&origin).cloned()).unwrap_or_else(|| FILE.with(|x| x.borrow().clone()));
     let by = if CLEANUP.with(|c| c.get()) > 0 { "cleanup".to_string() } else { where_.to_string() };
     emit(vec![
         ("kind", q("runtime-failure")),
         ("code", q(f.code)),
-        ("message", q(&f.message)),
+        ("message", q(&message)),
         ("payload", format!("{{{}}}", payload.join(", "))),
         ("origin", format!("{{\"file\": {}, \"function\": {}}}", q(&file), q(&origin))),
         ("cause", format!("[{}]", chain.join(", "))),

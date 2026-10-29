@@ -1,0 +1,35 @@
+// execute: 3 2 true|error note error
+// requires: runtime
+// covers: LANG-06-01
+// 9.7 (X-345, D-304): a bare variant whose enum the expected type names (an annotated binding, a generic argument the
+// annotation fixes, a comparison's right operand) checks and runs the same on every backend; the qualified form works
+// wherever nothing expects the enum.
+import fortis.host { Host }
+
+enum Severity derive Equatable {
+  Error
+  Note
+}
+
+func word(s: Severity) String {
+  return match s {
+    Error => "error"
+    Note => "note"
+  }
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let all: List[Severity] = List.of(Error, Note, Error)
+  let first: Severity = Error
+  let untyped = List.of(Severity.Note, Severity.Note)
+  let mut errors = 0
+  for s in all {
+    if s == Error {
+      errors = Int.wrappingAdd(errors, 1)
+    }
+  }
+  caps.console.print("${all.count()} ${errors} ${first == Error}")
+  caps.console.print("${word(first)} ${word(Note)} ${word(Severity.Error)}")
+  discard untyped
+}

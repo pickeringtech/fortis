@@ -1,0 +1,62 @@
+// execute: 7 3 9|7 1 2|placed 7 of 9|demo.insufficient 7 3 9
+// requires: runtime
+// covers: LANG-05-09
+// 5.8, 9.2 (X-345): a bare local name stands for `name: name` where a positional argument cannot stand: anywhere in a
+// class's generated constructor, and after a named argument in any call (a function, an error kind, a variant). Before
+// the first named argument a bare name stays positional, as before.
+import fortis.host { Host }
+
+class Item {
+  sku: Int
+  held: Int
+  wanted: Int
+}
+
+enum Move {
+  Shift(sku: Int, low: Int, high: Int)
+  Hold
+}
+
+error Insufficient {
+  code: "demo.insufficient"
+  payload { sku: Int, held: Int, wanted: Int }
+  message: "${sku}: ${held} held, ${wanted} wanted"
+}
+
+func placed(sku: Int, held: Int, wanted: Int) String => "placed ${sku} of ${wanted}"
+
+func shift(m: Move) String {
+  return match m {
+    Shift(sku: s, low: l, high: h) => "${s} ${l} ${h}"
+    Hold => "hold"
+  }
+}
+
+try func take(sku: Int, held: Int, wanted: Int) Int {
+  if held < wanted {
+    fail Insufficient(sku, held: held, wanted)
+  }
+  return wanted
+}
+
+export recovers func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let sku = 7
+  let held = 3
+  let wanted = 9
+  let item = Item(wanted, sku, held)
+  caps.console.print("${item.sku} ${item.held} ${item.wanted}")
+  let high = 2
+  caps.console.print(shift(Move.Shift(sku, low: 1, high)))
+  caps.console.print(placed(sku, held: 4, wanted))
+  let got = take(sku, held: held, wanted) catch e {
+    match move e {
+      is Insufficient(sku: s, held: h, wanted: w) => caps.console.print("demo.insufficient ${s} ${h} ${w}")
+      otherwise(other) => {
+        report other
+      }
+    }
+    recover 0
+  }
+  discard got
+}

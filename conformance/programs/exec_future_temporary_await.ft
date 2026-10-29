@@ -6,7 +6,7 @@
 // constructed receiver, a `copy`), its named arguments evaluated in source order on a cooperative
 // and a parallel launch alike; a future launched from a binding borrows a place instead, which the scope's block keeps
 // alive until the task is joined.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 async func make(console: Shared[Console]) Int {
   console.print("made")
@@ -36,9 +36,7 @@ export class Word {
   export async func size(self) Int => self.s.scalarCount()
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+async func main(out: Console) {
   let console = Shared.create(move out)
   let a = await make(console.retain())
   scope tasks {

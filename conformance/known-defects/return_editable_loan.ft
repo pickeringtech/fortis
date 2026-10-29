@@ -1,4 +1,4 @@
-// D-185 (docs/delivery/defects.json): natively `return editable c` from a function whose result is `editable Counter
+// D-185: natively `return editable c` from a function whose result is `editable Counter
 // from c` lowers to `&*c`, a read reference, so the program does not build (E0308); the interpreter and the VM print
 // `access|9`.
 import fortis.host { Host, Console }

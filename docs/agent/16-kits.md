@@ -12,8 +12,8 @@ included, is rejected in declaration and binding positions and admitted as a mem
 
 | Fact | LR |
 |---|---|
-| A kit is a named, versioned bundle of packages shipped with the distribution; it extends Fortis only through libraries, aspects, declaration heads, embedding bindings and verifiers. Toolchain components (daemon, LSP, SDK generators) are not kits. | PROG-PRD-38 |
-| A kit never changes core semantics and is never a prerequisite of Language 1.0. | PROG-FND-07 |
+| A kit is a named, versioned bundle of packages shipped with the distribution; it extends Fortis only through libraries, aspects, declaration heads, embedding bindings and verifiers. Toolchain components (daemon, LSP, SDK generators) are not kits. | LR 16 |
+| A kit never changes core semantics and is never a prerequisite of Language 1.0. | LR 16 |
 | Kits extend the language with aspects (LR 11.8) and, for non-function-shaped declarations, declaration heads. | LR 16 |
 | A head's body is validated by a versioned schema and elaborated into core declarations before type checking. | LR 16 |
 | Elaboration contract: a head produces only classes, functions, enums, contracts and observation schemas that obey every LR rule. | LR 16 |
@@ -119,7 +119,7 @@ test "component" {
 // accept
 export class Widget {
   export id: Int
-  export func component(id: Int) Widget => Widget(id: id)
+  export func component(id: Int) Widget => Widget(id)
 }
 
 test "component" {
@@ -131,7 +131,7 @@ test "component" {
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 aspect logged(label: StringView) {
   needs console: Console
@@ -143,9 +143,8 @@ aspect logged(label: StringView) {
 @logged("work")
 func work(console: Console, n: Int) Int => n
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("result ${work(caps.console, 3)}")
+func main(console: Console) {
+  console.print("result ${work(console, 3)}")
 }
 ```
 

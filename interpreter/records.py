@@ -4,7 +4,21 @@ definition; `validate` checks a record structurally (required keys, value types)
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List
+import os
+from typing import Any, Dict, List, Optional
+
+
+def shown_path(file: str, package_dir: Optional[str] = None) -> str:
+    """How a runtime record names a module's file, as fortisc's `shown_path` does for the VM and native code (D-302):
+    a module of a package relative to the package's directory, and a standalone module relative to the current
+    directory when it lies below it (the corpus runs from the repository root), else by its file name. Never
+    absolute, because a native executable carries it."""
+    f = os.path.realpath(file)
+    if package_dir is not None:
+        return os.path.relpath(f, os.path.realpath(package_dir))
+    here = os.path.realpath(os.getcwd())
+    return os.path.relpath(f, here) if f.startswith(here + os.sep) else os.path.basename(f)
+
 
 SCHEMAS: Dict[str, Dict[str, type]] = {
     # a failing `try main` (exactly one), each `report` (exactly one per execution of the statement)
@@ -26,6 +40,8 @@ SCHEMAS: Dict[str, Dict[str, type]] = {
     "task-completion": {"kind": str, "task": str, "outcome": str, "rule": str},
     # a defect terminated the main task (10.8): the program exits 3 and no completion value exists
     "defect": {"kind": str, "class": str, "task": str, "rule": str},
+    # one `log.info|warn|error(message)` execution (13, LANG-13-04): level info | warn | error, the writing function
+    "log": {"kind": str, "level": str, "message": str, "function": str, "rule": str},
     # the reporter's buffer overflowed (PROG-NFR-13): one visible record, the count of dropped records grows
     "buffer-overflow": {"kind": str, "bound": int, "dropped": int, "rule": str},
 }
@@ -64,6 +80,8 @@ def render(rec: Dict[str, Any]) -> str:
     if k == "observation-event":
         shown = ", ".join(f"{a}={b}" for a, b in rec["fields"].items())
         return f"event {rec['schema']}" + (f": {shown}" if shown else "")
+    if k == "log":
+        return f"{rec['level']}: {rec['message']}"
     if k == "defect":
         return f"defect {rec['class']} terminated task {rec['task']}"
     if k == "buffer-overflow":

@@ -1,0 +1,24 @@
+// reject: E-TYP-040, E-NAM-001 (at the marked lines)
+// covers: LANG-09-05
+// 9.7 (X-345): a bare variant in an initialiser is read against the declared type, as it is in an expression. A
+// variant of another enum, a constant with no declared type, a field of another type and a name no enum declares are
+// rejected; each is reported once.
+enum Hue {
+  Red
+  Green
+}
+
+enum Shape {
+  Dot
+  Square(side: Int)
+}
+
+class Paint {
+  hue: Hue = Dot                       // reject: E-TYP-040 — a Hue is expected, not a Shape
+  count: Int = Red                     // reject: E-TYP-040 — an Int is expected, not a Hue
+  tint: Hue = Purple                   // reject: E-NAM-001 — no enum declares `Purple`
+}
+
+const loose = Green                    // reject: E-TYP-040 — nothing declares the constant's type
+
+func drawn(s: Shape = Red) Shape => s  // reject: E-TYP-040 — a Shape is expected, not a Hue

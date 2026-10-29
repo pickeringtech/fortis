@@ -20,8 +20,10 @@ parameters, parameters, the success type and an optional `from` or `where` claus
 [export] [Contract …] [pure] [noalloc] [async] [try] [recovers] func name[TypeParams](params) ReturnType [from …] [where …] { body }
 ```
 
-The modifiers always appear in that order (LR 8.1). Every parameter has a type, and the success type is always
-written, including `Void` (LR 8.1). What each modifier means:
+The modifiers always appear in that order (LR 8.1). Every parameter has a type, and the success type is written
+unless it is `Void`: `func greet(console: Console) { … }` returns nothing (LR 8.1). Older code writes `Void` there
+too; it is still accepted, and `fortis fmt` drops it. A function type keeps its result, `fn(Int) Void`, and so does
+a lambda with a block body (LR 8.2, LR 8.4). What each modifier means:
 
 - `try`: the function may fail; a caller receives an `Outcome` it must deal with (LR 8.1, LR 10.1).
 - `async`: the function may suspend; a caller receives a `Future` (LR 8.1, LR 12.3).
@@ -36,7 +38,7 @@ A body is a block, or `=> expression` for a function whose body is one expressio
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func square(n: Int<-1000..1000>) Int => n * n
 
@@ -45,9 +47,8 @@ pure func describe(n: Int<-1000..1000>) String {
   return "${n} squared is ${s}"
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(describe(12))
+func main(console: Console) {
+  console.print(describe(12))
 }
 ```
 
@@ -60,15 +61,14 @@ compiler makes a non-capturing `fn` of the matching type for you (LR 8.1).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func increment(n: Int) Int => Int.saturatingAdd(n, 1)
 
 pure func applyTwice(f: pure fn(Int) Int, x: Int) Int => f(f(x))
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${applyTwice(increment, 5)}")
+func main(console: Console) {
+  console.print("${applyTwice(increment, 5)}")
 }
 ```
 
@@ -80,20 +80,22 @@ export func main(args: List[String]) Void {
 
 A lambda is written `fn`, an optional capture list in brackets, the parameters, the return type and a body
 (LR 8.2). It takes the same modifiers as a named function, in the same order, and must write `async`, `try` and
-`recovers` when its body has those effects; `pure` and `noalloc` may be written and are otherwise inferred
-(LR 8.2). The return type is always written. Parameter types may be left out only when the lambda is passed
-directly to a parameter whose function type supplies them (LR 8.2). Lambdas are not generic.
+`recovers` when its body has those effects; `pure` and `noalloc` may be written and are otherwise inferred; the
+formatter prints no inferred one back, and keeps one you wrote, because the function type the lambda is passed to
+already says what it must be (LR 8.2). A block body writes its return type; an expression body may leave it out, `fn(t) => t.isOpen()`, and it
+is then the result type of the function type the lambda is passed to, or the body's own type where that is a type
+parameter (LR 8.2). Parameter types may be left out only when the lambda is passed directly to a parameter whose
+function type supplies them (LR 8.2). Lambdas are not generic.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let numbers = List.of(3, 8, 1, 6)
   let evens = numbers.filter(fn(n: Int) Bool => n % 2 == 0)
   let doubled = numbers.map(fn(n) Int => Int.saturatingMul(n, 2))
-  caps.console.print("${evens.count()} even, first doubled ${doubled.first() ?? 0}")
+  console.print("${evens.count()} even, first doubled ${doubled.first() ?? 0}")
 }
 ```
 
@@ -111,33 +113,33 @@ closure may run and whether it changes anything (LR 8.2):
 | Kind | It may | Called | A call looks like |
 |---|---|---|---|
 | `fn` | read its captures | any number of times | `f(x)` |
-| `fn mut` | also change what it captured | any number of times; the binding must be `let mut` | `editable f(x)` |
+| `fn mut` | also change what it captured | any number of times; the binding must be `let mut` | `f(x)` |
 | `fn once` | also move a capture out | exactly once; the call consumes it | `move f(x)` |
 
-The call site mirrors the kind: calling a `fn mut` takes an exclusive loan of the closure, so it is written
-`editable bump()`, and calling a `fn once` consumes it, so it is written `move finish()` (LR 7.5, LR 8.2).
+Calling a `fn mut` takes an exclusive loan of the closure, and its `let mut` binding already says that it changes,
+so the call is written `bump()`; calling a `fn once` consumes it, so it is written `move finish()` (LR 7.5,
+LR 8.2). Older code writes `editable bump()`; it is still accepted, and `fortis fmt` rewrites it.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut total = 0
   {
     let mut add = fn mut[editable total](n: Int) Void {
       total = Int.saturatingAdd(total, n)
     }
-    editable add(4)
-    editable add(6)
+    add(4)
+    add(6)
   }
-  caps.console.print("total ${total}")
+  console.print("total ${total}")
   let name = String.from("ada")
   let takeName = fn once[move name]() String {
     return move name
   }
   let taken = move takeName()
-  caps.console.print("took ${taken}")
+  console.print("took ${taken}")
 }
 ```
 
@@ -154,7 +156,7 @@ and the use (LR 8.2). Here a `fn` writes to its capture:
 
 ```fortis
 // reject: E-FUN-010
-export func main(args: List[String]) Void {
+func main() {
   let mut count = 0
   let bump = fn[editable count]() Void {
     count = Int.saturatingAdd(count, 1)     // reject: E-FUN-010
@@ -165,13 +167,15 @@ export func main(args: List[String]) Void {
 Declaring `fn mut` fixes it. A `move` capture alone does not make a closure `fn once`; what matters is whether the
 body moves the captured value out (LR 8.2). Declaring a stronger kind than the body needs is allowed (LR 8.2).
 
-Forgetting the call marker is an ownership error like any other missing marker (LR 7.5):
+The binding that holds a `fn mut` must be `let mut`, because each call changes it. Through a `let mut` binding the
+call needs no `editable`, since the declaration already says it (LR 7.5); through a `let` binding it is an
+ownership error:
 
 ```fortis
 // reject: E-OWN-001
-export func main(args: List[String]) Void {
+func main() {
   let mut total = 0
-  let mut add = fn mut[editable total](n: Int) Void {
+  let add = fn mut[editable total](n: Int) Void {
     total = Int.saturatingAdd(total, n)
   }
   add(4)                                    // reject: E-OWN-001
@@ -183,7 +187,7 @@ And a `fn once` really runs once: after `move finish()` the closure is gone, and
 
 ```fortis
 // reject: E-OWN-020
-export func main(args: List[String]) Void {
+func main() {
   let name = String.from("ada")
   let finish = fn once[move name]() String {
     return move name
@@ -201,16 +205,15 @@ A lambda sees only the outside names it lists, each with a marker that says how:
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let threshold = 4
   let prefix = String.from("item")
   let numbers = List.of(1, 5, 2, 8)
   let above = numbers.countWhere(fn[threshold](n: Int) Bool => n > threshold)
   let labels = numbers.map(fn[alias prefix](n: Int) String => "${prefix} ${n}")
-  caps.console.print("${above} above ${threshold}; ${labels.first() ?? "none"}")
+  console.print("${above} above ${threshold}; ${labels.first() ?? "none"}")
 }
 ```
 
@@ -223,7 +226,7 @@ functions and types are never captures and need no entry.
 
 ```fortis
 // reject: E-FUN-011
-export func main(args: List[String]) Void {
+func main() {
   let limit = 3
   let numbers = List.of(1, 5, 2, 8)
   let over = numbers.countWhere(fn(n: Int) Bool => n > limit)    // reject: E-FUN-011
@@ -237,7 +240,7 @@ everywhere: two captures of one owner where one of them is `editable` conflict (
 
 ```fortis
 // reject: E-OWN-010
-export func main(args: List[String]) Void {
+func main() {
   let mut count = 0
   let mut both = fn mut[editable count, alias count]() Void {   // reject: E-OWN-010
     count = 1
@@ -254,7 +257,7 @@ the closure lives in, with `from` (LR 8.3, LR 8.4).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Limit {
   export value: Int
@@ -274,11 +277,10 @@ func countWhere(items: List[Int], keep: fn(Int) Bool) Int {
   return n
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let limit = Limit(value: 3)
   let check = above(alias limit)
-  caps.console.print("${countWhere(List.of(1, 5, 2, 8), check)} above ${limit.value}")
+  console.print("${countWhere(List.of(1, 5, 2, 8), check)} above ${limit.value}")
 }
 ```
 
@@ -316,7 +318,7 @@ recovers func run() Int {
   return 0
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -344,7 +346,7 @@ are nominal in their modifiers, so an ordinary callback cannot be passed where a
 
 ```fortis
 // reject: E-TYP-040
-import fortis.host { Host, Console }
+import fortis.host { Console }
 
 pure func applyPure(f: pure fn(Int) Int, x: Int) Int => f(x)
 
@@ -353,9 +355,7 @@ func noisy(console: Console, n: Int) Int {
   return n
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let console = alias caps.console
+func main(console: Console) {
   discard applyPure(fn[alias console](n: Int) Int => noisy(console, n), 1)   // reject: E-TYP-040
 }
 ```
@@ -371,7 +371,7 @@ when it is created (LR 8.4). Nothing is ever boxed unless you write `dynamic` (L
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 func applyAll(steps: List[dynamic fn(Int) Int], start: Int) Int {
   let mut value = start
@@ -381,13 +381,12 @@ func applyAll(steps: List[dynamic fn(Int) Int], start: Int) Int {
   return value
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let bonus = 10
   let double: dynamic fn(Int) Int = fn(n: Int) Int => Int.saturatingMul(n, 2)
   let addBonus: dynamic fn(Int) Int = fn[bonus](n: Int) Int => Int.saturatingAdd(n, bonus)
   let steps = List.of(move double, move addBonus)
-  caps.console.print("${applyAll(steps, 5)}")
+  console.print("${applyAll(steps, 5)}")
 }
 ```
 

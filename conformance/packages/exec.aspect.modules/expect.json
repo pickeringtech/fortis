@@ -1,0 +1,1 @@
+{"verdict": "execute", "expected": "mark|hooked|count|n 2", "covers": ["LANG-11-09", "LANG-05-08"], "runfile": "src/app.ft"}

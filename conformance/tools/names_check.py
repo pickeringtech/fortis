@@ -45,8 +45,9 @@ def main(argv):
             records = [{"code": "E-INT-000", "message": f"resolver failure: {e}", "line": 1}]
         nam = [r for r in records if r["code"].startswith("E-NAM")]
         codes = sorted({r["code"] for r in nam})
-        # resolution codes (E-NAM-034: a head whose kit is not installed, X-231); E-NAM-002 is typing
-        expected_nam = [c for c in sr.get("codes", []) if c in ("E-NAM-001", "E-NAM-003", "E-NAM-010", "E-NAM-034")]
+        # resolution codes (E-NAM-005 and E-NAM-006: the entry main's parameters, X-345; E-NAM-034: a head whose kit is
+        # not installed, X-231); E-NAM-002 is typing
+        expected_nam = [c for c in sr.get("codes", []) if c in ("E-NAM-001", "E-NAM-003", "E-NAM-005", "E-NAM-006", "E-NAM-010", "E-NAM-034")]
         if v == "illustrative" or (fragment and not expected_nam):
             # a statement fragment has free names by construction: reported, never judged (LR 0)
             status = "INFO"

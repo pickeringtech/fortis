@@ -6,5 +6,5 @@ export class Plain implements Printer {
   export pure func print(self, invoice: Invoice) String => "invoice"
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }

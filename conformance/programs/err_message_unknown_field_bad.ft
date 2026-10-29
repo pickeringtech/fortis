@@ -1,0 +1,20 @@
+// reject: E-NAM-001 (at the marked lines)
+// covers: LANG-04-05, LANG-10-03
+// 10.3, D-340: an error's `message` is a template whose `${name}` may name only the payload's fields, so a name the
+// payload does not declare is E-NAM-001: the rendered message would show it unfilled. Both checkers accepted it.
+export error Late {
+  code: "demo.late"
+  payload { n: Int }
+  message: "late ${n} at ${hour}"                   // reject: E-NAM-001 — `hour` is not a payload field
+}
+
+export error Bare {
+  code: "demo.bare"
+  message: "nothing ${here}"                        // reject: E-NAM-001 — an error without a payload names none
+}
+
+export error Fine {
+  code: "demo.fine"
+  payload { n: Int, who: String<scalars: ..8> }
+  message: "${who} is ${n} late"
+}

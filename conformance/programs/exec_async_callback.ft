@@ -6,12 +6,12 @@
 import fortis.host { Host, Console }
 async func twice(step: async fn(Int) Int, note: editable fn mut() Void) Int {
   let a = await step(1)
-  editable note()
+  note()
   let b = await step(2)
-  editable note()
+  note()
   return Int.wrappingAdd(a, b)
 }
-export async func main(args: List[String]) Void {
+async func main() {
   let caps = Host.capabilities()
   let console = alias caps.console
   let mut count = 0

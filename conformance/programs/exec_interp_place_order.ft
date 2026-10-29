@@ -3,7 +3,7 @@
 // covers: LANG-03-06, LANG-07-07
 // Interpolation shows each part before it evaluates the next (3.6), so a later part may edit a place an
 // earlier part displayed. The values agree on every backend; a temporary's destruction is D-150.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Cell {
   export n: Int
@@ -13,13 +13,11 @@ export class Cell {
   }
 }
 
-func show(console: Console, c: editable Cell) Void {
+func show(console: Console, c: editable Cell) {
   console.print("${c.n} ${editable c.bump()}")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let mut c = Cell(n: 1)
   show(move out, editable c)
 }

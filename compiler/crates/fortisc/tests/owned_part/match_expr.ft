@@ -1,0 +1,68 @@
+// execute: arm r-fb r-own|drop r-own|drop r-fb|after arm 1|give g-fb g-own|drop g-own|given g-fb|drop g-fb|after given|lent item l-own|drop l-own|after lent|list item|end|drop item
+// execute-trace: drop Token|drop Token|drop Token|loans-end|drop Token|drop Token
+// D-372, LR 7.9: a `match` expression that moves a record whose field holds a value of the record's own (a `??` whose
+// fallback was moved) gives that value to the arm's binding, which destroys it at the end of the arm, as the
+// statement form does, and a binding that receives the part given out of the arm owns it; a field that is a loan
+// destroys nothing. The VM treated the binding as a loan and never ran the cleanup. The interpreter prints the same
+// lines; native code does not build a record holding a loan (D-360).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func recordMatch(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "r-fb")
+  let rec = { item: empty.get(0) ?? move d, side: make(console, "r-own") }
+  let n = match move rec {
+    { item: a, side: b } => {
+      console.print("arm ${a.label} ${b.label}")
+      give 1
+    }
+  }
+  console.print("after arm ${n}")
+}
+
+func givenOut(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "g-fb")
+  let rec = { item: empty.get(0) ?? move d, side: make(console, "g-own") }
+  {
+    let t = match move rec {
+      { item: a, side: b } => {
+        console.print("give ${a.label} ${b.label}")
+        give move a
+      }
+    }
+    console.print("given ${t.label}")
+  }
+  console.print("after given")
+}
+
+func lentField(console: Shared[Console], xs: List[Token]) {
+  let rec = { item: xs.get(0) ?? make(console, "unused"), side: make(console, "l-own") }
+  match move rec {
+    { item: a, side: b } => console.print("lent ${a.label} ${b.label}")
+  }
+  console.print("after lent")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  recordMatch(console, empty)
+  givenOut(console, empty)
+  lentField(console, xs)
+  console.print("list ${xs.get(0)?.label ?? "none"}")
+  console.print("end")
+}

@@ -1,0 +1,31 @@
+// accept
+// covers: LANG-07-01, LANG-08-02
+// X-345 (R3): the markers v0.0.2 keeps, written: `copy` and `alias` in bindings and field initialisers, the markers
+// of a capture list, and `editable` and `move` on arguments.
+export class Item {
+  export name: String
+}
+export class Holder {
+  export item: Item
+}
+func change(i: editable Item) {
+  i.name = String.from("changed")
+}
+func keep(i: owned Item) {
+}
+func run() Int {
+  let mut a = Item(name: String.from("a"))
+  let b = copy a
+  {
+    let seen = alias a
+    discard seen.name
+  }
+  let h = Holder(item: copy a)
+  let mut c = Item(name: String.from("c"))
+  c = copy b
+  let f = fn[alias c]() Int => c.name.scalarCount()
+  discard f()
+  change(editable a)
+  keep(move a)
+  return h.item.name.scalarCount()
+}

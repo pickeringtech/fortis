@@ -27,7 +27,7 @@ pub use collections::{OrderedMap, OrderedSet};
 pub use failure::{outcome_err, Dyn, Failure, IntoDyn, Outcome, Report};
 pub use fortis_runtime::{float, Decimal, Rounding};
 pub use numeric::{Duration, Timestamp};
-pub use shared::{AtomicBool, AtomicInt, Guard, MaybeOwned, Mutex, Shared, WeakRef};
+pub use shared::{AtomicBool, AtomicInt, Guard, IntoMaybeOwned, MaybeOwned, Mutex, Shared, WeakRef};
 pub use show::Show;
 
 /// The value of an intrinsic whose signature is infallible but whose operation can still fail on an input the

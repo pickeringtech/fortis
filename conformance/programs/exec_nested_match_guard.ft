@@ -1,7 +1,7 @@
 // execute: big even|small|big odd
 // requires: runtime
 // covers: LANG-09-05
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func classify(n: Int) String {
   return match n {
@@ -11,9 +11,8 @@ pure func classify(n: Int) String {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(classify(12))
-  caps.console.print(classify(3))
-  caps.console.print(classify(13))
+func main(console: Console) {
+  console.print(classify(12))
+  console.print(classify(3))
+  console.print(classify(13))
 }

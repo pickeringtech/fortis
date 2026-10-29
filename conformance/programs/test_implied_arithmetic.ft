@@ -1,0 +1,30 @@
+// execute: 2 passed, 1 failed
+// tests: run
+// requires: runtime
+// covers: LANG-14-03
+// In test and property bodies, `Int` arithmetic the checker cannot prove safe is a checked region with an implied
+// `or fail`, as a call of a fallible function is (14, 6.4; X-345): an operation that overflows fails the test with its
+// failure's record, and the explicit `(a * b or fail)` stays accepted.
+func big() Int {
+  return 4611686018427387904
+}
+
+func double(n: Int<0..1000>) Int => n * 2
+
+test "arithmetic that fits" {
+  let n = big()
+  expect n - 1 + 1 == n
+  expect (n + 1 - 1 or fail) == n
+  expect double(500) + n / 2 > 0
+}
+
+test "arithmetic in an argument" {
+  let n = big()
+  let halved = Int.wrappingAdd(n + n / 2, 1)
+  expect halved > n
+}
+
+test "an overflow fails the test" {
+  let n = big()
+  expect n * 2 > 0
+}

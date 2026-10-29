@@ -1,0 +1,13 @@
+// D-404: `fortis fmt` never rewrites `Int.shiftLeft(a, b) or fail` to `a << b or fail`, although LR 6.4 makes `<<`
+// in a checked region `Int.shiftLeft`; `Int.add`, `sub`, `mul`, `div` and `rem` are rewritten to their operators. The
+// formatter leaves this module as it is. The two forms mean the same; every backend prints `16`.
+import fortis.host { Console }
+
+try func shifted(a: Int, b: Int) Int {
+  return Int.shiftLeft(a, b) or fail
+}
+
+try func main(console: Console) {
+  let v = shifted(4, 2) or fail
+  console.print("${v}")
+}

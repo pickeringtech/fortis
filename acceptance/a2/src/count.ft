@@ -13,10 +13,10 @@ export pure func words(text: StringView, minLength: Int) List[String] {
   let mut kept: List[String] = List.default()
   for w in Text.words(text) {
     if w.scalarCount() >= minLength {
-      editable kept.push(copy w)
+      kept.push(copy w)
     }
   }
-  return move kept
+  return kept
 }
 
 // The longest word, the first of equal length; empty for no words.
@@ -27,7 +27,7 @@ export pure func longest(ws: ListView[String]) String {
       best = copy w
     }
   }
-  return move best
+  return best
 }
 
 // A cooperative task: counts one file's words (it runs on the core executor while the others wait their turn).

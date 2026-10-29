@@ -1,0 +1,38 @@
+// execute: next a|next b|after walk|end|drop a|drop b
+// reports: log:level=info,message=drop a,function=cleanup Token|log:level=info,message=drop b,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-05-03
+// D-338, 7.7, 12.2: a list's cursor lends its elements, and `next()` gives a loan of each. Neither owns an
+// element, so each element's cleanup runs once, when the list's owner ends. Native code copied the list into the
+// cursor and copied each element out of it, and ran each copy's cleanup.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func walk(console: Shared[Console], xs: List[Token]) {
+  let mut cursor = alias xs.iterate()
+  loop {
+    let t = editable cursor.next()
+    if t == null {
+      break
+    }
+    console.print("next ${t.label}")
+  }
+  console.print("after walk")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut toks: List[Token] = List.default()
+  toks.push(Token(label: String.from("a"), console: console.retain()))
+  toks.push(Token(label: String.from("b"), console: console.retain()))
+  walk(console, toks)
+  console.print("end")
+}

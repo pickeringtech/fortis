@@ -3,12 +3,12 @@
 // A class may declare cleanup(editable self) Void, run when a value is destroyed before its fields are dropped (9.4, 7.9).
 export class Handle {
   export id: Int
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.id = 0
   }
 }
 
-func scopeIt() Void {
+func scopeIt() {
   let first = Handle(id: 1)
   let second = Handle(id: 2)
 }

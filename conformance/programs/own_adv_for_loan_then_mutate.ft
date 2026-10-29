@@ -3,7 +3,7 @@
 export class Bag {
   export items: List[Int]
 }
-func run(bag: editable Bag) Void {
+func run(bag: editable Bag) {
   for item in bag.items {
     editable bag.items.push(item)          // reject: E-OWN-010 — the loop holds a read loan of bag.items
   }

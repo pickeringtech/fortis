@@ -3,7 +3,7 @@
 // requires: runtime
 // covers: LANG-12-04
 // A recovered child failure leaves its sibling running: the scope block continues and joins the sibling normally.
-import fortis.host { Host, Console, Clock }
+import fortis.host { Console, Clock }
 export error Bad {
   code: "demo.bad"
 }
@@ -26,8 +26,7 @@ async recovers func run(console: Console, clock: Clock) Int {
     return Int.wrappingAdd(x, y)
   }
 }
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let sum = await run(caps.console, caps.clock)
-  caps.console.print("sum ${sum}")
+async recovers func main(console: Console, clock: Clock) {
+  let sum = await run(console, clock)
+  console.print("sum ${sum}")
 }

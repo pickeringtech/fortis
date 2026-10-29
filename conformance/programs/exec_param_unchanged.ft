@@ -1,7 +1,7 @@
 // execute: 6|5
 // requires: runtime
 // covers: LANG-07-02
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func bumped(start: Int) Int {
   let mut current = start
@@ -9,9 +9,8 @@ pure func bumped(start: Int) Int {
   return current
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let start = 5
-  caps.console.print("${bumped(start)}")
-  caps.console.print("${start}")
+  console.print("${bumped(start)}")
+  console.print("${start}")
 }

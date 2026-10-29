@@ -1,0 +1,24 @@
+// backstop: item item|end|drop item
+// D-348: `pop` while a `get` loan of the same element is live (both checkers once accepted it). The loan's binding
+// comes first, so the block destroys the owner `v` while `t` still holds the element. The VM once skipped the
+// cleanup because a second handle was live, then dropped the loan without cleanup: the cleanup was lost. A block's
+// loans end before its owners, and the owner's destruction runs the cleanup, once.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(Token(label: String.from("item"), console: console.retain()))
+  let t = xs.get(0)
+  let v = xs.pop()
+  console.print("${t?.label ?? "none"} ${v?.label ?? "none"}")
+  console.print("end")
+}

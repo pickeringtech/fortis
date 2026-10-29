@@ -1,4 +1,4 @@
-// D-183 (docs/delivery/defects.json): natively a function that returns a future does not build (E0277: `Future<i64>`
+// D-183: natively a function that returns a future does not build (E0277: `Future<i64>`
 // is not a future); the interpreter and the VM run this program and print `quick|recovered -1`, naming the task
 // `late` in its `not_started` lifecycle record and frame. Once it builds, a launch of a future that is neither a direct
 // call nor a local one made is named `work` natively (here the direct call `pending(...)` would name it `pending`),

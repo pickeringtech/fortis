@@ -3,7 +3,7 @@
 // requires: runtime
 // covers: LANG-13-03
 // 13: a String field is bounded by the schema; a longer value is truncated and the frame records which field was.
-import fortis.host { Host }
+import fortis.host { Console }
 observation Trace {
   label: String<scalars: 0..4>       required: all
 }
@@ -12,8 +12,7 @@ func work(text: String) Int {
   capture label = text
   return 1
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   discard work("abcdefgh")
-  caps.console.print("done")
+  console.print("done")
 }

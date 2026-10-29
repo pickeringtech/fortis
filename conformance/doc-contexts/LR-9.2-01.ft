@@ -16,6 +16,6 @@ export class CustomerSummary {
   export invoiceCount: Int
 }
 
-func example(customer: Customer, count: Int) Void {
+func example(customer: Customer, count: Int) {
   // {{example}}
 }

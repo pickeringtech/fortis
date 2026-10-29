@@ -3,11 +3,11 @@
 // cleanup runs at destruction and cannot be called directly (9.4).
 export class Handle {
   export id: Int
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.id = 0
   }
 }
 
-func early(h: editable Handle) Void {
+func early(h: editable Handle) {
   editable h.cleanup()                      // reject: E-TYP-040
 }

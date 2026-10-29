@@ -1,7 +1,7 @@
 // A second module stores a different lambda in the same closure field.
 import fun.closure.field.steps { Step, make }
 
-export func main(args: List[String]) Void {
+func main(args: List[String]) {
   discard args
   let first = make()
   let second = Step(run: pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1))

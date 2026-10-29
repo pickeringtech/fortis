@@ -6,7 +6,7 @@ export pure func sorted(items: ListView[Int]) List[Int] {
   let mut current: List[Int] = List.default()
   let mut k = 0
   while k < n {
-    editable current.push(items.get(k) ?? 0)
+    current.push(items.get(k) ?? 0)
     k = Int.wrappingAdd(k, 1)
   }
   let mut width = 1
@@ -22,10 +22,10 @@ export pure func sorted(items: ListView[Int]) List[Int] {
         let a = current.get(i) ?? 0
         let b = current.get(j) ?? 0
         if j >= hi || (i < mid && a <= b) {
-          editable next.push(a)
+          next.push(a)
           i = Int.wrappingAdd(i, 1)
         } else {
-          editable next.push(b)
+          next.push(b)
           j = Int.wrappingAdd(j, 1)
         }
       }
@@ -34,5 +34,5 @@ export pure func sorted(items: ListView[Int]) List[Int] {
     current = move next
     width = Int.saturatingMul(width, 2)
   }
-  return move current
+  return current
 }

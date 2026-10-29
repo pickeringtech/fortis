@@ -1,5 +1,5 @@
 // context: LR-10.5-01 (Language Reference 10.5, matching an outcome)
 // base: LR-2-01
-recovers func example(id: CustomerId, gbp: Currency, lines: owned List[Line]) Void {
+recovers func example(id: CustomerId, gbp: Currency, lines: owned List[Line]) {
   // {{example}}
 }

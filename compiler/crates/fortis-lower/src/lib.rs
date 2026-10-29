@@ -652,7 +652,12 @@ fn signature_for(prog: &Program, f: &Function, rust_name: &str, in_impl: bool, f
         type_params_in(&f.locals[p.local as usize].ty, &mut tparams);
     }
     type_params_in(&f.ret, &mut tparams);
-    let origin = match &f.ret {
+    // an optional loan (`(alias T from xs)?`) names its origin as a loan does (D-338)
+    let ret_loan = match &f.ret {
+        Type::Optional(i) if matches!(&**i, Type::Loan { .. }) => &**i,
+        t => t,
+    };
+    let origin = match ret_loan {
         Type::Loan { origin, .. } if f.params.iter().any(|p| &p.name == origin) => Some(origin.clone()),
         Type::Fn { origin, .. } if f.params.iter().any(|p| &p.name == origin) => Some(origin.clone()),
         _ => None,
@@ -1442,7 +1447,12 @@ fn entry(prog: &Program, opts: &Options, names: &HashMap<String, String>) -> Str
         Some(m) => m,
         None => return "fn main() {}\n".into(),
     };
-    let call = if main.params.is_empty() { "fortis_main()".to_string() } else { "fortis_main(&__args)".to_string() };
+    // each parameter of the entry `main` is supplied by its type (4.6, X-345): the command-line arguments for
+    // `List[String]`, and for a capability type that capability, all created once, before `main` runs (11.6)
+    let kinds: Vec<String> = main.params.iter().map(|p| name_of(&main.locals[p.local as usize].ty).unwrap_or("").to_string()).collect();
+    let caps = if kinds.iter().any(|k| k != "List") { "let __caps = rt::host::capabilities(); " } else { "" };
+    let passed: Vec<String> = kinds.iter().map(|k| if k == "List" { "&__args".to_string() } else { format!("__caps.{}", capability_field(k)) }).collect();
+    let call = format!("{{ {caps}fortis_main({}) }}", passed.join(", "));
     // an async main is the main task's future, run by the controlled scheduler (main is never cancelled)
     let call = if main.has("async") { format!("rt::task::block_on({call}).unwrap_or_else(|_| rt::dynamic(\"the main task was cancelled\"))") } else { call };
     let body = if main.is_try() { format!("{call}") } else { format!("{{ {call}; Ok(()) }}") };
@@ -1621,5 +1631,21 @@ fn has_eq(prog: &Program, ty: &Type, seen: &mut Vec<String>) -> bool {
                 None => args_ok,
             }
         }
+    }
+}
+
+/// The field of `Capabilities` that holds a capability type (fortis.host).
+fn capability_field(ty: &str) -> &'static str {
+    match ty {
+        "FileSystem" => "fileSystem",
+        "Network" => "network",
+        "Clock" => "clock",
+        "Random" => "random",
+        "Environment" => "environment",
+        "Process" => "process",
+        "Supervisor" => "supervisor",
+        "Console" => "console",
+        "SecretAccess" => "secretAccess",
+        _ => "rawSql",
     }
 }

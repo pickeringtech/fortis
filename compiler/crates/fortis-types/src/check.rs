@@ -20,6 +20,12 @@ pub fn check_tree<'a>(sess: &'a Session<'a>, lib: usize, mtree: N<'a>, file: &st
 
 /// One module of a package set, with the function IR of its final pass.
 pub fn check_tree_ir<'a>(sess: &'a Session<'a>, lib: usize, mtree: N<'a>, file: &str, module: &str, package: &str, entry: Option<&str>) -> (Vec<Record>, Vec<crate::journal::FnIr>) {
+    check_tree_with(sess, lib, mtree, file, module, package, entry, |ty| std::mem::take(&mut ty.ir_out))
+}
+
+/// One module of a package set, with the typer of its final pass handed to `f`.
+#[allow(clippy::too_many_arguments)]
+fn check_tree_with<'a, R>(sess: &'a Session<'a>, lib: usize, mtree: N<'a>, file: &str, module: &str, package: &str, entry: Option<&str>, f: impl FnOnce(&mut Typer<'a>) -> R) -> (Vec<Record>, R) {
     // a module of a package: the manifest's `entry` judges its `main` (resolve.rs `check_entry`), not this check
     let mut records = Resolver::new(&sess.libs.libs[lib], file, false).resolve_module(mtree);
     let mut dc = DeclChecker::new(sess, lib, file, module, package);
@@ -28,9 +34,125 @@ pub fn check_tree_ir<'a>(sess: &'a Session<'a>, lib: usize, mtree: N<'a>, file: 
     dc.check();
     let mut ty = Typer::new(dc);
     ty.run(mtree);
-    let ir = std::mem::take(&mut ty.ir_out);
+    let r = f(&mut ty);
     records.extend(ty.dc.records);
-    (records, ir)
+    (records, r)
+}
+
+/// Where a module is checked: on its own (its file name), or as the module at `file` of the package whose
+/// directory is `dir` (the formatter's typed rewrites, X-345).
+#[derive(Clone, Copy, Debug)]
+pub enum Unit<'a> {
+    Alone(&'a str),
+    Package { dir: &'a Path, file: &'a Path },
+}
+
+/// The module whose text is `src` (parsed as `parsed`) checked as `unit` says, with the typer of its final pass
+/// handed to `f`. Alone, the records are the module's own. In a package, the package set is loaded from disk with
+/// this module's file replaced by `src` in memory (nothing is written), and the records are every record of the
+/// set: the resolver's, else every module's; `f` runs only when the set resolves and the module is found.
+pub fn check_unit_with<R, F: for<'b> FnOnce(&Typer<'b>) -> R>(parsed: &Parsed, src: &str, unit: Unit, f: F) -> (Vec<Record>, Option<R>) {
+    match unit {
+        Unit::Alone(file) => {
+            let (records, r) = check_parsed_with(parsed, file, f);
+            (records, Some(r))
+        }
+        Unit::Package { dir, file } => {
+            let shown = rel(file);
+            let refused = |why: &str| vec![Record::new("E-NAM-001", why.to_string(), "LANG-04-02", &shown, 1, 1, fortis_diag::Json::Null)];
+            let search = dir.parent().unwrap_or(Path::new("."));
+            let mut ps = match PackageSet::load(dir, search) {
+                Ok(ps) => ps,
+                Err(e) => return (vec![fortis_names::resolve::manifest_record(&e, &rel(&dir.join("project.yaml")))], None),
+            };
+            let Ok(again) = fortis_syntax::parse_module(src) else { return (refused("the module does not parse"), None) };
+            let again = Arc::new(again);
+            let target = std::fs::canonicalize(file).ok();
+            let mut found = false;
+            for (_, pkg) in ps.packages.iter_mut() {
+                for m in pkg.modules.values_mut() {
+                    if target.is_some() && std::fs::canonicalize(&m.file).ok() == target {
+                        m.parsed = Some(again.clone());
+                        m.error = None;
+                        found = true;
+                    }
+                }
+            }
+            if !found {
+                return (refused("the file is not a module of its package"), None);
+            }
+            let r = ps.run();
+            if !r.is_empty() {
+                return (r, None);
+            }
+            check_package_set_with(&ps, target.as_deref(), f)
+        }
+    }
+}
+
+/// Every module of every package in the set, as `check_package_set`, with the typer of the module whose file is
+/// `target` handed to `f` after its final pass.
+fn check_package_set_with<R, F: for<'b> FnOnce(&Typer<'b>) -> R>(ps: &PackageSet, target: Option<&Path>, f: F) -> (Vec<Record>, Option<R>) {
+    let (ids, libs) = set_libraries(ps);
+    let lib_of = |p: &Package| ids.iter().position(|i| *i == p.identity()).unwrap();
+    let sess = Session::new(&libs);
+    let entry = ps.entry_key();
+    seed_inferred_consts(&sess, ps, &ids, entry.as_deref());
+    let mut out = Vec::new();
+    let mut f = Some(f);
+    let mut got = None;
+    for (_, p) in &ps.packages {
+        for (mpath, m) in &p.modules {
+            let parsed = match &m.parsed {
+                Some(p) => p,
+                None => continue,
+            };
+            let key = format!("{}.{}", p.name, mpath);
+            let mtree = N::new(&parsed.root, &parsed.toks);
+            let mine = target.is_some() && std::fs::canonicalize(&m.file).ok().as_deref() == target;
+            let (recs, r) = check_tree_with(&sess, lib_of(p), mtree, &rel(&m.file), &key, &p.identity(), entry.as_deref(), |ty| {
+                if mine {
+                    f.take().map(|f| f(ty))
+                } else {
+                    None
+                }
+            });
+            if r.is_some() {
+                got = r;
+            }
+            out.extend(recs);
+        }
+    }
+    (out, got)
+}
+
+/// Each package's identity, and its library: every module of the packages visible to it.
+fn set_libraries(ps: &PackageSet) -> (Vec<String>, Libraries) {
+    let ids: Vec<String> = ps.packages.iter().map(|(_, p)| p.identity()).collect();
+    let lib_of = |p: &Package| ids.iter().position(|i| *i == p.identity()).unwrap();
+    let mut libs: Vec<Library> = ids.iter().map(|_| Library::new()).collect();
+    for (pi, (_, p)) in ps.packages.iter().enumerate() {
+        let li = lib_of(p);
+        let mut visible: Vec<usize> = ps.visible_packages(pi).into_iter().map(|(_, i)| i).collect();
+        if !visible.contains(&pi) {
+            visible.push(pi);
+        }
+        for qi in visible {
+            let q = &ps.packages[qi].1;
+            for (mpath, m) in &q.modules {
+                let parsed: Arc<Parsed> = match &m.parsed {
+                    Some(p) => p.clone(),
+                    None => continue,
+                };
+                let lm = Arc::new(LibraryModule::new(&m.file.display().to_string(), &q.identity(), parsed, Some(lib_of(q))));
+                libs[li].modules.insert(format!("{}.{}", q.name, mpath), lm.clone());
+                if q.root.as_deref() == Some(mpath.as_str()) {
+                    libs[li].modules.insert(q.name.clone(), lm);
+                }
+            }
+        }
+    }
+    (ids, Libraries { libs })
 }
 
 /// One module checked against the reference library.
@@ -418,31 +540,8 @@ pub type ModuleIr = (String, Arc<Parsed>, Vec<crate::journal::FnIr>);
 
 /// Every module of every package in the set, with each module's function IR.
 pub fn check_package_set_ir(ps: &PackageSet) -> (Vec<Record>, Vec<ModuleIr>) {
-    let ids: Vec<String> = ps.packages.iter().map(|(_, p)| p.identity()).collect();
+    let (ids, libs) = set_libraries(ps);
     let lib_of = |p: &Package| ids.iter().position(|i| *i == p.identity()).unwrap();
-    let mut libs: Vec<Library> = ids.iter().map(|_| Library::new()).collect();
-    for (pi, (_, p)) in ps.packages.iter().enumerate() {
-        let li = lib_of(p);
-        let mut visible: Vec<usize> = ps.visible_packages(pi).into_iter().map(|(_, i)| i).collect();
-        if !visible.contains(&pi) {
-            visible.push(pi);
-        }
-        for qi in visible {
-            let q = &ps.packages[qi].1;
-            for (mpath, m) in &q.modules {
-                let parsed: Arc<Parsed> = match &m.parsed {
-                    Some(p) => p.clone(),
-                    None => continue,
-                };
-                let lm = Arc::new(LibraryModule::new(&m.file.display().to_string(), &q.identity(), parsed, Some(lib_of(q))));
-                libs[li].modules.insert(format!("{}.{}", q.name, mpath), lm.clone());
-                if q.root.as_deref() == Some(mpath.as_str()) {
-                    libs[li].modules.insert(q.name.clone(), lm);
-                }
-            }
-        }
-    }
-    let libs = Libraries { libs };
     let sess = Session::new(&libs);
     let entry = ps.entry_key();
     seed_inferred_consts(&sess, ps, &ids, entry.as_deref());
@@ -466,31 +565,8 @@ pub fn check_package_set_ir(ps: &PackageSet) -> (Vec<Record>, Vec<ModuleIr>) {
 /// Every module of every package in the set with the type of every expression recorded, each handed to `f`
 /// with its module key (`acme.stock.ids`): the typed IR builder runs there, module by module.
 pub fn check_package_set_typed<R, F: for<'b> FnMut(&mut Typer<'b>, N<'b>, &str, &Package) -> R>(ps: &PackageSet, mut f: F) -> (Vec<Record>, Vec<(String, R)>) {
-    let ids: Vec<String> = ps.packages.iter().map(|(_, p)| p.identity()).collect();
+    let (ids, libs) = set_libraries(ps);
     let lib_of = |p: &Package| ids.iter().position(|i| *i == p.identity()).unwrap();
-    let mut libs: Vec<Library> = ids.iter().map(|_| Library::new()).collect();
-    for (pi, (_, p)) in ps.packages.iter().enumerate() {
-        let li = lib_of(p);
-        let mut visible: Vec<usize> = ps.visible_packages(pi).into_iter().map(|(_, i)| i).collect();
-        if !visible.contains(&pi) {
-            visible.push(pi);
-        }
-        for qi in visible {
-            let q = &ps.packages[qi].1;
-            for (mpath, m) in &q.modules {
-                let parsed: Arc<Parsed> = match &m.parsed {
-                    Some(p) => p.clone(),
-                    None => continue,
-                };
-                let lm = Arc::new(LibraryModule::new(&m.file.display().to_string(), &q.identity(), parsed, Some(lib_of(q))));
-                libs[li].modules.insert(format!("{}.{}", q.name, mpath), lm.clone());
-                if q.root.as_deref() == Some(mpath.as_str()) {
-                    libs[li].modules.insert(q.name.clone(), lm);
-                }
-            }
-        }
-    }
-    let libs = Libraries { libs };
     let sess = Session::new(&libs);
     let entry = ps.entry_key();
     seed_inferred_consts(&sess, ps, &ids, entry.as_deref());

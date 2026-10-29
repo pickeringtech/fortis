@@ -15,16 +15,16 @@ of Fortis and its distribution (LR E); this one also defines the words used insi
   its name. A module holds only declarations and constants, so importing one never runs code (LR 4.2).
 - **Kit**: a named, versioned bundle of packages that ships with the distribution, such as the HTTP kit, the
   Data kit or the Web UI kit. A kit extends Fortis only through libraries, aspects, declaration heads, embedding
-  bindings and verifiers, and never changes what a core program means (PROG-PRD-38, PROG-FND-07).
+  bindings and verifiers, and never changes what a core program means.
 - **Compatibility set**: the published set of standard packages, `fortis` and the kits, at the versions tested
   together; a dependency on a standard package must name one of them at the set's version (LR 4.1).
 - **Toolchain component**: a tool that ships with Fortis and works on programs rather than inside them: the
-  daemon, the language server, the SDK generators. Toolchain components are not kits (PROG-PRD-38).
+  daemon, the language server, the SDK generators. Toolchain components are not kits.
 - **Backend**: an implementation that runs checked programs. There are three, which must agree: the
   *definitional interpreter* (the reference, run by `fortis run`), the *development VM* (`fortisc vm`) and
-  *native code* (safe Rust, built by `fortis build`) (LR 1, Programme 6).
+  *native code* (safe Rust, built by `fortis build`) (LR 1).
 - **Build mode**: how a program is built: `dev` (on the VM), `native-dev` or `release`. Optimisation, debug
-  symbols and profile-guided optimisation are settings of a mode (Programme 5.4).
+  symbols and profile-guided optimisation are settings of a mode.
 - **Lint level**: how strictly lints are reported: under the baseline level an unused import is a warning, under
   the strict level an error (LR 4.3).
 - **Target feature set**: which standard modules exist for a compilation target (`core`, `alloc`, `host`,
@@ -55,9 +55,9 @@ of Fortis and its distribution (LR E); this one also defines the words used insi
   (LR 5.1, LR 7.2, LR 9.8).
 - **Binding** (of an embedded language): a versioned package that gives a language fenced blocks in Fortis,
   through the embedding protocol: its meaning is fixed by the compiler and its checking is a verifier
-  (PROG-PRD-30; being designed, [Embedded languages](embedded-languages.md)).
+  (being designed, [Embedded languages](embedded-languages.md)).
 - **Verifier**: a package that can only make the check stricter: it reads the checked program and returns
-  records, never code; it is pure, deterministic, bounded and holds no capability (PROG-PRD-36).
+  records, never code; it is pure, deterministic, bounded and holds no capability.
 
 ## Values and ownership
 
@@ -96,7 +96,8 @@ of Fortis and its distribution (LR E); this one also defines the words used insi
   parameter, capture or `self`; mutating it is not `mutate` (LR 11.1).
 - **Authority**: a value that grants input or output, implementing the marker interface `Authority` (LR 11.6).
 - **Capability**: a process-wide authority (`FileSystem`, `Network`, `Clock`, `Random`, `Environment`, `Process`,
-  `Supervisor`, `Console`, `SecretAccess`, `RawSql`), created once by `Host.capabilities()` in `main` (LR 11.6).
+  `Supervisor`, `Console`, `SecretAccess`, `RawSql`), created once by the runtime and supplied to the entry
+  `main`, which declares the ones it needs as parameters (LR 4.6, LR 11.6).
 - **Per-activation authority**: an authority minted by a kit's adapter from a capability for one unit of work,
   such as `RequestContext` or `Tx` (LR 11.6).
 - **Trusted**: a standard-library intrinsic with no Fortis body, whose claims are reported as trusted, never as
@@ -116,4 +117,4 @@ of Fortis and its distribution (LR E); this one also defines the words used insi
 - **Diagnostic plane**: where reports and observation records go; nothing on it can feed back into the program
   (LR 11.7).
 - **Record**: as a tool's output, a schema-valid object (a finding, a test result, a runtime failure) printed as
-  text on a terminal and as one JSON line otherwise (Programme 7.4).
+  text on a terminal and as one JSON line otherwise.

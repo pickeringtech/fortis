@@ -1,0 +1,92 @@
+// execute: lent moved|consume moved|drop moved|after moved|peek popped|took popped|drop popped|after popped|lent matched|arm matched|drop matched|after matched|made returned|got returned|drop returned|made paren|got paren|drop paren|end
+// reports: log:level=info,message=drop moved,function=cleanup Token|log:level=info,message=drop popped,function=cleanup Token|log:level=info,message=drop matched,function=cleanup Token|log:level=info,message=drop returned,function=cleanup Token|log:level=info,message=drop paren,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-01
+// D-338, 7.4, 7.9, 12.2: a value that was lent and is then moved out takes its cleanup obligation with it: the new
+// owner runs it once, and the old place and the ended loans run none. The value is moved to an `owned` parameter
+// after a loan of it ended, popped from a list after a `get` lent it, consumed by `match move` after a loan, and
+// returned as a local (`return t`, `return (t)`, R16 and D-313) after a loan of it ended in the function.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func consume(console: Shared[Console], t: owned Token) {
+  console.print("consume ${t.label}")
+}
+
+func moved(console: Shared[Console]) {
+  let own = Token(label: String.from("moved"), console: console.retain())
+  {
+    let a = alias own
+    console.print("lent ${a.label}")
+  }
+  consume(console, move own)
+  console.print("after moved")
+}
+
+func popped(console: Shared[Console]) {
+  let mut xs: List[Token] = List.default()
+  xs.push(Token(label: String.from("popped"), console: console.retain()))
+  {
+    let t = xs.get(0)
+    console.print("peek ${t?.label ?? "none"}")
+  }
+  match xs.pop() {
+    present(t) => { console.print("took ${t.label}") }
+    null => {}
+  }
+  console.print("after popped")
+}
+
+func matched(console: Shared[Console]) {
+  let own = Token(label: String.from("matched"), console: console.retain())
+  {
+    let a = alias own
+    console.print("lent ${a.label}")
+  }
+  match move own {
+    t => { console.print("arm ${t.label}") }
+  }
+  console.print("after matched")
+}
+
+func made(console: Shared[Console], label: String) Token {
+  let t = Token(label: copy label, console: console.retain())
+  {
+    let a = alias t
+    console.print("made ${a.label}")
+  }
+  return t
+}
+
+func madeParen(console: Shared[Console], label: String) Token {
+  let t = Token(label: copy label, console: console.retain())
+  {
+    let a = alias t
+    console.print("made ${a.label}")
+  }
+  return (t)
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  moved(console)
+  popped(console)
+  matched(console)
+  {
+    let r = made(console, "returned")
+    console.print("got ${r.label}")
+  }
+  {
+    let p = madeParen(console, "paren")
+    console.print("got ${p.label}")
+  }
+  console.print("end")
+}

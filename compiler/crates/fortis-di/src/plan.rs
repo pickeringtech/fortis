@@ -1,4 +1,4 @@
-//! Resolution (spikes/SP-08/design.md sections 3, 5-7): which binding fills each slot, where each instance lives,
+//! Resolution (SP-08's design, sections 3, 5-7): which binding fills each slot, where each instance lives,
 //! the order instances are built in, and the graph rules. Everything here is a fact about the provider graph; no
 //! rule here is about loans, moves or effects, which the core checks on the elaborated source.
 

@@ -3,7 +3,7 @@
 // `using factory`: a factory's parameters are filled like slots, an authority by a loan for the call; a `try`
 // factory makes every generated function that calls it `try`, so a failing construction reaches the caller as a
 // failure and the scope's already-built instances are dropped in reverse order.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export error Closed {
   code: "demo.closed"
@@ -40,9 +40,7 @@ context Live(console: owned Shared[Console], limit: Int) {
   provide Checkout
 }
 
-export try recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+try recovers func main(out: Console) {
   let console = Shared.create(move out)
   let app = Live.application(console.retain(), 3) or fail
   console.print(app.checkout().pay(5))

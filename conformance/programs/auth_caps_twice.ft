@@ -1,7 +1,7 @@
 // reject: E-EFF-010 (at the marked line)
 // covers: LANG-11-07
 import fortis.host { Host }
-export try func main(args: List[String]) Void {   // reject: E-EFF-010 — Host.capabilities() twice
+try func main() {   // reject: E-EFF-010 — Host.capabilities() twice
   let caps = Host.capabilities()
   let again = Host.capabilities()
   caps.console.print("ready")

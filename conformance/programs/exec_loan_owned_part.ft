@@ -1,0 +1,195 @@
+// execute: pair f1 s1|show f1|drop f1|drop s1|after pair|made f2|drop f2|drop s2|after made|lent item s3|drop s3|after lent|moved in f4|drop f4|drop s4|after moved in|loan moved in item|after loan moved in|moved on f5|drop f5|drop s5|after moved on|captured f6 s6|drop f6|drop s6|after captured|optional f7|element f7b|drop f7b|drop s7b|drop f7|drop s7|after optional|returning f10|drop f10|drop s10|returned 10|turn l0 m0|drop l0|drop m0|turn l1 m1|drop l1|drop m1|nested out|read f11 f11b|drop f11|drop in|drop f11b|drop out|discarded|after nested|copied n n|after copied|failing f12|drop f12|drop s12|recovered|back 0|list item|end|drop item
+// reports: log:level=info,message=drop f1,function=cleanup Token|log:level=info,message=drop s1,function=cleanup Token|log:level=info,message=drop f2,function=cleanup Token|log:level=info,message=drop s2,function=cleanup Token|log:level=info,message=drop s3,function=cleanup Token|log:level=info,message=drop f4,function=cleanup Token|log:level=info,message=drop s4,function=cleanup Token|log:level=info,message=drop f5,function=cleanup Token|log:level=info,message=drop s5,function=cleanup Token|log:level=info,message=drop f6,function=cleanup Token|log:level=info,message=drop s6,function=cleanup Token|log:level=info,message=drop f7b,function=cleanup Token|log:level=info,message=drop s7b,function=cleanup Token|log:level=info,message=drop f7,function=cleanup Token|log:level=info,message=drop s7,function=cleanup Token|log:level=info,message=drop f10,function=cleanup Token|log:level=info,message=drop s10,function=cleanup Token|log:level=info,message=drop l0,function=cleanup Token|log:level=info,message=drop m0,function=cleanup Token|log:level=info,message=drop l1,function=cleanup Token|log:level=info,message=drop m1,function=cleanup Token|log:level=info,message=drop f11,function=cleanup Token|log:level=info,message=drop in,function=cleanup Token|log:level=info,message=drop f11b,function=cleanup Token|log:level=info,message=drop out,function=cleanup Token|log:level=info,message=note n,function=cleanup Note|log:level=info,message=note n,function=cleanup Note|log:level=info,message=drop f12,function=cleanup Token|log:level=info,message=drop s12,function=cleanup Token|log:level=info,message=drop item,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-366, D-367, D-368, 7.9, 12.2: a tuple's element whose type is a loan can hold a value of the tuple's own: a `??`
+// whose fallback is moved or made, or a binding of one moved in. The tuple owns that value and destroys it with its
+// other elements, in element order: when it ends, is moved, captured, nested, discarded or wrapped in an optional,
+// in a loop, and when `return` or `fail` leaves its block; a copy copies it. The VM never ran that cleanup (D-366),
+// and native code ran it after the tuple's other elements (D-367). A real loan in the same place, given by the `??`
+// or moved in from a binding, still destroys nothing: the interpreter ran the list's element's cleanup when a tuple
+// that a binding's loan was moved into ended (D-368).
+import fortis.host { Console }
+
+export error Late {
+  code: "demo.late"
+}
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func show(console: Shared[Console], t: Token) {
+  console.print("show ${t.label}")
+}
+
+// a copyable class: a copy of the tuple copies the value it owns
+class Note {
+  label: String
+  cleanup(editable self) {
+    log.info("note ${self.label}")
+  }
+}
+
+func coalesced(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "f1")
+  {
+    let pair = (empty.get(0) ?? move d, make(console, "s1"))
+    console.print("pair ${pair.0.label} ${pair.1.label}")
+    show(console, pair.0)
+  }
+  console.print("after pair")
+}
+
+func made(console: Shared[Console], empty: List[Token]) {
+  {
+    let pair = (empty.get(0) ?? make(console, "f2"), make(console, "s2"))
+    console.print("made ${pair.0.label}")
+  }
+  console.print("after made")
+}
+
+func lent(console: Shared[Console], xs: List[Token]) {
+  {
+    let pair = (xs.get(0) ?? make(console, "unused"), make(console, "s3"))
+    console.print("lent ${pair.0.label} ${pair.1.label}")
+  }
+  console.print("after lent")
+}
+
+func movedIn(console: Shared[Console], empty: List[Token], xs: List[Token]) {
+  let d = make(console, "f4")
+  let t = empty.get(0) ?? move d
+  {
+    let pair = (move t, make(console, "s4"))
+    console.print("moved in ${pair.0.label}")
+  }
+  console.print("after moved in")
+  let u = xs.get(0)
+  {
+    let pair = (move u, 4)
+    console.print("loan moved in ${pair.0?.label ?? "none"}")
+  }
+  console.print("after loan moved in")
+}
+
+func movedOn(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "f5")
+  {
+    let pair = (empty.get(0) ?? move d, make(console, "s5"))
+    let moved = move pair
+    console.print("moved on ${moved.0.label}")
+  }
+  console.print("after moved on")
+}
+
+func captured(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "f6")
+  {
+    let pair = (empty.get(0) ?? move d, make(console, "s6"))
+    let f = fn[move pair, alias console]() Void {
+      console.print("captured ${pair.0.label} ${pair.1.label}")
+    }
+    f()
+  }
+  console.print("after captured")
+}
+
+func optional(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "f7")
+  let e = make(console, "f7b")
+  {
+    let p = present((empty.get(0) ?? move d, make(console, "s7")))
+    match p {
+      present(pair) => console.print("optional ${pair.0.label}")
+      null => console.print("optional none")
+    }
+    let q = (present(empty.get(0) ?? move e), make(console, "s7b"))
+    console.print("element ${q.0?.label ?? "none"}")
+  }
+  console.print("after optional")
+}
+
+func returned(console: Shared[Console], empty: List[Token]) Int {
+  let d = make(console, "f10")
+  let pair = (empty.get(0) ?? move d, make(console, "s10"))
+  console.print("returning ${pair.0.label}")
+  return 10
+}
+
+func looped(console: Shared[Console], empty: List[Token]) {
+  let mut i = 0
+  while i < 2 {
+    let d = make(console, "l${i}")
+    let pair = (empty.get(0) ?? move d, make(console, "m${i}"))
+    console.print("turn ${pair.0.label} ${pair.1.label}")
+    i = i + 1
+  }
+}
+
+func nested(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "f11")
+  let e = make(console, "f11b")
+  {
+    let outer = ((empty.get(0) ?? move d, make(console, "in")), empty.get(0) ?? move e, make(console, "out"))
+    console.print("nested ${outer.2.label}")
+    match outer {
+      (inner, second, _) => console.print("read ${inner.0.label} ${second.label}")
+    }
+    discard move outer
+    console.print("discarded")
+  }
+  console.print("after nested")
+}
+
+func copied(console: Shared[Console]) {
+  let notes: List[Note] = List.default()
+  let n = Note(label: String.from("n"))
+  {
+    let pair = (notes.get(0) ?? move n, 1)
+    let c = copy pair
+    console.print("copied ${c.0.label} ${pair.0.label}")
+  }
+  console.print("after copied")
+}
+
+try func failed(console: Shared[Console], empty: List[Token]) Int {
+  let d = make(console, "f12")
+  let pair = (empty.get(0) ?? move d, make(console, "s12"))
+  console.print("failing ${pair.0.label}")
+  fail Late()
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  coalesced(console, empty)
+  made(console, empty)
+  lent(console, xs)
+  movedIn(console, empty, xs)
+  movedOn(console, empty)
+  captured(console, empty)
+  optional(console, empty)
+  console.print("returned ${returned(console, empty)}")
+  looped(console, empty)
+  nested(console, empty)
+  copied(console)
+  let n = failed(console, empty) catch e {
+    console.print("recovered")
+    recover 0
+  }
+  console.print("back ${n}")
+  console.print("list ${xs.get(0)?.label ?? "none"}")
+  console.print("end")
+}

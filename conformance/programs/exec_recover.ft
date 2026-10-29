@@ -1,7 +1,7 @@
 // execute: 2|0
 // requires: runtime
 // covers: LANG-10-05
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Odd {
   code: "demo.odd"
@@ -17,8 +17,7 @@ try func half(n: Int) Int {
 
 recovers func safeHalf(n: Int) Int => half(n) or recover 0
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${safeHalf(4)}")
-  caps.console.print("${safeHalf(3)}")
+recovers func main(console: Console) {
+  console.print("${safeHalf(4)}")
+  console.print("${safeHalf(3)}")
 }

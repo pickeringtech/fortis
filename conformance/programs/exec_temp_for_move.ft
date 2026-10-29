@@ -3,21 +3,21 @@
 // covers: LANG-07-07
 // 7.9: an element moved out of a temporary `for` source leaves that source. Elements the body does not
 // move, including those still in the source when the loop breaks, are destroyed with the source.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
 
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   for h in List[Handle].of(Handle.make(1, alias console)) {
     let kept = move h
     console.print("kept")
@@ -34,9 +34,7 @@ func run(console: Shared[Console]) Void {
   console.print("after visit")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
 }

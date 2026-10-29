@@ -18,12 +18,12 @@ export pure try func lineTotal(line: Line) Money {
   if line.unitPrice < 0d {
     fail InvalidPrice(quantity: line.quantity)
   }
-  return Money.multiply(Money.of(Currency.GBP, line.unitPrice), line.quantity) or fail
+  return Money.multiply(Money.of(GBP, line.unitPrice), line.quantity) or fail
 }
 
 test "line totals are exact" {
   let line = Line(sku: "tea", quantity: 3, unitPrice: 1.10d)
-  expect (lineTotal(line) or fail).amount == 3.30d
+  expect lineTotal(line).amount == 3.30d
 }
 
 test "line totals by quantity" cases {
@@ -32,11 +32,11 @@ test "line totals by quantity" cases {
   "ten": { quantity: 10, expected: 11.00d }
 } as row {
   let line = Line(sku: "tea", quantity: row.quantity, unitPrice: 1.10d)
-  expect (lineTotal(line) or fail).amount == row.expected
+  expect lineTotal(line).amount == row.expected
 }
 
 property "a larger quantity never costs less" forall (quantity: Int<1..999>) {
-  let fewer = Line(sku: "tea", quantity: quantity, unitPrice: 2.50d)
+  let fewer = Line(sku: "tea", quantity, unitPrice: 2.50d)
   let more = Line(sku: "tea", quantity: quantity + 1, unitPrice: 2.50d)
-  expect Money.greaterThan(lineTotal(more) or fail, lineTotal(fewer) or fail)
+  expect Money.greaterThan(lineTotal(more), lineTotal(fewer))
 }

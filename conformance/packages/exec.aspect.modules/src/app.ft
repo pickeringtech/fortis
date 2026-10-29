@@ -1,0 +1,16 @@
+// `@ignorable` here is the core aspect: `mark` runs no hook, and its result may be dropped. `count` carries the
+// aspect its own module declares, whose hook runs before it (11.8; D-314).
+import fortis.host { Console }
+import exec.aspect.modules.notes { count }
+
+@ignorable
+func mark(c: Console) Int {
+  c.print("mark")
+  return 1
+}
+
+func main(c: Console) {
+  mark(c)
+  let n = count(c, 2)
+  c.print("n ${n}")
+}

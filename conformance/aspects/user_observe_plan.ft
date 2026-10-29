@@ -1,0 +1,25 @@
+// accept
+// covers: LANG-11-03, LANG-11-09
+// D-314, 11.4, 11.8: the plan step judges the core `@observe` only, resolved by identity. This module declares its
+// own aspect under the name `observe`, so `@observe(OrderTrace)` attaches no core observation and the `noalloc`
+// function carrying it has no plan to conflict with: no `E-EFF-030`, which the step reported when it recognised
+// `@observe` by its spelling. The core aspect still conflicts (conformance/programs/eff_noalloc_observe.ft).
+// Judged by both toolchains' plan steps: conformance/tools/aspects_check.py and fortis-types `plans` tests. Not a
+// program fixture: the VM and native do not yet build a user aspect that takes an observation schema.
+export class Order {
+  export id: Int
+  export label: String<scalars: 0..64>
+}
+
+observation OrderTrace {
+  label: String<scalars: 0..64>      required: none
+}
+
+aspect observe(schema: ObservationSchema) {
+  metadata
+}
+
+@observe(OrderTrace)
+export noalloc func total(order: Order) Int {
+  return order.id
+}

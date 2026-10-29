@@ -3,11 +3,11 @@ export class Builder {
   // intrinsic: an empty builder; O(1)
   export trusted pure func create() Builder
   // intrinsic: appends the view; amortised O(len)
-  export trusted func append(editable self, text: StringView) Void
+  export trusted func append(editable self, text: StringView)
   // intrinsic: appends the view and a line feed; amortised O(len)
-  export trusted func appendLine(editable self, text: StringView) Void
+  export trusted func appendLine(editable self, text: StringView)
   // intrinsic: appends one scalar; amortised O(1)
-  export trusted func appendScalar(editable self, s: Scalar) Void
+  export trusted func appendScalar(editable self, s: Scalar)
   // intrinsic: the accumulated text as an owned String; O(total length)
   export trusted pure func finish(self) String
 }

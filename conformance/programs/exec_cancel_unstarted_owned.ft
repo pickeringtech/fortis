@@ -4,7 +4,7 @@
 // covers: LANG-07-07
 // 7.9, 12.3 (X-250; D-30): a task cancelled before it starts never runs, and what its work owns goes with it: an
 // async call's owned argument, and a closure's `move` capture, each destroyed when the task is cancelled.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export error Bad {
   code: "demo.bad"
@@ -13,7 +13,7 @@ export error Bad {
 export class Res {
   console: Shared[Console]
   label: String
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("drop ${self.label}")
   }
 }
@@ -38,9 +38,7 @@ async try func run(console: Shared[Console]) Int {
   }
 }
 
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+async recovers func main(out: Console) {
   let console = Shared.create(move out)
   let r = await run(console) or recover -1
   console.print("recovered ${r}")

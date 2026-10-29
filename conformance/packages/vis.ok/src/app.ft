@@ -1,7 +1,7 @@
 // accept
 import vis.ok.util { Thing, Plain }
 
-export func main(args: List[String]) Void {
+func main() {
   let t = Thing.create()
   let n = Int.saturatingAdd(t.open, t.shown())
   let p = Plain(a: 1, b: 2)               // every field exported: constructible here

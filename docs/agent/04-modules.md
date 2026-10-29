@@ -14,7 +14,7 @@
 | LANG-04-03 | Across packages, only modules listed in the exporting package's `exports:` may be imported. | LR 4.3 |
 | LANG-04-04 | Two versions of one package are two packages; a type's identity is its name, package, version and declaring module, so same-named types of two modules or versions never interchange. | LR 4.1 |
 | LANG-04-05 | A `let` may not shadow a visible binding (`E-NAM-003`). | LR 4.5 |
-| LANG-04-06 | The entry point is the exported `main` of the manifest's `entry` module, with one of the four signatures of LR 4.6, each optionally `recovers` (X-155; refused in packages today, D-52). | LR 4.6 |
+| LANG-04-06 | The entry point is the `main` of the manifest's `entry` module, exported or not, with one of the four heads of LR 4.6, each optionally `recovers` (X-155; refused in packages today, D-52); each parameter is `List[String]` or a capability type, each type once (`E-NAM-005`, `E-NAM-006`), supplied by the runtime by its type (X-345). | LR 4.6 |
 
 ## Package and import facts
 
@@ -33,7 +33,7 @@
 | `export` is the only visibility modifier. Unexported: private to the module. Exported: visible to importers; outside the package only if the module is in `exports:`. Class fields, methods, associated functions: private unless `export`. Enum variants, interface members and mixin-required methods share their declaration's visibility. | LR 4.4 |
 | Generated constructor `C(field: …)` is callable only where every field is visible. An exported field is readable through any loan and writable through an `editable` one. | LR 4.4 |
 | Names resolve to the innermost enclosing block, then the module namespace. Qualified forms: `module.member`, `Type.associated`, `Enum.Variant`, `value.field`, `value.method(…)`. No `::`. A bare field name is not in scope inside a method: use `self.field`. | LR 4.5 |
-| `main(args: List[String]) Void` with modifiers `try`, `async` or `async try`; it calls `Host.capabilities()` exactly once. A failing `try main` prints one failure record to standard error and exits 1. An `async main` is the root task on the core cooperative executor. | LR 4.6 |
+| `func main(console: Console, args: List[String])` with modifiers `try`, `async` or `async try`; the result is `Void`, left out; `export` is implied. Each parameter is supplied by its type: `List[String]` gets the arguments, a capability type imported from `fortis.host` gets that capability; declare only what the body uses (`func main()` takes nothing). `main` owns its capabilities and may move one (`Shared.create(move console)`). Older code writes `export func main(args: List[String]) Void` and calls `Host.capabilities()` once in the body; that stays accepted in a `main` with no capability parameter, and `fortis fmt` rewrites it. A failing `try main` prints one failure record to standard error and exits 1. An `async main` is the root task on the core cooperative executor. | LR 4.6 |
 
 ## Diagnostics
 
@@ -85,12 +85,11 @@ test "gross adds a fifth" {
 ```fortis
 // accept
 // file: agent.shop/src/main.ft
-import fortis.host { Host }
+import fortis.host { Console }
 import agent.shop.prices
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${prices.gross(100)}")
+func main(console: Console) {
+  console.print("${prices.gross(100)}")
 }
 ```
 
@@ -139,12 +138,11 @@ dependencies:
 ```fortis
 // reject: E-NAM-004
 // file: agent.tillmix/src/main.ft
-import fortis.host { Host }
+import fortis.host { Console }
 import agent.till.prices
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${prices.gross(100)}")
+func main(console: Console) {
+  console.print("${prices.gross(100)}")
   discard prices.margin()               // reject: E-NAM-004
 }
 ```
@@ -205,24 +203,38 @@ class Price {
 
 test "money" {
   expect Price(pennies: 1).pennies == 1
-  expect Money.zero(Currency.GBP).currency == Currency.GBP
+  expect Money.zero(GBP).currency == GBP
 }
 ```
 
 ### Entry point (LR 4.6)
+
+`main` declares the capabilities it needs as parameters; the runtime supplies each by its type (X-345).
+
+```fortis
+// accept
+import fortis.host { Console }
+
+func main(console: Console, args: List[String]) {
+  console.print("${args.count()} arguments")
+}
+```
+
+```output
+0 arguments
+```
 
 A failing `try main` exits with status 1 and one failure record on standard error; standard output keeps what was
 printed before the failure.
 
 ```fortis
 // accept (exit status 1)
-import fortis.host { Host, Path }
+import fortis.host { Path, Console, FileSystem }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("start")
-  let text = caps.fileSystem.readText(Path.parse("missing.txt") or fail) or fail
-  caps.console.print(text)
+try func main(console: Console, fileSystem: FileSystem) {
+  console.print("start")
+  let text = fileSystem.readText(Path.parse("missing.txt") or fail) or fail
+  console.print(text)
 }
 ```
 
@@ -236,5 +248,5 @@ start
 - Within a package, imports may be cyclic for type declarations (LR 4.2).
 - Renaming an exported declaration or parameter, or moving a module out of `exports:`, breaks other packages
   (LR 4.4, LR 5.8).
-- Reach the process's authority only through `main`'s `Host.capabilities()` and pass capabilities down as
+- Reach the process's authority only through `main`'s capability parameters, and pass capabilities down as
   parameters (LR 4.6, LR 11.6).

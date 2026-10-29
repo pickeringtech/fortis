@@ -4,7 +4,7 @@
 // The list functions whose native bodies are hand-written Rust (X-119): each over empty, single and
 // several items, with trivial and owning element types. The native harness also builds this program
 // with the bodies lowered from library/fortis and requires the same output.
-import fortis.host { Host }
+import fortis.host { Console }
 import fortis.collections { sorted }
 
 func show(xs: ListView[Int]) String {
@@ -27,25 +27,24 @@ func words(xs: ListView[String]) String {
     out = "${out}<${xs.get(i) ?? ""}>"
     i = Int.wrappingAdd(i, 1)
   }
-  return move out
+  return out
 }
 
 func backwards(xs: ListView[Int]) List[Int] => xs.reversed()
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let none: List[Int] = List.default()
   let one = List.of(7)
   let many = List.of(5, -3, 9, 0, 9, 2, -8)
   let names = List.of(String.from("pear"), String.from("fig"), String.from("apple"))
-  caps.console.print("${show(none.map(fn(x: Int) Int => Int.wrappingMul(x, 2)))} ${show(one.map(fn(x: Int) Int => Int.wrappingMul(x, 2)))} ${show(many.map(fn(x: Int) Int => Int.wrappingMul(x, x)))}")
-  caps.console.print("${show(none.filter(fn(x: Int) Bool => x > 0))} ${show(one.filter(fn(x: Int) Bool => x > 7))} ${show(many.filter(fn(x: Int) Bool => x > 0))}")
-  caps.console.print("${none.countWhere(fn(x: Int) Bool => x > 0)} ${one.countWhere(fn(x: Int) Bool => x == 7)} ${many.countWhere(fn(x: Int) Bool => x % 3 == 0)}")
-  caps.console.print("${show(none.reversed())} ${show(one.reversed())} ${show(many.reversed())} ${show(backwards(many))}")
-  caps.console.print("${show(none.concat(none))} ${show(one.concat(many))} ${show(many.concat(one))}")
-  caps.console.print("${show(sorted(none))} ${show(sorted(one))} ${show(sorted(many))}")
+  console.print("${show(none.map(fn(x: Int) Int => Int.wrappingMul(x, 2)))} ${show(one.map(fn(x: Int) Int => Int.wrappingMul(x, 2)))} ${show(many.map(fn(x: Int) Int => Int.wrappingMul(x, x)))}")
+  console.print("${show(none.filter(fn(x: Int) Bool => x > 0))} ${show(one.filter(fn(x: Int) Bool => x > 7))} ${show(many.filter(fn(x: Int) Bool => x > 0))}")
+  console.print("${none.countWhere(fn(x: Int) Bool => x > 0)} ${one.countWhere(fn(x: Int) Bool => x == 7)} ${many.countWhere(fn(x: Int) Bool => x % 3 == 0)}")
+  console.print("${show(none.reversed())} ${show(one.reversed())} ${show(many.reversed())} ${show(backwards(many))}")
+  console.print("${show(none.concat(none))} ${show(one.concat(many))} ${show(many.concat(one))}")
+  console.print("${show(sorted(none))} ${show(sorted(one))} ${show(sorted(many))}")
   let long = names.filter(fn(w: String) Bool => w.scalarCount() > 3)
-  caps.console.print("${words(long)} ${words(names.reversed())} ${words(names.concat(long))} ${names.countWhere(fn(w: String) Bool => w.byteCount() == 3)}")
+  console.print("${words(long)} ${words(names.reversed())} ${words(names.concat(long))} ${names.countWhere(fn(w: String) Bool => w.byteCount() == 3)}")
   let lengths = names.map(fn(w: String) Int => w.scalarCount())
-  caps.console.print("${show(lengths)} ${names.count()}")
+  console.print("${show(lengths)} ${names.count()}")
 }

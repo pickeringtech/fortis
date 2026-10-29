@@ -248,6 +248,8 @@ contradict); they are counted once, as tool defects.
 - **Happened:** for `let last = items.get(0)` both checkers say `E-OWN-002 "`copy last`: alias String from self?
   is not Copyable"` (the message also names `self`, not `items`). `match … { present(x) => copy x … }` works.
 - **Repro:** `pilot/repro/narrowed-optional-loan-copy.ft`.
+- **Resolved** in v0.0.2 (D-341): `copy v` of a binding that holds a loan copies the value it lends, narrowed or
+  not, so both forms in the repro check and run the same on every backend (LR 7.5).
 
 ### 24. Fallible text operations and comparators (language question)
 - Every text operation (`scalarAt`, `slice`) is `try`, so a comparator that looks at text must either propagate

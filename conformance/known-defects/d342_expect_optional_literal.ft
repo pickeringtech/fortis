@@ -1,0 +1,11 @@
+// D-342: a test's `expect` that compares an optional with a literal does not build natively: `fortisc native
+// FILE --tests` stops with rustc E0614 (`Option<&str>` cannot be dereferenced). `fortis test` and `fortisc test`
+// pass the test. Binding the present value first (`let got = first(names) ?? "none"`) builds.
+func first(names: List[String]) String? {
+  let name = names.get(0)
+  return copy name
+}
+
+test "an optional compared with a literal" {
+  expect first(List.of("a")) == "a"
+}

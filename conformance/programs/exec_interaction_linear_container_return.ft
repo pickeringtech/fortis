@@ -4,7 +4,7 @@
 // covers: LANG-10-01, LANG-10-02, LANG-05-05
 // Programme 16, interaction linear outcome in a linear container + early return: a function returns early before
 // the container exists, and on its other path consumes every outcome of the container before returning.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Odd {
   code: "demo.odd"
@@ -21,9 +21,9 @@ try func even(n: Int) Int {
 func batch(xs: List[Int]) List[Outcome[Int]] {
   let mut out: List[Outcome[Int]] = List.default()
   for x in xs {
-    editable out.push(even(x))
+    out.push(even(x))
   }
-  return move out
+  return out
 }
 
 func summarise(xs: List[Int]) String {
@@ -47,8 +47,7 @@ func summarise(xs: List[Int]) String {
   return "ok ${ok}, refused ${refused}"
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(summarise(List.default()))
-  caps.console.print(summarise(List.of(2, 4, 5, 6)))
+func main(console: Console) {
+  console.print(summarise(List.default()))
+  console.print(summarise(List.of(2, 4, 5, 6)))
 }

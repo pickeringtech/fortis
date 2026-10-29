@@ -37,6 +37,12 @@ def check_module(lib, mtree, file: str, module: str = "main", package: str = "",
 def check_decls(dc, file: str) -> List[dict]:
     ty = Typer(dc)
     out = []
+    # `@observe` is the prelude's aspect only where this module's table resolves the name to it: an aspect the module
+    # declares or imports under that name attaches no core observation, and the IR builder records none for it
+    # (fortis-mir `core_aspect`), so it has no plan to conflict with (11.8; D-314)
+    od = dc.table.get("observe")
+    if od is not None and od.module != "fortis.prelude":
+        return out
     for name, d in dc.table.decls.items():
         if d.kind != "func" or d.module != dc.module_name or d.sig is None:
             continue

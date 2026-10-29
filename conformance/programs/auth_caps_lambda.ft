@@ -2,7 +2,7 @@
 // covers: LANG-11-07
 // D-110: a lambda written in `main` can be called any number of times, so it may not create the capabilities (11.6).
 import fortis.host { Host, Capabilities }
-export func main(args: List[String]) Void {
+func main() {
   let make = fn() Capabilities => Host.capabilities()     // reject: E-EFF-010 — inside a lambda
   let caps = make()
   caps.console.print("made")

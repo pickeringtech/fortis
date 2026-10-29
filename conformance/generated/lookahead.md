@@ -1,20 +1,21 @@
 # Lookahead report (generated parser, DEL-02)
 
-Grammar sha256 `9a53cbf67a820bd32861535e1c27abc920d97f30fec3772962e6605f0a892924`; generator `conformance/tools/gen_parser.py`; emitted parser `conformance/generated/fortis_parser.py`.
+Grammar sha256 `048e1b0919de39a334d8cf8fb50094eea202389b60b7e53f538765d45e3455d2`; generator `conformance/tools/gen_parser.py`; emitted parser `conformance/generated/fortis_parser.py`.
 
-**Lookahead bound: k = 3**, confirmed by the generator: at k = 3 every one of the 286 decision points is separated by token classes alone or covered by a documented policy (0 undocumented conflicts). No decision consults a name: lookahead tables hold literal token texts and lexer kinds only.
+**Lookahead bound: k = 3**, confirmed by the generator: at k = 3 every one of the 290 decision points is separated by token classes alone or covered by a documented policy (0 undocumented conflicts). No decision consults a name: lookahead tables hold literal token texts and lexer kinds only.
 
 | k | decisions | conflicts | without a documented policy |
 |---|---|---|---|
-| 1 | 286 | 83 | 9 |
-| 2 | 286 | 42 | 2 |
-| 3 | 286 | 35 | 0 |
+| 1 | 290 | 85 | 10 |
+| 2 | 290 | 43 | 2 |
+| 3 | 290 | 36 | 0 |
 
-Conflicts at k = 3 by resolution policy (Language Reference 3.2, X-94): P2: 22, P3: 13
+Conflicts at k = 3 by resolution policy (Language Reference 3.2, X-94): P2: 22, P3: 14
 
 | Rule | Decision | Branches | Example shared prefix | Policy |
 |---|---|---|---|---|
 | mixinMember | alternative | [0, 1] | `KIND:UPPER KIND:UPPER KIND:UPPER` | P3 |
+| funcSignature | alternative | [0, 1] | `{ KIND:LOWER :` | P3 |
 | paramType | option | [0, 1] | `editable ( (` | P2 |
 | statement | alternative | [1, 19] | `KIND:LOWER . KIND:KW` | P3 |
 | statement | alternative | [2, 19] | `if ! !` | P3 |
@@ -52,12 +53,12 @@ Conflicts at k = 3 by resolution policy (Language Reference 3.2, X-94): P2: 22, 
 
 ## Agreement with the recogniser
 
-295 fixtures: 0 disagreements.
+902 fixtures: 0 disagreements.
 
 ## Ambiguity corpus
 
-24 programs, 24 with exactly one parse (no undocumented fallback); documented ordered choices used: 61.
+27 programs, 27 with exactly one parse (no undocumented fallback); documented ordered choices used: 70.
 
 ## Timing (pinned conditions)
 
-Warm process, median of 20 parses per fixture, Linux-7.2.5-3-omarchy-x86_64-with-glibc2.44, Python 3.12.12; 270 fixtures listed by sha256 in check.json; slowest median 7.8 ms (PS-7.3-01, 85 tokens); 0 at or over 50 ms.
+Warm process, median of 20 parses per fixture, Linux-7.2.5-3-omarchy-x86_64-with-glibc2.44, Python 3.12.12; 873 fixtures listed by sha256 in check.json; slowest median 8.41 ms (PRG-syntax_component_fn_param, 43 tokens); 0 at or over 50 ms.

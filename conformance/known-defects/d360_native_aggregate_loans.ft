@@ -1,0 +1,35 @@
+// D-360: a record literal that holds a loan (`{ item: xs.get(0), n: 1 }`) does not build natively (rustc E0106, a
+// missing lifetime), nor does a tuple with a loan passed to a read parameter of tuple type (E0308). The interpreter and
+// the VM print `record a|pair o p|show a|end` and run each cleanup once, when its owner ends. A tuple holding a list's
+// loan (`(xs.get(0), 1)`) builds (conformance/programs/exec_loan_cleanup_tuple.ft), and so does one holding an `alias`
+// loan of a local (`(alias own, make("p"))`, the pair below).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  cleanup(editable self) {
+    log.info("drop ${self.label}")
+  }
+}
+
+func make(s: StringView) Token => Token(label: String.from(s))
+
+func show(console: Console, p: (Token?, Int)) {
+  console.print("show ${p.0?.label ?? "none"}")
+}
+
+func main(console: Console) {
+  let mut xs: List[Token] = List.default()
+  xs.push(make("a"))
+  {
+    let r = { item: xs.get(0), n: 1 }
+    console.print("record ${r.item?.label ?? "none"}")
+  }
+  let own = make("o")
+  {
+    let pair = (alias own, make("p"))
+    console.print("pair ${pair.0.label} ${pair.1.label}")
+  }
+  show(console, (xs.get(0), 1))
+  console.print("end")
+}

@@ -162,6 +162,80 @@ pub fn source_text(c: C) -> String {
 }
 
 /// The expected type with every present-injection optional removed (6.8).
+/// A lambda's body: its `funcBody`, or, for an expression body written without a return type (8.2, X-345), the lambda
+/// itself, whose first `expr` is that body (its parameters, captures and modifiers hold none), so `body` reads both
+/// forms alike.
+pub fn lambda_body<'a>(node: N<'a>) -> Option<N<'a>> {
+    node.child_node("funcBody").or_else(|| node.direct_tokens().iter().any(|t| t.text == "=>").then_some(node))
+}
+
+/// The operators with a checked `Int` operation (6.4, X-345).
+pub const CHECKED_OPS: &[&str] = &["+", "-", "*", "/", "%", "<<"];
+
+/// The operators of a checked region (6.4, X-345): the integer arithmetic an outcome operator's left operand is made
+/// of, through `+ - * / % << >>`, unary `-` and parentheses, and nothing else (not into a call's arguments, an index, a
+/// lambda or another operator). Empty when the left operand is not arithmetic. Positions are (line, column).
+pub fn region_operators(c: C) -> BTreeSet<(usize, usize)> {
+    fn walk(c: C, out: &mut BTreeSet<(usize, usize)>) {
+        let Some(n) = c.node() else { return };
+        let kids = n.kids();
+        let nm = n.name();
+        if matches!(nm, "additiveExpr" | "multiplicativeExpr" | "shiftExpr") && kids.len() > 1 {
+            for k in kids {
+                match k.tok() {
+                    Some(t) => {
+                        out.insert((t.line, t.col));
+                    }
+                    None => walk(k, out),
+                }
+            }
+            return;
+        }
+        if nm == "unaryExpr" && kids.len() == 2 && kids[0].tok().map_or(false, |t| t.text == "-") {
+            let t = kids[0].tok().unwrap();
+            out.insert((t.line, t.col));
+            walk(kids[1], out);
+            return;
+        }
+        if nm == "primaryExpr" && kids.len() == 3 && kids[0].tok().map_or(false, |t| t.text == "(") {
+            walk(kids[1], out);
+            return;
+        }
+        const WRAPPERS: &[&str] = &[
+            "expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "unaryExpr", "postfixExpr",
+        ];
+        if WRAPPERS.contains(&nm) && kids.len() == 1 {
+            walk(kids[0], out);
+        }
+    }
+    let mut out = BTreeSet::new();
+    walk(c, &mut out);
+    out
+}
+
+/// The name of an argument written as a bare local name (`wanted`), which a call reads as `wanted: wanted` where a
+/// positional argument cannot stand: after a named argument, and in a class's generated constructor (5.8, X-345).
+pub fn pun_name<'a>(arg: N<'a>) -> Option<&'a Token> {
+    let ks = arg.kids();
+    if ks.len() != 1 {
+        return None;
+    }
+    let e = ks[0].node().filter(|n| n.name() == "expr" || n.name() == "constExpr")?;
+    let ts = e.tokens();
+    (ts.len() == 1 && ts[0].kind == Kind::Lower).then(|| ts[0])
+}
+
+/// The value of a named argument written `x: x`, unmarked: what a pun would write (5.8, X-345).
+pub fn pun_value<'a>(arg: N<'a>) -> Option<&'a Token> {
+    let ts = arg.direct_tokens();
+    if ts.len() < 2 || ts[0].kind != Kind::Lower || ts[1].text != ":" {
+        return None;
+    }
+    let e = arg.child_node("expr").or_else(|| arg.child_node("constExpr"))?;
+    let vt = e.tokens();
+    (vt.len() == 1 && vt[0].kind == Kind::Lower && vt[0].text == ts[0].text).then(|| vt[0])
+}
+
 fn peel_optional(t: &Type) -> &Type {
     let mut cur = strip(t);
     while let Type::Optional(inner) = cur {
@@ -173,6 +247,34 @@ fn peel_optional(t: &Type) -> &Type {
 impl<'a> Typer<'a> {
     /// A core literal names the standard type. `10ms` is `Duration` of `fortis.time`, the origin a signature parsed
     /// against the prelude's copy carries. An unstamped name would be a different type.
+    /// The enum a comparison's left operand has (an optional one's present type), which the right operand is expected
+    /// to have, so a bare variant there is read as that enum's (9.7, X-345); None for any other type.
+    pub(crate) fn enum_operand(&self, t: &Type) -> Option<Type> {
+        let mut s = strip(t).clone();
+        if let Type::Optional(i) = &s {
+            s = strip(i).clone();
+        }
+        if !known(&s) {
+            return None;
+        }
+        match self.decl_of(&s) {
+            Some(d) if d.kind == "enum" => Some(s),
+            _ => None,
+        }
+    }
+
+    /// The type an unannotated binding takes from its initialiser (5.1): a computed integer interval or a literal's
+    /// exact value widens to its base type, which stays a fact; an inferred lambda result takes the same (8.2, X-345).
+    pub(crate) fn widened(&self, t: &Type) -> Type {
+        let c = concrete(t);
+        if let Type::Refined { base, kind, .. } = &c {
+            if (kind == "exact" || kind == "range") && self.is_int(&c) {
+                return Type::Named(base.clone());
+            }
+        }
+        c
+    }
+
     pub(crate) fn stamp_literal(&self, t: Type) -> Type {
         if let Type::Named(n) = &t {
             if n.origin.is_empty() && n.package.is_empty() {
@@ -191,6 +293,8 @@ impl<'a> Typer<'a> {
         self.call_depth += 1;
         let t = self.check_call_at(sig, al, env, m, where_, tok, expected.as_ref());
         self.call_depth -= 1;
+        // the callee at its name token, for `@ignorable` statements (5.5) and a test body's implied `or fail` (14)
+        self.call_sigs.insert((tok.line, tok.col), (sig.has_mod("try"), sig.ignorable.is_some()));
         t
     }
 
@@ -208,6 +312,7 @@ impl<'a> Typer<'a> {
         let params = sig.params.clone();
         let mut bound: BTreeSet<String> = BTreeSet::new();
         let mut seen_named = false;
+        let mut out_named = false;
         let mut pairs: Vec<(Param, Option<N<'a>>)> = Vec::new();
         for (i, a) in args.iter().enumerate() {
             let ts = a.direct_tokens();
@@ -215,13 +320,35 @@ impl<'a> Typer<'a> {
             if ts.first().map_or(false, |t| t.text == "...") {
                 continue;
             }
+            // the formatter's pun (5.8, X-345): `x: x` is written `x` after a named argument, or where `x` is the
+            // parameter in that position and every argument before it is positional
+            if ts.len() > 1 && ts[0].kind == Kind::Lower && ts[1].text == ":" {
+                let positional_same = !out_named && params.get(i).map_or(false, |p| p.0 == ts[0].text && !p.2.starts_with("..."));
+                if pun_value(*a).is_some() && (out_named || positional_same) {
+                    if self.final_pass {
+                        let v = pun_value(*a).unwrap();
+                        self.migrations.push(crate::migrate::Edit { from: (ts[0].line, ts[0].col), to: (v.line, v.col), text: String::new(), rule: "R9" });
+                    }
+                } else {
+                    out_named = true;
+                }
+            } else if seen_named {
+                out_named = true;
+            }
             let p: Param;
-            if !ts.is_empty() && ts[0].kind == Kind::Lower && ts.len() > 1 && ts[1].text == ":" {
+            // `wanted` after a named argument is `wanted: wanted` (5.8, X-345)
+            let pun = if seen_named { pun_name(*a) } else { None };
+            let ts: Vec<&Token> = match pun {
+                Some(pt) => vec![pt, pt],
+                None => ts,
+            };
+            if !ts.is_empty() && ts[0].kind == Kind::Lower && ts.len() > 1 && (ts[1].text == ":" || pun.is_some()) {
                 seen_named = true;
                 match params.iter().find(|p| p.0 == ts[0].text) {
                     None => {
                         let names = params.iter().map(|p| p.0.clone()).collect::<Vec<_>>().join(", ");
-                        self.typ("E-TYP-130", format!("{where_} has no parameter `{}`", ts[0].text), ts[0], &names, &ts[0].text, &ts[0].text, "LANG-05-09");
+                        let why = if pun.is_some() { format!(" (`{0}` after a named argument stands for `{0}: {0}`)", ts[0].text) } else { String::new() };
+                        self.typ("E-TYP-130", format!("{where_} has no parameter `{}`{why}", ts[0].text), ts[0], &names, &ts[0].text, &ts[0].text, "LANG-05-09");
                         self.infer(e, env, None);
                         continue;
                     }
@@ -268,8 +395,11 @@ impl<'a> Typer<'a> {
         let saved_res = std::mem::take(&mut self.own.reservations);
         self.res_stack.push(saved_res.clone());
         let recv = self.receiver.take();
+        // the reservations each argument made, by parameter (D-348)
+        let mut spans: BTreeMap<String, (usize, usize)> = BTreeMap::new();
         if let Some((rp, rm)) = &recv {
             self.reserve(rp, if rm != "alias" { rm } else { "alias" }, tok);
+            spans.insert("self".into(), (0, self.own.reservations.len()));
         }
         let origin = if let Type::Loan { origin, .. } = &sig.ret { Some(origin.clone()) } else { None };
         let mut temps: Vec<Token> = Vec::new();
@@ -294,6 +424,7 @@ impl<'a> Typer<'a> {
             };
             self.arg_mode = Some(pmode.clone());
             let want = self.subst(&p.1, m);
+            let n0 = self.own.reservations.len();
             let t = self.infer(e, env, Some(&want));
             self.arg_mode = None;
             if let Some(e) = e {
@@ -302,6 +433,7 @@ impl<'a> Typer<'a> {
                     temps.push(ftok(e).clone());
                 }
             }
+            spans.insert(p.0.clone(), (n0, self.own.reservations.len()));
             let shares = Self::tparams_of(&p.1).iter().any(|tp| pending_names.contains(tp) && !m.contains_key(tp));
             self.unify_pin(&p.1, &t, m, !shares);
             arg_types.push((p, t, e));
@@ -324,7 +456,19 @@ impl<'a> Typer<'a> {
             self.unify(&p.1, &t, m);
             arg_types.push((p, t, e));
         }
-        self.activate(tok, Self::result_carries(sig), env);
+        let carries = Self::result_carries(sig);
+        let mut keep: BTreeMap<usize, String> = BTreeMap::new();
+        if !carries {
+            let mut origins = Vec::new();
+            Self::nested_origins(&sig.ret, true, &mut origins);
+            for (o, mode) in origins {
+                let (lo, hi) = spans.get(&o).copied().unwrap_or((0, 0));
+                for i in lo..hi {
+                    keep.insert(i, mode.clone());
+                }
+            }
+        }
+        self.activate(tok, carries, env, &keep);
         self.res_stack.pop();
         self.own.reservations = saved_res;
         self.call_decl = call_decl.clone();
@@ -1066,7 +1210,30 @@ impl<'a> Typer<'a> {
     }
 
     pub fn infer(&mut self, node: Option<N<'a>>, env: &Env, expected: Option<&Type>) -> Type {
-        let t = self.infer_raw(node, env, expected);
+        let ops = node.map(|n| self.test_region(n)).unwrap_or_default();
+        let mut t = if ops.is_empty() {
+            self.infer_raw(node, env, expected)
+        } else {
+            // unproved `Int` arithmetic in a test body is a checked region with an implied `or fail` (14, 6.4; X-345)
+            let first = *ops.iter().next().unwrap();
+            self.regions.push((ops, Vec::new(), false));
+            let t = self.infer_raw(node, env, expected);
+            let (_, checked, _) = self.regions.pop().unwrap();
+            if let Some(op) = checked.first() {
+                self.eff.add("fail", "proved", Some(op));
+                self.unwind_point(op, "or fail", env, None);
+                if self.defer_depth > 0 {
+                    self.def_err("E-DEF-001", "failing arithmetic inside a deferred block: there is no outcome to propagate to (12.1)".into(), op, "or fail", "LANG-12-01");
+                }
+                self.implied_regions.insert(first);
+            }
+            t
+        };
+        if let Some(n) = node {
+            if self.test_body && (n.name() == "postfixExpr" || n.name() == "markerExpr") && !self.consumed_ops.contains(&n.id()) {
+                t = self.implied_or_fail(n, t, env);
+            }
+        }
         // a call whose arguments do not fix its type arguments, with no expected type to fix them (6.10): a proved
         // inference failure, repaired by annotating the receiving binding
         if let (Type::Unknown(why), None, Some(n)) = (&t, expected, node) {
@@ -1112,7 +1279,7 @@ impl<'a> Typer<'a> {
                 }
                 if let Type::Optional(i) = &ls {
                     self.expect(&right, i, ctok(kids[2]), "`??` fallback");
-                    return (**i).clone();
+                    return self.coalesce_result(i, &right, kids[0].node(), kids[2].node(), env);
                 }
                 return unknown("");
             }
@@ -1178,7 +1345,9 @@ impl<'a> Typer<'a> {
                     return self.infer_c(kids[0], env, expected);
                 }
                 let l = self.infer_c(kids[0], env, None);
-                let r = self.infer_c(kids[2], env, None);
+                // `s == Error`: the right operand is expected to have the left operand's enum (9.7, X-345)
+                let want = self.enum_operand(&l);
+                let r = self.infer_c(kids[2], env, want.as_ref());
                 let op = kids[1].tok().unwrap().clone();
                 self.compare(&op, &l, &r);
                 return boolean();
@@ -1273,9 +1442,13 @@ impl<'a> Typer<'a> {
                 return Type::Record(fields);
             }
             "argList" => {
+                // the arguments of a call the checker could not resolve: every expression in them is typed with no
+                // context, which proves nothing about what it expects (D-304)
+                self.unresolved_args += 1;
                 for a in node.find_all("expr") {
                     self.infer(Some(a), env, None);
                 }
+                self.unresolved_args -= 1;
                 return void();
             }
             _ => {}
@@ -1447,6 +1620,34 @@ impl<'a> Typer<'a> {
             _ => "a checked operation",
         };
         let r = iv::arith(o, a, b, width);
+        let is_int = base.name == "Int" || base.name == "Int64";
+        let in_region = self.regions.last().map_or(false, |rg| rg.0.contains(&(op.line, op.col)));
+        if in_region && is_int && CHECKED_OPS.contains(&o) && !Self::proved(o, full, a, b, r) {
+            // the checked operation (6.4, X-345): it fails as `Int.add` and its family fail, and its success value has
+            // the operation's interval clipped to the type's range, as theirs does (6.3)
+            self.regions.last_mut().unwrap().1.push(op.clone());
+            self.checked_ops.insert((op.line, op.col));
+            return match r.and_then(|r| iv::meet(r, full)) {
+                Some(c) => refined(base.clone(), Some(c.0), Some(c.1), "range"),
+                None => Type::Named(base.clone()),
+            };
+        }
+        let checked_hint;
+        let checked = if is_int && CHECKED_OPS.contains(&o) {
+            let form = if o == "-" && a == (0, 0) { "-x".to_string() } else { format!("a {o} b") };
+            checked_hint = format!("{checked}, or write the operator as the checked operation: `{form} or fail` (or `or recover`, `catch`)");
+            checked_hint.as_str()
+        } else if !is_int {
+            // the sized integer types have no checked family (6.4): only a proof makes the operator safe
+            checked_hint = format!("a refined type or a test that proves it ({} has no checked operation)", base.name);
+            checked_hint.as_str()
+        } else {
+            checked_hint = format!("a refined type or a test that proves it (`{o}` has no checked operation)");
+            checked_hint.as_str()
+        };
+        if in_region && !Self::proved(o, full, a, b, r) {
+            self.regions.last_mut().unwrap().2 = true; // rejected below: the region's handler adds no record of its own (6.4)
+        }
         let r = match r {
             None => {
                 let why = if o == "/" || o == "%" { "the divisor may be zero".to_string() } else { format!("the shift amount is not proved within [0, {}]", width - 1) };
@@ -1491,6 +1692,108 @@ impl<'a> Typer<'a> {
             return Type::Named(base.clone());
         }
         refined(base.clone(), Some(r.0), Some(r.1), "range")
+    }
+
+    /// `Int.add(a, b) or fail` and its family, whose operator would be unproved, written as the checked operator
+    /// `a + b or fail` (6.4, X-345): a rewrite for the formatter. One line only, so no comment is inside. Under `or fail`,
+    /// an operand that is itself such a call under `or fail` joins the region: both propagate the same failure.
+    fn note_operator_form(&mut self, left: C<'a>, or_fail: bool) {
+        let Some(prim) = Self::unwrap_to(left, "primaryExpr") else { return };
+        let Some((text, _)) = self.operator_form(prim, or_fail) else { return };
+        let toks = prim.tokens();
+        let (first, last) = (toks[0], *toks.last().unwrap());
+        self.migrations.push(crate::migrate::Edit { from: (first.line, first.col), to: (last.line, crate::decls::tok_end(last)), text, rule: "R14" });
+    }
+
+    /// The node a chain of single-child wrappers leads to, when it is a `name` node.
+    fn unwrap_to(c: C<'a>, name: &str) -> Option<N<'a>> {
+        let mut c = c;
+        while let Some(n) = c.node() {
+            if n.name() == name {
+                return Some(n);
+            }
+            let ks = n.kids();
+            if ks.len() != 1 {
+                return None;
+            }
+            c = ks[0];
+        }
+        None
+    }
+
+    /// The operator form of a checked call `Int.add(a, b)` whose operator would be unproved, with its precedence.
+    fn operator_form(&self, prim: N<'a>, or_fail: bool) -> Option<(String, u8)> {
+        if self.int_calls.get(&prim.id()) != Some(&true) {
+            return None;
+        }
+        let m = prim.child_node("memberName")?.tokens()[0].text.clone();
+        let op = match m.as_str() {
+            "add" => "+",
+            "sub" => "-",
+            "mul" => "*",
+            "div" => "/",
+            _ => "%",
+        };
+        let args = Self::arg_nodes(prim.find("argList"));
+        let toks = prim.tokens();
+        if args.len() != 2 || toks[0].line != toks.last().unwrap().line {
+            return None;
+        }
+        let prec = |o: &str| -> u8 {
+            match o {
+                "*" | "/" | "%" => 4,
+                "+" | "-" => 5,
+                _ => 6,
+            }
+        };
+        // an operand keeps its own grouping: parentheses where its top operator binds looser than `op` (or as loose,
+        // on the right, since the operators associate to the left)
+        let operand = |x: N<'a>, right: bool| -> String {
+            let mut top: u8 = 0;
+            let mut text = source_text(C::N(x));
+            let mut cur = C::N(x);
+            loop {
+                let Some(n) = cur.node() else { break };
+                let ks = n.kids();
+                if ks.len() == 1 {
+                    cur = ks[0];
+                    continue;
+                }
+                top = match n.name() {
+                    "multiplicativeExpr" | "additiveExpr" | "shiftExpr" => ks.get(1).and_then(|k| k.tok()).map_or(9, |t| prec(&t.text)),
+                    "unaryExpr" if ks[0].tok().map_or(false, |t| t.text == "-") => 2,
+                    "outcomeExpr" if or_fail && ks.len() == 3 && ks[1].tok().map_or(false, |t| t.text == "or") && ks[2].tok().map_or(false, |t| t.text == "fail") => {
+                        match Self::unwrap_to(ks[0], "primaryExpr").and_then(|p| self.operator_form(p, true)) {
+                            Some((inner, p)) => {
+                                text = inner;
+                                p
+                            }
+                            None => 9,
+                        }
+                    }
+                    "postfixExpr" | "primaryExpr" | "markerExpr" | "unaryExpr" | "literal" => 0,
+                    _ => 9,
+                };
+                break;
+            }
+            if top > prec(op) || (right && top == prec(op)) {
+                format!("({text})")
+            } else {
+                text
+            }
+        };
+        let (a, b) = (Self::arg_expr(args[0])?, Self::arg_expr(args[1])?);
+        Some((format!("{} {op} {}", operand(a, false), operand(b, true)), prec(op)))
+    }
+
+    /// Whether the interval rules prove an integer operation safe (6.4): no division by zero, no out-of-range shift, no
+    /// `MIN / -1` and no overflow.
+    fn proved(o: &str, full: iv::Interval, a: iv::Interval, b: iv::Interval, r: Option<iv::Interval>) -> bool {
+        let Some(r) = r else { return false };
+        if o == "/" && a.0 <= full.0 && b.0 <= -1 && -1 <= b.1 {
+            return false;
+        }
+        full.0 <= r.0 && r.1 <= full.1
     }
 
     pub fn compare(&mut self, op: &Token, l: &Type, r: &Type) {
@@ -1538,16 +1841,44 @@ impl<'a> Typer<'a> {
     pub fn outcome(&mut self, node: N<'a>, env: &Env, expected: Option<&Type>) -> Type {
         let kids = node.kids();
         let words: Vec<String> = kids.iter().filter_map(|k| k.tok()).map(|t| t.text.clone()).collect();
-        let left = self.infer_c(kids[0], env, if kids.len() == 1 { expected } else { None });
+        if kids.len() > 1 {
+            self.mark_consumed(kids[0].node()); // `or` and `catch` consume the outcome themselves (14)
+        }
+        // the left operand of an outcome operator, when it is integer arithmetic, is a checked region: an `Int` operator
+        // in it that the interval rules cannot prove safe is the checked operation, and the region fails as it fails
+        // (6.4, X-345)
+        let ops = if kids.len() > 1 { region_operators(kids[0]) } else { BTreeSet::new() };
+        let is_region = !ops.is_empty();
+        if is_region {
+            self.regions.push((ops, Vec::new(), false));
+        }
+        let mut left = self.infer_c(kids[0], env, if kids.len() == 1 { expected } else { None });
+        let region = if is_region { self.regions.pop() } else { None };
         if kids.len() == 1 {
             return left;
+        }
+        if self.final_pass && !is_region {
+            let or_fail = words.len() >= 2 && words[0] == "or" && words[1] == "fail";
+            self.note_operator_form(kids[0], or_fail);
+        }
+        if region.as_ref().map_or(false, |r| !r.1.is_empty()) {
+            left = named_args("Outcome", vec![left]);
         }
         let ls = strip(&left).clone();
         let inner = match &ls {
             Type::Named(n) if n.name == "Outcome" && !n.args.is_empty() => n.args[0].clone(),
             _ => {
                 if known(&ls) {
-                    self.typ("E-TYP-040", format!("`{}` needs an Outcome left operand, got {}", words[..words.len().min(2)].join(" "), ls.show()), ctok(kids[0]), "Outcome[T]", &ls.show(), &words[0], "LANG-06-08");
+                    if region.as_ref().is_some_and(|r| r.2) {
+                        return unknown(""); // an operator the region could not check is E-REF-002 already (6.4)
+                    }
+                    let w = words[..words.len().min(2)].join(" ");
+                    let msg = if region.is_some() {
+                        format!("`{w}` needs an Outcome left operand: this arithmetic is proved safe ({}) and cannot fail, so drop `{w}`", ls.show())
+                    } else {
+                        format!("`{w}` needs an Outcome left operand, got {}", ls.show())
+                    };
+                    self.typ("E-TYP-040", msg, ctok(kids[0]), "Outcome[T]", &ls.show(), &words[0], "LANG-06-08");
                     return unknown("");
                 }
                 unknown("outcome")
@@ -1598,6 +1929,7 @@ impl<'a> Typer<'a> {
                     return optional(target);
                 }
                 self.expect(&r, &target, ctok(last), "`or recover` value");
+                self.loan_into_owned(&r, Some(&target), ctok(last), "the `or recover` value");
             }
             return target;
         }
@@ -1648,6 +1980,7 @@ impl<'a> Typer<'a> {
         for (t, tok) in &rec {
             if known(&target) {
                 self.expect(t, &target, tok, "`recover` value");
+                self.loan_into_owned(t, Some(&target), tok, "the `recover` value");
             }
         }
         target
@@ -1674,12 +2007,15 @@ impl<'a> Typer<'a> {
         };
         self.use_place(Some(&path), &mtok, if mk == "copy" { "copy" } else { &mk }, env);
         if mk == "copy" {
-            let base = if !call_follows { strip(&self.declared_type(pl, env)).clone() } else { unknown("") };
+            // `copy v` of a binding that holds a loan copies the value it lends, narrowed or not (7.5; D-341)
+            let declared = if !call_follows { self.declared_type(pl, env) } else { unknown("") };
+            let base = Self::lent(&declared).unwrap_or_else(|| strip(&declared).clone());
             if known(&base) && !self.dc.is_trivial(&base) {
                 self.eff.add("alloc", "proved", Some(&mtok));
             }
             if known(&base) && !self.dc.is_copyable(&base) {
                 let rule = if matches!(&base, Type::Named(n) if n.name == "Shared" || n.name == "Weak") { "LANG-07-08" } else { "LANG-07-01" };
+                self.copy_refused.insert((mtok.line, mtok.col));
                 self.own_err("E-OWN-002", format!("`copy {path}`: {} is not Copyable (6.11)", base.show()), &mtok, &path, "copy of a non-copyable place", rule, "");
             }
         }
@@ -1744,6 +2080,11 @@ impl<'a> Typer<'a> {
             if (mk == "alias" || mk == "editable") && known(&t) && !t.is_loan() {
                 return Type::Loan { inner: Box::new(t), mode: mk, origin: pl.direct_tokens()[0].text.clone() };
             }
+            if mk == "copy" {
+                if let Some(owned) = Self::lent(&t) {
+                    return owned; // a copy is owned, whatever the place holds (7.5; D-341)
+                }
+            }
             return t;
         }
         let mut rest: Vec<C<'a>> = kids[2..].to_vec();
@@ -1769,9 +2110,15 @@ impl<'a> Typer<'a> {
                 let last = members.last().unwrap().tokens()[0].clone();
                 let msg = format!("`{}`", last.text);
                 self.dc.records.retain(|r| !(r.code == "E-NAM-001" && r.line == last.line && r.message.contains(&msg)));
+                if mk == "editable" && self.receiver_mode(&prefix_t, &last.text).as_deref() == Some("editable self") && self.unmarked_editable_root(&path, env) {
+                    self.redundant_markers.insert((mtok.line, mtok.col)); // the declaration shows it (X-345)
+                }
                 t = self.method_call_named(&prefix_t, &last, al, env);
             } else if let Type::Fn { kind, .. } = strip(&t).clone() {
                 let ft = strip(&t).clone();
+                if kind == "fn mut" && mk == "editable" && self.unmarked_editable_root(&path, env) {
+                    self.redundant_markers.insert((mtok.line, mtok.col)); // the declaration shows it (X-345)
+                }
                 if kind == "fn mut" && mk != "editable" {
                     self.own_err("E-OWN-001", format!("a `fn mut` closure is called `editable {path}(…)`, not `{mk}`"), &mtok, &path, "wrong call marker", "LANG-08-02", "");
                 } else if kind == "fn once" && mk != "move" {
@@ -1943,6 +2290,64 @@ impl<'a> Typer<'a> {
         unknown("member")
     }
 
+    /// The receiver of an `editable self` method, or a `fn mut` closure being called, needs no `editable` wherever
+    /// `editable` could be written (7.5, X-345), whatever the receiver's type, and the call is then checked exactly as
+    /// `editable p…`. On any other root it is rejected as the marked form is (D-303).
+    pub fn unmarked_editable_root(&self, path: &str, env: &Env) -> bool {
+        self.editable_root(path, env)
+    }
+
+    /// The receiver mode of method `m` on `recv`, found as `method_call_named` finds it, recording nothing.
+    pub fn receiver_mode(&self, recv: &Type, m: &str) -> Option<String> {
+        let mut s = concrete(strip(recv));
+        if let Type::Refined { base, .. } = &s {
+            s = Type::Named(base.clone());
+        }
+        if let Type::Named(n) = &s {
+            if n.name == "Shared" && !n.args.is_empty() && m != "retain" && m != "downgrade" {
+                s = strip(&n.args[0]).clone();
+            }
+        }
+        if matches!(s, Type::Optional(_)) || !known(&s) {
+            return None;
+        }
+        let d = match &s {
+            Type::Dynamic(i) => self.dc.resolve_named(i, None),
+            _ => self.decl_of(&s),
+        }?;
+        let mut sig = d.methods.get(m).cloned();
+        if sig.is_none() && d.kind == "mixin" {
+            sig = d.methods.get(&format!("requires:{m}")).cloned();
+        }
+        if sig.is_none() {
+            for mx in &d.mixins {
+                if let Some(md) = self.dc.resolve_named(mx, None) {
+                    if let Some(ms) = md.methods.get(m) {
+                        sig = Some(ms.clone());
+                    }
+                }
+            }
+            for iface in &d.implements {
+                if sig.is_none() {
+                    if let Some(idecl) = self.dc.resolve_named(iface, None) {
+                        if let Some(ms) = idecl.methods.get(m) {
+                            sig = Some(ms.clone());
+                        }
+                    }
+                }
+            }
+        }
+        sig.and_then(|s| s.receiver)
+    }
+
+    /// An unmarked receiver or callee the declaration shows to be editable: the steps of `editable p` (`marker`).
+    pub fn unmarked_editable(&mut self, path: &str, tok: &Token, env: &Env) {
+        self.use_place(Some(path), tok, "editable", env);
+        self.inval_log.push(path.to_string());
+        self.facts.invalidate(path);
+        self.receiver = Some((path.to_string(), "editable".into()));
+    }
+
     pub fn method_call(&mut self, recv: &Type, mc: N<'a>, env: &Env) -> Type {
         let mtok = mc.find("memberName").unwrap().tokens()[0];
         self.method_call_named(recv, mtok, mc.find("argList"), env)
@@ -2065,10 +2470,14 @@ impl<'a> Typer<'a> {
             self.check_pool_launch(&m, al, env, mtok);
         }
         self.receiver = marked;
-        if self.receiver.is_none() && rp.is_some() && self.is_bearing(recv) && sig.receiver.is_some() {
+        if self.receiver.is_none() && rp.is_some() && sig.receiver.as_deref() == Some("editable self") {
+            // reached only on a root `editable` could not be written on (X-345; D-303: whatever the receiver's type, a
+            // trivial value or a read loan included): a `let` binding, a read parameter, capture or loan, a read `self`
+            let rp = rp.clone().unwrap();
+            self.own_err("E-OWN-001", format!("`{m}` takes `editable self`, and `{rp}` cannot change: declare it `let mut` or take it `editable`"), mtok, &rp, "editable receiver on an immutable root", "LANG-07-01", "");
+        } else if self.receiver.is_none() && rp.is_some() && self.is_bearing(recv) && sig.receiver.is_some() {
             let rp = rp.unwrap();
             match sig.receiver.as_deref() {
-                Some("editable self") => self.own_err("E-OWN-001", format!("`{m}` takes `editable self`: write `editable {rp}.{m}(…)`"), mtok, &rp, "editable receiver marker required", "LANG-07-01", ""),
                 Some("owned self") => self.own_err("E-OWN-001", format!("`{m}` takes `owned self`: write `move {rp}.{m}(…)`"), mtok, &rp, "move receiver marker required", "LANG-07-01", ""),
                 _ => self.receiver = Some((rp, "alias".into())),
             }
@@ -2093,6 +2502,11 @@ impl<'a> Typer<'a> {
         self.pending_owner_where = d.where_.clone();
         if self.result_expected.is_some() {
             self.pending_call_expected = self.result_expected.clone(); // copied here, after every early return (8.4)
+        }
+        let mut sig = sig;
+        if d.name == "Map" && d.module == "fortis.prelude" && m == "get" && mm.get("K") == Some(&string()) && !sig.params.is_empty() {
+            // `get` only reads its key: on a Map[String, V] the key is a StringView, so no copy makes one (6.7, X-345)
+            sig.params[0].1 = string_view();
         }
         let t = self.check_call(&sig, al, env, &mut mm, &where_, mtok);
         if d.name == "Scope" && (m == "launch" || m == "launchParallel") {
@@ -2238,6 +2652,18 @@ impl<'a> Typer<'a> {
             let s = strip(t).clone();
             if let Type::Fn { kind, .. } = &s {
                 if let Some(cp) = self.coll_path.clone() {
+                    if kind == "fn mut" && self.unmarked_editable_root(&cp, env) {
+                        // X-345: a `fn mut` held by a binding that shows it may change is called as `editable f(…)` (8.2)
+                        self.unmarked_editable(&cp, &ft, env);
+                        let info = self.closures.get(&root_of(&cp)).cloned();
+                        for (cap, cm) in info.as_ref().map(|i| i.captures.clone()).unwrap_or_default() {
+                            if cm == "editable" {
+                                self.inval_log.push(cap.clone());
+                                self.facts.invalidate(&cap);
+                            }
+                        }
+                        return self.call_fn(&s, al, env, "closure", Some(&ft), info.and_then(|i| i.eff));
+                    }
                     if kind == "fn mut" {
                         self.own_err("E-OWN-001", format!("a `fn mut` closure is called `editable {cp}(…)`"), &ft, &cp, "editable call marker required", "LANG-08-02", "");
                     } else if kind == "fn once" {
@@ -2435,12 +2861,21 @@ impl<'a> Typer<'a> {
                             if let Some(nt_) = self.node_types.as_mut() {
                                 nt_.insert(kids[1].node().unwrap().id(), t.clone());
                             }
-                            for pf in &kids[2..] {
+                            if kids.len() > 2 {
+                                t = self.unwrap_call(t0, t, env, None); // a receiver in a test body (14)
+                            }
+                            let posts: Vec<N<'a>> = kids[1..].iter().filter_map(|k| k.node()).collect();
+                            for (i, pf) in kids[2..].iter().enumerate() {
                                 let pfn = pf.node().unwrap();
                                 self.temp_field_siblings(&t, pfn);
                                 t = self.apply_postfix(&t, pfn, env);
                                 if let Some(nt_) = self.node_types.as_mut() {
                                     nt_.insert(pfn.id(), t.clone());
+                                }
+                                if i + 3 < kids.len() {
+                                    if let Some(ct) = fortis_names::reading::postfix_call_token(&posts, i + 1, Some(prim)) {
+                                        t = self.unwrap_call(ct, t, env, None);
+                                    }
                                 }
                             }
                             return t;
@@ -2454,15 +2889,48 @@ impl<'a> Typer<'a> {
             nt_.insert(prim.id(), t.clone());
         }
         let mut path = self.path_of_expr(Some(prim));
+        let mut member_toks: Vec<Token> = Vec::new();
         let posts = &kids[1..];
+        let post_nodes: Vec<N<'a>> = posts.iter().filter_map(|k| k.node()).collect();
+        if !posts.is_empty() && self.test_body {
+            if let Some(pt0) = fortis_names::reading::primary_call_token(prim) {
+                t = self.unwrap_call(pt0, t, env, None); // `Type.m(a).n()` in a test body (14)
+            }
+        }
         for (i, pf) in posts.iter().enumerate() {
+            if i > 0 && self.test_body {
+                if let Some(ct) = fortis_names::reading::postfix_call_token(&post_nodes, i - 1, Some(prim)) {
+                    t = self.unwrap_call(ct, t, env, None); // the receiver of the next postfix, in a test body (14)
+                }
+            }
             // only the last call's result is the chain's result; an earlier `List.of` must not see it (8.4)
             self.result_expected = if i + 1 == posts.len() { expected.cloned() } else { None };
             let pfn = pf.node().unwrap();
             self.coll_path = path.clone();
             let is_mc = pfn.name() == "methodCall" || pfn.kid(0).map_or(false, |c| c.is("methodCall"));
             if path.is_some() && !self.in_marker && is_mc {
-                self.use_place(path.as_deref(), ftok(prim), "read", env);
+                let p = path.clone().unwrap();
+                let mc = if pfn.name() == "methodCall" { pfn } else { pfn.kid(0).and_then(|c| c.node()).unwrap() };
+                let mname = mc.find("memberName").unwrap().tokens()[0].text.clone();
+                if self.receiver_mode(&t, &mname).as_deref() == Some("editable self") && self.unmarked_editable_root(&p, env) {
+                    // X-345: the declaration shows the receiver is editable; checked as `editable p.m(…)` (7.5), whatever
+                    // the receiver's type: a trivial value or a binding holding a loan takes the same exclusive loan (D-303)
+                    let saved = std::mem::take(&mut self.facts);
+                    let mut decl_t = self.root_type(ftok(prim), env);
+                    for mt in &member_toks {
+                        decl_t = self.member_type(&decl_t, mt);
+                    }
+                    self.facts = saved;
+                    let decl_t = strip(&decl_t).clone();
+                    if let Type::Refined { kind, .. } = &decl_t {
+                        if kind == "length" {
+                            self.ref_("E-REF-003", format!("`{p}` has a length refinement and may not be loaned editable"), ftok(prim), "violated", &decl_t.show(), "", "");
+                        }
+                    }
+                    self.unmarked_editable(&p, ftok(prim), env);
+                } else {
+                    self.use_place(path.as_deref(), ftok(prim), "read", env);
+                }
             }
             if path.is_none() {
                 self.temp_field_siblings(&t, pfn);
@@ -2470,6 +2938,7 @@ impl<'a> Typer<'a> {
             t = self.apply_postfix(&t, pfn, env);
             let k = pfn.kids();
             if path.is_some() && !k.is_empty() && k[0].text_is(".") && k.len() > 1 && k[1].is("memberName") {
+                member_toks.push(k[1].node().unwrap().tokens()[0].clone());
                 path = Some(format!("{}.{}", path.unwrap(), k[1].node().unwrap().tokens()[0].text));
                 if !is_mc {
                     t = self.fact_type(path.as_deref(), t); // `d.p.read()` sees `d.p` as the null test narrowed it (6.8)
@@ -2756,14 +3225,48 @@ impl<'a> Typer<'a> {
             }
         }
         let tr_tok = tr.tokens().into_iter().find(|x| x.kind == Kind::Upper).unwrap().clone();
+        // a bare variant where the expected type is that enum (9.7) whose name also reaches a declaration in scope is
+        // ambiguous: the qualified form says which is meant, so a name never silently changes meaning (X-345)
+        if let (Some(dd), None, Type::Named(tn), Some(ex)) = (&d, &member, &t, expected) {
+            if rts[0].kind == Kind::Upper {
+                let es = strip(ex).clone();
+                if let Some(ed) = self.decl_of(&es) {
+                    if ed.kind == "enum" && ed.variants.contains(&tn.name) && !(dd.kind == "enum" && dd.name == ed.name) {
+                        let n = tn.name.clone();
+                        self.typ(
+                            "E-TYP-040",
+                            format!("`{n}` is ambiguous: the {} `{}` is in scope and {}, the expected type, declares `{n}` as a variant; write `{}.{n}`", dd.kind, dd.name, ed.name, ed.name),
+                            &tr_tok,
+                            &format!("{}.{n}", ed.name),
+                            &format!("{} {}", dd.kind, dd.name),
+                            &n,
+                            "LANG-06-01",
+                        );
+                        if let Some(al) = al {
+                            self.infer(Some(al), env, None);
+                        }
+                        return es;
+                    }
+                }
+            }
+        }
         if d.is_none() && member.is_none() {
             if let Type::Named(tn) = &t {
                 let es = expected.map(|e| strip(e).clone());
                 let ed = es.as_ref().and_then(|e| self.decl_of(e));
                 if let Some(ed) = ed {
                     if ed.kind == "enum" && ed.variants.contains(&tn.name) {
-                        self.variant_args(&ed, &tn.name, al, env, &tr_tok);
-                        return es.unwrap();
+                        let m = self.variant_args(&ed, &tn.name, al, env, &tr_tok);
+                        let es = es.unwrap();
+                        // an expected type that still names the enum's own type parameters (a payload of the generic
+                        // enum, `tail: Chain[T]`) is instantiated by what this variant's payload fixes; a parameter
+                        // nothing fixes leaves the value untyped, as the qualified form is (D-307)
+                        let free = |t: &Type, s: &Self| Self::tparams_of(t).into_iter().any(|p| !s.tparams_in_scope.contains(&p));
+                        if !free(&es, self) {
+                            return es;
+                        }
+                        let inst = self.subst(&es, &m);
+                        return if free(&inst, self) { unknown("generic enum") } else { inst };
                     }
                 }
                 // a variant name where a function type is expected denotes that enum's constructor (LR 9.7). The
@@ -2797,6 +3300,21 @@ impl<'a> Typer<'a> {
                     let forms = owners.iter().map(|o| format!("`{o}.{}`", tn.name)).collect::<Vec<_>>().join(" or ");
                     let cands = owners.iter().map(|o| format!("{o}.{}", tn.name)).collect();
                     self.rec("E-NAM-001", format!("`{}` is ambiguous: {listed} declare it as a variant; write {forms}", tn.name), "LANG-04-05", &tr_tok, Self::nam(&tn.name, cands));
+                } else if owners.len() == 1 && self.unresolved_args == 0 && !matches!(es, Some(Type::Unknown(_))) && !matches!(es.as_ref().map(|e| e.opt_inner().unwrap_or(e)), Some(Type::Fn { .. })) {
+                    // the bare form is read only where the expected type is the enum (9.7): with no such type the value
+                    // has no type, and no backend could build it (D-304, X-345). An unknown expected type is not a proof,
+                    // and where a function (or an optional one: an aspect's `fallback`) is expected the name is the
+                    // variant's constructor.
+                    let o = owners[0].clone();
+                    self.typ(
+                        "E-TYP-040",
+                        format!("`{}` is a variant of {o}, but nothing here expects a {o}: the bare form is read only where the expected type is that enum; write `{o}.{}`", tn.name, tn.name),
+                        &tr_tok,
+                        &format!("{o}.{}", tn.name),
+                        "a bare variant with no expected enum",
+                        &tn.name,
+                        "LANG-06-01",
+                    );
                 }
             }
         }
@@ -2847,15 +3365,28 @@ impl<'a> Typer<'a> {
                     return unknown("newtype call");
                 }
                 if d.kind == "error" && called {
+                    let mut seen_named = false;
                     for a in Self::arg_nodes(al) {
                         let ats = a.tokens();
-                        let lbl = if ats.len() > 1 && ats[1].text == ":" { Some(ats[0].text.clone()) } else { None };
+                        let mut lbl = if ats.len() > 1 && ats[1].text == ":" { Some(ats[0].text.clone()) } else { None };
+                        // the formatter's pun after a named argument (5.8, X-345)
+                        if self.final_pass && seen_named && lbl.is_some() {
+                            if let Some(v) = pun_value(a) {
+                                self.migrations.push(crate::migrate::Edit { from: (ats[0].line, ats[0].col), to: (v.line, v.col), text: String::new(), rule: "R9" });
+                            }
+                        }
+                        // `wanted` after a named argument is `wanted: wanted` (5.8, X-345)
+                        if lbl.is_none() && seen_named {
+                            lbl = pun_name(a).map(|t| t.text.clone());
+                        }
+                        seen_named |= lbl.is_some();
                         let e = Self::arg_expr(a);
                         let want = lbl.as_ref().and_then(|l| d.payload.get(l)).cloned();
                         let at = if e.is_some() { self.infer(e, env, want.as_ref()) } else { unknown("arg") };
                         if let Some(w) = &want {
                             if known(&at) && known(w) {
                                 self.expect(&at, w, ats[0], &format!("payload field `{}` of {}", lbl.clone().unwrap(), d.name));
+                                self.loan_into_owned(&at, Some(w), ats[0], &format!("payload field `{}` of {}", lbl.clone().unwrap(), d.name));
                             }
                         }
                         let ft_ = want.unwrap_or(at);
@@ -2901,6 +3432,15 @@ impl<'a> Typer<'a> {
                 return Type::Fn { params: vec![base.as_type()], ret: Box::new(named_args("Outcome", vec![t.clone()])), kind: "fn".into(), modifiers: vec!["try".into()], origin: String::new(), dynamic: false, identity: String::new() };
             }
         }
+        if d.kind == "enum" && d.variants.contains(&m) && self.final_pass && node.name() != "constTerm" && rts.len() == 1 && tr.kids().len() == 1 {
+            // `Severity.Error` where the expected type is Severity and no declaration is named `Error`: the formatter
+            // may drop the prefix (9.7, X-345)
+            let same = expected.map(|e| strip(e).clone()).and_then(|e| self.decl_of(&e)).map_or(false, |ed| ed.kind == "enum" && ed.name == d.name && ed.module == d.module);
+            if same && self.dc.table.get(&m).is_none() {
+                let first = tr.tokens()[0];
+                self.migrations.push(crate::migrate::Edit { from: (first.line, first.col), to: (member.line, member.col), text: String::new(), rule: "R15" });
+            }
+        }
         if d.kind == "enum" && d.variants.contains(&m) {
             // `Enum.Variant` where a function type is expected denotes the constructor (LR 9.7), as the bare name
             // does. Called, or where the expected type is not a function, it stays the enum value (D-54.5).
@@ -2940,6 +3480,12 @@ impl<'a> Typer<'a> {
                         _ => "%",
                     };
                     if let (Some(ai), Some(bi)) = (ai, bi) {
+                        // whether `a op b` would be unproved, so `Int.add(a, b) or fail` may be written `a + b or fail`
+                        // (6.4, X-345); only positional, unmarked arguments
+                        let plain = args.iter().all(|x| x.direct_tokens().is_empty() && x.find("markerExpr").is_none());
+                        if self.final_pass && plain && (d.name == "Int" || d.name == "Int64") {
+                            self.int_calls.insert(node.id(), !Self::proved(op, full, ai, bi, iv::arith(op, ai, bi, 64)));
+                        }
                         if let Some(r) = iv::arith(op, ai, bi, 64) {
                             if let Some(c) = iv::meet(r, full) {
                                 return named_args("Outcome", vec![refined(nt(&d.name), Some(c.0), Some(c.1), "range")]);
@@ -3041,18 +3587,22 @@ impl<'a> Typer<'a> {
         unknown("associated")
     }
 
-    pub fn variant_args(&mut self, d: &DeclRef<'a>, vname: &str, al: Option<N<'a>>, env: &Env, tok: &Token) {
+    /// A variant's payload arguments checked against its fields; returns the enum's type arguments they fix.
+    pub fn variant_args(&mut self, d: &DeclRef<'a>, vname: &str, al: Option<N<'a>>, env: &Env, tok: &Token) -> BTreeMap<String, Type> {
         let payload = d.variants.get(vname).cloned().unwrap_or_default();
         let args = Self::arg_nodes(al);
         if payload.is_empty() && !args.is_empty() {
             self.typ("E-TYP-130", format!("variant {}.{vname} has no payload", d.name), tok, "no arguments", &args.len().to_string(), vname, "LANG-05-09");
         }
-        let sig = Sig::simple(vname, payload.iter().map(|(f, t)| (f.clone(), t.clone(), String::new())).collect(), named_of_decl(&d, vec![]), vec![]);
+        // a payload is passed as a read parameter is, but the variant owns it: a loan there needs `copy` (D-341)
+        let sig = Sig::simple(vname, payload.iter().map(|(f, t)| (f.clone(), t.clone(), "payload".to_string())).collect(), named_of_decl(&d, vec![]), vec![]);
+        let mut m = BTreeMap::new();
         if !payload.is_empty() && al.is_some() {
             self.call_decl = Some(d.clone());
             self.call_label = format!("variant {}.{vname}", d.name);
-            self.check_call(&sig, al, env, &mut BTreeMap::new(), &format!("{}.{vname}", d.name), tok);
+            self.check_call(&sig, al, env, &mut m, &format!("{}.{vname}", d.name), tok);
         }
+        m
     }
 
     pub fn construct(&mut self, d: &DeclRef<'a>, t: &Type, al: Option<N<'a>>, env: &Env, tok: &Token) -> Type {
@@ -3133,7 +3683,19 @@ impl<'a> Typer<'a> {
                 }
                 continue;
             }
-            if !(!ts.is_empty() && ts[0].kind == Kind::Lower && ts.len() > 1 && ts[1].text == ":") {
+            // the formatter's pun: in a constructor `x: x` is always `x` (9.2, X-345)
+            if self.final_pass && ts.len() > 1 && ts[0].kind == Kind::Lower && ts[1].text == ":" {
+                if let Some(v) = pun_value(a) {
+                    self.migrations.push(crate::migrate::Edit { from: (ts[0].line, ts[0].col), to: (v.line, v.col), text: String::new(), rule: "R9" });
+                }
+            }
+            // `sku` is `sku: sku`: constructor arguments are named (9.2, X-345)
+            let pun = pun_name(a);
+            let ts: Vec<&Token> = match pun {
+                Some(pt) => vec![pt, pt],
+                None => ts,
+            };
+            if !(!ts.is_empty() && ts[0].kind == Kind::Lower && ts.len() > 1 && (ts[1].text == ":" || pun.is_some())) {
                 self.typ("E-TYP-130", format!("constructor arguments of {} are named (field: value)", d.name), ftok(a), "field: value", "positional", &d.name, "LANG-09-02");
                 self.infer(e, env, None);
                 continue;
@@ -3143,7 +3705,8 @@ impl<'a> Typer<'a> {
                 Some(x) => x.clone(),
                 None => {
                     let names = d.fields.keys().cloned().collect::<Vec<_>>().join(", ");
-                    self.typ("E-TYP-130", format!("{} has no field `{f}`", d.name), ts[0], &names, &f, &f, "LANG-09-02");
+                    let why = if pun.is_some() { format!(" (`{f}` stands for `{f}: {f}`)") } else { String::new() };
+                    self.typ("E-TYP-130", format!("{} has no field `{f}`{why}", d.name), ts[0], &names, &f, &f, "LANG-09-02");
                     self.infer(e, env, None);
                     continue;
                 }
@@ -3171,7 +3734,7 @@ impl<'a> Typer<'a> {
             let list = missing.iter().map(|f| format!("`{f}`")).collect::<Vec<_>>().join(", ");
             self.typ("E-TYP-050", format!("constructor of {} lacks field{s} {list}", d.name), tok, &missing.join(", "), "absent", &d.name, "LANG-09-02");
         }
-        self.activate(tok, d.lifetime.is_some(), env);
+        self.activate(tok, d.lifetime.is_some(), env, &BTreeMap::new());
         match t {
             Type::Named(n) if !n.args.is_empty() => t.clone(),
             _ => named_of_decl(&d, vec![]),
@@ -3279,9 +3842,15 @@ impl<'a> Typer<'a> {
                 self.obl_err("E-OBL-006", format!("this `{kind}` lambda captures a linear value by move: a closure owning a linear value must be `fn once`"), &ltok, &format!("{}:{}", ltok.line, ltok.col), "closure", "LANG-10-02");
             }
         }
-        let rt = match node.child_node("type") {
+        // an expression body may leave out its return type (8.2, X-345): the callee's parameter type decides it when
+        // that type names one, otherwise the body's type does, widened as an unannotated `let` widens its initialiser
+        let inferred_rt = node.child_node("type").is_none();
+        let mut rt = match node.child_node("type") {
             Some(t) => self.dc.type_of(Some(t)),
-            None => unknown("lambda result"),
+            None => match &exp_fn {
+                Some(Type::Fn { ret, .. }) if known(strip(ret)) && !super::has_free(ret) => (**ret).clone(),
+                _ => unknown("lambda result"),
+            },
         };
         let written: Vec<String> = node.child_node("modifiers").map(|m| m.tokens().iter().map(|t| t.text.clone()).collect()).unwrap_or_default();
         let is_contract = |m: &String| m.chars().next().map_or(false, |c| c.is_ascii_uppercase());
@@ -3325,7 +3894,7 @@ impl<'a> Typer<'a> {
                 }
             }
         }
-        let body = node.child_node("funcBody");
+        let body = lambda_body(node);
         if let Some(body) = body {
             let saved_ret = self.ret_type.replace(rt.clone());
             let saved_try = std::mem::replace(&mut self.in_try, modifiers.iter().any(|m| m == "try"));
@@ -3352,7 +3921,14 @@ impl<'a> Typer<'a> {
             let saved_rest = std::mem::take(&mut self.block_rest);
             let log_mark = self.inval_log.len();
             let outer_eff = std::mem::take(&mut self.eff);
-            self.body(Some(body), &e, &rt, &ltok, "lambda");
+            let outer_test = std::mem::replace(&mut self.test_body, false); // a lambda's body is its own function, not the test's (14)
+            let body_t = self.body(Some(body), &e, &rt, &ltok, "lambda");
+            self.test_body = outer_test;
+            if inferred_rt && !known(strip(&rt)) {
+                if let Some(bt) = body_t {
+                    rt = self.widened(&bt);
+                }
+            }
             self.exit_frames = saved_exits;
             self.break_frames = saved_breaks;
             self.defer_bodies = saved_defers;
@@ -3451,4 +4027,125 @@ impl<'a> Typer<'a> {
 #[allow(dead_code)]
 fn _interp_used() -> Type {
     interp()
+}
+
+impl<'a> Typer<'a> {
+    /// The operators of a checked region that a test body's arithmetic starts at `n` (14, 6.4; X-345): integer
+    /// arithmetic not already inside a region (the left operand of `or` or `catch` has its own), outside lambdas.
+    pub fn test_region(&self, n: N<'a>) -> BTreeSet<(usize, usize)> {
+        if !self.test_body {
+            return BTreeSet::new();
+        }
+        let kids = n.kids();
+        let root = (matches!(n.name(), "additiveExpr" | "multiplicativeExpr" | "shiftExpr") && kids.len() > 1)
+            || (n.name() == "unaryExpr" && kids.len() == 2 && kids[0].tok().map_or(false, |t| t.text == "-"));
+        if !root {
+            return BTreeSet::new();
+        }
+        let ops = region_operators(C::N(n));
+        if ops.is_empty() || self.regions.last().map_or(false, |rg| ops.iter().any(|o| rg.0.contains(o))) {
+            return BTreeSet::new();
+        }
+        ops
+    }
+
+    /// The single-child chain under a consuming operand, through parentheses: a call there keeps its outcome in a
+    /// test body (14).
+    pub fn mark_consumed(&mut self, node: Option<N<'a>>) {
+        let mut n = node;
+        while let Some(x) = n {
+            self.consumed_ops.insert(x.id());
+            let kids = x.kids();
+            if x.name() == "primaryExpr" && kids.len() == 3 && kids[0].text_is("(") {
+                n = kids[1].node(); // through parentheses: `(f()) or fail`
+                continue;
+            }
+            n = if kids.len() == 1 { kids[0].node() } else { None };
+        }
+    }
+
+    /// In a `test` or `property` body, a call of a fallible function that nothing consumes is that call followed by
+    /// `or fail` (14, LANG-14-03; X-345): it has its success type, and a failure fails the test.
+    pub fn implied_or_fail(&mut self, node: N<'a>, t: Type, env: &Env) -> Type {
+        match fortis_names::reading::call_name_token(node) {
+            Some(tok) => {
+                let path = self.path_of_expr(Some(node));
+                self.unwrap_call(tok, t, env, path)
+            }
+            None => t,
+        }
+    }
+
+    /// The implied `or fail` of a test body's call named at `tok` (14): its success type, when the call fails.
+    pub fn unwrap_call(&mut self, tok: &Token, t: Type, env: &Env, path: Option<String>) -> Type {
+        let inner = match strip(&t) {
+            Type::Named(n) if self.test_body && n.name == "Outcome" && !n.args.is_empty() => n.args[0].clone(),
+            _ => return t,
+        };
+        if let Some((is_try, _)) = self.call_sigs.get(&(tok.line, tok.col)) {
+            if !is_try {
+                return t; // a function that returns an Outcome it built is not a failing call
+            }
+        }
+        self.consume(path, tok.line, "handled");
+        self.eff.add("fail", "proved", Some(tok));
+        self.unwind_point(tok, "or fail", env, None);
+        if self.defer_depth > 0 {
+            self.def_err("E-DEF-001", "a failing call inside a deferred block: there is no outcome to propagate to (12.1)".into(), tok, "or fail", "LANG-12-01");
+        }
+        self.implied_fails.insert((tok.line, tok.col));
+        inner
+    }
+
+    /// `log.info(m)`, `log.warn(m)`, `log.error(m)` (13, LANG-13-04; X-345): one `StringView` message, the `io` effect
+    /// like `report` and no authority. `log` is the statement only where it names nothing in scope.
+    pub fn log_statement(&mut self, inner: N<'a>, env: &Env) -> bool {
+        let Some((_, level, al)) = fortis_names::reading::log_call(inner) else { return false };
+        if env_lookup(env, "log").is_some() || self.dc.table.get("log").is_some() {
+            return false;
+        }
+        if !fortis_names::reading::LOG_LEVELS.contains(&level.text.as_str()) {
+            return true; // the names layer reports the level (E-NAM-001)
+        }
+        self.eff.add("io", "proved", Some(level)); // the diagnostic plane, as `report` (10.6, 11.6)
+        let args = Self::arg_nodes(al);
+        let named = args.first().map_or(false, |a| a.direct_tokens().iter().any(|t| t.text == ":" || t.text == "..."));
+        if args.len() != 1 || named {
+            self.typ("E-TYP-040", format!("`log.{}` takes one message", level.text), level, "one StringView argument", &format!("{} arguments", args.len()), &format!("log.{}", level.text), "LANG-06-01");
+            for a in args {
+                self.infer(Self::arg_expr(a), env, None);
+            }
+            return true;
+        }
+        let ae = Self::arg_expr(args[0]);
+        let t = self.infer(ae, env, Some(&string_view()));
+        if let Some(ae) = ae {
+            self.expect(&t, &string_view(), ftok(ae), &format!("the message of `log.{}`", level.text));
+        }
+        true
+    }
+
+    /// The statement is a direct call of a function declared `@ignorable` (5.5, the prelude's aspect): the callee's
+    /// declaring module resolved the name to the core aspect (`Sig::ignorable`; D-314), whatever it names here.
+    pub fn ignorable_call(&self, e: N<'a>) -> bool {
+        let Some(tok) = fortis_names::reading::call_name_token(e) else { return false };
+        self.call_sigs.get(&(tok.line, tok.col)).map_or(false, |c| c.1)
+    }
+
+    /// `@ignorable` on a function whose result is linear is rejected (5.5, 11.8): a linear value is never dropped.
+    pub fn check_ignorable(&mut self, sig: &Sig<'a>, label: &str) {
+        let Some(tok) = sig.ignorable else { return };
+        let mods = self.expanded_mods(sig);
+        let what = if mods.contains("try") {
+            "a `try` function's result is an Outcome".to_string()
+        } else if mods.contains("async") {
+            "an `async` function's result is a Future".to_string()
+        } else if self.is_linear(&sig.ret) {
+            format!("{} is linear", strip(&sig.ret).show())
+        } else {
+            return;
+        };
+        let actual = strip(&sig.ret).show();
+        self.typ("E-TYP-150", format!("@ignorable on {label}: {what}, and a linear result can never be dropped (5.5)"), tok, "a non-linear result", &actual, "ignorable", "LANG-11-09");
+    }
 }

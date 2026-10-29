@@ -2,7 +2,7 @@
 // covers: PLAT-03-01, PLAT-03-03
 // An interface is injected in an ownership form the consumer writes: an owned `dynamic I` (a fresh boxed value
 // per consumer) or a `Shared[dynamic I]` (one instance, retained per consumer). DI never changes the slot's type.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export interface PaymentGateway {
   func charge(self, cents: Int) String
@@ -31,10 +31,9 @@ context Production {
   provide Checkout
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let app = Production.application()
-  caps.console.print(app.preview().gateway.charge(3))
-  caps.console.print(app.checkout().gateway.charge(4))
-  caps.console.print(app.checkout().gateway.charge(5))
+  console.print(app.preview().gateway.charge(3))
+  console.print(app.checkout().gateway.charge(4))
+  console.print(app.checkout().gateway.charge(5))
 }

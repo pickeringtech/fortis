@@ -12,9 +12,10 @@ and they may import modules meant only for tests (LR 14).
 
 ## A first test
 
-A `test` has a name and a body. The body behaves like the body of a `try` function: `or fail` is available, and
-a failure that escapes it fails the test (LR 14). `expect condition` checks a `Bool`, records what it compared,
-and fails the test when the condition is false (LR 14).
+A `test` has a name and a body. The body behaves like the body of a `try` function, and a failure that escapes
+it fails the test; a call that can fail needs no `or fail` there, because its failure fails the test anyway
+([`or fail` is implied](#or-fail-is-implied), LR 14). `expect condition` checks a `Bool`, records what it
+compared, and fails the test when the condition is false (LR 14).
 
 ```fortis
 // accept
@@ -34,9 +35,9 @@ pure try func root(n: Int<-10000..10000>) Int {
 }
 
 test "square roots round down" {
-  expect (root(16) or fail) == 4
-  expect (root(17) or fail) == 4
-  let zero = root(0) or fail
+  expect root(16) == 4
+  expect root(17) == 4
+  let zero = root(0)
   expect zero == 0
 }
 ```
@@ -82,7 +83,7 @@ test "an empty cart has no average" {
 }
 
 test "a full cart averages" {
-  expect (average(10, 4) or fail) == 2
+  expect average(10, 4) == 2
 }
 ```
 
@@ -215,7 +216,7 @@ keeps any input that reaches a new branch, and saves the corpus beside the packa
 
 ## Running tests
 
-Each backend has a command (LR 14 names the runner; Programme 8.1 describes it):
+Each backend has a command (LR 14 names the runner):
 
 | Command | Runs the tests on | Notes |
 |---|---|---|
@@ -232,3 +233,37 @@ Selecting, replaying and fuzzing work in `fortisc test`: a failing property's re
 seed, and `fortisc test FILE --test NAME --seed S` reruns exactly that case. The record writes the command as
 `fortis test …`, but the interpreter's `fortis test` does not yet take these options and does not shrink (D-59),
 so run them with `fortisc test`.
+
+## `or fail` is implied
+
+A test can only react to a failure it did not expect by failing, so in `test` and `property` bodies `or fail` is
+implied: a call of a fallible function has its success type, and its failure fails the test with its record
+(LR 14). So `expect root(16) == 4` checks the root, and fails the test if `root` fails. A call that `or`, `catch`
+or `match` consumes keeps its outcome, so expecting a failure is as explicit as ever, and outside tests nothing
+changes. Integer arithmetic works the same way: an operation the checker cannot prove safe fails the test if it
+overflows, so `expect a * b == c` needs no handler (LR 6.4). Older tests write `expect (root(16) or fail) == 4`;
+the explicit form is still accepted, and `fortis fmt` rewrites it.
+
+```fortis
+// accept
+export error Negative {
+  code: "demo.negative"
+}
+
+pure try func root(n: Int<-10000..10000>) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  let mut r: Int<0..101> = 0
+  while r < 100 && (r + 1) * (r + 1) <= n {
+    r = r + 1
+  }
+  return r
+}
+
+test "square roots, with or fail implied" {
+  expect root(16) == 4
+  let zero = root(0)
+  expect zero == 0
+}
+```

@@ -6,14 +6,14 @@ export class User {
   export age: Int
 }
 
-func rename(user: editable User, name: String) Void {
+func rename(user: editable User, name: String) {
   user.name = copy name
 }
 
-func enqueue(user: owned User) Void {
+func enqueue(user: owned User) {
 }
 
-func positions(name: String) Void {
+func positions(name: String) {
   let user = User(name: copy name, age: 30)
   let mut independent = copy user
   let seen = alias user

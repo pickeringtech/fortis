@@ -3,8 +3,8 @@ else: the bundles of packages are kits, build profiles are build modes, and lint
 
   python3 -I conformance/tools/terms_check.py [--json] [-v]
 
-Scope: the specification (`docs/Fortis_*.md`, the grammar), the plan (`docs/delivery`: its documents, chunk files,
-generated tables and tools), the documentation (`README.md`, `docs/guide`, `docs/agent`, `docs/site`, `skills`, the
+Scope: the specification (`docs/Fortis_*.md`, the grammar), the delivery plan in the maintainers' checkout (its
+documents, chunk files, generated tables and tools), the documentation (`README.md`, `docs/guide`, `docs/agent`, `docs/site`, `skills`, the
 READMEs of examples, acceptance and the implementation), the tools and their messages (`bin/fortis`,
 `conformance/tools`, the reference checker and interpreter, the compiler crates, the telemetry pipeline), the
 library (`library`, `reference/library`, every path in it), the manifests and the corpus programs. In scope, every
@@ -14,13 +14,14 @@ CPU, heap, allocation or OpenTelemetry profile. The other permitted uses name wh
 that states the rename itself, the quoted old word and the old names in backticks.
 
 Out of scope, because they are records of what was said or produced at the time and are cited by hash or date:
-the review transcripts (`docs/reviews`), frozen evidence (`docs/delivery/evidence`, the release record and the
-readability preregistration), spike preregistrations, designs and decisions (`spikes`, `PREREGISTRATION*.md`),
+the review transcripts, frozen evidence (the delivery plan's evidence, the release record and the readability
+preregistration), spike preregistrations, designs and decisions (`PREREGISTRATION*.md` and the spike records),
 generated result files (`results*.json`, run logs, differential reports), Cargo's `target` directories, the
 register's rows before X-150 and the defect register's entries before D-50 (an entry keeps the words of the day it
 was written; later ones use the new words; each stream edits only its own entries), and the definitions of passed
 chunks (their chunk files and their `chunk(...)` calls in `chunks.py`), which their criterion reports hash. This
 file names the old word to find it. A file or directory whose path contains the old word is reported like a line.
+The planning files are maintainers' files (planning.py): a checkout without them checks everything else.
 """
 from __future__ import annotations
 
@@ -75,7 +76,12 @@ def files():
 
 def frozen_chunks():
     """A passed chunk's definition is frozen: its criterion report hashes the generated chunk file (plan_check), so
-    its file and its `chunk(...)` call in chunks.py keep the words it passed with. Returns (files, chunks.py lines)."""
+    its file and its `chunk(...)` call in chunks.py keep the words it passed with. Returns (files, chunks.py lines).
+    A checkout without the delivery plan has no chunks to exempt."""
+    sys.path.insert(0, HERE)
+    import planning
+    if not planning.optional(planning.PLAN_TOOLS, "terms", "the delivery plan's documents and the exemption of passed chunks' definitions"):
+        return set(), set()
     status = json.load(open(os.path.join(ROOT, "docs", "delivery", "status.json"), encoding="utf-8"))
     passed = {u for u, v in status.items() if isinstance(v, dict) and v.get("status") == "passed"}
     files = {f"docs/delivery/chunks/{f}" for f in os.listdir(os.path.join(ROOT, "docs", "delivery", "chunks"))

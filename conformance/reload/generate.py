@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write a version of the SP-07 workload (spikes/SP-07/design.md 11).
+"""Write a version of the SP-07 workload (SP-07's design, section 11).
 
 A version is a number `v` and a set of edits from edits.json. The edits are textual replacements applied to
 template.ft in catalogue order. Then each `{{X}}` placeholder becomes the version's coefficient X, a literal in the

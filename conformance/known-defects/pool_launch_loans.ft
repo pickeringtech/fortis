@@ -1,4 +1,4 @@
-// D-180 (docs/delivery/defects.json): both checkers accept loans that cross a pool launch or a detach, which LANG-12-05
+// D-180: both checkers accept loans that cross a pool launch or a detach, which LANG-12-05
 // forbids (12.5, 12.7; Appendix C.2: only Shareable environments without loans cross a pool launch): a bound future
 // that borrows a local, launched on the parallel pool; a method call that borrows its receiver, launched on the pool
 // (natively the receiver is then moved into the task, so the later read does not build); and a cooperative task that

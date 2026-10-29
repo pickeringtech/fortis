@@ -1,20 +1,19 @@
 // execute: 150s|90s|true|1s|1h|0s|90000000000
 // requires: runtime
 // covers: LANG-06-04
-import fortis.host { Host }
+import fortis.host { Console }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let r1 = Duration.add(2min, 30s) or fail
-  caps.console.print("${r1}")
-  caps.console.print("${Duration.seconds(90)}")
-  caps.console.print("${1h > 59min}")
+  console.print("${r1}")
+  console.print("${Duration.seconds(90)}")
+  console.print("${1h > 59min}")
   let r2 = Duration.multiply(250ms, 4) or fail
-  caps.console.print("${r2}")
+  console.print("${r2}")
   let r3 = Duration.sub(Duration.hours(2), 1h) or fail
-  caps.console.print("${r3}")
+  console.print("${r3}")
   let r4 = Duration.sub(3s, 3s) or fail
-  caps.console.print("${r4}")
+  console.print("${r4}")
   let d = Duration.seconds(90)
-  caps.console.print("${d.nanoseconds()}")
+  console.print("${d.nanoseconds()}")
 }

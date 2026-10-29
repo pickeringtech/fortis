@@ -1,0 +1,30 @@
+// D-396: `xs.first()` on a list whose element is not Copyable (a class with a `cleanup`) passes both checkers and
+// runs on the interpreter and the VM (`first a|drop a|drop b|end`), but does not build natively: every generated
+// generic signature carries `T: Clone`, and `List.first` declares no `where T implements Copyable` (rustc E0277,
+// `Token: Clone` is not satisfied). `xs.get(0)` builds. v0.0.1 behaved the same, and its interpreter ran the
+// cleanup twice. Found by the v0.0.2-rc.9 wide review (GLM 5.3).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func lentFirst(console: Shared[Console]) {
+  let xs = List.of(make(console, "a"), make(console, "b"))
+  let t = xs.first()
+  console.print("first ${t?.label ?? "?"}")
+}
+
+func main(console: Console) {
+  let shared = Shared.create(move console)
+  lentFirst(shared)
+  shared.print("end")
+}

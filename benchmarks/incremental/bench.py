@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The SP-12 harness (spikes/SP-12/design.md 6-11): the daemon's runs, the batch check of every state they reach, and
+"""The SP-12 harness (SP-12's design, sections 6-11): the daemon's runs, the batch check of every state they reach, and
 the checks.
 
     python3 -I benchmarks/incremental/bench.py run --size 50k --out build/incremental/run-50k

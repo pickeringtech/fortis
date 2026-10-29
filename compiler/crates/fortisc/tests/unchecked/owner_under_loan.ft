@@ -1,0 +1,26 @@
+// backstop: pop p|drop p|after p|end
+// D-348: the owner `gone` ends in an inner block while the loan `t` of the same element is still live (both
+// checkers once accepted it). Its destruction is the owner's, so the cleanup runs there, once, on every runtime; the
+// loan's later end runs nothing. The VM once skipped it while the loan held a handle and then lost it.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(Token(label: String.from("p"), console: console.retain()))
+  let t = xs.get(0)
+  {
+    let gone = xs.pop()
+    console.print("pop ${gone?.label ?? "none"}")
+  }
+  console.print("after ${t?.label ?? "none"}")
+  console.print("end")
+}

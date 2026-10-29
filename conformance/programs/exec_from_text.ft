@@ -1,0 +1,23 @@
+// execute: plain|raw|via|end
+// requires: runtime
+// covers: LANG-07-06
+// D-386, 6.6, 7.6: a string literal without interpolation is a view of static storage, so it lends where a view
+// `from` a parameter is declared, as the whole result or as a raw string, and a view parameter lends on; every
+// backend runs it. A byte string, and a branch beside one that reads the parameter, check alike on both checkers
+// and run on the interpreter and the VM; native code does not build them yet (D-390).
+import fortis.host { Console }
+
+func plain(xs: List[Int]) StringView from xs => "plain"
+
+func raw(xs: List[Int]) StringView from xs => """raw"""
+
+func pass(s: StringView) StringView from s => s
+
+func main(console: Console) {
+  let xs: List[Int] = List.of(1)
+  console.print("${plain(alias xs)}")
+  console.print("${raw(alias xs)}")
+  let name = String.from("via")
+  console.print("${pass(alias name)}")
+  console.print("end")
+}

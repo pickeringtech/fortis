@@ -14,18 +14,20 @@ program importing no kit runs; kits add adapters and policy and never replace th
 | Component | Core provides | Kits add | LR |
 |---|---|---|---|
 | Executor | one cooperative executor per process (root task and every `scope`); parallel and blocking pools; cancellation and deadlines | Tokio adapter, I/O readiness, timers, channels (Runtime host kit) | LR 15, LR 12.5 |
-| Task reporter | sink for `report`, cleanup reports, `not_started` records, completed `capture` frames; default: reports plus each frame's schema, outcome class and duration to stderr, never a captured field value; `FORTIS_TELEMETRY=permit-all` puts every field on the record stream | exporters, archive, projections (Telemetry kit) | LR 15 |
-| Authorities | `Authority`; the ten capabilities; `Host.capabilities()` in `fortis.host`; the rule for per-activation authorities | minting adapters, attenuation helpers, sandboxing | LR 15, LR 11.6 |
+| Task reporter | sink for `report`, cleanup reports, `log` records, `not_started` records, completed `capture` frames; default: reports plus each frame's schema, outcome class and duration to stderr, never a captured field value; `FORTIS_TELEMETRY=permit-all` puts every field on the record stream | exporters, archive, projections (Telemetry kit) | LR 15 |
+| Authorities | `Authority`; the ten capabilities, supplied to the entry `main`'s parameters by type; `Host.capabilities()` in `fortis.host`; the rule for per-activation authorities | minting adapters, attenuation helpers, sandboxing | LR 15, LR 11.6 |
 | Observation schemas | the `observation` head | registry and pipelines (Telemetry kit) | LR 15, LR 13 |
-| Entry | `main` in four forms; one report and exit status 1 on failure | the `application` head and lifecycle (Runtime host kit) | LR 15, LR 4.6 |
+| Entry | `main` in four forms, its parameters supplied by type; one report and exit status 1 on failure | the `application` head and lifecycle (Runtime host kit) | LR 15, LR 4.6 |
 | Standard modules | `fortis.prelude`, `fortis.text`, `fortis.collections`, `fortis.numeric`, `fortis.time`, `fortis.money`, `fortis.host` | everything else under `fortis.*` | LR 15 |
 | Secrets | `Secret[T]` (no codec, no capture, fingerprint display), `reveal(secret, cap: SecretAccess)` | `declassify`, `Sanitiser`, authentication adapters (Security kit) | LR 15 |
 
 ## Capabilities and their core operations
 
-Created only by `Host.capabilities()`, only in `main`, only once (LR 11.6). Fields of the returned
-`Capabilities`: `fileSystem`, `network`, `clock`, `random`, `environment`, `process`, `supervisor`, `console`,
-`secretAccess`, `rawSql` ([`fortis.host`](../../library/fortis/host.ft)).
+Created once, only for the entry `main`: the runtime passes each capability `main` declares as a parameter, by its
+type (`func main(console: Console, fileSystem: FileSystem)`, LR 4.6), and `main` lends them to the functions it
+calls (LR 11.6). Older code calls `Host.capabilities()` once in a `main` with no capability parameter; the fields of
+the returned `Capabilities` are `fileSystem`, `network`, `clock`, `random`, `environment`, `process`, `supervisor`,
+`console`, `secretAccess`, `rawSql` ([`fortis.host`](../../library/fortis/host.ft)).
 
 | Capability | Operations (LR 15) | Notes |
 |---|---|---|
@@ -61,7 +63,7 @@ fails `sql.unavailable`.
 
 | Code | Trigger | Correction | LR |
 |---|---|---|---|
-| E-EFF-010 | `Host.capabilities()` outside `main`, a second call in `main` (reported at `main`), or `io` other than `report` reached without an `Authority` parameter (`report` needs none, LR 10.6) | call it once in `main`; pass the capability (or a `Shared` of it) as a parameter | LR 11.6 |
+| E-EFF-010 | `Host.capabilities()` outside `main`, a second call in `main` (reported at `main`), a call in a `main` that takes a capability parameter, or `io` other than `report` and `log` reached without an `Authority` parameter | declare the capability as a parameter of `main`; pass it (or a `Shared` of it) down as a parameter | LR 11.6 |
 | E-TYP-090 | a `Secret[T]` (or an authority) in an `Encodable` position, such as an observation field | capture or encode a non-secret projection | LR 15, LR 6.10 |
 
 ## Correction patterns
@@ -72,26 +74,25 @@ fails `sql.unavailable`.
 // reject: E-EFF-010
 import fortis.host { Host }
 
-func greet() Void {
+func greet() {
   let caps = Host.capabilities()     // reject: E-EFF-010
 }
 
-export func main(args: List[String]) Void {
+func main() {
   greet()
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
-func greet(console: Console) Void {
+func greet(console: Console) {
   console.print("hello")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  greet(caps.console)
+func main(console: Console) {
+  greet(console)
 }
 ```
 
@@ -99,28 +100,28 @@ export func main(args: List[String]) Void {
 hello
 ```
 
-### E-EFF-010: a second `Host.capabilities()` (LR 11.6)
+### E-EFF-010: `Host.capabilities()` in a `main` that takes capabilities (LR 11.6)
+
+A `main` with a capability parameter already has its capabilities; a call of `Host.capabilities()` there is a
+second creation.
 
 ```fortis
 // reject: E-EFF-010
-import fortis.host { Host }
+import fortis.host { Console, Host }
 
-export func main(args: List[String]) Void {     // reject: E-EFF-010
-  let caps = Host.capabilities()
-  let again = Host.capabilities()
-  caps.console.print("ready")
-  again.console.print("twice")
+func main(console: Console) {
+  let caps = Host.capabilities()     // reject: E-EFF-010
+  console.print("ready")
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("ready")
-  caps.console.print("once")
+func main(console: Console) {
+  console.print("ready")
+  console.print("once")
 }
 ```
 
@@ -136,13 +137,12 @@ LR 4.6):
 
 ```fortis
 // accept (exit status 1)
-import fortis.host { Host, Path }
+import fortis.host { Path, FileSystem, Console }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(fileSystem: FileSystem, console: Console) {
   let path = Path.parse("missing.txt") or fail
-  let text = caps.fileSystem.readText(path) or fail
-  caps.console.print(text)
+  let text = fileSystem.readText(path) or fail
+  console.print(text)
 }
 ```
 
@@ -150,14 +150,13 @@ Revealing a secret (LR 15):
 
 ```fortis
 // accept
-import fortis.host { Host, reveal }
+import fortis.host { reveal, Environment, SecretAccess, Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let home = caps.environment.get("HOME")
+func main(environment: Environment, secretAccess: SecretAccess, console: Console) {
+  let home = environment.get("HOME")
   if home != null {
-    let value = reveal(home, caps.secretAccess)
-    caps.console.print("${value.byteCount() > 0}")
+    let value = reveal(home, secretAccess)
+    console.print("${value.byteCount() > 0}")
   }
 }
 ```
@@ -176,7 +175,7 @@ pure try func deadline(start: Timestamp, slack: Int<0..60>) Timestamp {
 }
 
 test "deadline is later" {
-  let t = deadline(Timestamp.epoch(), 30) or fail
+  let t = deadline(Timestamp.epoch(), 30)
   expect Timestamp.after(t, Timestamp.epoch())
 }
 ```

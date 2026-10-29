@@ -1,6 +1,6 @@
 // reject: E-EFF-010 (at the marked line)
 // covers: LANG-11-07
 import fortis.host { Host }
-func sneak() Void {
+func sneak() {
   let caps = Host.capabilities()           // reject: E-EFF-010 — Host.capabilities() only in main
 }

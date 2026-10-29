@@ -7,7 +7,7 @@ try func sinceEpoch(clock: Clock) Duration {
   let start = Timestamp.epoch()
   return clock.elapsedSince(start) or fail
 }
-export try func main(args: List[String]) Void {
+try func main() {
   let caps = Host.capabilities()
   let at = Timestamp.add(Timestamp.epoch(), Duration.seconds(100)) or fail
   let frozen = caps.clock.frozen(at)

@@ -1,0 +1,55 @@
+// Formatter rewrites R15 and R12 (LR 9.7, 9.8, X-345): a qualified variant drops its enum where the expected type is
+// that enum and no declaration has the variant's name; adjacent single-line arms with no guard, no binding and the
+// same body become one or-pattern arm. A name also in scope keeps its prefix, and so does a variant with no expected
+// enum (a generic argument).
+enum Severity derive Equatable {
+  Error
+  Warning
+  Note
+}
+
+enum Problem {
+  MalformedDate
+  InvalidDate
+  Unbalanced(by: Int)
+  DateOutOfOrder
+  Unused
+}
+
+class Note {
+  text: String
+}
+
+class Finding {
+  severity: Severity
+  problem: Problem
+}
+
+func severityOf(p: Problem) Severity {
+  return match p {
+    MalformedDate => Severity.Error
+    InvalidDate => Severity.Error
+    Unbalanced(by: _) => Severity.Error
+    DateOutOfOrder => Severity.Warning
+
+    Unused => Severity.Note
+  }
+}
+
+func amount(p: Problem) Int {
+  return match p {
+    Unbalanced(by: n) => n
+    MalformedDate => 0
+    InvalidDate => 0      // kept apart: a comment
+    DateOutOfOrder => 0
+    Unused => 0
+  }
+}
+
+func isError(s: Severity) Bool => s == Severity.Error
+
+func finding() Finding {
+  let all: List[Severity] = List.of(Severity.Error, Severity.Warning)
+  let f = Finding(severity: Severity.Warning, problem: Problem.Unbalanced(by: all.count()))
+  return move f
+}

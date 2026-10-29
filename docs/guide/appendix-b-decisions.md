@@ -28,15 +28,15 @@ effects or timing (LR 1.1).
 | Constructors are named `create`, `of` or `from`; there is no `new` | Construction is an ordinary associated function, named for what it does. | LR 1.1, LR 9.2 |
 | No transparent type aliases: `type` is always nominal | A reader never has to ask whether two type names are the same type. | LR 6.9 |
 | No operator overloading (`Money.add(a, b)`, not `a + b`) | An operator always means the same thing; behaviour is named. | LR 6.10 |
-| Or-patterns, range patterns, generic lambdas, const generics over `N`, associated types and explicit type arguments at calls are not in v1 | Each was left out of Language 1.0; the LR states the workaround (annotate the binding; take a generic parameter). | LR 6.2, LR 6.10, LR 8.2, LR 9.5, LR 9.8 |
+| Range patterns, generic lambdas, const generics over `N`, associated types and explicit type arguments at calls are not in v1 | Each was left out of Language 1.0; the LR states the workaround (annotate the binding; take a generic parameter). | LR 6.2, LR 6.10, LR 8.2, LR 9.5, LR 9.8 |
 | The standard package is `fortis` (`fortis.prelude`, `fortis.text`, …) | One name for the standard library. | LR 4.3 |
 
 The decision about semicolons is checked like any rule. A stray `;` is `E-SYN-001` (LR 3.2), and the checker's
-record carries a correction that deletes it, as the syntax class allows (Programme 7.1):
+record carries a correction that deletes it, as the syntax class allows:
 
 ```fortis
 // reject: E-SYN-001
-export func main(args: List[String]) Void {
+func main() {
   let a = 1;          // reject: E-SYN-001
 }
 ```
@@ -46,7 +46,8 @@ export func main(args: List[String]) Void {
 | Decision | Why | LR |
 |---|---|---|
 | `move p`, `copy p`, `editable p` at the call site for existing places; fresh values need no marker | The call shows what happens to each argument. | LR 7.5 |
-| `editable p.m()` and `move p.m()` for `editable self` and `owned self` methods | The receiver is an argument like any other, so it is marked the same way. | LR 7.5, LR 7.6 |
+| `move p.m()` for `owned self` methods; `p.m()` for `editable self` methods and `fn mut` calls, on a place declared to change | The transfer is shown at the call; that `p` changes is shown once, by its `let mut` or `editable` declaration, and the call takes the same exclusive loan `editable p.m()` would (older code writes it). | LR 7.5, LR 7.6 |
+| `return x` of a local moves it, without `move` | Nothing can use a returned local afterwards, so the marker says nothing the line does not. | LR 7.5 |
 | `alias p` or `editable p` for an argument the result borrows `from` | A loan that outlives the statement is visible where it is taken. | LR 7.6 |
 | Loans are lexical; no non-lexical lifetimes | A loan ends at the end of its block, which a reader can see; to end one early, close a block. | LR 7.3 |
 | No stored loans: no lifetime parameters on user types, `E-OWN-053` | A reader never follows a region through a value's type; adding stored loans later breaks nothing. | LR 7.7 |
@@ -73,7 +74,7 @@ report of the failure to standard error and the process exits with status 1 (LR 
 
 ```fortis
 // accept (exit status 1)
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Empty {
   code: "demo.empty"
@@ -87,12 +88,11 @@ try func first(items: ListView[Int]) Int {
   return items.get(0) ?? 0
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let items: List[Int] = List.default()
-  caps.console.print("starting")
+  console.print("starting")
   let n = first(items) or fail
-  caps.console.print("first is ${n}")
+  console.print("first is ${n}")
 }
 ```
 
@@ -116,6 +116,27 @@ to standard error rather than standard output.
 | Projection by constructor spread `...copy p` / `...move p`; `derive From[S]`; `to()` on every type | Narrowing one type into another is written once, with its ownership visible. | LR 6.10, LR 9.2 |
 | Constants include record and variant-map literals, declaration names and the `Type.of(…)` constructors | Tables and route lists can be constants. | LR 5.1 |
 | `VariantMap[E, V]` is written `{ Variant: value }`; an optional callable is written `(fn(…) R)?` | One entry per variant, checked for completeness; the parentheses say which part is optional. | LR 6.9 |
+
+## The reading release (v0.0.2)
+
+v0.0.2 applies one principle: mark only what the reader cannot already see (LR 1.1). Every older form is still
+accepted, and `fortis fmt` rewrites each one that means the same; logging, `@ignorable` and `derive Default` are
+the author's choice, so they are left alone.
+
+| Decision | Why | LR |
+|---|---|---|
+| The entry `main` declares the capabilities it needs as parameters, supplied by type; `export` is implied on it, and `args` is declared only when used | Authority stays explicit, with no ambient authority, but it sits in the signature, where a reader looks. Only the entry `main` receives capabilities. | LR 4.6, LR 11.6 |
+| `log.info`, `log.warn` and `log.error` are statements that need no capability | A log observes; it has no authority over the world, and its sinks are the platform's. `console.print` stays for the program's own output. | LR 13, LR 11.6 |
+| A `Void` return type may be left out of a head | A head with no result type returns nothing; writing `Void` adds nothing. A function type keeps its result. | LR 8.1 |
+| In `test` and `property` bodies `or fail` is implied | A test can react to a failure it did not expect only by failing. | LR 14 |
+| Checked arithmetic is written with operators under a handler: `value * 10 + d or fail` | One handler covers the expression, and the arithmetic reads as arithmetic; an operator the checker proves stays a plain value. | LR 6.4 |
+| An enum variant may be written bare where the expected type is known; a bare name that also names something in scope must be qualified | The expected type already says which enum; an ambiguous name is never guessed. | LR 9.7 |
+| `A \| B => v` in `match` | Arms with the same result are one arm; the alternatives bind no names and take no guard. | LR 9.8 |
+| A labelled argument puns: `wanted` for `wanted: wanted` | The name was written twice. | LR 5.8, LR 9.2 |
+| `Map[String, V].get` takes a `StringView` key | A lookup allocates no key it then throws away. | LR 6.7 |
+| `@ignorable` on a declaration, instead of `discard` at every caller | The author decides once that the result may be dropped. | LR 5.5, LR 11.8 |
+| `derive Default` gives `Name.default()` | A class whose fields all have defaults needs no hand-written constructor. | LR 6.10, LR 9.2 |
+| The formatter does not print a lambda's inferred `pure` and `noalloc`; an expression-bodied lambda may leave out its result type | The function type it is passed to already says both. | LR 8.2 |
 
 ## Numbers, collections and concurrency
 

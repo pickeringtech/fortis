@@ -1,0 +1,5 @@
+// reject: E-NAM-006 (at the marked line)
+// covers: LANG-04-06
+// The command-line arguments are supplied once (4.6, X-345).
+func main(args: List[String], more: List[String]) {     // reject: E-NAM-006 — List[String] twice
+}

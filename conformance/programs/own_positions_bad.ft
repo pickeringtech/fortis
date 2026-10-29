@@ -3,16 +3,16 @@
 export class User {
   export name: String
   export age: Int
-  export func rename(editable self, name: String) Void {
+  export func rename(editable self, name: String) {
     self.name = copy name
   }
   export func retire(owned self) Int => self.age
 }
 
-func keep(user: owned User) Void {
+func keep(user: owned User) {
 }
 
-func change(user: editable User) Void {
+func change(user: editable User) {
 }
 
 func positions(name: String, user: User) User {
@@ -24,7 +24,7 @@ func positions(name: String, user: User) User {
   keep(own)                                          // reject: E-OWN-001 — owned parameter needs move or copy
   keep(alias own)                                    // reject: E-OWN-001 — alias is not a transfer
   change(move own)                                   // reject: E-OWN-001 — editable parameter takes `editable`
-  own.rename("z")                                    // reject: E-OWN-001 — editable self receiver needs `editable own.rename`
+  user.rename("z")                                   // reject: E-OWN-001: an editable self receiver on a read parameter
   let age = own.retire()                             // reject: E-OWN-001 — owned self receiver needs `move own.retire`
   let bad = editable user                            // reject: E-OWN-001 — editable needs a mutable root
   let taken = move user                              // reject: E-OWN-001 — a plain parameter holds a loan and owns nothing

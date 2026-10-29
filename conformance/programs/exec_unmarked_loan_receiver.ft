@@ -1,0 +1,50 @@
+// execute: order x,y|p 2|filled 1
+// requires: runtime
+// covers: LANG-07-04, LANG-07-07
+// D-303: unmarked receivers held through an exclusive-loan binding, a trivial value and a `move` capture change their
+// place on every backend, exactly as the marked forms do. (An exclusive `from` result is checked by
+// own_unmarked_loan_receiver_ok.ft; it does not build natively, D-185.)
+import fortis.host { Console }
+export class Tally {
+  export order: List[String]
+  export func add(editable self, word: StringView) {
+    self.order.push(String.from(word))
+  }
+}
+export trivial class Point {
+  export x: Int
+  export func shift(editable self) {
+    self.x = Int.saturatingAdd(self.x, 1)
+  }
+}
+func joined(t: Tally) String {
+  let mut b = Builder.create()
+  let mut first = true
+  for w in t.order {
+    if !first {
+      b.append(",")
+    }
+    b.append(w)
+    first = false
+  }
+  return b.finish()
+}
+func main(console: Console) {
+  let mut t = Tally(order: List.default())
+  {
+    let r = editable t
+    r.add("x")
+    r.add("y")
+  }
+  console.print("order ${joined(t)}")
+  let mut p = Point(x: 0)
+  p.shift()
+  p.shift()
+  console.print("p ${p.x}")
+  let fresh = Tally(order: List.default())
+  let mut fill = fn mut[move fresh]() Int {
+    fresh.add("z")
+    return fresh.order.count()
+  }
+  console.print("filled ${fill()}")
+}

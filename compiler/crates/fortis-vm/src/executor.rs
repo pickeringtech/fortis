@@ -16,7 +16,7 @@ use fortis_mir::model::Program;
 
 use crate::machine::{dynamic, Exit, Frame, Halt, Record, Vm, R};
 use crate::sync::Rc;
-use crate::value::{display, FutureVal, ScopeVal, TaskRef, Value};
+use crate::value::{display, FutureVal, ScopeVal, TaskRef, TupleVal, Value};
 
 /// Tasks a scope may hold (launched, not yet joined), and detached tasks a program may queue (PROG-NFR-13).
 pub const SCOPE_BOUND: usize = 256;
@@ -724,7 +724,7 @@ impl<'p> Vm<'p> {
                     }
                     results.push(result.unwrap_or(Value::Void));
                 }
-                Ok(Value::Tuple(Rc::new(results)))
+                Ok(Value::Tuple(Rc::new(TupleVal::from(results))))
             }
             Value::Sleep(ns) => {
                 let until = self.sched().lock().now + ns;

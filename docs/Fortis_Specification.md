@@ -37,7 +37,7 @@ Fortis is **library-first**. A program is a set of packages; a package is a set 
 ```fortis
 // accept — src/report.ft in package acme.reporting
 import fortis.text
-import fortis.host { Host }
+import fortis.host { FileSystem, Console }
 import acme.billing.invoices { Invoice, CustomerId }
 import acme.reporting.store { Archive, Invoices }   // illustrative dependency
 
@@ -58,27 +58,26 @@ export pure try func summarise(invoices: List[Invoice]) String {
   let mut out = text.Builder.create()           // fresh local storage: mutation is still pure
   for invoice in invoices {                     // read loan of each invoice
     let total = invoice.total() or fail         // propagate failure, keep the success value
-    editable out.appendLine("${invoice.customer}: ${total}")
+    out.appendLine("${invoice.customer}: ${total}")
   }
   return out.finish()
 }
 
 // Ownership is explicit when an existing value is involved.
-export func archive(store: editable Archive, invoices: owned List[Invoice]) Void {
+export func archive(store: editable Archive, invoices: owned List[Invoice]) {
   let count = invoices.count()
-  editable store.add(move invoices)             // `store` is loaned exclusively; `invoices` is given away
-  editable store.note("archived ${count}")
+  store.add(move invoices)                      // `store` changes, as its parameter says; `invoices` is given away
+  store.note("archived ${count}")
 }
 
 // The entry point. `try main` that fails prints one report and exits 1.
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()                // I/O needs an explicit capability value
-  let invoices = Invoices.load(caps.fileSystem, args) or fail
+try func main(fileSystem: FileSystem, console: Console, args: List[String]) {
+  let invoices = Invoices.load(fileSystem, args) or fail
   let reportText = summarise(invoices) catch e { // explicit binding; must end in recover/return/fail
     report e                                    // consumes the failure; it cannot also be propagated
     recover "no report"
   }
-  caps.console.print(reportText)
+  console.print(reportText)
 }
 ```
 
@@ -113,8 +112,8 @@ A kit is an ordinary set of packages: it obeys every language rule, enters a mod
 | `Fortis_Language_Reference.md` | the core language: syntax, static rules, execution semantics, lowering reference, keyword inventory, closed decisions | `LANG-<section>-<nn>` |
 | `reference/grammar/fortis.ebnf` | the normative grammar | — |
 | `Fortis_Platform_Specification.md` | the kits as libraries: runtime host, DI, HTTP, data, telemetry, web UI, security, packages, configuration, developer tooling, standard contracts | `PLAT-<kit>-<nn>` |
-| `Fortis_Delivery_Programme.md` | release boundary, planned artefacts, requirements register, compiler and VM implementation, diagnostics, testing, exploration and agent protocol, non-functional requirements, threat model, proof spikes, gates, acceptance applications, evidence rules, risks, governance | `PROG-<family>-<nn>` |
-| `Fortis_Specification_Review.md` | the FSPEC-0.1 review register with the decision recorded for every item | review item IDs |
+| the Delivery Programme (kept with the maintainers' planning records) | release boundary, planned artefacts, requirements register, compiler and VM implementation, diagnostics, testing, exploration and agent protocol, non-functional requirements, threat model, proof spikes, gates, acceptance applications, evidence rules, risks, governance | `PROG-<family>-<nn>` |
+| the decision register (kept with the maintainers' planning records) | the FSPEC-0.1 review register with the decision recorded for every item | review item IDs |
 
 Read the Language Reference first if you want to write or review Fortis code. Read the Platform Specification if you are building an application. Read the Delivery Programme if you are implementing the compiler or planning the release.
 
@@ -139,7 +138,7 @@ Requirement identifiers from FSPEC-0.1 were renumbered into three families. Each
 | API, DAT, JOB, CAC, WEB, SEC (adapters), PKG, SCF, CFG, SCH, DEP, TEL, FIN, DI, STD, APP, OBS-003/004/005, VM-002…004 | `PLAT-` | Platform Specification, Appendix A |
 | FND, ARC, CMP, VM-001/005, DIA, TST, EXP, AGT, NFR, SEC (threat model), DEL, DOC | `PROG-` | Delivery Programme, section Requirements register |
 
-Review items (`R-`, `G-`, `T-`, `O-`, `F-`, `E-`, `C-`, `D-`, `I-`, `B-`, `P-`, `V-`, `N-`) map to the sections that resolved them in `Fortis_Specification_Review.md`, under each item's **Decision** line.
+Review items (`R-`, `G-`, `T-`, `O-`, `F-`, `E-`, `C-`, `D-`, `I-`, `B-`, `P-`, `V-`, `N-`) map to the sections that resolved them in the decision register, under each item's **Decision** line.
 
 ## 7. Status of decisions and open items
 

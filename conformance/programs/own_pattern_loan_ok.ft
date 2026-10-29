@@ -4,7 +4,7 @@ export enum Slot {
   Empty
   Full(label: String)
 }
-func keep(s: owned String) Void {
+func keep(s: owned String) {
 }
 func run(slot: Slot, owned_slot: owned Slot) Int {
   let n = match slot {
@@ -13,7 +13,7 @@ func run(slot: Slot, owned_slot: owned Slot) Int {
   }
   match move owned_slot {
     Full(label: l) => keep(move l)
-    Empty => { }
+    Empty => {}
   }
   return n
 }

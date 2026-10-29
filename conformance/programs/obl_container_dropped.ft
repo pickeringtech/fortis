@@ -2,7 +2,7 @@
 // covers: LANG-10-02
 try func half(n: Int) Int => n
 
-func both(a: Int, b: Int) Void {
+func both(a: Int, b: Int) {
   let mut results: List[Outcome[Int]] = List.default()   // reject: E-OBL-001 — the list of outcomes is dropped at block end
   editable results.push(half(a))
 }

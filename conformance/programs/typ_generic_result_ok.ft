@@ -21,7 +21,7 @@ func make[T](value: T) Box[T] where T implements Copyable {
 func good() Int {
   let xs: List[Int] = box(1)
   let b: Box[Bool] = make(true)
-  let lights: List[Light] = List.of(Light.Wrap(n: 1))
+  let lights: List[Light] = List.of(Wrap(n: 1))
   let ctor: List[fn(Int) Light] = List.of(Light.Wrap)
   let one: List[fn(Int) Int] = List.of(pure noalloc fn(x: Int) Int => x)
   discard b

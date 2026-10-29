@@ -4,7 +4,7 @@
 // D-3: a class that contains itself is destructured under move like any class (9.8): with `let Class(...) = move x`,
 // with a `match move` class arm, inside another match's arm, with a literal and `null` inside it, and with guards
 // that read its fields and a binding nested inside it. Natively such a class is boxed, and the destructuring moves the box's contents out.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Node {
   export value: Int
@@ -72,25 +72,24 @@ func pair(n: owned Node) String {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let list = Node(value: 1, next: Node(value: 2, next: Node(value: 3, next: null)))
-  caps.console.print("length ${length(move list)}")
+  console.print("length ${length(move list)}")
   let one = Node(value: 4, next: null)
-  caps.console.print("first ${firstValue(move one)}")
+  console.print("first ${firstValue(move one)}")
   let other = Node(value: 5, next: Node(value: 6, next: null))
   let rest = takeNext(move other)
   let shown = match rest {
     present(r) => r.value
     null => 0
   }
-  caps.console.print("next ${shown}")
-  caps.console.print("second ${second(Chain(node: Node(value: 1, next: Node(value: 2, next: null))))}")
-  caps.console.print(describe(Node(value: 1, next: null)))
-  caps.console.print(describe(Node(value: 9, next: null)))
-  caps.console.print(describe(Node(value: 2, next: Node(value: 3, next: null))))
-  caps.console.print(pair(Node(value: 1, next: Node(value: 2, next: null))))
-  caps.console.print(climbs(Node(value: 1, next: Node(value: 5, next: null))))
-  caps.console.print(climbs(Node(value: 7, next: Node(value: 5, next: null))))
-  caps.console.print("end")
+  console.print("next ${shown}")
+  console.print("second ${second(Chain(node: Node(value: 1, next: Node(value: 2, next: null))))}")
+  console.print(describe(Node(value: 1, next: null)))
+  console.print(describe(Node(value: 9, next: null)))
+  console.print(describe(Node(value: 2, next: Node(value: 3, next: null))))
+  console.print(pair(Node(value: 1, next: Node(value: 2, next: null))))
+  console.print(climbs(Node(value: 1, next: Node(value: 5, next: null))))
+  console.print(climbs(Node(value: 7, next: Node(value: 5, next: null))))
+  console.print("end")
 }

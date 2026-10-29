@@ -12,6 +12,6 @@ pure func nest[T](x: T, n: Int<0..100>) Int where T implements Copyable {
   return nest(Box(value: copy x), n - 1)
 }
 
-export func main(args: List[String]) Void {
+func main() {
   discard nest(1, 5)
 }

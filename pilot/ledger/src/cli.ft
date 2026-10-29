@@ -68,17 +68,17 @@ export pure try func parseArguments(args: ListView[String]) Invocation {
   let first = wordAt(args, 0)
   if first == "--file" {
     if n < 2 {
-      fail UsageError(problem: UsageProblem.MissingArgument, argument: 2)
+      fail UsageError(problem: MissingArgument, argument: 2)
     }
     file = wordAt(args, 1)
     i = 2
   }
   if i >= n {
-    return Invocation(file: move file, command: Command.All)
+    return Invocation(file: move file, command: All)
   }
   let name = wordAt(args, i)
-  let position = Int.add(i, 1) or fail
-  let rest = Int.sub(n, position) or fail
+  let position = i + 1
+  let rest = n - position
   let command = commandNamed(name, args, position, rest) or fail
   return Invocation(file: move file, command: move command)
 }
@@ -87,43 +87,43 @@ export pure try func parseArguments(args: ListView[String]) Invocation {
 pure try func commandNamed(name: StringView, args: ListView[String], position: Int, rest: Int) Command {
   if name == "all" || name == "balance" || name == "tree" || name == "trial" || name == "check" || name == "help" {
     if rest > 0 {
-      let extra = Int.add(position, 1) or fail
-      fail UsageError(problem: UsageProblem.ExtraArgument, argument: extra)
+      let extra = position + 1 or fail
+      fail UsageError(problem: ExtraArgument, argument: extra)
     }
     if name == "all" {
-      return Command.All
+      return All
     }
     if name == "balance" {
-      return Command.Balance
+      return Balance
     }
     if name == "tree" {
-      return Command.Tree
+      return Tree
     }
     if name == "trial" {
-      return Command.Trial
+      return Trial
     }
     if name == "check" {
-      return Command.Check
+      return Check
     }
-    return Command.Help
+    return Help
   }
   if name == "income" {
     if rest == 0 {
-      return Command.Income(first: null, last: null)
+      return Income(first: null, last: null)
     }
     checkArity(position, rest, 2) or fail
-    let fromAt = Int.add(position, 1) or fail
-    let toAt = Int.add(position, 2) or fail
+    let fromAt = position + 1 or fail
+    let toAt = position + 2 or fail
     let startDate = dateArgument(args, position, fromAt) or fail
-    let endIndex = Int.add(position, 1) or fail
+    let endIndex = position + 1 or fail
     let endDate = dateArgument(args, endIndex, toAt) or fail
     if endDate.isBefore(startDate) {
-      fail UsageError(problem: UsageProblem.ReversedDates, argument: toAt)
+      fail UsageError(problem: ReversedDates, argument: toAt)
     }
-    return Command.Income(first: startDate, last: endDate)
+    return Income(first: startDate, last: endDate)
   }
   if name == "register" {
-    let at = Int.add(position, 1) or fail
+    let at = position + 1 or fail
     checkArity(position, rest, 1) or fail
     let text = wordAt(args, position)
     // The account's own failure is passed on, annotated with the argument it came from. Replacing it with a
@@ -131,23 +131,23 @@ pure try func commandNamed(name: StringView, args: ListView[String], position: I
     let account = AccountName.parse(text) catch e {
       fail annotate(move e, "command-line argument ${at}")
     }
-    return Command.Register(account: move account)
+    return Register(account: move account)
   }
-  fail UsageError(problem: UsageProblem.UnknownCommand, argument: position)
+  fail UsageError(problem: UnknownCommand, argument: position)
 }
 
 // Fails unless the command at `position` has exactly `wanted` arguments after it: a missing argument is reported
 // at the position just after the last word, an extra one at its own position.
-pure try func checkArity(position: Int, rest: Int, wanted: Int<0..2>) Void {
+pure try func checkArity(position: Int, rest: Int, wanted: Int<0..2>) {
   if rest < wanted {
-    let lastWord = Int.add(position, rest) or fail
-    let missing = Int.add(lastWord, 1) or fail
-    fail UsageError(problem: UsageProblem.MissingArgument, argument: missing)
+    let lastWord = position + rest or fail
+    let missing = lastWord + 1 or fail
+    fail UsageError(problem: MissingArgument, argument: missing)
   }
   if rest > wanted {
-    let lastWanted = Int.add(position, wanted) or fail
-    let extra = Int.add(lastWanted, 1) or fail
-    fail UsageError(problem: UsageProblem.ExtraArgument, argument: extra)
+    let lastWanted = position + wanted or fail
+    let extra = lastWanted + 1 or fail
+    fail UsageError(problem: ExtraArgument, argument: extra)
   }
 }
 
@@ -173,13 +173,7 @@ pure func wordAt(words: ListView[String], index: Int) String {
 export pure func wantsHelp(command: Command) Bool {
   return match command {
     Help => true
-    All => false
-    Balance => false
-    Tree => false
-    Trial => false
-    Income(first: _, last: _) => false
-    Register(account: _) => false
-    Check => false
+    All | Balance | Tree | Trial | Income(first: _, last: _) | Register(account: _) | Check => false
   }
 }
 
@@ -232,7 +226,7 @@ test "command lines that parse" cases {
   "check":           { line: "check", file: "journal.ledger", command: "check" }
   "help":            { line: "help", file: "journal.ledger", command: "help" }
 } as row {
-  let invocation = parseArguments(argumentsOf(row.line)) or fail
+  let invocation = parseArguments(argumentsOf(row.line))
   expect invocation.file == row.file
   expect describeCommand(invocation.command) == row.command
 }
@@ -251,7 +245,7 @@ test "command lines that do not parse" cases {
 } as row {
   let parsed = parseArguments(argumentsOf(row.line)) catch e {
     expect e.code == row.code
-    recover Invocation(file: "refused", command: Command.Help)
+    recover Invocation(file: "refused", command: Help)
   }
   expect parsed.file == "refused"
 }
@@ -299,8 +293,8 @@ pure recovers func usageArgument(f: owned Failure) Int {
 }
 
 test "every usage problem is explained" {
-  expect usageProblemText(UsageProblem.UnknownCommand) == "unknown command"
-  expect usageProblemText(UsageProblem.ReversedDates) == "the period ends before it starts"
-  expect !wantsHelp(Command.All)
-  expect wantsHelp(Command.Help)
+  expect usageProblemText(UnknownCommand) == "unknown command"
+  expect usageProblemText(ReversedDates) == "the period ends before it starts"
+  expect !wantsHelp(All)
+  expect wantsHelp(Help)
 }

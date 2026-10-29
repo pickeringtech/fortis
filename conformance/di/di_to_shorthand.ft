@@ -1,7 +1,7 @@
 // execute: preview: fallback|checkout: direct
 // covers: PLAT-03-02
 // `provide Key to Target` without `using` binds the key's own class to that target.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Gateway {
   name: String = "direct"
@@ -22,9 +22,8 @@ context Production {
   provide Preview
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let app = Production.application()
-  caps.console.print("preview: ${app.preview().gateway.name}")
-  caps.console.print("checkout: ${app.checkout().gateway.name}")
+  console.print("preview: ${app.preview().gateway.name}")
+  console.print("checkout: ${app.checkout().gateway.name}")
 }

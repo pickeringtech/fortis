@@ -1,0 +1,35 @@
+// backstop: const line|dynamic:`t` was moved (use after move)
+// D-391: a deferred block names a local only inside an interpolation and `return t` moves the local out (both checkers
+// once accepted it, since they read the holes of a deferred block for its effects but not for its places). The
+// deferred block runs after the return and reads what left: the read is a dynamic check failure, reported with the
+// lines printed before it. The VM once let the block's `return` win over the deferred block's failure and stopped the
+// block silently, exit 0; the interpreter once kept the returned local readable and printed its label.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func two(console: Shared[Console]) Token {
+  let t = make(console, "y")
+  defer {
+    console.print("const line")
+    console.print("read ${t.label}")
+  }
+  return t
+}
+
+func main(console: Console) {
+  let shared = Shared.create(move console)
+  let a = two(shared)
+  shared.print("got ${a.label}")
+  shared.print("end")
+}

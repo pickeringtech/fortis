@@ -1,0 +1,157 @@
+// reject: E-OWN-010, E-OWN-011, E-OWN-051 (at the marked lines)
+// covers: LANG-07-05, LANG-07-04, LANG-07-06
+// D-348, 7.3, 7.6: a loan a result holds inside an optional, a tuple or a record (`xs.get(0)` is
+// `(alias T from self)?`) is held by the binding that receives it, until the end of that binding's block. An
+// editable use of the owner while it is live is a conflicting loan (E-OWN-010), and a move of the owner, or its end
+// while an outer binding still holds the loan, is the owner used while loaned (E-OWN-011). Loans are lexical: the
+// loan's last use before the change does not end it. Both checkers dropped the loan inside the optional, so the
+// interpreter and the VM ran these programs with a loan of an element the list no longer held.
+import fortis.host { Console }
+
+class Item {
+  label: String
+}
+
+func items() List[Item] {
+  let mut xs: List[Item] = List.default()
+  xs.push(Item(label: String.from("a")))
+  xs.push(Item(label: String.from("b")))
+  return xs
+}
+
+func popWhileLent() {
+  let mut xs = items()
+  let t = xs.get(0)
+  let v = xs.pop()                                // reject: E-OWN-010 — t holds a loan of xs
+  log.info("${t?.label ?? "none"} ${v?.label ?? "none"}")
+}
+
+func pushWhileLent() {
+  let mut xs = items()
+  let t = xs.first()
+  xs.push(Item(label: String.from("c")))          // reject: E-OWN-010 — first() lends too
+  log.info("${t?.label ?? "none"}")
+}
+
+try func setWhileLent() {
+  let mut xs = items()
+  let t = xs.get(0)
+  xs.set(0, Item(label: String.from("z"))) or fail   // reject: E-OWN-010 — set
+  log.info("${t?.label ?? "none"}")
+}
+
+func moveWhileLent() {
+  let xs = items()
+  let t = xs.get(0)
+  let ys = move xs                                // reject: E-OWN-011 — a move of the owner
+  log.info("${t?.label ?? "none"} ${ys.count()}")
+}
+
+func consumeWhileLent() {
+  let xs = items()
+  let t = xs.get(0)
+  move xs.consumeEach(fn(k: owned Item) Void {     // reject: E-OWN-011 — an `owned self` call moves it
+    log.info("each ${k.label}")
+  })
+  log.info("${t?.label ?? "none"}")
+}
+
+func lastUseFirst() {
+  let mut xs = items()
+  let t = xs.get(0)
+  log.info("${t?.label ?? "none"}")
+  let v = xs.pop()                                // reject: E-OWN-010 — loans are lexical
+  log.info("${v?.label ?? "none"}")
+}
+
+func letMut() {
+  let mut xs = items()
+  let mut t = xs.get(0)
+  let v = xs.pop()                                // reject: E-OWN-010 — a `let mut` holds it too
+  log.info("${t?.label ?? "none"} ${v?.label ?? "none"}")
+}
+
+func assigned() {
+  let mut xs = items()
+  let mut t = xs.get(0)
+  t = xs.get(1)
+  let v = xs.pop()                                // reject: E-OWN-010 — the assigned binding holds the new loan
+  log.info("${t?.label ?? "none"} ${v?.label ?? "none"}")
+}
+
+func movedOn() {
+  let mut xs = items()
+  let t = xs.get(0)
+  let u = move t
+  let v = xs.pop()                                // reject: E-OWN-010 — `move t` hands the loan to u
+  log.info("${u?.label ?? "none"} ${v?.label ?? "none"}")
+}
+
+func inTuple() {
+  let mut xs = items()
+  let pair = (xs.get(0), 1)
+  let v = xs.pop()                                // reject: E-OWN-010 — a tuple holds it
+  log.info("${pair.0?.label ?? "none"} ${v?.label ?? "none"}")
+}
+
+func inRecord() {
+  let mut xs = items()
+  let rec = { item: xs.get(0), n: 1 }
+  let v = xs.pop()                                // reject: E-OWN-010 — a record holds it
+  log.info("${rec.item?.label ?? "none"} ${v?.label ?? "none"}")
+}
+
+func coalesced() {
+  let mut xs = items()
+  let d = Item(label: String.from("d"))
+  let t = xs.get(0) ?? alias d
+  let v = xs.pop()                                // reject: E-OWN-010 — the present side of the `??` lends
+  log.info("${t.label} ${v?.label ?? "none"}")
+}
+
+func mapValue() {
+  let mut m: Map[String, Item] = Map.default()
+  m.set(String.from("k"), Item(label: String.from("m")))
+  let t = m.get("k")
+  m.set(String.from("k"), Item(label: String.from("n")))   // reject: E-OWN-010 — Map.get lends
+  log.info("${t?.label ?? "none"}")
+}
+
+func cursorItem() {
+  let mut xs: List[String] = List.default()
+  xs.push(String.from("a"))
+  let mut ys: List[String] = List.default()
+  ys.push(String.from("y"))
+  let mut a = ys.get(0)
+  {
+    let mut c = alias xs.iterate()
+    a = c.next()
+  }
+  let v = xs.pop()                                // reject: E-OWN-010 — the item outlives the cursor
+  log.info("${a ?? "none"} ${v ?? "none"}")
+}
+
+func outlivesOwner() {
+  let mut xs = items()
+  let mut t = xs.get(0)
+  {
+    let ys = items()
+    t = ys.get(0)                                 // reject: E-OWN-011 — ys ends while t still lends it
+  }
+  log.info("${t?.label ?? "none"}")
+}
+
+func editableParam(xs: editable List[Item]) {
+  let t = xs.get(0)
+  xs.push(Item(label: String.from("e")))          // reject: E-OWN-010 — an editable parameter's element
+  log.info("${t?.label ?? "none"}")
+}
+
+func localsElement(xs: List[Item]) (alias Item from xs)? {
+  let ys = items()
+  return ys.get(0)                                // reject: E-OWN-051 — a loan of a local
+}
+
+func main(console: Console) {
+  console.print("loans")
+}

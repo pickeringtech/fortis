@@ -19,31 +19,31 @@ export class Balances {
   export pure func empty() Balances => Balances(byAccount: Map.default(), names: List.default())
 
   // Adds a quantity of one commodity to an account.
-  export pure try func credit(editable self, account: AccountName, code: CommodityCode, minor: Int) Void {
+  export pure try func credit(editable self, account: AccountName, code: CommodityCode, minor: Int) {
     let key = account.text()
     let mut updated = Holdings.empty()
     {
       // The loan of the map ends with this block, before the map is changed.
-      let existing = self.byAccount.get(copy key)
+      let existing = self.byAccount.get(key)
       if existing != null {
-        editable updated.addAll(existing) or fail
+        updated.addAll(existing) or fail
       }
     }
-    if self.byAccount.get(copy key) == null {
-      editable self.names.push(copy account)
+    if self.byAccount.get(key) == null {
+      self.names.push(copy account)
     }
-    editable updated.add(code, minor) or fail
-    editable self.byAccount.set(move key, move updated)
+    updated.add(code, minor) or fail
+    self.byAccount.set(move key, move updated)
   }
 
   // Adds one posting.
-  export pure try func post(editable self, posting: Posting) Void {
-    editable self.credit(posting.account, posting.amount.code, posting.amount.minor) or fail
+  export pure try func post(editable self, posting: Posting) {
+    self.credit(posting.account, posting.amount.code, posting.amount.minor) or fail
   }
 
   // The balance of an account; empty when it has no postings.
   export pure func of(self, account: StringView) Holdings {
-    return match self.byAccount.get(String.from(account)) {
+    return match self.byAccount.get(account) {
       present(existing) => copy existing
       null => Holdings.empty()
     }
@@ -60,9 +60,9 @@ export class Balances {
     let mut sum = Holdings.empty()
     for name in self.names {
       let h = self.of(name.text())
-      editable sum.addAll(h) or fail
+      sum.addAll(h) or fail
     }
-    return move sum
+    return sum
   }
 
   // The balances rolled up the account tree: every account and every account above it, each holding the sum of
@@ -74,11 +74,11 @@ export class Balances {
       for ancestor in name.lineage() {
         let node = AccountName.parse(ancestor) or fail
         for amount in own.asAmounts() {
-          editable tree.credit(node, amount.code, amount.minor) or fail
+          tree.credit(node, amount.code, amount.minor) or fail
         }
       }
     }
-    return move tree
+    return tree
   }
 }
 
@@ -92,11 +92,11 @@ export pure try func balancesOf(journal: Journal, period: Period?) Balances {
     let excluded = period != null && !period.holds(t.date)
     if !excluded {
       for p in t.postings {
-        editable balances.post(p) or fail
+        balances.post(p) or fail
       }
     }
   }
-  return move balances
+  return balances
 }
 
 const journalText = """commodity GBP 2
@@ -137,71 +137,71 @@ pure try func minorOf(balances: Balances, account: StringView, code: StringView)
 }
 
 test "balances per account" {
-  let loaded = loadedForTest(journalText) or fail
+  let loaded = loadedForTest(journalText)
   expect loaded.diagnostics.count() == 0
-  let balances = balancesOf(loaded.journal, null) or fail
+  let balances = balancesOf(loaded.journal, null)
   expect balances.count() == 7
-  expect (minorOf(balances, "assets:bank:current", "GBP") or fail) == 220000
-  expect (minorOf(balances, "assets:bank:savings", "GBP") or fail) == 30000
-  expect (minorOf(balances, "assets:cash", "GBP") or fail) == -1250
-  expect (minorOf(balances, "assets:cash", "USD") or fail) == -4000
-  expect (minorOf(balances, "income:salary", "GBP") or fail) == -200000
-  expect (minorOf(balances, "assets:nowhere", "GBP") or fail) == 0
-  let total = balances.total() or fail
+  expect minorOf(balances, "assets:bank:current", "GBP") == 220000
+  expect minorOf(balances, "assets:bank:savings", "GBP") == 30000
+  expect minorOf(balances, "assets:cash", "GBP") == -1250
+  expect minorOf(balances, "assets:cash", "USD") == -4000
+  expect minorOf(balances, "income:salary", "GBP") == -200000
+  expect minorOf(balances, "assets:nowhere", "GBP") == 0
+  let total = balances.total()
   expect total.isZero()
 }
 
 test "accounts come out in report order" {
-  let loaded = loadedForTest(journalText) or fail
-  let balances = balancesOf(loaded.journal, null) or fail
+  let loaded = loadedForTest(journalText)
+  let balances = balancesOf(loaded.journal, null)
   let names = balances.accounts().map(fn(n: AccountName) String => n.text())
-  expect (names.at(0) or fail) == "assets:bank:current"
-  expect (names.at(1) or fail) == "assets:bank:savings"
-  expect (names.at(2) or fail) == "assets:cash"
-  expect (names.at(3) or fail) == "equity:opening"
-  expect (names.at(4) or fail) == "income:salary"
-  expect (names.at(5) or fail) == "expenses:food"
-  expect (names.at(6) or fail) == "expenses:travel"
+  expect names.at(0) == "assets:bank:current"
+  expect names.at(1) == "assets:bank:savings"
+  expect names.at(2) == "assets:cash"
+  expect names.at(3) == "equity:opening"
+  expect names.at(4) == "income:salary"
+  expect names.at(5) == "expenses:food"
+  expect names.at(6) == "expenses:travel"
 }
 
 test "balances roll up the tree" {
-  let loaded = loadedForTest(journalText) or fail
-  let balances = balancesOf(loaded.journal, null) or fail
-  let tree = balances.rolledUp() or fail
-  expect (minorOf(tree, "assets", "GBP") or fail) == 248750
-  expect (minorOf(tree, "assets:bank", "GBP") or fail) == 250000
-  expect (minorOf(tree, "assets", "USD") or fail) == -4000
-  expect (minorOf(tree, "expenses", "GBP") or fail) == 1250
+  let loaded = loadedForTest(journalText)
+  let balances = balancesOf(loaded.journal, null)
+  let tree = balances.rolledUp()
+  expect minorOf(tree, "assets", "GBP") == 248750
+  expect minorOf(tree, "assets:bank", "GBP") == 250000
+  expect minorOf(tree, "assets", "USD") == -4000
+  expect minorOf(tree, "expenses", "GBP") == 1250
   expect tree.count() == 12
   let names = tree.accounts().map(fn(n: AccountName) String => n.text())
-  expect (names.at(0) or fail) == "assets"
-  expect (names.at(1) or fail) == "assets:bank"
-  expect (names.at(2) or fail) == "assets:bank:current"
+  expect names.at(0) == "assets"
+  expect names.at(1) == "assets:bank"
+  expect names.at(2) == "assets:bank:current"
 }
 
 test "a period selects transactions by date" {
-  let loaded = loadedForTest(journalText) or fail
-  let february = Period(first: Date.of(2026, 2, 1) or fail, last: Date.of(2026, 2, 28) or fail)
-  let balances = balancesOf(loaded.journal, february) or fail
-  expect (minorOf(balances, "income:salary", "GBP") or fail) == 0
-  expect (minorOf(balances, "expenses:food", "GBP") or fail) == 1250
+  let loaded = loadedForTest(journalText)
+  let february = Period(first: Date.of(2026, 2, 1), last: Date.of(2026, 2, 28))
+  let balances = balancesOf(loaded.journal, february)
+  expect minorOf(balances, "income:salary", "GBP") == 0
+  expect minorOf(balances, "expenses:food", "GBP") == 1250
   expect balances.count() == 3
 }
 
 property "every roll-up keeps the grand total" forall (a: Int<1..1000000>, b: Int<1..1000000>) {
-  let first = Date.of(2026, 1, 1) or fail
+  let first = Date.of(2026, 1, 1)
   let mut balances = Balances.empty()
-  let gbp = CommodityCode.validate(String.from("GBP")) or fail
-  let food = AccountName.parse("expenses:food:lunch") or fail
-  let cash = AccountName.parse("assets:cash") or fail
-  editable balances.credit(food, copy gbp, a) or fail
-  editable balances.credit(cash, copy gbp, 0 - a) or fail
-  editable balances.credit(food, copy gbp, b) or fail
-  editable balances.credit(cash, copy gbp, 0 - b) or fail
-  let tree = balances.rolledUp() or fail
-  expect (minorOf(tree, "expenses", "GBP") or fail) == a + b
-  expect (minorOf(tree, "expenses:food", "GBP") or fail) == a + b
-  expect (minorOf(tree, "assets", "GBP") or fail) == 0 - (a + b)
-  let total = balances.total() or fail
+  let gbp = CommodityCode.validate(String.from("GBP"))
+  let food = AccountName.parse("expenses:food:lunch")
+  let cash = AccountName.parse("assets:cash")
+  balances.credit(food, copy gbp, a)
+  balances.credit(cash, copy gbp, 0 - a)
+  balances.credit(food, copy gbp, b)
+  balances.credit(cash, copy gbp, 0 - b)
+  let tree = balances.rolledUp()
+  expect minorOf(tree, "expenses", "GBP") == a + b
+  expect minorOf(tree, "expenses:food", "GBP") == a + b
+  expect minorOf(tree, "assets", "GBP") == 0 - (a + b)
+  let total = balances.total()
   expect total.isZero()
 }

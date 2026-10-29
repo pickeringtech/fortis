@@ -111,7 +111,7 @@ def main(argv):
     missing_dir = os.path.join(ROOT, "build", "no-such-rcf-dir")
     dir_statuses = {"fortisc fmt": run([FORTISC, "fmt", missing_dir]).returncode, "fortis fmt": run([sys.executable, "-I", fortis, "fmt", missing_dir]).returncode}
     expect("a missing directory is exit status 2 for fmt", set(dir_statuses.values()) == {2}, dir_statuses)
-    present = "conformance/programs/exec_ordinary_comment.ft"
+    present = "conformance/programs/fmt_canonical_ok.ft"     # canonical: no layout to change and no old form to rewrite (X-345)
     expect("fmt --check of a present file exits 0", run([FORTISC, "fmt", "--check", present]).returncode == 0 and run([sys.executable, "-I", fortis, "fmt", "--check", present]).returncode == 0)
     # a failing try main reports once on stderr and exits 1, on every runner (LR 4.6, D-325)
     fail = "conformance/programs/exec_main_failure.ft"
@@ -154,7 +154,7 @@ def main(argv):
            {who: (p.returncode, p.stdout[-120:], p.stderr[-300:]) for who, p in runners.items()})
     # a `// tests: run` comment does not stop main; `--tests` still runs tests; an ordinary comment runs main (D-326)
     commented = "conformance/programs/exec_comment_runs_main.ft"
-    ordinary = present
+    ordinary = "conformance/programs/exec_ordinary_comment.ft"
 
     def program_out(path):
         ref = run([sys.executable, "-I", fortis, "run", path])

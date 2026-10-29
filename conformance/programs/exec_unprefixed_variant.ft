@@ -6,7 +6,7 @@
 // it compares equal to the prefixed form and matches its arm, also when two enums declare a variant of that name,
 // inside a collection, and for a core library enum (`Ordering`).
 // The interpreter once read an unprefixed variant as a type reference (D-53).
-import fortis.host { Host }
+import fortis.host { Console }
 
 enum Light derive Equatable {
   Red
@@ -93,24 +93,23 @@ pure func advice(l: Light) String {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${viaReturn() == Light.Red} ${viaArm(true) == Light.Amber} ${viaArm(false) == Light.Green} ${viaLet() == Paint.Red}")
-  caps.console.print("${coin(false).pence()} ${coin(true).pence()}")
+func main(console: Console) {
+  console.print("${viaReturn() == Red} ${viaArm(true) == Amber} ${viaArm(false) == Green} ${viaLet() == Red}")
+  console.print("${coin(false).pence()} ${coin(true).pence()}")
   let lamp = Lamp(light: Red)
-  caps.console.print("${lamp.light == Light.Red} ${same(Red, Light.Red)} ${lamp.light != Light.Green}")
-  caps.console.print("${viaReturn().code()} ${lamp.light.code()} ${viaLet().shade()}")
-  caps.console.print(advice(Red))
+  console.print("${lamp.light == Red} ${same(Red, Red)} ${lamp.light != Green}")
+  console.print("${viaReturn().code()} ${lamp.light.code()} ${viaLet().shade()}")
+  console.print(advice(Red))
   let mut lights: List[Light] = List.default()
-  editable lights.push(Red)
-  editable lights.push(Amber)
+  lights.push(Red)
+  lights.push(Amber)
   let mut paints: List[Paint] = List.default()
-  editable paints.push(Red)
+  paints.push(Red)
   for l in lights {
-    caps.console.print("${l.code()}")
+    console.print("${l.code()}")
   }
   for p in paints {
-    caps.console.print("${p.shade()}")
+    console.print("${p.shade()}")
   }
-  caps.console.print("${rank(ordering())} ${rank(Ordering.Greater)} ${ordering() == Ordering.Less}")
+  console.print("${rank(ordering())} ${rank(Greater)} ${ordering() == Less}")
 }

@@ -4,11 +4,11 @@ export enum Slot {
   Empty
   Full(label: String)
 }
-func keep(s: owned String) Void {
+func keep(s: owned String) {
 }
-func run(slot: Slot) Void {
+func run(slot: Slot) {
   match slot {
     Full(label: l) => keep(move l)         // reject: E-OWN-001 — a payload binding of `match slot` is a read loan
-    Empty => { }
+    Empty => {}
   }
 }

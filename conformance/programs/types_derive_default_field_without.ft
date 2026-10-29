@@ -1,0 +1,21 @@
+// reject: E-TYP-090 (at the marked lines)
+// covers: LANG-06-07
+// 6.10 (X-345): `derive Default` is rejected when a field has no default: no initialiser, and a type without
+// `Default` (a class that does not derive it, a refinement that excludes its representation's default).
+class Account {
+  id: Int
+}
+
+class Ledger derive Default {              // reject: E-TYP-090 — `owner` has neither an initialiser nor a default
+  entries: List[Int]
+  owner: Account
+}
+
+class Range derive Default {               // reject: E-TYP-090 — Int<1..10> excludes 0, the representation's default
+  low: Int<1..10>
+}
+
+class Fine derive Default {
+  low: Int<1..10> = 1
+  owner: Account = Account(id: 0)
+}

@@ -1,0 +1,50 @@
+// execute: 27 passed, 1 failed
+// tests: run
+// requires: runtime
+// covers: LANG-14-03
+// D-308: a call that is all primary, `Code.validate(s)` or an associated function `Name.parse(s)`, has the implied
+// `or fail` of a test or property body on every backend (14; X-345, R7). The VM and native typed such a binding as
+// its outcome, so `copy c` was an invalid typed IR; the interpreter bound a failed `validate`'s outcome as a value,
+// so the last test passed.
+export error Empty {
+  code: "demo.empty"
+}
+
+type Code = String<scalars: 1..10>
+
+class Name derive Equatable {
+  export text: String
+  export try func parse(text: StringView) Name {
+    if text.byteCount() == 0 {
+      fail Empty()
+    }
+    return Name(text: String.from(text))
+  }
+}
+
+func keep(c: owned Code) Code => move c
+
+func size(n: Name) Int => n.text.byteCount()
+
+test "a validated binding is its success value" {
+  let c = Code.validate(String.from("GBP"))
+  let d = keep(copy c)
+  expect d == c
+}
+
+test "an associated function's result is its success value" {
+  let n = Name.parse("ledger")
+  expect size(copy n) == 6
+  expect n == Name(text: String.from("ledger"))
+}
+
+property "a property body has the implied or fail too" forall (k: Int<1..10>) {
+  let c = Code.validate(String.from("GBP"))
+  expect keep(copy c) == c
+  expect k > 0
+}
+
+test "a failing validation fails the test" {
+  let c = Code.validate(String.from(""))
+  expect keep(copy c) == c
+}

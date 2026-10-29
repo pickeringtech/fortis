@@ -1,12 +1,11 @@
 // execute: 9.99|-0.01
 // requires: runtime
 // covers: LANG-06-04
-import fortis.host { Host }
+import fortis.host { Console }
 import fortis.money { Money, Currency, CurrencyMismatch }
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let a = Money.subtract(Money.of(Currency.EUR, 10.00d), Money.of(Currency.EUR, 0.01d)) or fail
-  let b = Money.subtract(Money.of(Currency.EUR, 0.00d), Money.of(Currency.EUR, 0.01d)) or fail
-  caps.console.print("${a.amount}")
-  caps.console.print("${b.amount}")
+try func main(console: Console) {
+  let a = Money.subtract(Money.of(EUR, 10.00d), Money.of(EUR, 0.01d)) or fail
+  let b = Money.subtract(Money.of(EUR, 0.00d), Money.of(EUR, 0.01d)) or fail
+  console.print("${a.amount}")
+  console.print("${b.amount}")
 }

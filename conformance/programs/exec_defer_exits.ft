@@ -2,7 +2,7 @@
 // requires: runtime
 // covers: LANG-05-02, LANG-12-01
 // A deferred block runs on every exit kind: return, fail, break and continue.
-import fortis.host { Host, Console }
+import fortis.host { Console }
 export error Stop {
   code: "demo.stop"
 }
@@ -16,7 +16,7 @@ try func failing(console: Console) Int {
   console.print("fail path")
   fail Stop()
 }
-func looping(console: Console) Void {
+func looping(console: Console) {
   for i in 1..5 {
     defer { console.print("deferred") }
     console.print("loop ${i}")
@@ -28,10 +28,9 @@ func looping(console: Console) Void {
     }
   }
 }
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  discard early(caps.console)
-  discard failing(caps.console) or recover 0
-  looping(caps.console)
-  caps.console.print("done")
+recovers func main(console: Console) {
+  discard early(console)
+  discard failing(console) or recover 0
+  looping(console)
+  console.print("done")
 }

@@ -401,7 +401,7 @@ pub fn call(vm: &mut Vm, name: &str, a: Vec<Value>) -> R<Value> {
             let k = Decimal::from_int(int(&arg(1))?).map_err(|_| Exit::Halt(Halt::Dynamic("Money factor".into())))?;
             let r = if name == "Money.multiply" { dec(&amount)?.mul(&k) } else { dec(&amount)?.div(&k) };
             match r {
-                Ok(d) => Value::Obj(shared(Obj { ty: Rc::from("Money"), fields: vec![(Rc::from("currency"), cur), (Rc::from("amount"), Value::Dec(d))] })),
+                Ok(d) => Value::Obj(shared(Obj::new(Rc::from("Money"), vec![(Rc::from("currency"), cur), (Rc::from("amount"), Value::Dec(d))]))),
                 Err(e) => dec_result(Err(e), "decimal"),
             }
         }
@@ -696,7 +696,7 @@ pub fn call(vm: &mut Vm, name: &str, a: Vec<Value>) -> R<Value> {
                 }
                 fields.push((Rc::from(k), c));
             }
-            Value::Obj(shared(Obj { ty: Rc::from("Capabilities"), fields }))
+            Value::Obj(shared(Obj::new(Rc::from("Capabilities"), fields)))
         }
         "Path.parse" => {
             let t = text(&arg(0))?;
@@ -710,6 +710,14 @@ pub fn call(vm: &mut Vm, name: &str, a: Vec<Value>) -> R<Value> {
             Value::Secret(v) => deep_copy(&v),
             _ => return dynamic("reveal of a non-secret"),
         },
+        // a log statement (13, LANG-13-04): one `log` record on the diagnostic plane, never the program's output
+        "log.info" | "log.warn" | "log.error" => {
+            // the writing function by its source name: a lambda's is its enclosing function's, as native names it
+            let function = vm.stack.last().map(|n| n.split('#').next().unwrap_or("").to_string()).unwrap_or_else(|| "main".into());
+            let rec = vec![("kind".into(), "log".into()), ("level".into(), name[4..].to_string()), ("message".into(), display(&arg(0))), ("function".into(), function)];
+            vm.emit(rec);
+            Value::Void
+        }
         "Console.print" => {
             let s = display(&arg(1));
             // a session attributes each line to its root invocation and generation (SP-07 design 2)

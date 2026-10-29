@@ -3,6 +3,8 @@
 <!-- covers: LR 1 -->
 *Human mode. Source of truth: the LR; each note cites the section that states the rule.*
 
+> Preview: newtypes (LR 6.9) arrive in v0.1 and async with `join` (LR 12.3, 12.5) in v0.3; the examples under "Types are nominal" and "Promises are futures, and concurrency is scoped" are checked today. The rest of these notes is in v0.0.2.
+
 TypeScript adds static types to a dynamic language and leaves the runtime alone. Fortis is statically checked
 and compiled all the way down: the checker's view is the program's behaviour, there is no `any`, and a type can
 never be wrong at run time (LR 1, LR 6.1). Much of the syntax will look familiar (braces, `let`, `${…}`
@@ -22,7 +24,7 @@ type OrderId = Int<1..>
 
 pure func describe(id: UserId) String => "user ${id}"
 
-export func main(args: List[String]) Void {
+func main() {
   let order = OrderId(7)
   discard describe(order)      // reject: E-TYP-040
 }
@@ -40,7 +42,7 @@ analysis does (LR 6.8).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class User {
   export name: String
@@ -54,12 +56,11 @@ pure func greeting(user: User) String {
   return "hello ${user.name}"
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(greeting(User(name: "Ada", nickname: null)))
-  caps.console.print(greeting(User(name: "Brian", nickname: "Bri")))
+func main(console: Console) {
+  console.print(greeting(User(name: "Ada", nickname: null)))
+  console.print(greeting(User(name: "Brian", nickname: "Bri")))
   let maybe: Int? = null
-  caps.console.print("${maybe ?? 0}")
+  console.print("${maybe ?? 0}")
 }
 ```
 
@@ -94,7 +95,7 @@ handling forms are written at the call: `or fail` passes the failure on (like le
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error NotFound {
   code: "users.not_found"
@@ -109,18 +110,17 @@ pure try func lookup(id: Int) String {
   fail NotFound(id: id)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let first = lookup(1) catch e {
     report e
     recover "nobody"
   }
   let second = lookup(2) catch e {
-    caps.console.print("lookup failed: ${e.code}")
+    console.print("lookup failed: ${e.code}")
     report e
     recover "nobody"
   }
-  caps.console.print("${first}, ${second}")
+  console.print("${first}, ${second}")
 }
 ```
 
@@ -143,18 +143,17 @@ question never arises silently.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Cart {
   export items: List[String]
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut cart = Cart(items: List.of("tea"))
   let snapshot = copy cart
-  editable cart.items.push("milk")
-  caps.console.print("cart has ${cart.items.count()}, snapshot has ${snapshot.items.count()}")
+  cart.items.push("milk")
+  console.print("cart has ${cart.items.count()}, snapshot has ${snapshot.items.count()}")
 }
 ```
 
@@ -162,9 +161,10 @@ export func main(args: List[String]) Void {
 cart has 2, snapshot has 1
 ```
 
-The `editable` in front of `cart.items.push(…)` is the other half of the rule: a call that may change a value
-says so at the call (LR 7.5, LR 7.6). A function that receives a plain parameter can read it but not change it
-(LR 7.6).
+`let mut cart` is the other half of the rule: a value that may change says so where it is declared, and only
+there may `cart.items.push(…)` change it (LR 7.5). A function that may change its argument declares the parameter
+`editable`, and the caller writes `f(editable cart)`; a function that receives a plain parameter can read it but
+not change it (LR 7.6).
 
 ## Numbers are not all one type
 
@@ -175,14 +175,13 @@ arithmetic is the checked `Decimal.add`, `Decimal.mul` and so on (LR 6.5).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${0.1 + 0.2}")
+recovers func main(console: Console) {
+  console.print("${0.1 + 0.2}")
   let price = Decimal.add(0.1d, 0.2d) or recover 0d
-  caps.console.print("${price}")
-  caps.console.print("${7 / 2}")
+  console.print("${price}")
+  console.print("${7 / 2}")
 }
 ```
 
@@ -207,7 +206,7 @@ A discriminated union (`{ kind: "circle"; radius: number } | …`) is a Fortis `
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 enum Shape {
   Circle(radius: Int<0..1000>)
@@ -219,9 +218,8 @@ pure func area(s: Shape) Int => match s {
   Rect(width: w, height: h) => w * h
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${area(Shape.Circle(radius: 2))} ${area(Shape.Rect(width: 3, height: 4))}")
+func main(console: Console) {
+  console.print("${area(Circle(radius: 2))} ${area(Rect(width: 3, height: 4))}")
 }
 ```
 
@@ -240,15 +238,14 @@ with no captures has no brackets.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let prices: List[Int<0..1000>] = List.of(120, 80, 45, 300)
   let limit = 100
   let cheap = prices.filter(fn[limit](p: Int<0..1000>) Bool => p < limit)
   let doubled = prices.map(fn(p: Int<0..1000>) Int => p * 2)
-  caps.console.print("${cheap} ${doubled}")
+  console.print("${cheap} ${doubled}")
 }
 ```
 
@@ -268,14 +265,13 @@ on a `scope`, which waits for or cancels every task before it ends, so `Promise.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 async func square(n: Int<0..1000>) Int => n * n
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async func main(console: Console) {
   let both = await join(square(3), square(4))
-  caps.console.print("${both.0} ${both.1}")
+  console.print("${both.0} ${both.1}")
 }
 ```
 
@@ -291,5 +287,6 @@ unconsumed outcome (LR 12.3, LR 6.12).
 
 A TypeScript module can run code when it is first imported. A Fortis module contains only declarations and
 constants, so importing one never executes anything (LR 4.2). Side effects begin in `main`, and I/O needs a
-capability value that `main` obtains from `Host.capabilities()` and passes to whatever needs it: there is no
-global `console` (LR 11.6).
+capability value: `main` declares the ones it needs as parameters, `func main(console: Console)`, and passes them
+to whatever needs them; there is no global `console` (LR 4.6, LR 11.6). Logging is the exception: `log.info(...)`
+writes a log record to standard error from any function, with no capability (LR 13).

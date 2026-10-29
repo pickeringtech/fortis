@@ -1,0 +1,114 @@
+// execute: list 0 true|pair 0 true|chain 0 0|tree 0 0|deep 0
+// requires: runtime
+// covers: LANG-06-07
+// D-335, D-336, D-337, 6.9, 6.10: a field that would close a cycle has a default when its type is optional (`null`)
+// or a list (empty), directly or behind a newtype, and those classes derive Default on every backend. A
+// finite chain of newtypes has its representation's default at any depth: the interpreter stopped unfolding after
+// 64 (`N0 has no default`), where the VM and native built the value.
+import fortis.host { Console }
+
+class Link derive Default {
+  value: Int
+  next: Link?
+}
+
+type Back = Pair
+
+class Pair derive Default {
+  count: Int
+  back: Back?
+}
+
+class Tree derive Default {
+  size: Int
+  kids: List[Tree]
+}
+
+type N0 = Int
+type N1 = N0
+type N2 = N1
+type N3 = N2
+type N4 = N3
+type N5 = N4
+type N6 = N5
+type N7 = N6
+type N8 = N7
+type N9 = N8
+type N10 = N9
+type N11 = N10
+type N12 = N11
+type N13 = N12
+type N14 = N13
+type N15 = N14
+type N16 = N15
+type N17 = N16
+type N18 = N17
+type N19 = N18
+type N20 = N19
+type N21 = N20
+type N22 = N21
+type N23 = N22
+type N24 = N23
+type N25 = N24
+type N26 = N25
+type N27 = N26
+type N28 = N27
+type N29 = N28
+type N30 = N29
+type N31 = N30
+type N32 = N31
+type N33 = N32
+type N34 = N33
+type N35 = N34
+type N36 = N35
+type N37 = N36
+type N38 = N37
+type N39 = N38
+type N40 = N39
+type N41 = N40
+type N42 = N41
+type N43 = N42
+type N44 = N43
+type N45 = N44
+type N46 = N45
+type N47 = N46
+type N48 = N47
+type N49 = N48
+type N50 = N49
+type N51 = N50
+type N52 = N51
+type N53 = N52
+type N54 = N53
+type N55 = N54
+type N56 = N55
+type N57 = N56
+type N58 = N57
+type N59 = N58
+type N60 = N59
+type N61 = N60
+type N62 = N61
+type N63 = N62
+type N64 = N63
+type N65 = N64
+
+class Deep derive Default {
+  n: N65
+}
+
+class Chain derive Default {
+  shallow: N3
+  deep: N64
+}
+
+func main(console: Console) {
+  let l = Link.default()
+  console.print("list ${l.value} ${l.next == null}")
+  let p = Pair.default()
+  console.print("pair ${p.count} ${p.back == null}")
+  let c = Chain.default()
+  console.print("chain ${c.shallow} ${c.deep}")
+  let t = Tree.default()
+  console.print("tree ${t.size} ${t.kids.count()}")
+  let d = Deep.default()
+  console.print("deep ${d.n}")
+}

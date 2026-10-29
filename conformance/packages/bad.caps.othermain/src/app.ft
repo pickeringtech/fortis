@@ -1,11 +1,10 @@
 // reject: E-EFF-010 (in other.ft)
 // D-110: the entry `main` is the manifest's entry module's; a sibling module's function named `main` is an ordinary
 // function and may not create the capabilities (11.6, LANG-11-07).
-import fortis.host { Host }
+import fortis.host { Console }
 import bad.caps.othermain.other
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("entry")
+func main(console: Console, args: List[String]) {
+  console.print("entry")
   other.main(copy args)
 }

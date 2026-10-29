@@ -2,7 +2,7 @@
 // covers: PLAT-03-01, PLAT-03-02
 // A context in one module wires consumers declared in another module of the package; the plan names the package
 // and its version (static provenance, Platform 3.5).
-import fortis.host { Host }
+import fortis.host { Console }
 import di.shop.services { Prices, Quote, Basket }
 
 context Shop(base: Int) {
@@ -11,9 +11,8 @@ context Shop(base: Int) {
   provide Basket
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let shop = Shop.application(7)
-  caps.console.print(shop.basket().total(3))
-  caps.console.print(shop.basket().total(5))
+  console.print(shop.basket().total(3))
+  console.print(shop.basket().total(5))
 }

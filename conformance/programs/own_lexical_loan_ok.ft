@@ -3,14 +3,14 @@
 // A loan held by a binding lasts until the end of the block that declares it; closing the block ends it (7.3).
 export class Invoice {
   export lines: List[Int]
-  export func issue(editable self) Void {
+  export func issue(editable self) {
   }
 }
 
-func sequence(invoice: editable Invoice) Void {
+func sequence(invoice: editable Invoice) {
   {
     let lines = alias invoice.lines
     discard lines.count()
   }
-  editable invoice.issue()
+  invoice.issue()
 }

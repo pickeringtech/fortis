@@ -7,6 +7,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from interpreter.eval import Interpreter  # noqa: E402
+from interpreter.records import shown_path  # noqa: E402
 from interpreter.values import FortisError
 from interpreter.executor import DefectSignal  # noqa: E402
 
@@ -17,7 +18,7 @@ def main(argv):
     path = argv[0]
     src = open(path, encoding="utf-8").read()
     try:
-        it = Interpreter(src, path)
+        it = Interpreter(src, shown_path(path))
         it.json_out = not sys.stderr.isatty()
         if testing:
             passed, failed = it.run_tests()

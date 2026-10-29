@@ -1,18 +1,17 @@
 // execute: a,b,c
 // requires: runtime
 // covers: LANG-06-06
-import fortis.host { Host }
+import fortis.host { Console }
 import fortis.text
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut out = text.Builder.create()
   let parts = List.of("a", "b", "c")
   for i in 0..<parts.count() {
     if i > 0 {
-      editable out.append(",")
+      out.append(",")
     }
-    editable out.append(parts[i])
+    out.append(parts[i])
   }
-  caps.console.print(out.finish())
+  console.print(out.finish())
 }

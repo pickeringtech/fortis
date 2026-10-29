@@ -1,0 +1,66 @@
+// execute: body kept|bye kept|drop kept|got 1|still stay|drop stay|got go|n 3|got 3|bare|got 4|end|drop go
+// execute-trace: loans-end|defer|drop Token|loans-end|defer|drop Token|loans-end|defer|loans-end|defer|loans-end|drop Token
+// requires: runtime
+// covers: LANG-12-01, LANG-07-04, LANG-06-10, LANG-03-06
+// D-391's sound neighbours: a deferred block that reads, inside a string interpolation, a value the function does not
+// move. A local the block keeps to its end is read by the defer and destroyed after it; a local the function returns
+// another value beside stays; and a trivial local is copied by `return n` (6.11, 7.5), so the defer reads it after
+// the return, bare or in a hole. The same output and trace on every backend.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func keeps(console: Shared[Console]) Int {
+  let t = make(console, "kept")
+  defer {
+    console.print("bye ${t.label}")
+  }
+  console.print("body ${t.label}")
+  return 1
+}
+
+func returnsOther(console: Shared[Console]) Token {
+  let t = make(console, "stay")
+  let u = make(console, "go")
+  defer {
+    console.print("still ${t.label}")
+  }
+  return u
+}
+
+func countInterp(console: Shared[Console]) Int {
+  let n = 3
+  defer {
+    console.print("n ${n}")
+  }
+  return n
+}
+
+func countBare(console: Shared[Console]) Int {
+  let n = 4
+  defer {
+    discard n
+    console.print("bare")
+  }
+  return n
+}
+
+func main(console: Console) {
+  let shared = Shared.create(move console)
+  shared.print("got ${keeps(shared)}")
+  let a = returnsOther(shared)
+  shared.print("got ${a.label}")
+  shared.print("got ${countInterp(shared)}")
+  shared.print("got ${countBare(shared)}")
+  shared.print("end")
+}

@@ -4,6 +4,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "The semantic query database (DEL-46): the frontend's analyses as incremental queries over stable unit IDs"
+# the one test target is declared below; tests/alloc.rs is a module of it
+autotests = false
 
 [dependencies]
 fortis-syntax = { path = "../crates/fortis-syntax" }
@@ -15,3 +17,11 @@ fortis-types = { path = "../crates/fortis-types" }
 [features]
 # SP-12's apparatus check: the package database's fault switches (FORTIS_QDB_FAULT); never in a default build
 faults = []
+
+# The allocator test (tests/alloc.rs, SP-12b's apparatus) inside tests/alloc_run.rs, which runs it with nothing else
+# in the process allocating. `cargo test` leaves it out; it runs on its own, with one harness thread:
+#     cargo test -p fortis-query-db --test alloc -- --test-threads=1
+[[test]]
+name = "alloc"
+path = "tests/alloc_run.rs"
+test = false

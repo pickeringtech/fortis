@@ -1,0 +1,49 @@
+// execute: 23|23
+// The wiring of wiring.ft with live provenance: the module imports fortis.di.provenance and passes the Supervisor,
+// so the generated code records an event per creation, injection and disposal, trivial values only; `handle` is the
+// same `noalloc async` handler, measured by the allocator probe. (A scope with live provenance is created by a
+// function holding the Supervisor, so this variant has no `build`.)
+import fortis.host { Host, Clock, Supervisor, Capabilities }
+import fortis.di.provenance
+
+export class Rates {
+  percent: Int
+}
+
+export trivial class Bias {
+  amount: Int
+}
+
+export trivial class Step {
+  size: Int = 1
+}
+
+export class Calculator {
+  inject rates: Shared[Rates]
+  inject bias: Bias
+  inject step: Step
+  export noalloc func apply(self, n: Int<0..1000>) Int => Int.wrappingAdd(Int.wrappingMul(n, self.rates.percent), Int.wrappingAdd(self.bias.amount, self.step.size))
+}
+
+context Production(percent: Int) {
+  provide Shared[Rates] using instance Shared.create(Rates(percent: percent))
+  provide Bias using instance Bias(amount: 2)
+  provide Step
+  provide Calculator
+}
+
+noalloc async func handle(app: owned ProductionApplication, clock: owned Shared[Clock], n: Int<0..1000>) Int {
+  let c = app.calculator()
+  await clock.sleep(1ms)
+  return c.apply(n)
+}
+
+export async func main(args: List[String]) {
+  let caps = Host.capabilities()
+  let Capabilities(console: console, fileSystem: fs, network: net, clock: clk, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let clock = Shared.create(move clk)
+  let first = await handle(Production.application(4, sup), clock.retain(), 5)
+  let second = await handle(Production.application(4, sup), clock.retain(), 5)
+  console.print("${first}")
+  console.print("${second}")
+}

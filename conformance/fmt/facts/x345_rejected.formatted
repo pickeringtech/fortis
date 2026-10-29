@@ -1,0 +1,6 @@
+// A module the checker rejects loses only its `Void` return types, which are syntax (X-345): its markers stay,
+// because what a marker means is decided by a check that did not pass.
+func broken() {
+  let mut xs = List.of(1)
+  editable xs.push(true)
+}

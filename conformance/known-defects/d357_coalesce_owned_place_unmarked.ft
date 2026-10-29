@@ -1,0 +1,21 @@
+// D-357: both checkers accept an owned optional place, written without a marker, on the left of a `??` whose result
+// is owned: `let p: Token? = some ?? move d`, with `some` a `let` binding that owns its value. `p` and `some` then
+// both own the token. The interpreter prints `s s` and runs its cleanup twice (`drop s`, `drop d`, `drop s`), the VM
+// announces three drops in its trace for two values, and native code does not build (rustc E0382). The sound forms
+// are `move some ?? move d` and `copy some ?? move d`, as `let x = p` needs a marker (LR 7.5).
+import fortis.host { Console }
+
+class Token {
+  label: String
+
+  cleanup(editable self) {
+    log.info("drop ${self.label}")
+  }
+}
+
+func main(console: Console) {
+  let some: Token? = Token(label: String.from("s"))
+  let d = Token(label: String.from("d"))
+  let p: Token? = some ?? move d
+  console.print("${p?.label ?? "none"} ${some?.label ?? "none"}")
+}

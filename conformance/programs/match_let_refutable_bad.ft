@@ -1,0 +1,49 @@
+// reject: E-MAT-004 (at the marked lines)
+// covers: LANG-05-01
+// D-243, 5.1: a `let` destructures a class, tuple or record, so its pattern must match every value of the place's
+// type. A variant pattern, a literal, `null` or `present(…)`, at any depth, can fail to match and is rejected; `match`
+// handles the other cases. Both checkers accepted these, and the interpreter and the VM then stopped at run time.
+enum Chain {
+  End(value: Int)
+  Next(tail: Chain)
+}
+
+class Pair {
+  left: Chain
+  right: Int
+}
+
+class Slot {
+  item: Int?
+  count: Int
+}
+
+func top(c: owned Chain) Int {
+  let End(value: a) = move c                   // reject: E-MAT-004 — `Next` is not matched
+  return a
+}
+
+func nested(p: owned Pair) Int {
+  let Pair(left: End(value: a), right: _) = move p    // reject: E-MAT-004 — nor here, inside a class
+  return a
+}
+
+func literal(p: owned Pair) Int {
+  let Pair(left: _, right: 3) = move p                 // reject: E-MAT-004 — only a right of 3 matches
+  return 3
+}
+
+func optional(s: owned Slot) Int {
+  let Slot(item: present(n), count: _) = move s        // reject: E-MAT-004 — `null` is not matched
+  return n
+}
+
+func absent(s: owned Slot) Int {
+  let Slot(item: null, count: c) = move s              // reject: E-MAT-004 — a present item is not matched
+  return c
+}
+
+func tupled(t: owned (Int, Chain)) Int {
+  let (n, End(value: _)) = move t                      // reject: E-MAT-004 — inside a tuple
+  return n
+}

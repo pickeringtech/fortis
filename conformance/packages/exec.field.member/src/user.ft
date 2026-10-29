@@ -2,11 +2,10 @@
 // requires: runtime
 // covers: LANG-04-04, LANG-04-05
 // A method of a field's class is callable without importing that class: the field's type names it (D-54.11).
-import fortis.host { Host }
+import fortis.host { Console }
 import exec.field.member.outer { make }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let h = make()
-  caps.console.print("${h.counter.count()}")
+  console.print("${h.counter.count()}")
 }

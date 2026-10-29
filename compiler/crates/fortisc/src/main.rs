@@ -349,15 +349,36 @@ fn remember_decl(seen: &mut std::collections::HashSet<String>, pairs: &mut Vec<(
     pairs.push((name, file.to_string()));
 }
 
-/// The file a failure names, matching the interpreter. A standalone module names the path the user gave. A package
-/// names the entry module's absolute path, and a declaration of any other module names that module's file. The
-/// first declaration of a source name wins (`decl_file.setdefault`). The entry module stays out of the map, so its
-/// failures use the fallback, including when the user named the package directory or a file under `src/`.
+/// How a runtime record names a module's file, on every backend and in a native executable (D-302): a module of a
+/// package relative to the package's directory, and a standalone module relative to the current directory when it
+/// lies below it (the corpus runs from the repository root), else by its file name. Never absolute, so where a
+/// package lies does not reach its executable, two checkouts build the same one, and no user's home path is built
+/// into it. The interpreter's `shown_path` (interpreter/records.py) is the same.
+fn shown_path(file: &Path, package: Option<&Path>) -> String {
+    let real = |p: &Path| p.canonicalize().unwrap_or_else(|_| python_abspath(p));
+    let f = real(file);
+    let shown = match package {
+        // `os.path.relpath`: a dependency's module lies beside the package, under `..`
+        Some(dir) => {
+            let d = real(dir);
+            let (fc, dc): (Vec<_>, Vec<_>) = (f.components().collect(), d.components().collect());
+            let common = fc.iter().zip(&dc).take_while(|(a, b)| a == b).count();
+            std::iter::repeat(std::path::Component::ParentDir).take(dc.len() - common).chain(fc[common..].iter().copied()).collect::<PathBuf>()
+        }
+        None => f.strip_prefix(real(Path::new("."))).map(Path::to_path_buf).unwrap_or_else(|_| f.file_name().map(PathBuf::from).unwrap_or_default()),
+    };
+    if shown.as_os_str().is_empty() { ".".into() } else { shown.display().to_string() }
+}
+
+/// The file a failure names, matching the interpreter, as `shown_path` gives it. A standalone module names its own
+/// file. A package names the entry module's file, and a declaration of any other module names that module's file.
+/// The first declaration of a source name wins (`decl_file.setdefault`). The entry module stays out of the map, so
+/// its failures use the fallback, including when the user named the package directory or a file under `src/`.
 fn report_files(user: &str) -> (String, Vec<(String, String)>) {
     let unit = run_unit(user);
     let root = unit.root.as_path();
     if !root.join("project.yaml").is_file() {
-        return (user.to_string(), vec![]);
+        return (shown_path(Path::new(user), None), vec![]);
     }
     // A directory keeps Python's abspath. A file under src/ keeps the canonical package directory
     // `enclosing_package` already computed, which is Python's realpath.
@@ -365,10 +386,10 @@ fn report_files(user: &str) -> (String, Vec<(String, String)>) {
     let search = root_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
     let ps = match fortis_names::resolve::PackageSet::load(&root_dir, &search) {
         Ok(ps) => ps,
-        Err(_) => return (user.to_string(), vec![]),
+        Err(_) => return (shown_path(Path::new(user), Some(&root_dir)), vec![]),
     };
     let entry_module = ps.packages.first().and_then(|(_, p)| p.entry.clone());
-    let fallback = entry_module.as_ref().and_then(|m| ps.packages.first().and_then(|(_, p)| p.modules.get(m).map(|module| module.file.display().to_string()))).unwrap_or_else(|| user.to_string());
+    let fallback = entry_module.as_ref().and_then(|m| ps.packages.first().and_then(|(_, p)| p.modules.get(m).map(|module| shown_path(&module.file, Some(&root_dir))))).unwrap_or_else(|| shown_path(Path::new(user), Some(&root_dir)));
     let mut seen = std::collections::HashSet::new();
     let mut pairs = Vec::new();
     for (i, (_, pkg)) in ps.packages.iter().enumerate() {
@@ -376,7 +397,7 @@ fn report_files(user: &str) -> (String, Vec<(String, String)>) {
             if i == 0 && entry_module.as_deref() == Some(mpath.as_str()) {
                 continue;
             }
-            let file = module.file.display().to_string();
+            let file = shown_path(&module.file, Some(&root_dir));
             for d in module.decls() {
                 if let Some(name) = d.name.clone() {
                     remember_decl(&mut seen, &mut pairs, name, &file);
@@ -823,6 +844,23 @@ fn render_runtime(r: &fortis_diag::Json) -> String {
             s("minimal"),
             s("replay")
         ),
+        // as the reference renderer writes it (interpreter/records.py)
+        "log" => format!("{}: {}", s("level"), s("message")),
+        "runtime-failure" => {
+            let text = |j: Option<&Json>| match j {
+                Some(Json::Str(x)) => x.clone(),
+                Some(other) => other.to_line(),
+                None => String::new(),
+            };
+            let at = text(r.get("origin").and_then(|o| o.get("function")));
+            let pay = match r.get("payload") {
+                Some(Json::Obj(fields)) => fields.iter().map(|(k, v)| format!("{k}: {}", text(Some(v)))).collect::<Vec<_>>().join(", "),
+                _ => String::new(),
+            };
+            let pay = if pay.is_empty() { pay } else { format!(" ({pay})") };
+            let message = if s("message").is_empty() { String::new() } else { format!(": {}", s("message")) };
+            format!("failure {} in {at}{pay}{message}", s("code"))
+        }
         _ => r.to_line(),
     }
 }
@@ -1047,6 +1085,12 @@ fn main() -> ExitCode {
                     continue;
                 }
                 let base = pkg_dir.map(|d| d.to_path_buf()).unwrap_or_else(|| p.parent().unwrap_or(Path::new(".")).to_path_buf());
+                // records name files as `fortis test` names them: relative, never absolute (D-302)
+                let (report_file, decl_pairs) = report_files(f);
+                let mut decl_files = std::collections::HashMap::<String, String>::new();
+                for (name, path) in decl_pairs {
+                    decl_files.entry(name).or_insert(path);
+                }
                 let opts = fortis_vm::testing::Options {
                     test: flag("--test"),
                     case: flag("--case"),
@@ -1058,14 +1102,17 @@ fn main() -> ExitCode {
                     }),
                     replay: flag("--replay").map(std::path::PathBuf::from),
                     command: format!("fortis test {f}"),
+                    decl_files,
                     ..Default::default()
                 };
-                let out = fortis_vm::testing::run(&prog, f, &opts);
+                let out = fortis_vm::testing::run(&prog, &report_file, &opts);
+                // a test's records are runtime records, on standard error; the summary alone is the command's
+                // output, on standard output, as `fortis test` writes them (LR 4.6, 14)
                 for r in &out.records {
                     if as_json {
-                        outln!("{}", r.to_line());
+                        eprintln!("{}", r.to_line());
                     } else {
-                        outln!("{}", render_runtime(r));
+                        eprintln!("{}", render_runtime(r));
                     }
                 }
                 let summary = fortis_diag::Json::obj([("kind", fortis_diag::Json::str("test-summary")), ("passed", fortis_diag::Json::Int(out.passed as i64)), ("failed", fortis_diag::Json::Int(out.failed as i64)), ("rule", fortis_diag::Json::str("PROG-TST-01"))]);
@@ -1370,7 +1417,7 @@ fn main() -> ExitCode {
             }
         }
         Some("dev") => {
-            // a development session (Platform 11; spikes/SP-07): `fortisc dev --script S.json [--events F] [--metrics F]`
+            // a development session (Platform 11; spike SP-07): `fortisc dev --script S.json [--events F] [--metrics F]`
             let script = match flag("--script") {
                 Some(s) => s,
                 None if args.iter().any(|a| a == "--ir-size") => String::new(),
@@ -1718,7 +1765,40 @@ fn main() -> ExitCode {
                     }
                 };
                 // `--layout`: whitespace only, without printing back inferred facts
-                let formatted = if args.iter().any(|a| a == "--layout") { fortis_fmt::format(&src) } else { fortis_fmt::format_reprinting(&src, &p.display().to_string()).map(|x| x.0) };
+                // the v0.0.2 reading migrations of the entry `main`, a test's `or fail` and a map lookup come first
+                // (`fortis_fmt::migrate`, X-345), unless `--no-migrate` or `--layout` asks for none: an entry module's
+                // `main` (a standalone file, or the manifest's `entry`) is the entry `main`
+                let layout = args.iter().any(|a| a == "--layout");
+                let migrated = if layout || args.iter().any(|a| a == "--no-migrate") {
+                    src.clone()
+                } else {
+                    let file = p.display().to_string();
+                    match enclosing_package(p) {
+                        None => fortis_fmt::migrate::migrate(&src, true, &fortis_fmt::migrate::facts_alone(&file)),
+                        Some((dir, module)) => {
+                            let entry = fortis_names::project::Package::load(&dir).ok().and_then(|pk| pk.entry).map_or(false, |e| e == module);
+                            fortis_fmt::migrate::migrate(&src, entry, &fortis_fmt::migrate::facts_in_package(&dir, p))
+                        }
+                    }
+                };
+                // the rewrites into the v0.0.2 reading forms are counted on standard error (X-345); a module of a
+                // package is checked in its package, so that its imports resolve
+                let formatted = if layout {
+                    fortis_fmt::format(&src)
+                } else {
+                    let file = p.display().to_string();
+                    let package = enclosing_package(p);
+                    let unit = match &package {
+                        None => fortis_fmt::Unit::Alone(&file),
+                        Some((dir, _)) => fortis_fmt::Unit::Package { dir, file: p },
+                    };
+                    fortis_fmt::format_migrating_in(&migrated, unit).map(|(t, _, n)| {
+                        if n > 0 {
+                            eprintln!("{}: {n} rewrite{} into the reading forms", p.display(), if n == 1 { "" } else { "s" });
+                        }
+                        t
+                    })
+                };
                 match formatted {
                     Ok(out) => {
                         let differs = out != src;

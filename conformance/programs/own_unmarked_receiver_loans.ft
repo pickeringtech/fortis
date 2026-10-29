@@ -1,0 +1,58 @@
+// reject: E-OWN-010, E-OWN-020, E-REF-001 (at the marked lines)
+// covers: LANG-07-04, LANG-07-05, LANG-06-02
+// X-345 (R1, R2): an unmarked receiver is checked exactly as `editable p.m(…)`. Its exclusive loan conflicts with a
+// live read loan, it is refused while a closure holds the place, it is a use after a move, and it discards what a
+// test proved about the place.
+export class Cell {
+  export value: Int
+  export func reset(editable self) {
+    self.value = 500
+  }
+}
+
+func conflicts() Int {
+  let mut xs = List.of(1, 2)
+  let first = alias xs
+  xs.push(3)                                         // reject: E-OWN-010: exclusive loan while `first` reads xs
+  return first.count()
+}
+
+func inLoop() {
+  let mut xs = List.of(1, 2)
+  for x in xs {
+    xs.push(x)                                       // reject: E-OWN-010: the loop holds a read loan of xs
+  }
+}
+
+func heldByClosure() Int {
+  let mut xs = List.of(1)
+  let mut grow = fn mut[editable xs]() Void {
+    xs.push(2)
+  }
+  xs.push(3)                                         // reject: E-OWN-010: `grow` holds xs exclusively
+  grow()
+  return 0
+}
+
+func afterMove() {
+  let mut xs = List.of(1)
+  let ys = move xs
+  xs.push(2)                                         // reject: E-OWN-020: xs was moved
+}
+
+func narrowed(c: editable Cell) Int<0..100> {
+  if c.value >= 0 && c.value <= 100 {
+    c.reset()
+    return c.value                                   // reject: E-REF-001: the exclusive loan discarded the fact
+  }
+  return 0
+}
+
+func narrowedLocal() Int<0..100> {
+  let mut c = Cell(value: 5)
+  if c.value >= 0 && c.value <= 100 {
+    c.reset()
+    return c.value                                   // reject: E-REF-001: the exclusive loan discarded the fact
+  }
+  return 0
+}

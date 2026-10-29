@@ -1,10 +1,9 @@
 // LANG-04-04: a type's identity is its package@version and its module: one module's `Node` is not another's.
-import fortis.host { Host }
+import fortis.host { Console }
 import bad.module.types.one as one
 import bad.module.types.two as two
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let a = one.Node(label: "x")
-  caps.console.print("${two.weigh(a)}")
+  console.print("${two.weigh(a)}")
 }

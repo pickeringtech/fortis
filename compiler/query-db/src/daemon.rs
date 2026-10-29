@@ -1,4 +1,4 @@
-//! The daemon's protocol (SP-12, spikes/SP-12/design.md 2): one JSON request per line on standard input, one reply
+//! The daemon's protocol (SP-12's design, section 2): one JSON request per line on standard input, one reply
 //! line per request on standard output.
 //!
 //! | request | reply |

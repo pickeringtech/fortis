@@ -60,12 +60,12 @@ export trivial class Date derive Equatable, Hashable {
   // A date from its three fields, checked against the calendar.
   export pure try func of(year: Int, month: Int, day: Int) Date {
     if year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 {
-      fail DateRange(year: year, month: month, day: day)
+      fail DateRange(year: year, month, day)
     }
     let y = Int<1..9999>.validate(year) or fail
     let m = Int<1..12>.validate(month) or fail
     if day > daysInMonth(y, m) {
-      fail DateRange(year: year, month: month, day: day)
+      fail DateRange(year: year, month, day)
     }
     let d = Int<1..31>.validate(day) or fail
     return Date(year: y, month: m, day: d)
@@ -94,15 +94,15 @@ export trivial class Date derive Equatable, Hashable {
   export pure func iso(self) String {
     let mut out = Builder.create()
     if self.year < 1000 {
-      editable out.append("0")
+      out.append("0")
     }
     if self.year < 100 {
-      editable out.append("0")
+      out.append("0")
     }
     if self.year < 10 {
-      editable out.append("0")
+      out.append("0")
     }
-    editable out.append("${self.year}-${twoDigits(self.month)}-${twoDigits(self.day)}")
+    out.append("${self.year}-${twoDigits(self.month)}-${twoDigits(self.day)}")
     return out.finish()
   }
 
@@ -190,9 +190,9 @@ pure try func digitsAt(text: StringView, start: Int, end: Int) Int {
     if d == null {
       fail DateSyntax(position: i)
     }
-    value = Int.mul(value, 10) or fail
-    value = Int.add(value, d) or fail
-    i = Int.add(i, 1) or fail
+    value = value * 10 or fail
+    value = value + d or fail
+    i = i + 1
   }
   return value
 }
@@ -222,7 +222,7 @@ test "parse good dates" cases {
   "year end":   { text: "1999-12-31", year: 1999, month: 12, day: 31 }
   "early":      { text: "0001-01-01", year: 1, month: 1, day: 1 }
 } as row {
-  let d = Date.parse(row.text) or fail
+  let d = Date.parse(row.text)
   expect d.year == row.year
   expect d.month == row.month
   expect d.day == row.day
@@ -242,15 +242,15 @@ test "parse bad dates" cases {
 } as row {
   let ok = Date.parse(row.text) catch e {
     expect e.code == row.code
-    recover Date.of(1, 1, 1) or fail
+    recover Date.of(1, 1, 1)
   }
-  expect ok == (Date.of(1, 1, 1) or fail)
+  expect ok == Date.of(1, 1, 1)
 }
 
 test "dates order chronologically" {
-  let a = Date.parse("2025-12-31") or fail
-  let b = Date.parse("2026-01-01") or fail
-  let c = Date.parse("2026-01-02") or fail
+  let a = Date.parse("2025-12-31")
+  let b = Date.parse("2026-01-01")
+  let c = Date.parse("2026-01-02")
   expect a.isBefore(b)
   expect b.isBefore(c)
   expect !c.isBefore(a)
@@ -267,34 +267,34 @@ test "dates order chronologically" {
 }
 
 test "dates display in ISO form" {
-  let d = Date.of(2026, 3, 9) or fail
+  let d = Date.of(2026, 3, 9)
   expect d.iso() == "2026-03-09"
-  let early = Date.of(12, 1, 1) or fail
+  let early = Date.of(12, 1, 1)
   expect early.iso() == "0012-01-01"
 }
 
 test "day number bounds" {
-  let first = Date.of(1, 1, 1) or fail
-  let last = Date.of(9999, 12, 31) or fail
+  let first = Date.of(1, 1, 1)
+  let last = Date.of(9999, 12, 31)
   expect first.dayNumber() == firstDayNumber
   expect last.dayNumber() == lastDayNumber
 }
 
 property "day numbers round-trip" forall (n: Int<306..3652364>) {
-  let d = Date.fromDayNumber(n) or fail
+  let d = Date.fromDayNumber(n)
   expect d.dayNumber() == n
 }
 
 property "the order of dates is the order of their day numbers" forall (y1: Int<1..9999>, m1: Int<1..12>, d1: Int<1..28>, y2: Int<1..9999>, m2: Int<1..12>, d2: Int<1..28>) {
-  let a = Date.of(y1, m1, d1) or fail
-  let b = Date.of(y2, m2, d2) or fail
+  let a = Date.of(y1, m1, d1)
+  let b = Date.of(y2, m2, d2)
   expect a.isBefore(b) == (a.dayNumber() < b.dayNumber())
   expect (a == b) == (a.dayNumber() == b.dayNumber())
 }
 
 property "consecutive day numbers are consecutive days" forall (n: Int<306..3652363>) {
-  let today = Date.fromDayNumber(n) or fail
-  let tomorrow = Date.fromDayNumber(n + 1) or fail
+  let today = Date.fromDayNumber(n)
+  let tomorrow = Date.fromDayNumber(n + 1)
   expect today.isBefore(tomorrow)
   expect today.daysUntil(tomorrow) == 1
 }

@@ -2,10 +2,10 @@
 // covers: LANG-11-02
 export class Cell {
   export value: Int
-  export pure func set(editable self, value: Int) Void {
+  export pure func set(editable self, value: Int) {
     self.value = value
   }
 }
-pure func through(c: editable Cell) Void {
-  editable c.set(3)
+pure func through(c: editable Cell) {
+  c.set(3)
 }

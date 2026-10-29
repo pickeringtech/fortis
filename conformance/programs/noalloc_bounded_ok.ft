@@ -11,7 +11,7 @@ export error Empty {
 }
 export noalloc try func clamp(n: Int, limit: Int) Int {
   if n > limit {
-    fail TooBig(value: n, limit: limit)
+    fail TooBig(value: n, limit)
   }
   if n == 0 {
     fail Empty()

@@ -1,0 +1,16 @@
+// This module declares its own aspect `ignorable`, with a hook: its `@ignorable` is that aspect, woven on every
+// backend, while the entry module's `@ignorable` is the core aspect, which has none (11.8; D-314).
+import fortis.host { Console }
+
+export aspect ignorable() {
+  needs c: Console
+  before {
+    c.print("hooked")
+  }
+}
+
+@ignorable
+export func count(c: Console, n: Int) Int {
+  c.print("count")
+  return n
+}

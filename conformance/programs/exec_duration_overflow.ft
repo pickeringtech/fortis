@@ -1,18 +1,17 @@
 // execute: numeric.overflow|numeric.overflow
 // requires: runtime
 // covers: LANG-06-04
-import fortis.host { Host }
+import fortis.host { Console }
 
-export try recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try recovers func main(console: Console) {
   let big = Duration.hours(2562047)
   let sum = Duration.add(big, big) catch e {
-    caps.console.print(e.code)
+    console.print(e.code)
     recover 0s
   }
   discard sum
   let product = Duration.multiply(big, 3) catch e {
-    caps.console.print(e.code)
+    console.print(e.code)
     recover 0s
   }
   discard product

@@ -19,7 +19,7 @@ func setWrong(xs: owned Set[FileSystem]) Set[host.FileSystem] => move xs    // r
 func nestWrong(xs: owned List[List[FileSystem]]) List[List[host.FileSystem]] => move xs    // reject: E-TYP-040
 func optWrong(xs: owned List[FileSystem?]) List[host.FileSystem?] => move xs    // reject: E-TYP-040
 func viewCall(xs: List[FileSystem]) Int => viewCount(xs)    // reject: E-TYP-040 — List where ListView is expected
-func viewOwn(xs: owned List[FileSystem]) Void {
+func viewOwn(xs: owned List[FileSystem]) {
   let v: ListView[host.FileSystem] = move xs    // reject: E-TYP-040
   discard v
 }

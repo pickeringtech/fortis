@@ -6,6 +6,6 @@ export enum Void {
   Unit
 }
 
-export func main(args: List[String]) Void {    // reject: E-NAM-001 — main's Void is not the prelude Void
+func main() {    // reject: E-NAM-001 — main's Void is not the prelude Void
   return Void.Unit
 }

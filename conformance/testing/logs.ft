@@ -1,0 +1,48 @@
+// A test's records on every runner: `fortis test`, `fortisc test` and native code write each log (13) and each
+// failure it reports (10.6), in order, before its result, naming the function that wrote or raised it (the test, a
+// lambda, a cleanup), a failing test's too. tests_check.py compares them; `fortisc test` once dropped the reports.
+class Crate derive Default {
+  export n: Int
+  cleanup(editable self) {
+    log.info("crate dropped")
+  }
+}
+
+test "logs from the body, a lambda and a cleanup" {
+  log.info("in the body")
+  let f = fn() Int {
+    log.warn("in a lambda")
+    return 2
+  }
+  {
+    let b = Crate.default()
+  }
+  expect f() == 2
+}
+
+test "a failing test still logs" {
+  let a = 1 << 62
+  log.error("before overflow")
+  expect a * 4 == 0
+}
+
+test "a reported failure is a record" {
+  log.info("before the report")
+  let v = late(3) catch e {
+    report e
+    recover 0
+  }
+  log.info("after the report")
+  expect v == 0
+}
+
+export error Late {
+  code: "demo.late"
+}
+
+try func late(n: Int) Int {
+  if n > 0 {
+    fail Late()
+  }
+  return n
+}

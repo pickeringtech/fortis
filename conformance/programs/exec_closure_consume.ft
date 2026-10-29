@@ -4,19 +4,17 @@
 // 8.2, 7.9 (X-250; D-30): `move f()` consumes the closure whatever its body does with its captures: one that
 // mutates a capture without moving it out, and an `async` one, whose call hands the closure to its future; the
 // future owns it until the body has run, so its capture is destroyed after the body, when the future is awaited.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Res {
   console: Shared[Console]
   label: String
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("drop ${self.label}")
   }
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+async func main(out: Console) {
   let console = Shared.create(move out)
   let n = 0
   let step = fn once[move n]() Int {

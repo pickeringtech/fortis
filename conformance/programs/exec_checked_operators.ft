@@ -1,0 +1,64 @@
+// execute: 123 20|numeric.overflow|0|numeric.divide_by_zero|0|-1 7|3|left|numeric.overflow|3|left|0 6
+// requires: runtime
+// covers: LANG-06-04
+// 6.4 (X-345): an `Int` operator the interval rules cannot prove safe is, as the left operand of `or fail`,
+// `or recover` or `catch`, the checked operation: one handler covers the whole arithmetic, the first operation that
+// fails ends it with the failure `Int.add` and its family raise (`numeric.overflow`, `numeric.divide_by_zero`), and
+// operands run left to right. A proved operator stays a plain value.
+import fortis.host { Console }
+
+try func digits(text: List[Int]) Int {
+  let mut value = 0
+  for d in text {
+    value = value * 10 + d or fail
+  }
+  return value
+}
+
+try func mean(total: Int, count: Int) Int {
+  return total / count or fail
+}
+
+recovers func doubled(console: Console, x: Int) Int {
+  return x * 2 + 1 catch e {
+    console.print(e.code)
+    recover 0
+  }
+}
+
+recovers func lowered(x: Int) Int => -x + 1 or recover -1
+
+try func flipped(x: Int<0..10>, y: Int) Int => -x + y or fail
+
+func noisy(console: Console, label: StringView, v: Int) Int {
+  console.print(label)
+  return v
+}
+
+recovers func sum(console: Console, a: Int, b: Int) Int {
+  return noisy(console, "3", a) + noisy(console, "left", b) * 2 catch e {
+    console.print(e.code)
+    recover 0
+  }
+}
+
+try recovers func main(console: Console) {
+  let ds: List[Int] = List.of(1, 2, 3)
+  let small: Int<0..10> = 4
+  let both = small * 5                                  // proved: a plain value
+  let d = digits(ds) or fail
+  console.print("${d} ${both}")
+  let over = doubled(console, 9223372036854775807)
+  console.print("${over}")
+  let zero = mean(10, 0) catch e {
+    console.print(e.code)
+    recover 0
+  }
+  console.print("${zero}")
+  let neg = lowered(-9223372036854775807 - 1)
+  let back = flipped(4, 11) or fail
+  console.print("${neg} ${back}")
+  let r = sum(console, 9223372036854775807, 1)
+  let fine = sum(console, 2, 2)
+  console.print("${r} ${fine}")
+}

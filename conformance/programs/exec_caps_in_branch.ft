@@ -5,7 +5,7 @@
 // part of that body.
 import fortis.host { Host }
 
-export func main(args: List[String]) Void {
+func main(args: List[String]) {
   if args.isEmpty() {
     let caps = Host.capabilities()
     caps.console.print("no arguments")

@@ -1,8 +1,9 @@
 """DEL-44 (DW-09): the release-evidence record of Language 1.0, with integrity, attestation and correctness apart.
 
-`python3 -I conformance/tools/release_record.py` writes docs/delivery/release/record.json and each acceptance
-application's resolved contract manifest (acceptance/<app>/contracts.json). docs/delivery/tools/release_verify.py,
-which shares no code with this tool, verifies the record independently.
+`python3 -I conformance/tools/release_record.py` writes each acceptance application's resolved contract manifest
+(acceptance/<app>/contracts.json) and, in the maintainers' checkout, the release record in the delivery plan, which
+the plan's own verifier, sharing no code with this tool, verifies independently. The delivery plan is a maintainers'
+planning file: a checkout without it writes the contract manifests and says that it skipped the record.
 
 It establishes, as executed facts:
 
@@ -14,7 +15,7 @@ It establishes, as executed facts:
   conformance results were produced so, and the toolchain has no plugin mechanism (no dynamic loading anywhere).
 - **PROG-DEL-05**: the release scope (G0–G3) depends on no G4–G7 unit, and its acceptance runs need no kit.
 - **PROG-NFR-16**: every critical or high defect is fixed, or open with a release-blocking review record
-  (docs/delivery/safety-review.json) that names its decision.
+  (the delivery plan's safety review) that names its decision.
 
 and aggregates the other done-when items from their own checks' outputs (plan_check, release results, acceptance
 run logs, the matrix, the privilege check, the readability registration and the targets). The record states
@@ -162,6 +163,10 @@ def main(argv):
     item("no kit installed; no compiler plugins", "PROG-FND-07", lib == ["fortis"] and not plugins,
          f"library holds {lib}; dynamic loading in the toolchain: {plugins or 'none'}; the core results below were produced with this library",
          ["library", "compiler/crates"])
+    sys.path.insert(0, HERE)
+    import planning  # noqa: E402
+    if not planning.optional(planning.PLAN_TOOLS, "release-record", "the release record (the contract manifests above are written)"):
+        return 0
     sys.path.insert(0, os.path.join(ROOT, "docs", "delivery", "tools"))
     import chunks  # noqa: E402  (defines the units; writes nothing unless run as a program)
     core_gate = {"G0", "G1", "G2", "G3"}
@@ -207,7 +212,7 @@ def main(argv):
          [f"acceptance/{a}/run-log.json" for a in APPS])
     matrix = load("build/matrix.json") or {}
     item("DW-06 the supported matrix", "PROG-DEL-04", matrix.get("checks") and all(c["ok"] for c in matrix["checks"]), f"{matrix.get('entries')} entries, {sum(c['ok'] for c in matrix.get('checks', []))}/{len(matrix.get('checks', []))} checks pass",
-         ["docs/delivery/matrix.json"])
+         ["reference/matrix.json"])
     reg = os.path.join(ROOT, "docs", "delivery", "readability", "PREREGISTRATION.sha256")
     ok = os.path.exists(reg) and all(sha_file(os.path.join(ROOT, p)) == h for h, p in (l.split("  ", 1) for l in open(reg, encoding="utf-8").read().splitlines() if l))
     item("DW-07 readability pre-registered (study deferred with a recorded justification)", "PROG-AGT-05", ok and os.path.exists(os.path.join(ROOT, "docs", "delivery", "readability", "DEFERRAL.md")),
@@ -225,7 +230,7 @@ def main(argv):
     # integrity: what the record speaks for
     subjects = {}
     for rel in ["conformance/release/results.json", "conformance/execution/results.json", "conformance/checker/results.json", "conformance/results.json",
-                "docs/delivery/matrix.json", "docs/delivery/privileges.json", "docs/delivery/defects.json", "docs/delivery/safety-review.json",
+                "reference/matrix.json", "docs/delivery/privileges.json", "docs/delivery/defects.json", "docs/delivery/safety-review.json",
                 "docs/delivery/readability/PREREGISTRATION.sha256", "docs/Fortis_Language_Reference.md", "docs/Fortis_Delivery_Programme.md",
                 "docs/Fortis_Platform_Specification.md", "library/fortis/compatibility.yaml"] + [f"acceptance/{a}/{f}" for a in APPS for f in ("run-log.json", "spec.json", "contracts.json")]:
         p = os.path.join(ROOT, rel)

@@ -1,4 +1,4 @@
-//! The package query database (SP-12, spikes/SP-12/design.md 3): DEL-46's queries for every module of a package,
+//! The package query database (SP-12's design, section 3): DEL-46's queries for every module of a package,
 //! with dependencies across modules on single declarations, the package resolver as a query, dirty propagation,
 //! collection, and one checker context per request.
 //!
@@ -45,7 +45,7 @@ fn fp(data: &[u8]) -> Fp {
     out
 }
 
-/// The fault switches of the apparatus check (spikes/SP-12/design.md 10); never in a default build.
+/// The fault switches of the apparatus check (SP-12's design, section 10); never in a default build.
 #[cfg(feature = "faults")]
 pub fn fault(name: &str) -> bool {
     std::env::var("FORTIS_QDB_FAULT").map_or(false, |v| v.split(',').any(|x| x == name))

@@ -1,0 +1,30 @@
+// execute: built repo|2 resolves, size 1
+// SP-08 lazy edge, representation 4: the provider holds shared, synchronised state that the first resolve fills
+// (here `Shared[AtomicInt]` cells, since a value of any type would need a `Mutex` whose guard gives access to it, which
+// Language 1.0 does not yet: defect D-23). It meets Platform 3.4's one instance per scope, but only through shared
+// ownership and synchronisation that the source never wrote: the slot says `inject lazy repo: Provider[Repo]`, and
+// the cost (reference counts, atomic or locked access on every resolve) would not be visible there. The Programme
+// never lets an elaboration add hidden shared ownership (section 12), so this representation is outside the
+// kit's first version.
+import fortis.host { Console }
+
+export class ProviderOfRepo {
+  console: Shared[Console]
+  built: Shared[AtomicInt]
+  size: Shared[AtomicInt]
+  export func resolve(self) Int {
+    if self.built.fetchAdd(1) == 0 {
+      self.console.print("built repo")
+      self.size.store(1)
+    }
+    return self.size.load()
+  }
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let p = ProviderOfRepo(console: console.retain(), built: Shared.create(AtomicInt.create(0)), size: Shared.create(AtomicInt.create(0)))
+  let a = p.resolve()
+  let b = p.resolve()
+  console.print("2 resolves, size ${b}")
+}

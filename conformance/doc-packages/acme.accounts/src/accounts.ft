@@ -22,7 +22,7 @@ export pure try func loadAccount(id: CustomerId) Account {
   fail AccountNotFound()
 }
 
-export pure func save(account: Account) Void {
+export pure func save(account: Account) {
   discard account.name
 }
 

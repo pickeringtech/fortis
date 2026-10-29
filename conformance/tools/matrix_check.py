@@ -2,7 +2,7 @@
 
 `python3 -I conformance/tools/matrix_check.py [--json]`
 
-For docs/delivery/matrix.json:
+For the supported matrix (reference/matrix.json, published with the language):
 - every entry is in exactly one class (Full, Representative, Unsupported) and Programme 16's six Language 1.0
   interaction cases are present and Full;
 - Full: each scenario passes on each backend the entry lists, at this commit: a program fixture by its release
@@ -24,6 +24,7 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 # the corpus reads captured values, so it runs under the permit-all telemetry plan (Language Reference 15; D-25)
 os.environ.setdefault("FORTIS_TELEMETRY", "permit-all")
 FORTISC = os.path.join(ROOT, "compiler", "target", "release", "fortisc")
+MATRIX = "reference/matrix.json"
 INTERACTIONS = ["noalloc+failure+capture", "pure+closure kinds", "async+defer+scope", "views+from+closures",
                 "linear outcome in a linear container+early return", "ranged loop+refinement+checked arithmetic"]
 
@@ -34,7 +35,10 @@ def load(path):
 
 
 def main(argv):
-    matrix = load("docs/delivery/matrix.json")
+    matrix = load(MATRIX)
+    if not matrix.get("entries"):
+        print(f"matrix check: FAILED: {MATRIX} is missing or has no entries")
+        return 1
     release = {(r["path"], r["backend"]): r for r in load("conformance/release/results.json").get("results", [])}
     execution = {r["path"]: r for r in load("conformance/execution/results.json").get("results", [])}
     entries = {e["id"]: e for e in matrix.get("entries", [])}

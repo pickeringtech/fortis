@@ -4,22 +4,22 @@
 // covers: LANG-07-07
 // 7.9: a temporary forwarded by `??`, by a free-function call used as a receiver, or by `or fail` is
 // destroyed once. A consuming use owns the selected success value, so the statement does not destroy it too.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  export func consume(owned self) Void {
+  export func consume(owned self) {
     self.console.print("consume ${self.id}")
   }
-  export func ping(self) Void {
+  export func ping(self) {
     self.console.print("ping ${self.id}")
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
@@ -40,7 +40,7 @@ try func makeTry(id: Int, console: Shared[Console]) Handle {
   return Handle.make(id, alias console)
 }
 
-try func run(console: Shared[Console]) Void {
+try func run(console: Shared[Console]) {
   (maybe(console) ?? Handle.make(9, alias console)).consume()
   console.print("after coalesce")
   (none() ?? Handle.make(2, alias console)).consume()
@@ -60,9 +60,7 @@ try func run(console: Shared[Console]) Void {
   console.print("after outcome")
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+try func main(out: Console) {
   let console = Shared.create(move out)
   run(console) or fail
 }

@@ -5,6 +5,6 @@
 import fortis.money { Money, Currency }
 import fortis.money { Money }               // reject: E-NAM-001 — `Money` is bound twice
 
-export func main(args: List[String]) Void {
+func main() {
   let m = Money.zero(Currency.GBP)
 }

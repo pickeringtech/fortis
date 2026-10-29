@@ -1,0 +1,32 @@
+// D-390: native code does not build some static text returned as a view `from` a parameter: a byte string as the
+// whole `BytesView from xs` result (`=> b"abc"`, rustc E0515, a reference to a temporary), and an `if` or `match`
+// that gives a string literal on one branch and a view of a `String` through a loan on another (`if empty { give
+// "empty" } else { give alias t.label }` as `StringView from t`, rustc E0308). Both checkers accept them, as 6.6
+// and 7.6 say (a literal without interpolation is a view of static storage), and the interpreter and the VM print
+// `bytes 3|empty|x0|end`; a string literal as the whole `StringView from xs` result builds (exec_from_text.ft).
+// Both checkers accepted these before D-386's fix and native lowering is unchanged by it. Found by the sweep of
+// D-386's fix.
+import fortis.host { Console }
+
+class Token {
+  label: String
+}
+
+func bytesOf(xs: List[Token]) BytesView from xs => b"abc"
+
+func labelOr(t: Token, empty: Bool) StringView from t {
+  return if empty {
+    give "empty"
+  } else {
+    give alias t.label
+  }
+}
+
+func main(console: Console) {
+  let xs: List[Token] = List.default()
+  console.print("bytes ${bytesOf(alias xs).byteCount()}")
+  let t = Token(label: String.from("x0"))
+  console.print("${labelOr(alias t, true)}")
+  console.print("${labelOr(alias t, false)}")
+  console.print("end")
+}

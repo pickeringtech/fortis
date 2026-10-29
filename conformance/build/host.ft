@@ -1,9 +1,8 @@
 // PLAT-01-03 and PROG-ARC-03: `fortis.host` needs the `host` feature set. On wasm32-wasip1 (core, alloc) and on the
 // embedded target (core) it does not exist, so `check --target` and `build --target` refuse it (E-NAM-030) before
 // any native compilation; on a tier-1 host target it builds.
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("hello")
+func main(console: Console) {
+  console.print("hello")
 }

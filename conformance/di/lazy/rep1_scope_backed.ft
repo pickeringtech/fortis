@@ -1,0 +1,17 @@
+// reject: E-OWN-053 (at the marked line)
+// SP-08 lazy edge, representation 1 (design section 8): `inject lazy repo: Provider[Repo]` elaborated as a
+// provider that borrows its scope class, the most direct form. The provider stores a loan of the scope it lives
+// in, which Language 1.0 never allows (7.7, X-137); before X-137 it was E-OWN-052 (a loan into the class's own
+// storage) for a consumer held at the same level.
+export class Repo {
+  size: Int = 1
+}
+export class ProductionApplication {
+  service: Service
+}
+export class ProviderOfRepo[lifetime r] {    // reject: E-OWN-053 — a provider would store a loan of its scope
+  level: alias ProductionApplication from r
+}
+export class Service {
+  repo: Int
+}

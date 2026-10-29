@@ -1,0 +1,108 @@
+// execute: record f1 s1|drop f1|drop s1|optional f2|drop f2|drop s2|lent a|drop s3|after records|drop unused|assigned b|drop s4|after assigned|drop unused4|branch f5|drop f5|drop s5|after branch|branch a|drop s5|after branch|drop f5|reassigned f6|drop f6|drop s6|after reassigned|split f7 s7|drop s7|drop f7|matched f8 s8|drop s8|drop f8|after match|after patterns|list a|end|drop a|drop b
+// execute-trace: loans-end|drop Token|loans-end|drop Token|loans-end|drop Token|loans-end|drop Token|drop Token|drop Token|drop Token
+// D-366, LR 7.9: an element or field whose type is a loan but whose value is the aggregate's own (a `??` whose
+// fallback is moved, an `if` that moves a value in, a binding assigned a value of its own) is destroyed with the
+// aggregate's other parts, in element and field order, and by a binding a pattern gives it to; a real loan in the
+// same place destroys nothing, also when another loan is assigned to the record's field that held it (the VM ran
+// the old element's cleanup there). The interpreter prints the same lines, but execute_check.py does not run this
+// directory; native code does not build a record holding a loan (D-360) or an `if` giving a loan or a moved value
+// (D-361), and its trace has no drop for the destructured fallback (D-344).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func records(console: Shared[Console], empty: List[Token], xs: List[Token]) {
+  let d = make(console, "f1")
+  {
+    let rec = { item: empty.get(0) ?? move d, side: make(console, "s1") }
+    let moved = move rec
+    console.print("record ${moved.item.label} ${moved.side.label}")
+  }
+  let e = make(console, "f2")
+  {
+    let p = present({ item: empty.get(0) ?? move e, side: make(console, "s2") })
+    match p {
+      present(r) => console.print("optional ${r.item.label}")
+      null => console.print("optional none")
+    }
+  }
+  let g = make(console, "unused")
+  {
+    let rec = { item: xs.get(0) ?? move g, side: make(console, "s3") }
+    console.print("lent ${rec.item.label}")
+  }
+  console.print("after records")
+}
+
+func assigned(console: Shared[Console], xs: List[Token]) {
+  let d = make(console, "unused4")
+  {
+    let mut rec = { item: xs.get(0) ?? move d, side: make(console, "s4") }
+    rec.item = xs.get(1) ?? make(console, "z")
+    console.print("assigned ${rec.item.label}")
+  }
+  console.print("after assigned")
+}
+
+func branches(console: Shared[Console], xs: List[Token], lend: Bool) {
+  let d = make(console, "f5")
+  {
+    let pair = (if lend { give xs.get(0) } else { give move d }, make(console, "s5"))
+    console.print("branch ${pair.0?.label ?? "none"}")
+  }
+  console.print("after branch")
+}
+
+func reassigned(console: Shared[Console], xs: List[Token]) {
+  let mut t = xs.get(0)
+  t = make(console, "f6")
+  {
+    let pair = (move t, make(console, "s6"))
+    console.print("reassigned ${pair.0?.label ?? "none"}")
+  }
+  console.print("after reassigned")
+}
+
+func patterns(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "f7")
+  {
+    let pair = (empty.get(0) ?? move d, make(console, "s7"))
+    let (a, b) = move pair
+    console.print("split ${a.label} ${b.label}")
+  }
+  let e = make(console, "f8")
+  {
+    let pair = (empty.get(0) ?? move e, make(console, "s8"))
+    match move pair {
+      (w, b) => { console.print("matched ${w.label} ${b.label}") }
+    }
+    console.print("after match")
+  }
+  console.print("after patterns")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  xs.push(make(console, "b"))
+  records(console, empty, xs)
+  assigned(console, xs)
+  branches(console, xs, false)
+  branches(console, xs, true)
+  reassigned(console, xs)
+  patterns(console, empty)
+  console.print("list ${xs.get(0)?.label ?? "none"}")
+  console.print("end")
+}

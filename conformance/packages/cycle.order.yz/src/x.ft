@@ -2,13 +2,12 @@
 // cycle. x, checked first, enters the cycle at y here and at z in cycle.order.zy, whose only difference is the order
 // of these two imports. A type written through an alias is that module's type, whichever member the check enters
 // first: `fb()` is z's `Cee` in x, in y and in z's own `probe`.
-import fortis.host { Host }
+import fortis.host { Console }
 import cycle.order.yz.y { fb }
 import cycle.order.yz.z { Cee, probe }
 
 func same() Cee => fb()
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${fb().n} ${same().n} ${probe().n}")
+func main(console: Console) {
+  console.print("${fb().n} ${same().n} ${probe().n}")
 }

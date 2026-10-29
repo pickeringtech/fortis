@@ -2,4 +2,5 @@
 match scrutinee {
   Pattern [when guard] => expression
   Pattern [when guard] => { … give value }
+  Pattern | Pattern … => expression            // alternatives: no bindings, no guard
 }

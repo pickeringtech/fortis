@@ -1,0 +1,15 @@
+// reject: E-TYP-040, E-TYP-140 (at the marked lines)
+// covers: LANG-08-01, LANG-05-05
+// X-345 (R6): a head without a return type returns Void, exactly as `Void` written: a value returned from it, an
+// expression body with a value, and a call of it used as a value are the errors they are for `Void` written.
+func noted(n: Int) {
+  return n                                           // reject: E-TYP-040: the result is Void
+}
+func doubled(n: Int) => Int.saturatingAdd(n, n)      // reject: E-TYP-040: an expression body of Void
+func nothing() {
+}
+func run() Int {
+  let v: Int = nothing()                             // reject: E-TYP-040: Void is not Int
+  Int.saturatingAdd(1, 2)                            // reject: E-TYP-140: a value still needs `discard`
+  return 0
+}

@@ -5,7 +5,7 @@
 // covers: LANG-12-03
 // A task cancelled before its first poll never runs (the parent resumes first when its awaited task completes,
 // so `late` is still ready when `or fail` leaves the scope): a not_started record (12.3, 13).
-import fortis.host { Host, Console }
+import fortis.host { Console }
 export error Bad {
   code: "demo.bad"
 }
@@ -25,8 +25,7 @@ async try func run(console: Console) Int {
     return Int.wrappingAdd(x, await second)
   }
 }
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let r = await run(caps.console) or recover -1
-  caps.console.print("recovered ${r}")
+async recovers func main(console: Console) {
+  let r = await run(console) or recover -1
+  console.print("recovered ${r}")
 }

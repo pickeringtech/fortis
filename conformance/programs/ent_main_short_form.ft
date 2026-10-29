@@ -1,0 +1,10 @@
+// execute: hello
+// requires: runtime
+// covers: LANG-04-06
+// The entry `main` in its short form (4.6, X-345): `export` is implied, and the one capability it uses is a
+// parameter the runtime supplies by its type. No `Host.capabilities()`, no `args`.
+import fortis.host { Console }
+
+func main(console: Console) {
+  console.print("hello")
+}

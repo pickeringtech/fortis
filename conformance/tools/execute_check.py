@@ -140,6 +140,40 @@ def backstop_test() -> int:
         ok = observed == want
         failures += not ok
         print(f"{'PASS' if ok else 'FAIL'} backstop {name:<27} {'' if ok else observed}")
+    return failures + cleanup_backstop_test()
+
+
+# programs a checker defect let run, built whatever the checker says; fortisc's tests/unchecked_cleanup.rs runs the
+# same programs on the VM
+UNCHECKED = os.path.join(ROOT, "compiler", "crates", "fortisc", "tests", "unchecked")
+
+
+def cleanup_backstop_test() -> int:
+    """The interpreter does not rely on the checker for a class value's cleanup to run exactly once (LR 7.9, 12.2;
+    D-348): a loan that outlives its owner's destruction, or two bindings that own one value, still print the
+    program's `// backstop:` lines; a program that reads what a `return` moved out stops with a dynamic check
+    failure, the last item, never silently (D-391)."""
+    failures = 0
+    for name in sorted(os.listdir(UNCHECKED)):
+        if not name.endswith(".ft"):
+            continue
+        path = os.path.join(UNCHECKED, name)
+        src = open(path, encoding="utf-8").read()
+        want = src.split("\n", 1)[0].removeprefix("// backstop: ")
+        it = Interpreter(src, os.path.relpath(path, ROOT))
+        sys.stderr = open(os.devnull, "w")
+        try:
+            it.run_main([])
+            observed = "|".join(it.out)
+        except DefectSignal as d:
+            observed = "|".join(it.out + [f"defect:{d.kind}"])
+        except FortisError as e:
+            observed = "|".join(it.out + [f"dynamic:{e}"])
+        finally:
+            sys.stderr = sys.__stderr__
+        ok = observed == want
+        failures += not ok
+        print(f"{'PASS' if ok else 'FAIL'} backstop {name:<27} {'' if ok else observed}")
     return failures
 
 

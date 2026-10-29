@@ -161,7 +161,7 @@ test "bump" {
 
 ```fortis
 // reject: E-ASY-003
-import fortis.host { Host }
+import fortis.host { Console }
 
 async func total(items: ListView[Int]) Int {
   let mut sum = 0
@@ -171,20 +171,19 @@ async func total(items: ListView[Int]) Int {
   return sum
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async func main(console: Console) {
   let numbers = List.of(1, 2, 3)
   scope tasks {
     let t = tasks.launchParallel(total(numbers))   // reject: E-ASY-003
     let sum = await t
-    caps.console.print("${sum}")
+    console.print("${sum}")
   }
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 async func total(items: owned List[Int]) Int {
   let mut sum = 0
@@ -194,13 +193,12 @@ async func total(items: owned List[Int]) Int {
   return sum
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async func main(console: Console) {
   let numbers = List.of(1, 2, 3)
   scope tasks {
     let t = tasks.launchParallel(total(move numbers))
     let sum = await t
-    caps.console.print("${sum}")
+    console.print("${sum}")
   }
 }
 ```
@@ -215,8 +213,8 @@ The record is reported at the allocating statement.
 
 ```fortis
 // reject: E-EFF-001
-pure noalloc func grow(items: editable List[Int]) Void {
-  editable items.push(1)              // reject: E-EFF-001
+pure noalloc func grow(items: editable List[Int]) {
+  items.push(1)                       // reject: E-EFF-001
 }
 
 test "grow" {
@@ -226,8 +224,8 @@ test "grow" {
 
 ```fortis
 // accept
-pure func grow(items: editable List[Int]) Void {
-  editable items.push(1)
+pure func grow(items: editable List[Int]) {
+  items.push(1)
 }
 
 pure noalloc func square(n: Int<-1000..1000>) Int => n * n

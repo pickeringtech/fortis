@@ -10,18 +10,21 @@ E-TYP-010/030/040/050/110/120/130, E-NAM-002, E-MAT-001/002, E-REF-001 (literals
 for later layers are marked `# plug-in:`."""
 from __future__ import annotations
 
+import dataclasses
+import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 import lexer as lexer_mod
 import tree as tree_mod
 from lexer import Token
-from tree import children, name, direct_tokens, find, find_all, tokens
+from tree import ARITH_RULES, children, name, direct_tokens, find, find_all, lambda_body, pun_name, region_operators, tokens
 
 from checker.decls import Decl, DeclChecker, Sig, standard
+from reading import CAPABILITY_TYPES, LOG_LEVELS, call_name_token, log_call, outcome_lets, postfix_call_token
 from checker import intervals as iv
 from checker.intervals import Facts
-from checker.owners import Owners, overlaps, root_of
+from checker.owners import Loan, Owners, overlaps, root_of
 from checker import effects as fx
 from checker.effects import Summary
 from checker.literals import CLOSURE_WHY, INTERP, STRLIT, assignable, closure_conflict, concrete, contains_dynamic_fn, declared_vs_lambda, dynamic_covers, is_strlit, literal_type, negate
@@ -29,6 +32,9 @@ from checker.types import (BOOL, DECIMAL, DURATION, FLOAT, INT, INT_TYPES, NEVER
                            OptionalT, RecordT, Refined, TupleT, Type, TypeParam, Unknown, base_name, int_bounds)
 
 STRUCTURAL = (TupleT, RecordT)
+CHECKED_OPS = ("+", "-", "*", "/", "%", "<<")     # the operators with a checked `Int` operation (6.4, X-345)
+
+
 FLOAT32 = Named("Float32")
 FAILURE = Named("Failure")
 ITERABLE = {"List", "ListView", "Array", "Set", "FixedList", "OrderedMap", "Map"}
@@ -107,6 +113,22 @@ def holes_of(text: str) -> List[str]:
     return out
 
 
+def lower_names(toks: Sequence[Token]) -> Set[str]:
+    """The text of every LOWER token among `toks`, those inside the holes of a string token included: a hole is an
+    expression evaluated where its string is (3.6), so a place named only in `"${t.label}"` is named (D-391)."""
+    out: Set[str] = set()
+    for t in toks:
+        if t.kind == "LOWER":
+            out.add(t.text)
+        elif t.kind == "STR" and "${" in t.text:
+            for src in hole_sources(t):
+                try:
+                    out |= lower_names(lexer_mod.lex(src))
+                except Exception:  # noqa: BLE001
+                    continue
+    return out
+
+
 class Typer:
     def __init__(self, dc: DeclChecker):
         self.dc = dc
@@ -133,6 +155,7 @@ class Typer:
         self.receiver: Optional[Tuple[str, str]] = None   # (place path, marker) of a marked receiver for the next call
         self.in_marker: bool = False
         self.pending: Optional[Tuple[str, str, Token]] = None   # a marked place awaiting its binding (let) or position
+        self.copy_refused: Set[Tuple[int, int]] = set()          # `copy` markers already E-OWN-002, by line and column (D-341)
         self.res_stack: List[List[Tuple[str, str]]] = []       # reservations of the enclosing calls being evaluated (5.7)
         self.lambda_kind: List[str] = []                        # kinds of the lambdas being typed (8.2)
         self.last_closure: Optional[dict] = None                # captures of the lambda just typed, awaiting its binding
@@ -152,6 +175,11 @@ class Typer:
         self.schema_unknown: bool = False
         self.current_aspects: list = []                          # aspectUse nodes of the function being typed (11.8)
         self.caps_calls: int = 0                                 # Host.capabilities() calls in the body (11.6)
+        self.call_sigs: Dict[Tuple[int, int], Sig] = {}          # a call's callee by its name token's position (5.5, `@ignorable`)
+        self.test_body: bool = False                             # typing a test or property body: `or fail` is implied (14, X-345)
+        self.consumed_ops: Set[int] = set()                      # nodes that `or`, `catch` or `match` consume (14)
+        self.implied_fails: List[Tuple[int, int]] = []           # positions of calls with an implied `or fail` (14)
+        self.implied_regions: Set[Tuple[int, int]] = set()       # first operators of a test's checked regions (14, 6.4)
         self.tparams_in_scope: Set[str] = set()                  # the type parameters of the body being typed (6.10)
         self.where_in_scope: list = []                           # its owner's and its own `where` bounds, with arguments
         self.pending_owner_where: tuple = ()                     # a generic class's bounds, for the method call checked next
@@ -162,6 +190,9 @@ class Typer:
         self.branch_expected: List[Optional[Type]] = []           # the type a `give`/`recover` value joins, when known
         self.branch_target = False                                 # typing a branch value whose target type is known
         self.closure_info: Dict[int, dict] = {}                  # id(lambda node) -> {kind, captures}
+        self.regions: List[dict] = []                            # checked-arithmetic regions being typed (6.4, X-345)
+        self.unresolved_args: int = 0                            # > 0 while typing an unresolved call's arguments (D-304)
+        self.checked_ops: Set[Tuple[int, int]] = set()           # (line, column) of each checked operator (6.4, X-345)
         self.guards: List[Tuple[str, int, Token]] = []           # MutexGuard bindings (name, depth, token) live in the body (12.3)
         self.scope_depths: List[Tuple[str, int]] = []            # (scope name, block depth) of enclosing scope blocks (12.5)
         self.deferred: List[Tuple[int, Set[str], Token]] = []    # (block depth, places the defer names, token) of active defers
@@ -428,7 +459,7 @@ class Typer:
             lp, rp = self.path_of_expr(kids[0]), self.path_of_expr(kids[2])
             lt = self.infer(kids[0], env)
             mark = len(iv.LOG)
-            rt = self.infer(kids[2], env)
+            rt = self.infer(kids[2], env, expected=self.enum_operand(lt))   # `s == Error` (9.7, X-345)
             # D-74, D-77: the left operand's value was read before the right operand ran; if the right operand discarded the
             # left place's facts (a write, an editable loan), the comparison says nothing about the place's current value
             if lp is not None and any(iv.overlaps(q, lp) for q in iv.LOG[mark:]):
@@ -522,9 +553,310 @@ class Typer:
             return False
         return not self.dc.is_trivial(s)
 
+    @staticmethod
+    def lent(t: Type) -> Optional[Type]:
+        """What a loan lends, as the owned value a copy of it is: `alias T` gives `T` and `(alias T)?` gives `T?`; None
+        for a type that is not a loan."""
+        if isinstance(t, LoanT):
+            return t.inner
+        if isinstance(t, OptionalT):
+            inner = Typer.lent(t.inner)
+            return OptionalT(inner) if inner is not None else None
+        if isinstance(t, TupleT):
+            items = [Typer.lent(x) for x in t.items]
+            return TupleT(tuple(x if l is None else l for x, l in zip(t.items, items))) if any(l is not None for l in items) else None
+        if isinstance(t, RecordT):
+            fs = [(k, Typer.lent(x)) for k, x in t.fields]
+            return RecordT(tuple((k, x if l is None else l) for (k, x), (_, l) in zip(t.fields, fs))) if any(l is not None for _, l in fs) else None
+        return None
+
+    def lent_operand(self, node, env: Env) -> Optional[str]:
+        """The origin of a `??` operand that is a place read through a loan, written bare: a read or `editable`
+        parameter, an `alias` capture, a binding that holds a loan, or `self` in a method that borrows it."""
+        path = self.path_of_expr(node)
+        if path is None or find(node, "markerExpr") is not None:
+            return None
+        root = root_of(path)
+        kind = self.binding_kind(path, env)
+        if kind in ("param", "editable", "capture-alias") or root in self.own.holders:
+            return root
+        if root == "self" and kind == "self" and self.self_mode in ("self", "editable self"):
+            return root
+        return None
+
+    def coalesce_result(self, inner: Type, right: Type, left_node, right_node, env: Env) -> Type:
+        """The type of `a ?? b`: `a`'s present type, and a loan of it when the result can be a loan (D-341): `a`
+        lends, the fallback is a loan (a nested lent `??`, at any depth), or either operand is a place read through
+        a loan. An owned value is then made from it only by `copy`, wherever it meets an owned expectation."""
+        if isinstance(inner, LoanT) or not self.is_bearing(inner):
+            return inner
+        if isinstance(right, LoanT):
+            return LoanT(inner, right.mode, right.origin)
+        origin = self.lent_operand(left_node, env) or self.lent_operand(right_node, env)
+        return LoanT(inner, "alias", origin) if origin is not None else inner
+
+    @staticmethod
+    def source_text(node) -> str:
+        """An expression as the source spells it, for a message: `move d`, `make(console, "x")`."""
+        s = " ".join(t.text for t in tokens(node))
+        s = re.sub(r"\s+([,)\].])", r"\1", s)
+        s = re.sub(r"(\w)\s+([(\[])", r"\1\2", s)
+        return re.sub(r"([(\[.])\s+", r"\1", s)
+
+    def owned_into_lent(self, have: Type, ret: Optional[Type], e, env: Env):
+        """A value of the function's own where the result is declared a loan (7.6; D-373, D-377, D-381). A `from`
+        result is a loan, so the expression that produces it must lend: what does not would be held by the caller as
+        a loan of what ends with the call, as a loan of a local or a temporary returned is: E-OWN-051."""
+        if ret is None or self.lent(ret) is None:
+            return
+        what = self.unlent_in(e, ret, env, have)
+        if what is None:
+            return
+        owned = self.lent(ret)
+        self.own_err("E-OWN-051", f"the result is declared as a loan, but `{what}` is a value of the function's own, which ends with the call: return an owned value from a function returning `{owned.show()}` (bind the loan first, `let v = …`, then `return copy v ?? …`), or `match` the loan",
+                     tokens(e)[0], what, "owned value in a lent result", "LANG-07-06")
+
+    UNLENT_WRAP = ("constExpr", "expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr",
+                   "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "unaryExpr", "postfixExpr", "primaryExpr", "exprStmt")
+    UNLENT_OPS = ("orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr")
+
+    def unlent_in(self, e, want: Type, env: Env, t: Optional[Type] = None) -> Optional[str]:
+        """The first part of `e` that is a value of the function's own where `want`, a result declared `from` a
+        parameter, is a loan, as the source spells it; None when the expression lends (7.6; D-381). What lends: a
+        place read through a loan (a parameter, `self`, a binding that holds a loan, a field or element path through
+        one), `alias p`, a call whose result lends, a `??` both of whose sides lend, an `if` or `match` every one of
+        whose results lends, an outcome expression whose value side and every `recover` lend (D-385), `present` of
+        one (an optional holds nothing of its own), parentheses, and a string literal without interpolation where a
+        view is declared, a view of static storage (6.6). What does not: an interpolated string, a literal where a
+        `String` loan is declared (it converts by allocating; D-386), a tuple or record literal, a constructor,
+        `move x`, `copy x`, a call whose result is owned, a lambda, an arithmetic or string result. A trivial value
+        holds nothing and is exempt. `t` is `e`'s type where the caller has it; otherwise the type recorded while `e`
+        was inferred says."""
+        w = want
+        while isinstance(w, OptionalT):
+            w = w.inner
+        if not isinstance(w, LoanT):
+            return None                                    # an owned result: a loan there is loan_into_owned's
+        n = e
+        while True:
+            nm, kids = name(n), children(n)
+            if nm in self.UNLENT_WRAP and len(kids) == 1 and not isinstance(kids[0], Token):
+                n = kids[0]
+            elif nm == "primaryExpr" and len(kids) == 3 and isinstance(kids[0], Token) and kids[0].text == "(":
+                n = kids[1]
+            else:
+                break
+        nm, kids = name(n), children(n)
+        if nm == "outcomeExpr" and len(kids) > 1:
+            # an outcome expression produces its value side, or what its handler recovers, so both must lend; `or
+            # fail`, and a handler that fails or returns, produce nothing (10.2; D-385)
+            hit = self.unlent_in(kids[0], want, env)
+            if hit is not None:
+                return hit
+            words = [k.text for k in kids if isinstance(k, Token)]
+            if "recover" in words:
+                return self.unlent_in(kids[-1], want, env)
+            if "catch" in words:
+                return self.unlent_recovered(next(k for k in kids if name(k) == "block"), want, env)
+            return None
+        if nm == "coalesceExpr" and len(kids) == 3:
+            return self.unlent_in(kids[0], want, env) or self.unlent_in(kids[2], want, env)
+        if nm == "primaryExpr" and len(kids) == 4 and isinstance(kids[0], Token) and kids[0].text == "present":
+            return self.unlent_in(kids[2], want, env)
+        if nm == "matchExpr":
+            for arm in (c for c in kids if name(c) == "matchArm"):
+                body = [c for c in children(arm) if name(c) in ("expr", "block")][-1]
+                hit = self.unlent_in(body, want, env) if name(body) == "expr" else self.unlent_given(body, want, env)
+                if hit is not None:
+                    return hit
+            return None
+        if nm == "ifExpr":
+            for c in kids:
+                if isinstance(c, Token) or name(c) == "expr":
+                    continue                               # a condition decides nothing
+                hit = self.unlent_given(c, want, env) if name(c) == "block" else self.unlent_in(c, want, env)
+                if hit is not None:
+                    return hit
+            return None
+        if t is None:
+            t = self.recorded_type(e)
+        s = strip(t) if t is not None else None
+        if isinstance(s, Named) and s.name == "Outcome" and s.args:
+            t = s.args[0]                                  # a `try` call produces its success value
+        if nm == "literal" and isinstance(kids[0], Token) and kids[0].kind in ("STR", "RAW", "BYTES"):
+            # text: a literal without interpolation is a view of static storage, which lends where a view is
+            # declared (6.6); an interpolation allocates a fresh String, and a literal converts to one where a
+            # `String` loan is declared: the function's own (D-386)
+            core = want
+            while isinstance(core, (OptionalT, LoanT)):
+                core = core.inner
+            core = strip(core)
+            # "without interpolation" is decided by the lexer's recorded holes, as `lower_names` decides it: an escaped
+            # `\${` opens no hole and prints literally on every backend (D-412)
+            static = kids[0].kind != "STR" or not hole_sources(kids[0])
+            if static and isinstance(core, Named) and core.name in ("StringView", "BytesView"):
+                return None
+            return self.source_text(n)
+        if nm in self.UNLENT_OPS and len(kids) > 1:
+            # computed here: a trivial result holds nothing, any other is the function's own
+            return None if t is None or self.dc.is_trivial(strip(t)) else self.source_text(n)
+        if t is not None and not self.is_bearing(self.lent(t) or t):
+            return None                                    # trivial, a literal or unknown: it holds nothing
+        if nm in ("tupleLit", "recordLit", "lambda"):
+            return self.source_text(n)                     # constructed here, whatever its parts
+        if t is None or self.lent(t) is not None or self.lent_operand(n, env) is not None:
+            return None
+        return self.source_text(n)
+
+    def unlent_recovered(self, node, want: Type, env: Env) -> Optional[str]:
+        """`unlent_in` over every `recover` of the handler `node`, at any depth of its statements: not one of a
+        nested `catch`, whose handler recovers its own value, nor one inside a lambda (10.2; D-385)."""
+        for c in children(node):
+            if isinstance(c, Token):
+                continue
+            kids = children(c)
+            if name(c) == "statement" and kids and isinstance(kids[0], Token) and kids[0].text == "recover":
+                hit = self.unlent_in(next(k for k in kids if name(k) == "expr"), want, env)
+            elif name(c) == "lambda" or (name(c) == "outcomeExpr" and any(isinstance(k, Token) and k.text == "catch" for k in kids)):
+                hit = None
+            else:
+                hit = self.unlent_recovered(c, want, env)
+            if hit is not None:
+                return hit
+        return None
+
+    def unlent_given(self, node, want: Type, env: Env) -> Optional[str]:
+        """`unlent_in` over every `give` that ends the arm or branch `node` is in, not one nested in an inner
+        `if` or `match` expression (5.5)."""
+        for c in children(node):
+            if isinstance(c, Token):
+                continue
+            kids = children(c)
+            if name(c) == "statement" and kids and isinstance(kids[0], Token) and kids[0].text == "give":
+                hit = self.unlent_in(next(k for k in kids if name(k) == "expr"), want, env)
+            elif name(c) not in ("matchExpr", "ifExpr", "lambda"):
+                hit = self.unlent_given(c, want, env)
+            else:
+                hit = None
+            if hit is not None:
+                return hit
+        return None
+
+    def lends_result(self, ret: Optional[Type]) -> bool:
+        """Start recording the types of the expressions inferred next when the result they produce is declared a
+        loan, for `unlent_in`; True when this call started it, so its caller stops it. A recording already running
+        (a lowering's, or an enclosing result's) is kept."""
+        if self.node_types is not None or ret is None or self.lent(ret) is None:
+            return False
+        self.node_types = {}
+        return True
+
+    def recorded_type(self, e) -> Optional[Type]:
+        """The type recorded for `e` while it was inferred, or for the one expression it wraps; None when none was."""
+        if self.node_types is None:
+            return None
+        n = e
+        while True:
+            t = self.node_types.get(id(n))
+            if t is not None:
+                return t
+            kids = children(n)
+            if len(kids) != 1 or isinstance(kids[0], Token):
+                return None
+            n = kids[0]
+
+    def loan_into_owned(self, have: Type, want: Optional[Type], tok: Token, what: str):
+        """A loan where an owned value is expected (a return, an annotated binding, an assignment, an `owned` argument
+        or field, a payload, a recovered value) stays a loan (X-95): an owned value is made from it
+        only by `copy` (7.5, 7.6; D-341). A trivial value needs no marker. Without one, a copyable value is E-OWN-001
+        (write `copy`); a value that is not Copyable has no owned copy at all, E-OWN-002. `want` is the expected type,
+        or None where the position itself is owned; a loan or a view expected is lent on."""
+        lent = self.lent(have)
+        if lent is None:
+            return
+        w = want
+        while isinstance(w, OptionalT):
+            w = w.inner
+        if isinstance(w, (LoanT, Unknown)) or (isinstance(w, Named) and w.name in ("StringView", "BytesView", "ListView", "ListCursor")):
+            return
+        core = lent
+        while isinstance(core, OptionalT):
+            core = core.inner
+        if isinstance(core, Unknown) or self.dc.is_trivial(lent) or (tok.line, tok.col) in self.copy_refused:
+            return
+        if isinstance(core, Named) and core.name in ("StringView", "BytesView", "ListView", "ListCursor"):
+            return                                    # a view held whole is a stored loan (E-OWN-053, E-OWN-090), not a copy
+        if self.dc.is_copyable(lent):
+            self.own_err("E-OWN-001", f"{what} must be owned, but it is a loan of {lent.show()}: write `copy` to make an owned copy (a call's result is bound first, `let v = …`, then `copy v`)",
+                         tok, tok.text, "copy required", "LANG-07-01")
+            return
+        dup = " (a `Shared` or `Weak` is duplicated with `retain()`)" if isinstance(core, Named) and core.name in ("Shared", "Weak") else ""
+        self.own_err("E-OWN-002", f"{what} must be owned, but it is a loan of {lent.show()}, which is not Copyable (6.11), so no owned copy can be made{dup}: keep the loan (a read parameter or a `from` result), or take the value out of its owner",
+                     tok, tok.text, "loan where an owned value is required", "LANG-07-01")
+
     def binding_kind(self, path: str, env: Env) -> Optional[str]:
         b = env.lookup(root_of(path))
         return b.kind if b else ("self" if root_of(path) == "self" else None)
+
+    # ---- markers the declaration already shows (X-345: R1, R2, R16) ------------------------------
+    def editable_root(self, path: str, env: Env) -> bool:
+        """Whether `editable p` may be written: `p` rooted in a `let mut` binding, an `editable` parameter, an
+        `editable` or `move` capture, a binding that holds an exclusive loan, or the method's own `editable self`."""
+        kind = self.binding_kind(path, env)
+        holder = self.own.holders.get(root_of(path))
+        return kind in ("mut", "editable", "capture-editable", "capture-move") or (holder is not None and holder.mode == "editable") \
+            or (root_of(path) == "self" and self.self_mode == "editable self")
+
+    def unmarked_editable_root(self, path: str, env: Env) -> bool:
+        """The receiver of an `editable self` method, or a `fn mut` closure being called, needs no `editable` wherever
+        `editable` could be written (7.5, X-345), whatever the receiver's type, and the call is then checked exactly as
+        `editable p…`. On any other root it is rejected as the marked form is (D-303)."""
+        return self.editable_root(path, env)
+
+    def receiver_mode(self, recv: Type, m: str) -> Optional[str]:
+        """The receiver mode of method `m` on `recv`, found as method_call_named finds it, recording nothing."""
+        s = concrete(strip(recv))
+        if isinstance(s, Refined):
+            s = s.base
+        if isinstance(s, Named) and s.name == "Shared" and s.args and m not in ("retain", "downgrade"):
+            s = strip(s.args[0])
+        if isinstance(s, OptionalT) or not known(s):
+            return None
+        d = self.dc.resolve_type(s.iface) if isinstance(s, DynamicT) else self.decl_of(s)
+        if d is None:
+            return None
+        sig = d.methods.get(m)
+        if sig is None and d.kind == "mixin":
+            sig = d.methods.get("requires:" + m)
+        if sig is None:
+            for mx in d.mixins:
+                md = self.dc.resolve_type(mx)
+                if md is not None and m in md.methods:
+                    sig = md.methods[m]
+            for iface in d.implements:
+                idecl = self.dc.resolve_type(iface)
+                if sig is None and idecl is not None and m in idecl.methods:
+                    sig = idecl.methods[m]
+        return sig.receiver if sig is not None else None
+
+    def unmarked_editable(self, path: str, tok: Token, env: Env):
+        """An unmarked receiver or callee the declaration shows to be editable: the steps of `editable p` (marker)."""
+        self.use_place(path, tok, "editable", env)
+        self.facts.invalidate(path)
+        self.receiver = (path, "editable")
+
+    def returned_local(self, e, env: Env) -> Optional[str]:
+        """`return x` moves `x` when `x` is a local `let` binding of the function: its use visibly ends there
+        (7.5, X-345). A field, a parameter, a capture or any other expression keeps the markers of 7.5."""
+        if e is None or find(e, "markerExpr") is not None:
+            return None
+        path = self.path_of_expr(e)
+        if path is None or not path.isidentifier():
+            return None
+        b = env.lookup(path)
+        if b is None or b.kind not in ("let", "mut") or b.depth <= 0:
+            return None
+        return path
 
     def set_last_status(self, status: str):
         """The status of the record just made (it was deduplicated away if the last record is another)."""
@@ -715,7 +1047,12 @@ class Typer:
         if not self.is_entry_main():
             self.eff_err("E-EFF-010", "`Host.capabilities()` is called outside the entry `main` (11.6)", tok, "the entry main only", "io", where, "LANG-11-07")
             return
-        inside = "a lambda" if "lambda" in self.ctx else "an aspect's hook" if "hook" in self.ctx else "a loop" if ("loop" in self.ctx or "whilecond" in self.ctx) else None
+        md = self.table.get("main")
+        if md is not None and md.sig is not None and any(isinstance(pt, Named) and pt.name in CAPABILITY_TYPES for _, pt, _ in md.sig.params):
+            self.eff_err("E-EFF-010", "`Host.capabilities()` is called in a `main` that takes capability parameters: the runtime has already created the capabilities, once (4.6, 11.6)",
+                         tok, "no Host.capabilities() beside capability parameters", "io", where, "LANG-11-07")
+            return
+        inside ="a lambda" if "lambda" in self.ctx else "an aspect's hook" if "hook" in self.ctx else "a loop" if ("loop" in self.ctx or "whilecond" in self.ctx) else None
         if inside is not None:
             self.eff_err("E-EFF-010", f"`Host.capabilities()` is called inside {inside}: the capabilities are created once, by a direct call in the entry `main`'s own body (11.6)",
                          tok, "a direct call in the entry main", "io", where, "LANG-11-07")
@@ -1152,7 +1489,7 @@ class Typer:
         """12.1: a deferred block is typed at registration with `return`/`fail`/`give`/`break`/`continue`/`await`
         rejected (E-DEF-001); the places it names must stay initialised until the block exits (E-DEF-002)."""
         blk = find(inner, "block")
-        roots = {t.text for t in tokens(blk) if t.kind == "LOWER" and env.lookup(t.text) is not None}   # the bindings the defer names
+        roots = {n for n in lower_names(tokens(blk)) if env.lookup(n) is not None}   # the bindings the defer names, in holes too
         tok = direct_tokens(inner)[0]
         for r in sorted(roots):
             b = env.lookup(r)
@@ -1247,8 +1584,10 @@ class Typer:
         return chain
 
     def foreign_loans(self, path: str) -> List:
+        """The active loans of `path`'s owner held by other bindings. A loan drawn through a read path (an item a
+        cursor's `next()` lent, 7.6) is the owner's, not the path's: using the path itself leaves it alone (D-348)."""
         chain = self.holder_chain(path)
-        return [l for l in self.own.active(path) if l.holder is not None and l.holder not in chain]
+        return [l for l in self.own.active(path) if l.holder is not None and l.holder not in chain and l.via not in chain]
 
     def use_place(self, path: str, tok: Token, how: str, env: Env):
         """A use of a place: how in read | write | move | alias | editable | copy. Sets use_ok."""
@@ -1273,9 +1612,7 @@ class Typer:
                 self.use_ok = False
             return
         if how == "editable":
-            holder = self.own.holders.get(root_of(path))
-            mutable_root = kind in ("mut", "editable", "capture-editable", "capture-move") or (holder is not None and holder.mode == "editable") or (root_of(path) == "self" and self.self_mode == "editable self")
-            if not mutable_root:
+            if not self.editable_root(path, env):
                 self.own_err("E-OWN-001", f"`editable {path}` needs a root that is a `let mut`, an `editable` parameter or an exclusive loan", tok, path, "editable on an immutable root", "LANG-07-01")
                 self.use_ok = False
                 return
@@ -1334,12 +1671,15 @@ class Typer:
                     return
         self.own.reservations.append((path, mode))
 
-    def activate(self, tok: Token, carries: bool, env: Env):
+    def activate(self, tok: Token, carries: bool, env: Env, keep: Optional[Dict[int, str]] = None):
         """5.7 step 2: reservations become loans at once; conflicts among them or with active loans are reported.
-        Step 4: the loans end when the call returns unless the result carries them."""
+        Step 4: the loans end when the call returns unless the result carries them. A result that holds a loan inside
+        an optional, a tuple or a record (`(alias T from self)?`) keeps, for each reservation `keep` names (the
+        argument it is `from`), a loan of the mode it declares, carried `nested` to the binding that receives it (D-348)."""
         res, self.own.reservations = self.own.reservations, []
         added = []
-        for path, mode in res:
+        kept = []
+        for i, (path, mode) in enumerate(res):
             if mode == "move":
                 self.own.move(path)
                 continue
@@ -1348,16 +1688,88 @@ class Typer:
                 if other is not path and (overlaps(other, path) or overlaps(path, other)) and (lmode == "editable" or omode in ("editable", "move")):
                     self.own_err("E-OWN-010", f"the call takes a {lmode} loan of `{path}` and a {omode} of `{other}` at once", tok, path, f"{omode} of {other}", "LANG-07-05")
             added.append(self.own.add_loan(path, lmode, None, self.depth, tok.line))
-        if not carries:
-            for l in added:
-                if l in self.own.loans:
-                    self.own.loans.remove(l)
-        else:
+            if keep and i in keep:
+                kept.append((path, keep[i]))
+        if carries:
             self.carried += added
+            return
+        for l in added:
+            if l in self.own.loans:
+                self.own.loans.remove(l)
+        for path, mode in kept:
+            # the kept loan has the mode the result declares (7.6): `editable cursor.next()` lends a read loan, drawn
+            # from what the cursor lends, so advancing the cursor leaves it alone; so does any use of a read path
+            root = root_of(path)
+            h = self.own.holders.get(root)
+            rt = env.get(root)
+            rt = strip(rt.inner if isinstance(rt, LoanT) else rt) if rt is not None else None
+            cursor = isinstance(rt, Named) and rt.name in ("StringView", "BytesView", "ListView", "ListCursor")
+            l = self.own.add_loan(path, mode, None, self.depth, tok.line)
+            l.nested = True
+            l.via = root if cursor or (h is not None and h.mode == "alias") else None
+            self.carried.append(l)
 
     def result_carries(self, sig: Sig) -> bool:
         r = strip(sig.ret) if not isinstance(sig.ret, LoanT) else sig.ret
         return isinstance(sig.ret, LoanT) or (isinstance(r, Named) and r.name in ("StringView", "BytesView", "ListView", "Future")) or "async" in sig.modifiers
+
+    @staticmethod
+    def nested_origins(t: Type, top: bool = True) -> Dict[str, str]:
+        """The origins of the loans a result holds inside an optional, a tuple or a record, with the mode each
+        declares: `(alias T from self)?` gives {"self": "alias"} (D-348). A result that is itself a loan carries its
+        loan whole (`result_carries`), so it gives none."""
+        if isinstance(t, LoanT):
+            return {} if top else {t.origin: t.mode}
+        if isinstance(t, OptionalT):
+            return Typer.nested_origins(t.inner, False)
+        out: Dict[str, str] = {}
+        if isinstance(t, TupleT):
+            for x in t.items:
+                out.update(Typer.nested_origins(x, False))
+        elif isinstance(t, RecordT):
+            for _, x in t.fields:
+                out.update(Typer.nested_origins(x, False))
+        return out
+
+    def holds_loan(self, t: Type) -> bool:
+        """Whether a value of type `t` holds a loan of an ownership-bearing value: a loan, or one inside an optional,
+        a tuple or a record, at any depth (D-348). A loan of a trivial value is that value, and holds nothing."""
+        if isinstance(t, LoanT):
+            return self.is_bearing(t.inner) or self.holds_loan(t.inner)
+        if isinstance(t, OptionalT):
+            return self.holds_loan(t.inner)
+        if isinstance(t, TupleT):
+            return any(self.holds_loan(x) for x in t.items)
+        if isinstance(t, RecordT):
+            return any(self.holds_loan(x) for _, x in t.fields)
+        return False
+
+    def keep_nested(self, holder: str, depth: int, t: Type, e) -> List[Loan]:
+        """A binding receives a value of type `t` from expression `e` (D-348). When `t` holds a loan of an
+        ownership-bearing value, the binding holds, until the end of its block, the loans the value carries inside it:
+        those of the calls in `e` (`xs.get(0)`, `(xs.get(0), 1)`, `xs.get(0) ?? alias d`) and those of the bindings `e`
+        reads (`move t`, `t ?? u`). Otherwise those loans end with the statement. Returns the loans it holds."""
+        keep = self.holds_loan(t)
+        rest, held = [], []
+        for l in self.carried:
+            if not l.nested:
+                rest.append(l)
+            elif keep:
+                l.holder, l.depth = holder, depth
+                held.append(l)
+            elif l in self.own.loans:
+                self.own.loans.remove(l)
+        self.carried = rest
+        if keep and e is not None:
+            names = {tk.text for tk in tokens(e) if tk.kind == "LOWER"}
+            for l in list(self.own.loans):
+                # a parameter's loan of its own argument is the caller's and outlives the function: not passed on
+                if l.holder in names and l.holder != holder and root_of(l.owner) != l.holder:
+                    via = l.via if l.via is not None else (l.holder if l.mode == "alias" else None)
+                    c = Loan(l.owner, l.mode, holder, depth, l.line, True, via)
+                    self.own.loans.append(c)
+                    held.append(c)
+        return held
 
     def carries_onward(self, t: Type) -> bool:
         """Whether a value of type `t` can carry a loan onward: a future, a task or a loan, also inside an optional, an
@@ -1403,6 +1815,9 @@ class Typer:
 
     def check_arg_marker(self, e, p_name: str, mode: str, t: Type, tok: Token, env: Env):
         """A bare ownership-bearing place where the parameter mode needs a marker (7.5)."""
+        lent_marked = find(e, "markerExpr") is not None and tokens(e)[0].text in ("alias", "editable")
+        if mode.lstrip(".") in ("owned", "payload") and not lent_marked:      # a written `alias` is E-OWN-001 at its marker
+            self.loan_into_owned(t, None, tok, f"`{p_name}`")
         path = self.path_of_expr(e)
         if path is None:
             lit = tokens(e)
@@ -1571,6 +1986,7 @@ class Typer:
             return self.check_call_at(sig, al, env, m, where, tok, expected)
         finally:
             self.call_depth -= 1
+            self.call_sigs[(tok.line, tok.col)] = sig      # the callee at its name token, for `@ignorable` statements (5.5)
 
     def check_call_at(self, sig: Sig, al, env: Env, m: Dict[str, Type], where: str, tok: Token, expected: Optional[Type] = None) -> Type:
         """Bind arguments to parameters, type them, infer method type parameters, return the result type."""
@@ -1592,11 +2008,15 @@ class Typer:
             e = self.arg_expr(a)
             if ts and ts[0].text == "...":
                 continue
+            pun = pun_name(a) if seen_named else None       # `wanted` after a named argument is `wanted: wanted` (5.8, X-345)
+            if pun is not None:
+                ts = [pun, Token("PUNCT", ":", pun.line, pun.col)]
             if ts and ts[0].kind == "LOWER" and len(ts) > 1 and ts[1].text == ":":
                 seen_named = True
                 p = next((p for p in params if p[0] == ts[0].text), None)
                 if p is None:
-                    self.typ("E-TYP-130", f"{where} has no parameter `{ts[0].text}`", ts[0], ", ".join(p[0] for p in params), ts[0].text, ts[0].text, "LANG-05-09")
+                    why = f" (`{ts[0].text}` after a named argument stands for `{ts[0].text}: {ts[0].text}`)" if pun is not None else ""
+                    self.typ("E-TYP-130", f"{where} has no parameter `{ts[0].text}`{why}", ts[0], ", ".join(p[0] for p in params), ts[0].text, ts[0].text, "LANG-05-09")
                     self.infer(e, env)
                     continue
                 if p[0] in bound:
@@ -1625,8 +2045,10 @@ class Typer:
         self.res_stack.append(saved_res)
         recv = self.receiver
         self.receiver = None
+        spans: Dict[str, Tuple[int, int]] = {}         # the reservations each argument made, by parameter (D-348)
         if recv is not None:
             self.reserve(recv[0], recv[1] if recv[1] != "alias" else "alias", tok)
+            spans["self"] = (0, len(self.own.reservations))
         origin = sig.ret.origin if isinstance(sig.ret, LoanT) else None
         temps: List[Token] = []
         # A pending lambda suppresses an empty-function pin only for a type parameter it can
@@ -1641,9 +2063,11 @@ class Typer:
                 continue
             pmode = "from" if origin == p[0] else ("loan" if isinstance(p[1], LoanT) else p[2])
             self.arg_mode = pmode
+            n0 = len(self.own.reservations)
             t = self.infer(e, env, expected=self.subst(p[1], m))
             self.arg_mode = None
             self.check_arg_marker(e, p[0], pmode, t, tokens(e)[0], env)
+            spans[p[0]] = (n0, len(self.own.reservations))
             if "async" in sig.modifiers and pmode in ("", "loan") and self.lends_temporary(e, t):
                 temps.append(tokens(e)[0])
             shared = self.tparams_of(p[1]) & pending_names
@@ -1659,7 +2083,9 @@ class Typer:
             t = self.infer(e, env, expected=self.subst(p[1], m))
             self.unify(p[1], t, m)
             arg_types.append((p, t, e))
-        self.activate(tok, self.result_carries(sig), env)
+        carries = self.result_carries(sig)
+        keep = {i: mode for o, mode in ({} if carries else self.nested_origins(sig.ret)).items() for i in range(*spans.get(o, (0, 0)))}
+        self.activate(tok, carries, env, keep)
         self.res_stack.pop()
         self.own.reservations = saved_res
         self.call_decl, self.call_label = call_decl, call_label
@@ -2133,6 +2559,23 @@ class Typer:
         self.note_field_closure(d, field, self.subst(d.fields[field][0], mm), value_ty, tok)
 
     # ---- assignability ------------------------------------------------------------------
+    def enum_operand(self, t: Type) -> Optional[Type]:
+        """The enum a comparison's left operand has (an optional one's present type), which the right operand is expected
+        to have, so a bare variant there is read as that enum's (9.7, X-345); None for any other type."""
+        s = strip(t)
+        if isinstance(s, OptionalT):
+            s = strip(s.inner)
+        d = self.decl_of(s) if known(s) else None
+        return s if d is not None and d.kind == "enum" else None
+
+    def widened(self, t: Type) -> Type:
+        """The type an unannotated binding takes from its initialiser (5.1): a computed integer interval or a literal's exact
+        value widens to its base type, which stays a fact; an inferred lambda result takes the same (8.2, X-345)."""
+        t = concrete(t)
+        if isinstance(t, Refined) and t.kind in ("exact", "range") and self.is_int(t):
+            return t.base
+        return t
+
     def stamp_literal(self, t: Type) -> Type:
         """A core literal names the standard type. `10ms` is `Duration` of `fortis.time`, the origin a signature
         parsed against the prelude's copy carries. An unstamped name would be a different type."""
@@ -2211,7 +2654,25 @@ class Typer:
 
     # ---- expressions ------------------------------------------------------------------
     def infer(self, node, env: Env, expected=None):
-        t = self._infer(node, env, expected)
+        ops = self.test_region(node)
+        if ops:
+            # unproved `Int` arithmetic in a test body is a checked region with an implied `or fail` (14, 6.4; X-345)
+            self.regions.append({"ops": ops, "checked": []})
+            try:
+                t = self._infer(node, env, expected)
+            finally:
+                region = self.regions.pop()
+            if region["checked"]:
+                first = region["checked"][0]
+                self.eff.add("fail", "proved", first)
+                self.unwind_point(first, "or fail", env)
+                if self.defer_depth:
+                    self.def_err("E-DEF-001", "failing arithmetic inside a deferred block: there is no outcome to propagate to (12.1)", first, "or fail")
+                self.implied_regions.add(min(ops))
+        else:
+            t = self._infer(node, env, expected)
+        if self.test_body and not isinstance(node, Token) and name(node) in ("postfixExpr", "markerExpr") and id(node) not in self.consumed_ops:
+            t = self.implied_or_fail(node, t, env)
         if isinstance(t, Unknown) and t.why == "generic result" and expected is None and not self.branch_target and not isinstance(node, Token):
             # a call whose arguments do not fix its type arguments, with no expected type to fix them (6.10): a
             # proved inference failure, repaired by annotating the receiving binding
@@ -2250,7 +2711,7 @@ class Typer:
                 return Unknown()
             if isinstance(ls, OptionalT):
                 self.expect(right, ls.inner, tokens(kids[2])[0], "`??` fallback")
-                return ls.inner
+                return self.coalesce_result(ls.inner, right, kids[0], kids[2], env)
             return Unknown()
         if n in ("orExpr", "andExpr"):
             if len(kids) == 1:
@@ -2291,7 +2752,8 @@ class Typer:
         if n in ("equalityExpr", "relationalExpr"):
             if len(kids) == 1:
                 return self.infer(kids[0], env, expected)
-            l, r = self.infer(kids[0], env), self.infer(kids[2], env)
+            l = self.infer(kids[0], env)
+            r = self.infer(kids[2], env, expected=self.enum_operand(l))   # `s == Error`: the left operand's enum (9.7, X-345)
             self.compare(kids[1], l, r)
             return BOOL
         if n == "rangeExpr":
@@ -2399,8 +2861,12 @@ class Typer:
                 self.settle_element()
             return RecordT(tuple(fields))
         if n == "argList":
+            # the arguments of a call the checker could not resolve: every expression in them is typed with no context,
+            # which proves nothing about what it expects (D-304)
+            self.unresolved_args += 1
             for a in find_all(node, "expr"):
                 self.infer(a, env)
+            self.unresolved_args -= 1
             return VOID
         for c in kids:
             if not isinstance(c, Token):
@@ -2449,6 +2915,23 @@ class Typer:
             return base                    # bitwise operators are total (6.4 lists only + - * / % << >> as proof-required)
         checked = {"+": "Int.add", "-": "Int.sub", "*": "Int.mul", "/": "Int.div", "%": "Int.rem", "<<": "Int.shiftLeft"}.get(op.text, "a checked operation")
         r = iv.arith(op.text, a, b, width)
+        if self.regions and (op.line, op.col) in self.regions[-1]["ops"] and base.name in ("Int", "Int64") and op.text in CHECKED_OPS and not self.proved(op, base, a, b, r):
+            # the checked operation (6.4, X-345): it fails as `Int.add` and its family fail, and its success value has the
+            # operation's interval clipped to the type's range, as theirs does (6.3)
+            self.regions[-1]["checked"].append(op)
+            self.checked_ops.add((op.line, op.col))
+            clipped = iv.meet(r, full) if r is not None else None
+            return Refined(base, clipped[0], clipped[1]) if clipped is not None else base
+        if base.name in ("Int", "Int64") and op.text in CHECKED_OPS:
+            form = "-x" if op.text == "-" and a == (0, 0) else f"a {op.text} b"
+            checked = f"{checked}, or write the operator as the checked operation: `{form} or fail` (or `or recover`, `catch`)"
+        elif base.name not in ("Int", "Int64"):
+            # the sized integer types have no checked family (6.4): only a proof makes the operator safe
+            checked = f"a refined type or a test that proves it ({base.name} has no checked operation)"
+        else:
+            checked = f"a refined type or a test that proves it (`{op.text}` has no checked operation)"
+        if self.regions and (op.line, op.col) in self.regions[-1]["ops"] and not self.proved(op, base, a, b, r):
+            self.regions[-1]["refused"] = True     # rejected below: the region's handler adds no record of its own (6.4)
         if r is None:
             why = "the divisor may be zero" if op.text in ("/", "%") else f"the shift amount is not proved within [0, {width - 1}]"
             status = "violated" if (op.text in ("/", "%") and b == (0, 0)) else "unproved"
@@ -2462,6 +2945,17 @@ class Typer:
             self.ref("E-REF-002", f"`{op.text}` may overflow {base.name}: operands {self.show_iv(a)} and {self.show_iv(b)} give {self.show_iv(r)}; use {checked}", op, status, self.show_iv(full), self.show_iv(r))
             return base
         return Refined(base, r[0], r[1])
+
+    @staticmethod
+    def proved(op: Token, base: Named, a: iv.Interval, b: iv.Interval, r: Optional[iv.Interval]) -> bool:
+        """Whether the interval rules prove an integer operation safe (6.4): no division by zero, no out-of-range shift, no
+        `MIN / -1` and no overflow."""
+        full = INT_TYPES[base.name]
+        if r is None:
+            return False
+        if op.text == "/" and a[0] <= full[0] and b[0] <= -1 <= b[1]:
+            return False
+        return full[0] <= r[0] and r[1] <= full[1]
 
     def compare(self, op: Token, l: Type, r: Type):
         ls, rs = concrete(strip(l)), concrete(strip(r))
@@ -2496,15 +2990,31 @@ class Typer:
     def outcome(self, node, env: Env, expected) -> Type:
         kids = children(node)
         words = [k.text for k in kids if isinstance(k, Token)]
+        # the left operand of an outcome operator, when it is integer arithmetic, is a checked region: an `Int` operator
+        # in it that the interval rules cannot prove safe is the checked operation, and the region fails as it fails
+        # (6.4, X-345)
+        ops = region_operators(kids[0]) if len(kids) > 1 else set()
+        if ops:
+            self.regions.append({"ops": ops, "checked": []})
+        if len(kids) > 1:
+            self.mark_consumed(kids[0])             # `or` and `catch` consume the outcome themselves (14)
         left = self.infer(kids[0], env, expected if len(kids) == 1 else None)
+        region = self.regions.pop() if ops else None
         if len(kids) == 1:
             return left
+        if region is not None and region["checked"]:
+            left = Named("Outcome", (left,))
         ls = strip(left)
         inner: Type = Unknown("outcome")
         if isinstance(ls, Named) and ls.name == "Outcome" and ls.args:
             inner = ls.args[0]
         elif known(ls):
-            self.typ("E-TYP-040", f"`{' '.join(words[:2])}` needs an Outcome left operand, got {ls.show()}", tokens(kids[0])[0], "Outcome[T]", ls.show(), words[0], "LANG-06-08")
+            if region is not None and region.get("refused"):
+                pass                                # an operator the region could not check is E-REF-002 already (6.4)
+            elif region is not None:
+                self.typ("E-TYP-040", f"`{' '.join(words[:2])}` needs an Outcome left operand: this arithmetic is proved safe ({ls.show()}) and cannot fail, so drop `{' '.join(words[:2])}`", tokens(kids[0])[0], "Outcome[T]", ls.show(), words[0], "LANG-06-08")
+            else:
+                self.typ("E-TYP-040", f"`{' '.join(words[:2])}` needs an Outcome left operand, got {ls.show()}", tokens(kids[0])[0], "Outcome[T]", ls.show(), words[0], "LANG-06-08")
             return Unknown()
         self.consume(self.path_of_expr(kids[0]))
         if "fail" in words:
@@ -2533,6 +3043,7 @@ class Typer:
                 if r == OptionalT(NEVER) and not isinstance(strip(target), OptionalT):
                     return OptionalT(target)           # `e or recover null`: the expression is T? (6.8)
                 self.expect(r, target, tokens(kids[-1])[0], "`or recover` value")
+                self.loan_into_owned(r, target, tokens(kids[-1])[0], "the `or recover` value")
             return target
         # catch e { ... }
         ident = next(k for k in kids if isinstance(k, Token) and k.kind == "LOWER")
@@ -2570,6 +3081,7 @@ class Typer:
         for t, tok in rec:
             if known(target):
                 self.expect(t, target, tok, "`recover` value")
+                self.loan_into_owned(t, target, tok, "the `recover` value")
         return target                       # plug-in: every path ends in recover/return/fail (E-OBL-002, DEL-17)
 
     def marker(self, node, env: Env) -> Type:
@@ -2585,10 +3097,14 @@ class Typer:
         path = self.path_of_place(pl) if not call_follows else ".".join([direct_tokens(pl)[0].text] + [tokens(k)[0].text for k in members[:-1]])
         self.use_place(path, mtok, "copy" if mk == "copy" else mk, env)
         if mk == "copy":
-            base = strip(self.declared_type(pl, env)) if not call_follows else Unknown()
+            # `copy v` of a binding that holds a loan copies the value it lends, narrowed or not (7.5; D-341)
+            declared = self.declared_type(pl, env) if not call_follows else Unknown()
+            lent_decl = self.lent(declared)
+            base = lent_decl if lent_decl is not None else strip(declared)
             if known(base) and not self.dc.is_trivial(base):
                 self.eff.add("alloc", "proved", mtok)          # copy of a heap-owning value allocates (6.11)
             if known(base) and not self.dc.is_copyable(base):
+                self.copy_refused.add((mtok.line, mtok.col))
                 self.own_err("E-OWN-002", f"`copy {path}`: {base.show()} is not Copyable (6.11)", mtok, path, "copy of a non-copyable place", "LANG-07-08" if isinstance(base, Named) and base.name in ("Shared", "Weak") else "LANG-07-01")
         if len(kids) > 2:
             self.receiver = (path, mk)               # the marker applies to the receiver of the call that follows (7.6)
@@ -2634,6 +3150,8 @@ class Typer:
         if len(kids) == 2:
             if mk in ("alias", "editable") and known(t) and not isinstance(t, LoanT):
                 return LoanT(t, mk, direct_tokens(pl)[0].text)
+            if mk == "copy" and (owned := self.lent(t)) is not None:
+                return owned                         # a copy is owned, whatever the place holds (7.5; D-341)
             return t
         rest = kids[2:]
         if name(rest[0]) == "methodCall":
@@ -2815,10 +3333,12 @@ class Typer:
         if d.name == "Scope" and m in ("launchParallel", "launchBlocking"):
             self.check_pool_launch(m, al, env, mtok)
         self.receiver = marked
-        if self.receiver is None and rp is not None and self.is_bearing(recv) and sig.receiver is not None:
-            if sig.receiver == "editable self":
-                self.own_err("E-OWN-001", f"`{m}` takes `editable self`: write `editable {rp}.{m}(…)`", mtok, rp, "editable receiver marker required", "LANG-07-01")
-            elif sig.receiver == "owned self":
+        if self.receiver is None and rp is not None and sig.receiver == "editable self":
+            # reached only on a root `editable` could not be written on (X-345; D-303: whatever the receiver's type, a
+            # trivial value or a read loan included): a `let` binding, a read parameter, capture or loan, a read `self`
+            self.own_err("E-OWN-001", f"`{m}` takes `editable self`, and `{rp}` cannot change: declare it `let mut` or take it `editable`", mtok, rp, "editable receiver on an immutable root", "LANG-07-01")
+        elif self.receiver is None and rp is not None and self.is_bearing(recv) and sig.receiver is not None:
+            if sig.receiver == "owned self":
                 self.own_err("E-OWN-001", f"`{m}` takes `owned self`: write `move {rp}.{m}(…)`", mtok, rp, "move receiver marker required", "LANG-07-01")
             else:
                 self.receiver = (rp, "alias")        # implicit read loan of the receiver for the call
@@ -2836,6 +3356,9 @@ class Typer:
         self.pending_owner_where = tuple(getattr(d, "where", ()) or ())
         if self.result_expected is not None:
             self.pending_call_expected = self.result_expected   # copied here, after every early return (8.4)
+        if d.name == "Map" and d.module == "fortis.prelude" and m == "get" and mm.get("K") == STRING and sig.params:
+            # `get` only reads its key: on a Map[String, V] the key is a StringView, so no copy makes one (6.7, X-345)
+            sig = dataclasses.replace(sig, params=[(sig.params[0][0], STRING_VIEW, sig.params[0][2])] + list(sig.params[1:]))
         t = self.check_call(sig, al, env, mm, f"{d.name}.{m}", mtok)
         if d.name == "Scope" and m in ("launch", "launchParallel") and al is not None:
             # a future launched directly owns its call's own temporaries (its arguments and receiver): they live as
@@ -2945,6 +3468,14 @@ class Typer:
             s = strip(t)
             if isinstance(s, FnT):
                 cp = self.coll_path
+                if cp is not None and s.kind == "fn mut" and self.unmarked_editable_root(cp, env):
+                    # X-345: a `fn mut` held by a binding that shows it may change is called as `editable f(…)` (8.2)
+                    self.unmarked_editable(cp, first, env)
+                    info = self.closures.get(root_of(cp), {})
+                    for cap, cm in info.get("captures", []):
+                        if cm == "editable":
+                            self.facts.invalidate(cap)        # a reachable editable capture of a called closure (6.3)
+                    return self.call_fn(s, al, env, "closure", first, info.get("eff"))
                 if cp is not None and s.kind == "fn mut":
                     self.own_err("E-OWN-001", f"a `fn mut` closure is called `editable {cp}(…)`", first, cp, "editable call marker required", "LANG-08-02")
                 elif cp is not None and s.kind == "fn once":
@@ -3050,25 +3581,54 @@ class Typer:
                 if len(kids) == 2:
                     self.pending_call_expected = expected   # the call is the chain's result
                 t = self.check_call(fd.sig, find(kids[1], "argList"), env, {}, pk[0].text, pk[0])
-                for pf in kids[2:]:
+                if len(kids) > 2:
+                    t = self.unwrap_call(pk[0], t, env)        # a receiver in a test body (14)
+                for i, pf in enumerate(kids[2:]):
                     self.temp_field_siblings(t, pf)
                     t = self.apply_postfix(t, pf, env)
+                    ct = postfix_call_token(kids[1:], i + 1, prim)
+                    if ct is not None and i + 3 < len(kids):
+                        t = self.unwrap_call(ct, t, env)
                 return t
         t = self.primary(prim, env, expected if len(kids) == 1 else None)
         path = self.path_of_expr(prim)
+        member_toks: List[Token] = []
         pfs = kids[1:]
+        if pfs and self.test_body:
+            pt0 = call_name_token(("postfixExpr", [prim]))
+            if pt0 is not None:
+                t = self.unwrap_call(pt0, t, env)          # `Type.m(a).n()` in a test body (14)
         for i, pf in enumerate(pfs):
+            if i > 0 and self.test_body:
+                ct = postfix_call_token(pfs, i - 1, prim)
+                if ct is not None:
+                    t = self.unwrap_call(ct, t, env)       # the receiver of the next postfix, in a test body (14)
             # only the last call's result is the chain's result; an earlier `List.of` must not see it (8.4)
             self.result_expected = expected if i == len(pfs) - 1 else None
             self.coll_path = path
             is_mc = name(pf) == "methodCall" or (children(pf) and name(children(pf)[0]) == "methodCall")
             if path is not None and not self.in_marker and is_mc:
-                self.use_place(path, tokens(prim)[0], "read", env)
+                mc = pf if name(pf) == "methodCall" else children(pf)[0]
+                if self.receiver_mode(t, tokens(find(mc, "memberName"))[0].text) == "editable self" and self.unmarked_editable_root(path, env):
+                    # X-345: the declaration shows the receiver is editable; checked as `editable p.m(…)` (7.5), whatever
+                    # the receiver's type: a trivial value or a binding holding a loan takes the same exclusive loan (D-303)
+                    saved_f, self.facts = self.facts, Facts()
+                    decl_t = self.root_type(tokens(prim)[0], env)
+                    for mt in member_toks:
+                        decl_t = self.member_type(decl_t, mt)
+                    self.facts = saved_f
+                    decl_t = strip(decl_t)
+                    if isinstance(decl_t, Refined) and decl_t.kind == "length":
+                        self.ref("E-REF-003", f"`{path}` has a length refinement and may not be loaned editable", tokens(prim)[0], "violated", decl_t.show(), "")
+                    self.unmarked_editable(path, tokens(prim)[0], env)
+                else:
+                    self.use_place(path, tokens(prim)[0], "read", env)
             if path is None:
                 self.temp_field_siblings(t, pf)
             t = self.apply_postfix(t, pf, env)
             k = children(pf)
             if path is not None and k and isinstance(k[0], Token) and k[0].text == "." and len(k) > 1 and name(k[1]) == "memberName":
+                member_toks.append(tokens(k[1])[0])
                 path = path + "." + tokens(k[1])[0].text
                 if not is_mc:
                     t = self.fact_type(path, t)       # `d.p.read()` sees `d.p` as the null test narrowed it (6.8)
@@ -3197,6 +3757,17 @@ class Typer:
             if dq is not None and dq.kind != "unknown":
                 d = dq
         tr_tok = next(x for x in tokens(tr) if x.kind == "UPPER")
+        # a bare variant where the expected type is that enum (9.7) whose name also reaches a declaration in scope is
+        # ambiguous: the qualified form says which is meant, so a name never silently changes meaning (X-345)
+        if d is not None and member is None and isinstance(t, Named) and rts[0].kind == "UPPER" and expected is not None:
+            es = strip(expected)
+            ed = self.decl_of(es)
+            if ed is not None and ed.kind == "enum" and t.name in ed.variants and not (d.kind == "enum" and d.name == ed.name):
+                self.typ("E-TYP-040", f"`{t.name}` is ambiguous: the {d.kind} `{d.name}` is in scope and {ed.name}, the expected type, declares `{t.name}` as a variant; write `{ed.name}.{t.name}`",
+                         tr_tok, f"{ed.name}.{t.name}", f"{d.kind} {d.name}", t.name)
+                if al is not None:
+                    self.infer(al, env)
+                return es
         # a bare variant where the expected type is that enum (9.7)
         if d is None and member is None and isinstance(t, Named):
             es = strip(expected) if expected is not None else None
@@ -3227,6 +3798,12 @@ class Typer:
                 forms = " or ".join(f"`{o}.{t.name}`" for o in owners)
                 self.rec("E-NAM-001", f"`{t.name}` is ambiguous: {listed} declare it as a variant; write {forms}", "LANG-04-05", tr_tok,
                          {"name": t.name, "candidates": [f"{o}.{t.name}" for o in owners]})
+            elif len(owners) == 1 and not self.unresolved_args and not isinstance(es, Unknown) and not isinstance(es.inner if isinstance(es, OptionalT) else es, FnT):
+                # the bare form is read only where the expected type is the enum (9.7): with no such type the value has no
+                # type, and no backend could build it (D-304, X-345). An unknown expected type is not a proof, and where a
+                # function (or an optional one: an aspect's `fallback`) is expected the name is the variant's constructor.
+                self.typ("E-TYP-040", f"`{t.name}` is a variant of {owners[0]}, but nothing here expects a {owners[0]}: the bare form is read only where the expected type is that enum; write `{owners[0]}.{t.name}`",
+                         tr_tok, f"{owners[0]}.{t.name}", "a bare variant with no expected enum", t.name)
         if d is None:
             if al is not None:
                 self.infer(al, env)
@@ -3256,14 +3833,19 @@ class Typer:
                 return Unknown("newtype call")
             if d.kind == "error" and called:
                 payload = getattr(d, "payload", None) or {}
+                seen_named = False
                 for a in self.arg_nodes(al):
                     ats = tokens(a)
                     lbl = ats[0].text if len(ats) > 1 and ats[1].text == ":" else None
+                    if lbl is None and seen_named and pun_name(a) is not None:
+                        lbl = pun_name(a).text                    # `wanted` after a named argument is `wanted: wanted` (5.8, X-345)
+                    seen_named = seen_named or lbl is not None
                     e = self.arg_expr(a)
                     want = payload.get(lbl) if lbl is not None else None
                     at = self.infer(e, env, expected=want) if e is not None else Unknown("arg")
                     if want is not None and known(at) and known(want):
                         self.expect(at, want, ats[0], f"payload field `{lbl}` of {d.name}")
+                        self.loan_into_owned(at, want, ats[0], f"payload field `{lbl}` of {d.name}")
                     ft_ = want if want is not None else at
                     if known(strip(ft_)) and isinstance(base_type(ft_), Named) and base_type(ft_).name in ("String", "Bytes", "List", "Map", "Set"):
                         self.eff.add("alloc", "proved", ats[0])      # an unbounded payload allocates (10.3, noalloc try)
@@ -3382,7 +3964,8 @@ class Typer:
         args = self.arg_nodes(al)
         if not payload and args:
             self.typ("E-TYP-130", f"variant {d.name}.{vname} has no payload", tok, "no arguments", f"{len(args)}", vname, "LANG-05-09")
-        sig = Sig(vname, [(f, t, "") for f, t in payload], d.as_named(), None, (), (), True)
+        # a payload is passed as a read parameter is, but the variant owns it: a loan there needs `copy` (D-341)
+        sig = Sig(vname, [(f, t, "payload") for f, t in payload], d.as_named(), None, (), (), True)
         if payload and al is not None:
             self.call_decl, self.call_label = d, f"variant {d.name}.{vname}"
             self.check_call(sig, al, env, {}, f"{d.name}.{vname}", tok)
@@ -3434,13 +4017,17 @@ class Typer:
                     elif ts[1].text == "move" and self.is_linear(ft):
                         self.obl_err("E-OBL-007", f"`...move` drops field `{f}` ({ft.show()}), which is linear and has no counterpart in {d.name}", tokens(a)[0], f"{tokens(a)[0].line}:{tokens(a)[0].col}", f, "LANG-10-02")
                 continue
+            pun = pun_name(a)                                # `sku` is `sku: sku`: constructor arguments are named (9.2, X-345)
+            if pun is not None:
+                ts = [pun, Token("PUNCT", ":", pun.line, pun.col)]
             if not (ts and ts[0].kind == "LOWER" and len(ts) > 1 and ts[1].text == ":"):
                 self.typ("E-TYP-130", f"constructor arguments of {d.name} are named (field: value)", tokens(a)[0], "field: value", "positional", d.name, "LANG-09-02")
                 self.infer(e, env)
                 continue
             f = ts[0].text
             if f not in d.fields:
-                self.typ("E-TYP-130", f"{d.name} has no field `{f}`", ts[0], ", ".join(d.fields), f, f, "LANG-09-02")
+                why = f" (`{f}` stands for `{f}: {f}`)" if pun is not None else ""
+                self.typ("E-TYP-130", f"{d.name} has no field `{f}`{why}", ts[0], ", ".join(d.fields), f, f, "LANG-09-02")
                 self.infer(e, env)
                 continue
             if f in given:
@@ -3531,6 +4118,11 @@ class Typer:
                 self.obl_err("E-OBL-006", f"this `{kind}` lambda captures a linear value by move: a closure owning a linear value must be `fn once`", tokens(node)[0], f"{tokens(node)[0].line}:{tokens(node)[0].col}", "closure", "LANG-10-02")
         rt_node = next((c for c in children(node) if name(c) == "type"), None)
         rt = self.dc.type_of(rt_node) if rt_node is not None else Unknown("lambda result")
+        # an expression body may leave out its return type (8.2, X-345): the callee's parameter type decides it when
+        # that type names one, otherwise the body's type does, widened as an unannotated `let` widens its initialiser
+        inferred_rt = rt_node is None
+        if inferred_rt and exp_fn is not None and known(strip(exp_fn.ret)) and not self.has_free(exp_fn.ret):
+            rt = exp_fn.ret
         mods = tree_mod.child(node, "modifiers")
         written = tuple(t.text for t in tokens(mods)) if mods else ()
         lam_contracts = tuple(m for m in written if m[:1].isupper())
@@ -3549,7 +4141,7 @@ class Typer:
                 if self.is_authority(t):
                     self.eff_err("E-EFF-001", f"lambda is declared `pure` but takes the capability {base_name(self.unshared(t))}: a pure function receives no authority (11.5)",
                                  tokens(node)[0], "pure", "io", "lambda", "LANG-11-06")
-        body = tree_mod.child(node, "funcBody")
+        body = lambda_body(node)
         if body is not None:
             saved = (self.ret_type, self.in_try, self.ctx, self.loop_labels, self.facts, self.own, self.depth, self.arg_mode, self.pending, self.carried, self.res_stack, self.carried_temps)
             self.ret_type, self.in_try, self.ctx, self.loop_labels, self.facts, self.own, self.depth, self.arg_mode, self.pending, self.carried, self.res_stack, self.carried_temps = rt, "try" in modifiers, ["lambda"], [], Facts(), Owners(), 0, None, None, [], [], []
@@ -3559,7 +4151,11 @@ class Typer:
             outer_flow = (self.exit_frames, self.break_frames, self.defer_bodies, self.block_rest, len(iv.LOG))
             self.exit_frames, self.break_frames, self.defer_bodies, self.block_rest = [], [], [], []
             outer_eff, self.eff = self.eff, Summary()
-            self.body(body, e, rt, tokens(node)[0], "lambda")
+            outer_test, self.test_body = self.test_body, False      # a lambda's body is its own function, not the test's (14)
+            body_t = self.body(body, e, rt, tokens(node)[0], "lambda")
+            self.test_body = outer_test
+            if inferred_rt and not known(strip(rt)) and body_t is not None:
+                rt = self.widened(body_t)
             self.exit_frames, self.break_frames, self.defer_bodies, self.block_rest, log_mark = outer_flow
             del iv.LOG[log_mark:]
             if isinstance(strip(rt), FnT):
@@ -3630,6 +4226,7 @@ class Typer:
         kids = children(node)
         moving = any(isinstance(k, Token) and k.text == "move" for k in kids)
         scrut = next((c for c in kids if name(c) in ("expr", "place")), None)
+        self.mark_consumed(scrut)                   # a `match` consumes its outcome itself (14)
         st = strip(self.infer(scrut, env))
         if is_strlit(st): st = STRING_VIEW
         sp = self.path_of_place(scrut) if name(scrut) == "place" else self.path_of_expr(scrut)
@@ -3658,28 +4255,36 @@ class Typer:
             # the live arm does not carry the residual's half: an inner join would report it early or drop it
             self.own = own_residual.copy()
             e = Env(env)
-            pat = find(arm, "pattern")
+            pats = self.arm_patterns(arm)
+            pat = pats[0]
             guard = next((c for c in children(arm) if name(c) == "expr" and children(arm).index(c) < len(children(arm)) - 1 and any(isinstance(k, Token) and k.text == "when" for k in children(arm))), None)
             # A fact about a name this arm binds belongs to this binding only (6.8, 9.8). Drop what an earlier arm
             # recorded under that name before this pattern and its guard establish their own facts. `outer` is what the
             # name meant on entry; residual and exit states put it back, so a later arm or the code after the match
             # does not inherit this binding's guard (a field path of the name included).
-            bound = self.names_in(pat)
+            bound = [b for p in pats for b in self.names_in(p)]
             outer = self.facts.split_off_names(bound)
-            cov, is_catch = self.pattern(pat, st, e, moving)
+            if len(pats) > 1:
+                self.check_alternatives(pats, next((k for k in children(arm) if isinstance(k, Token) and k.text == "when"), None))
+            cov, is_catch = set(), False
+            for p in pats:
+                c, k = self.pattern(p, st, e, moving)
+                cov |= c
+                is_catch = is_catch or k
             arm_holders = []
             arm_obligations = []
             if owning:
-                for b in self.names_in(pat):
+                for b in bound:
                     if b in e.vars and self.is_linear(e.vars[b].type):
                         self.own.obligations[b] = (tokens(pat)[0], self.depth + 1)
                         arm_obligations.append(b)
-                pt = direct_tokens(pat)
-                if pt and pt[0].text == "is" and "as" not in [t.text for t in pt] and isinstance(st, Named) and st.name == "Failure":
-                    self.discharges.append({"line": pt[0].line, "kind": "is-arm without as"})   # discharged: recovers effect (DEL-19)
-                    self.eff.add("recovers", "proved", pt[0])
+                for p in pats:
+                    pt = direct_tokens(p)
+                    if pt and pt[0].text == "is" and "as" not in [t.text for t in pt] and isinstance(st, Named) and st.name == "Failure":
+                        self.discharges.append({"line": pt[0].line, "kind": "is-arm without as"})   # discharged: recovers effect (DEL-19)
+                        self.eff.add("recovers", "proved", pt[0])
             if sp is not None and not moving:
-                for b in self.names_in(pat):
+                for b in bound:
                     if b in e.vars:
                         e.vars[b].kind = "pattern-loan"
                         self.own.holders[b] = self.own.add_loan(sp, "alias", b, self.depth + 1, tokens(pat)[0].line)
@@ -3693,12 +4298,12 @@ class Typer:
                     if r["code"] == "E-TYP-010" and r["message"].startswith("condition has type"):
                         r["message"] = "guard" + r["message"][len("condition"):]
                         r["fields"]["primary_span"] = "when"
-                residual = false_f.copy() if (is_catch or self.irrefutable(pat)) else residual.join(false_f)
+                residual = false_f.copy() if (is_catch or any(self.irrefutable(p) for p in pats)) else residual.join(false_f)
                 # own_outside_arm and the own_residual update read self.own, not self.facts. condition_states has
                 # typed the guard, so self.own is the post-guard state master snapshotted before the arm body. Take
                 # that before the body, and before self.facts becomes the true state the body sees.
                 guarded = self.own_outside_arm(arm_holders, arm_obligations)
-                if is_catch or self.irrefutable(pat):
+                if is_catch or any(self.irrefutable(p) for p in pats):
                     own_residual = self.retain_half(own_residual, guarded)   # replacing the residual must keep a half already found
                 else:
                     own_residual = self.join_own(own_residual, guarded)
@@ -3811,7 +4416,29 @@ class Typer:
         return cases is not None and all(self.covers(x, sub, strip(inner)) for x in cases)
 
     def irrefutable_present(self, arms) -> bool:
-        return any(self.irrefutable(find(arm, "pattern")) and not any(isinstance(k, Token) and k.text == "when" for k in children(arm)) for arm in arms)
+        return any(any(self.irrefutable(p) for p in self.arm_patterns(arm)) and not any(isinstance(k, Token) and k.text == "when" for k in children(arm)) for arm in arms)
+
+    @staticmethod
+    def arm_patterns(arm) -> list:
+        """An arm's patterns: one, or the alternatives of an or-pattern `A | B` (9.8, X-345)."""
+        return [c for c in children(arm) if name(c) == "pattern"]
+
+    def check_alternatives(self, pats, when_tok):
+        """The alternatives of an or-pattern bind no names and are not `otherwise`, and the arm takes no guard (9.8,
+        X-345): the arm body sees the same bindings, none, whichever alternative matched, and nothing runs twice."""
+        if when_tok is not None:
+            self.rec("E-MAT-003", "an or-pattern arm takes no `when` guard: match the guarded cases in arms of their own", "LANG-09-05", when_tok,
+                     {"missing_variants": [], "arm_set": " | ".join("".join(t.text for t in tokens(q)) for q in pats)})
+        for p in pats:
+            ts = direct_tokens(p)
+            if ts and ts[0].text == "otherwise":
+                self.rec("E-MAT-003", "`otherwise` cannot be an alternative of an or-pattern: write it as its own last arm", "LANG-09-05", ts[0],
+                         {"missing_variants": [], "arm_set": "otherwise"})
+                continue
+            for b in dict.fromkeys(self.names_in(p)):
+                bt = next((t for t in tokens(p) if t.text == b), ts[0] if ts else tokens(p)[0])
+                self.rec("E-MAT-003", f"an alternative of an or-pattern binds `{b}`: alternatives bind no names; match the cases apart, or use `_`", "LANG-09-05", bt,
+                         {"missing_variants": [], "arm_set": " | ".join("".join(t.text for t in tokens(q)) for q in pats)})
 
     def irrefutable(self, pat) -> bool:
         ts = direct_tokens(pat)
@@ -3969,6 +4596,45 @@ class Typer:
             return set(), False
         return set(), False
 
+    def let_refutable(self, pat, st: Type):
+        """The first part of a `let` pattern that can fail to match a value of `st`, or None (5.1; D-243). A `let`
+        destructures a class, tuple or record, so a variant, a literal, `null`, `present(…)`, `success(…)`,
+        `failure(…)` or `is …` pattern is refutable at any depth; `_` and a name always match. A pattern the typer
+        has already rejected against its type is left to that record."""
+        ts = direct_tokens(pat)
+        subs = [c for c in children(pat) if name(c) == "pattern"]
+        if not ts:
+            return pat if children(pat) and name(children(pat)[0]) == "literal" else None
+        head = ts[0]
+        if head.text in ("_", "otherwise") or (len(ts) == 1 and head.kind == "LOWER"):
+            return None
+        if head.text == "(":
+            items = list(st.items) if isinstance(st, TupleT) else [Unknown()] * len(subs)
+            return next((r for r in (self.let_refutable(p, t) for p, t in zip(subs, items)) if r is not None), None)
+        if head.text == "{":
+            fields = dict(st.fields) if isinstance(st, RecordT) else {}
+            keys = [t for t in ts if t.kind == "LOWER"]
+            return next((r for r in (self.let_refutable(p, fields.get(k.text, Unknown())) for k, p in zip(keys, subs)) if r is not None), None)
+        if head.kind == "UPPER":
+            d = self.decl_of(st)
+            if d is None or (d.kind == "class" and d.name != head.text):
+                return None
+            if d.kind != "class":
+                return pat if d.kind == "enum" else None
+            mm = self.recv_subst(st, d)
+            pfn = find(pat, "patternFields")
+            for pf in [c for c in children(pfn) if name(c) == "patternField"] if pfn is not None else []:
+                pts = direct_tokens(pf)
+                sub = find(pf, "pattern")
+                if sub is None:
+                    continue
+                named = len(pts) > 1 and pts[0].kind == "LOWER" and pts[1].text == ":" and pts[0].text in d.fields
+                r = self.let_refutable(sub, self.subst(d.fields[pts[0].text][0], mm) if named else Unknown())
+                if r is not None:
+                    return r
+            return None
+        return pat
+
     def field_patterns(self, pat) -> List:
         """The pattern of each field of a variant or class pattern (None for a field written without one)."""
         pfs = find(pat, "patternFields")
@@ -3977,7 +4643,8 @@ class Typer:
     def pattern_fields(self, pat, fields: Dict[str, Type], env: Env, moving: bool, tok: Token, label: str, require_all=False) -> List[Tuple[Set[str], bool]]:
         """Bind each field pattern; return each typed field pattern's (covered cases, is catch-all) in order (D-79)."""
         covs: List[Tuple[Set[str], bool]] = []
-        pfs = find_all(find(pat, "patternFields"), "patternField") if find(pat, "patternFields") is not None else []
+        pfn = find(pat, "patternFields")
+        pfs = [c for c in children(pfn) if name(c) == "patternField"] if pfn is not None else []    # its own, not a nested pattern's
         names_ = list(fields)
         seen = set()
         for i, pf in enumerate(pfs):
@@ -4241,11 +4908,101 @@ class Typer:
         if m is not None and name(children(e)[0]) == "outcomeExpr" and len(tokens(e)) and tokens(e)[0].text == "match":
             self.match(m, env, None, as_statement=True)
             return
+        if self.log_statement(inner, env):
+            return
         t = self.infer(e, env)
         if self.is_linear(t) and self.path_of_expr(e) is None:
             self.obl_err("E-OBL-001", f"the {strip(t).show()} produced here is dropped at the end of the statement; consume it (or fail, or recover, catch, match, bind it)", tokens(e)[0], f"{tokens(e)[0].line}:{tokens(e)[0].col}", "statement result")
-        elif known(strip(t)) and strip(t) not in (VOID, NEVER) and not self.is_linear(t) and find(e, "matchExpr") is None:
+        elif known(strip(t)) and strip(t) not in (VOID, NEVER) and not self.is_linear(t) and find(e, "matchExpr") is None and not self.ignorable_call(e):
             self.typ("E-TYP-140", f"the value of this statement ({strip(t).show()}) is unused: write `discard` to drop it (5.5)", tokens(e)[0], "Void or `discard`", strip(t).show(), "expression statement", "LANG-05-08")
+
+    def test_region(self, node) -> set:
+        """The operators of a checked region that a test body's arithmetic starts here (14, 6.4; X-345): integer
+        arithmetic not already inside a region (the left operand of `or` or `catch` is C's own), outside lambdas."""
+        if not self.test_body or isinstance(node, Token):
+            return set()
+        n, kids = name(node), children(node)
+        root = (n in ARITH_RULES and len(kids) > 1) or (n == "unaryExpr" and len(kids) == 2 and isinstance(kids[0], Token) and kids[0].text == "-")
+        if not root:
+            return set()
+        ops = region_operators(node)
+        if not ops or (self.regions and ops & self.regions[-1]["ops"]):
+            return set()
+        return ops
+
+    def mark_consumed(self, node):
+        """The single-child chain under a consuming operand: a call there keeps its outcome in a test body (14)."""
+        n = node
+        while n is not None and not isinstance(n, Token):
+            self.consumed_ops.add(id(n))
+            kids = children(n)
+            if name(n) == "primaryExpr" and len(kids) == 3 and isinstance(kids[0], Token) and kids[0].text == "(":
+                n = kids[1]                              # through parentheses: `(f()) or fail`
+                continue
+            n = kids[0] if len(kids) == 1 else None
+
+    def implied_or_fail(self, node, t: Type, env: Env) -> Type:
+        """In a `test` or `property` body, a call of a fallible function that nothing consumes is that call followed
+        by `or fail` (14, LANG-14-03; X-345): it has its success type, and a failure fails the test."""
+        tok = call_name_token(node)
+        if tok is None:
+            return t
+        return self.unwrap_call(tok, t, env, self.path_of_expr(node))
+
+    def unwrap_call(self, tok: Token, t: Type, env: Env, path: Optional[str] = None) -> Type:
+        """The implied `or fail` of a test body's call named at `tok` (14): its success type, when the call fails."""
+        s = strip(t)
+        if not (self.test_body and isinstance(s, Named) and s.name == "Outcome" and s.args):
+            return t
+        sig = self.call_sigs.get((tok.line, tok.col))
+        if sig is not None and "try" not in sig.modifiers:
+            return t                                  # a function that returns an Outcome it built is not a failing call
+        self.consume(path)
+        self.eff.add("fail", "proved", tok)
+        self.unwind_point(tok, "or fail", env)
+        if self.defer_depth:
+            self.def_err("E-DEF-001", "a failing call inside a deferred block: there is no outcome to propagate to (12.1)", tok, "or fail")
+        self.implied_fails.append((tok.line, tok.col))
+        return s.args[0]
+
+    def log_statement(self, inner, env: Env) -> bool:
+        """`log.info(m)`, `log.warn(m)`, `log.error(m)` (13, LANG-13-04; X-345): one `StringView` message, the `io`
+        effect like `report` and no authority. `log` is the statement only where it names nothing in scope."""
+        lc = log_call(inner)
+        if lc is None or env.lookup("log") is not None or self.table.get("log") is not None:
+            return False
+        _, level, al = lc
+        if level.text not in LOG_LEVELS:
+            return True                             # the names layer reports the level (E-NAM-001)
+        self.eff.add("io", "proved", level)           # the diagnostic plane, as `report` (10.6, 11.6)
+        args = self.arg_nodes(al)
+        if len(args) != 1 or any(t.text in (":", "...") for t in direct_tokens(args[0])):
+            self.typ("E-TYP-040", f"`log.{level.text}` takes one message", level, "one StringView argument", f"{len(args)} arguments", f"log.{level.text}")
+            for a in args:
+                self.infer(self.arg_expr(a), env)
+            return True
+        ae = self.arg_expr(args[0])
+        t = self.infer(ae, env, expected=STRING_VIEW)
+        self.expect(t, STRING_VIEW, tokens(ae)[0], f"the message of `log.{level.text}`")
+        return True
+
+    def ignorable_call(self, e) -> bool:
+        """The statement is a direct call of a function declared `@ignorable` (5.5, the prelude's aspect): the callee's
+        declaring module resolved the name to the core aspect (`Sig.ignorable`; D-314), whatever it names here."""
+        tok = call_name_token(e)
+        if tok is None:
+            return False
+        sig = self.call_sigs.get((tok.line, tok.col))
+        return sig is not None and sig.ignorable is not None
+
+    def check_ignorable(self, sig: Sig, label: str):
+        """`@ignorable` on a function whose result is linear is rejected (5.5, 11.8): a linear value is never dropped."""
+        if sig.ignorable is None:
+            return
+        mods = self.expanded_mods(sig)
+        if "try" in mods or "async" in mods or self.is_linear(sig.ret):
+            what = "a `try` function's result is an Outcome" if "try" in mods else "an `async` function's result is a Future" if "async" in mods else f"{strip(sig.ret).show()} is linear"
+            self.asp_err(f"@ignorable on {label}: {what}, and a linear result can never be dropped (5.5)", sig.ignorable, "a non-linear result", strip(sig.ret).show(), "ignorable")
 
     def bare_statement(self, st, env: Env):
         ts = direct_tokens(st)
@@ -4263,22 +5020,47 @@ class Typer:
                 self.rec("E-ASY-001", f"a Task leaves scope `{self.scope_depths[-1][0]}` through this return: a task is awaited inside its scope or detached (12.5)", "LANG-12-04", ts[0], {"offending_statement": "return", "rule_reference": "12.5"})
             if e is not None:
                 self.pending = None
-                t = self.infer(e, env, expected=self.ret_type)
+                local = self.returned_local(e, env)
+                if local is not None:
+                    self.in_marker = True              # its read is the move below, as in `return move x`
+                recording = self.lends_result(self.ret_type)   # the parts of a `from` result are judged by their types (D-381)
+                try:
+                    t = self.infer(e, env, expected=self.ret_type)
+                finally:
+                    if local is not None:
+                        self.in_marker = False
+                if local is not None:
+                    if self.is_bearing(t):
+                        # X-345: `return x` of a local `let` binding is `return move x` (7.4, 7.5)
+                        self.use_place(local, tokens(e)[0], "move", env)
+                        self.pending = (local, "move", tokens(e)[0])
+                    else:
+                        self.use_place(local, tokens(e)[0], "read", env)
                 self.consume(self.path_of_expr(e))
                 if self.ret_type is not None:
                     self.expect(t, self.ret_type, tokens(e)[0], "returned value")
+                    self.loan_into_owned(t, self.ret_type, tokens(e)[0], "the returned value")
+                    self.owned_into_lent(t, self.ret_type, e, env)
+                if recording:
+                    self.node_types = None
                 rp = self.path_of_expr(e)
                 rt = self.ret_type
                 while isinstance(rt, OptionalT) and isinstance(rt.inner, (LoanT, OptionalT)):
                     rt = rt.inner                         # `(alias T from self)?` names its origin inside the optional (7.6)
                 origin = rt.origin if isinstance(rt, LoanT) else (rt.origin or None if isinstance(rt, FnT) else None)
+                if origin is None and self.ret_type is not None:
+                    nested = self.nested_origins(self.ret_type)
+                    origin = next(iter(nested)) if len(nested) == 1 else None   # `((alias T from xs)?, Int)`
+                # a loan held inside an optional, a tuple or a record is returned only when the result lends one; an
+                # owned result was reported by loan_into_owned (D-341, D-348)
+                lends = self.ret_type is not None and self.lent(self.ret_type) is not None
                 loan_roots: List[str] = []
                 if self.pending is not None:
                     ppath, mk, mtok = self.pending
                     self.pending = None
                     if mk == "move":
                         for l in self.own.loans:
-                            if l.holder == root_of(ppath):
+                            if l.holder == root_of(ppath) and (lends or not l.nested):
                                 loan_roots.append(root_of(l.owner))   # a moved closure or lifetime value keeps its loans
                         self.own.move(ppath)
                     elif mk in ("alias", "editable"):
@@ -4288,7 +5070,8 @@ class Typer:
                 elif rp is not None and root_of(rp) in self.own.holders and self.loan_carrying(t):
                     loan_roots.append(root_of(self.own.holders[root_of(rp)].owner))
                 for l in self.carried:
-                    loan_roots.append(root_of(l.owner))
+                    if lends or not l.nested:
+                        loan_roots.append(root_of(l.owner))
                 self.carried = []
                 if origin is None and loan_roots:
                     for r in loan_roots:
@@ -4387,6 +5170,11 @@ class Typer:
                 if self.use_ok:
                     self.own.move(pp)
             self.pattern(pat, pt, env, moving=True)
+            bad = self.let_refutable(pat, pt) if known(pt) else None
+            if bad is not None:
+                # a `let` destructures a class, tuple or record: its pattern matches every value (5.1; D-243)
+                self.rec("E-MAT-004", f"a `let` pattern must match every value of {pt.show()}, but `{tokens(bad)[0].text}` can fail to match: use `match` to handle the other cases",
+                         "LANG-05-01", tokens(bad)[0], {"missing_variants": [], "arm_set": pt.show()})
             for b in self.names_in(pat):
                 bt = env.get(b)
                 if bt is not None and self.is_linear(bt):
@@ -4404,6 +5192,7 @@ class Typer:
                 self.typ("E-TYP-040", "an interpolated literal is a fresh String; a binding annotated StringView cannot hold it (3.5)", tokens(e)[0], "String", "an interpolated literal", nm.text, "LANG-03-05")
             else:
                 self.expect(have, want, tokens(e)[0], "initialiser")
+                self.loan_into_owned(have, want, tokens(e)[0], f"`{nm.text}`")
             t = self.with_closure(want, have)
             self.set_fact(nm.text, have)
         else:
@@ -4444,6 +5233,7 @@ class Typer:
             if self.last_closure.get("linear"):
                 self.own.obligations[binding] = (tokens(e)[0], self.depth)   # a linear closure is called exactly once (8.3)
         self.last_closure = None
+        self.keep_nested(binding, self.depth, t, e)   # a loan inside an optional, a tuple or a record (7.3; D-348)
         for l in self.carried:                       # a `from` result or view: the kept loan is held by the binding (7.6)
             l.holder, l.depth = binding, self.depth
             inner = strip(t)
@@ -4573,7 +5363,9 @@ class Typer:
         elif "." in path and self.is_linear(strip(self.declared_type(pl, env))) and not self.own.is_moved(path):
             self.obl_err("E-OBL-001", f"the linear value in field `{path}` is overwritten without being consumed", root, f"{root.line}:{root.col}", path)
         if "." not in path and self.use_ok:
+            old = [l for l in self.own.loans if l.holder == root.text]
             self.own.loans = [l for l in self.own.loans if l.holder != root.text]   # the old value's stored loans end with it (7.9)
+            self.assign_nested(root, b, rt, e, old, env)
         if self.pending is not None:
             ppath, mk, mtok = self.pending
             self.pending = None
@@ -4591,12 +5383,29 @@ class Typer:
             self.ref("E-REF-003", f"`{path}` has a length refinement {decl_t.show()} and may not be mutated; mutate an unrefined collection and validate the result", root, "violated", decl_t.show(), "")
         if known(decl_t):
             self.expect(rt, decl_t, tokens(e)[0], "assigned value")
+            self.loan_into_owned(rt, self.declared_type(pl, env), tokens(e)[0], f"`{path}`")
         # the first lambda stored in a closure binding pins it, including after `= null` (8.4)
         if op.text == "=" and "." not in path and b is not None:
             b.type = self.with_closure(b.type, rt)
         if op.text == "=" and "." in path:
             self.note_field_assign(pl, rt, tokens(e)[0], env)
         self.set_fact(path, rt)
+
+    def assign_nested(self, root: Token, b: Optional[Binding], rt: Type, e, old: List[Loan], env: Env):
+        """`t = e` where the new value holds a loan inside an optional, a tuple or a record (`t = xs.get(1)`): `t`
+        holds its loans until the end of the block that declares `t`, and the old ones too when `e` reads `t` (the new
+        value can be the old one: `t = t ?? xs.get(1)`). An owner declared in a deeper block than `t` is dropped while
+        `t` still lends it: E-OWN-011 (7.3, 7.9; D-348)."""
+        depth = b.depth if b is not None and b.kind in ("let", "mut") else self.depth
+        held = self.keep_nested(root.text, depth, rt, e)
+        if old and self.holds_loan(rt) and any(tk.text == root.text for tk in tokens(e)):
+            self.own.loans += old
+        for l in held:
+            ob = env.lookup(root_of(l.owner))
+            if ob is not None and ob.kind in ("let", "mut") and ob.depth > depth:
+                self.own_err("E-OWN-011", f"`{root.text}` keeps a loan of `{l.owner}`, which is dropped at the end of its block while `{root.text}` lives on", root, l.owner,
+                             f"{l.mode} loan held by {root.text}", "LANG-07-05", f"until the end of {root.text}'s block")
+                break
 
     def declared_type(self, pl, env: Env) -> Type:
         """A place's declared type, without the current facts."""
@@ -4764,17 +5573,24 @@ class Typer:
         else:
             e = find(body, "expr")
             self.carried_temps = []
+            recording = self.lends_result(ret)                   # the parts of a `from` result are judged by their types (D-381)
             t = self.infer(e, env, expected=ret)
             # the body's value is returned: a future in it that borrows a temporary outlives it (12.3; D-31)
             temps, self.carried_temps = self.carried_temps, []
             self.temporaries_kept(temps)
             if known(ret):
                 self.expect(t, ret, tokens(e)[0], f"{label} result")
+                self.loan_into_owned(t, ret, tokens(e)[0], f"the {label} result")
+                self.owned_into_lent(t, ret, e, env)
+            if recording:
+                self.node_types = None
             # an expression body is the return of its expression: an existing place needs a marker (7.1; X-118)
             rp = self.path_of_expr(e)
             if rp is not None and self.is_bearing(t) and find(e, "markerExpr") is None and not isinstance(t, LoanT):
                 self.own_err("E-OWN-001", f"`=> {rp}`: an existing ownership-bearing place needs `move {rp}`, `copy {rp}` or a `from` signature with `alias {rp}`", tokens(e)[0], rp, "marker required", "LANG-07-01")
             self.obs_exit("success", tokens(e)[0], "the expression body")
+            return t
+        return None
 
     def params_env(self, sig: Sig, env: Env) -> Env:
         e = Env(env)
@@ -4813,6 +5629,7 @@ class Typer:
                     self.check_exported_sig(d.sig, d.name, self.dc.tok_of(d))
                 self.check_result_origin(d.sig, d.name, self.dc.tok_of(d))
                 self.check_param_defaults(d.sig, d.name)
+                self.check_ignorable(d.sig, d.name)
                 if d.sig.body is not None:
                     self.current_aspects = list(d.aspects)
                     self.run_body(d.sig, None, "self", self.dc.tok_of(d), f"function {d.name}")
@@ -4869,6 +5686,7 @@ class Typer:
                         self.check_exported_sig(sig, f"{d.name}.{mname}", sig.node and tokens(sig.node)[0] or self.dc.tok_of(d))
                     self.check_result_origin(sig, f"{d.name}.{mname}", sig.node and tokens(sig.node)[0] or self.dc.tok_of(d))
                     self.check_param_defaults(sig, f"{d.name}.{mname}")
+                    self.check_ignorable(sig, f"{d.name}.{mname}")
                     if sig.body is not None:
                         self.run_body(sig, self_t, sig.receiver or "self", tokens(sig.node)[0] if sig.node is not None else self.dc.tok_of(d), f"method {d.name}.{mname}")
             elif d.kind == "mixin":
@@ -4931,7 +5749,13 @@ class Typer:
         self.self_type, self.self_mode = None, "self"
         self.ret_type, self.in_try, self.ctx, self.loop_labels = VOID, True, ["function"], []
         blk = [c for c in children(node) if name(c) == "block"][-1]
-        self.walk_block(blk, env)
+        self.test_body = True                       # `or fail` is implied in the body (14, X-345)
+        for init in outcome_lets(blk):
+            self.mark_consumed(init)                # a binding the body consumes as an outcome keeps it (14)
+        try:
+            self.walk_block(blk, env)
+        finally:
+            self.test_body = False
         self.summaries[self.current_label] = self.eff         # a test's effects, as a body's (the IR and its validator read it)
         self.self_type, self.ret_type, self.ctx = None, None, []
 

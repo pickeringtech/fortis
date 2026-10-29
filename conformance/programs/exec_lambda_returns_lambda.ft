@@ -4,7 +4,7 @@
 // D-34: a lambda's parameters, capture list, modifiers and body are its own, never those of a lambda inside its body. A
 // zero-parameter lambda that returns a one-parameter lambda was typed with the inner lambda's parameters (and so
 // refused), and the interpreter, the name resolvers and the IR builder read the inner lambda's parts the same way.
-import fortis.host { Host }
+import fortis.host { Console }
 
 func make(r: Int) fn() fn(Int) Int {
   return fn[copy r]() fn(Int) Int {
@@ -17,15 +17,14 @@ func adder(k: Int) fn(Int) fn() Int {
   return fn(n: Int) fn() Int => fn[copy n]() Int => Int.wrappingAdd(n, 5)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let outer = make(2)
   let inner = outer()
-  caps.console.print("${inner(40)}")
+  console.print("${inner(40)}")
   let twice = make(5)
   let second = twice()
-  caps.console.print("${second(40)}")
+  console.print("${second(40)}")
   let a = adder(0)
   let b = a(2)
-  caps.console.print("${b()}")
+  console.print("${b()}")
 }

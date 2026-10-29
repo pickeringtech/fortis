@@ -5,6 +5,6 @@ enum Level[T] {
   High(value: T)
 }
 
-export func main(args: List[String]) Void {
+func main() {
   let f: fn(Int) Level[String] = Level[Int].High                  // reject: E-TYP-040
 }

@@ -18,6 +18,7 @@ version = "0.1.0"
 name = "fortis-fmt"
 version = "0.1.0"
 dependencies = [
+ "fortis-names",
  "fortis-syntax",
  "fortis-types",
 ]

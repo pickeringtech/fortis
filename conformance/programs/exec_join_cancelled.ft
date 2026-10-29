@@ -4,7 +4,7 @@
 // covers: LANG-12-05
 // 12.5: the parent of a `join` is cancelled while both futures sleep; both observe the cancellation at their
 // await, unwind through their defers and complete before the parent leaves the join.
-import fortis.host { Host, Console, Clock }
+import fortis.host { Console, Clock }
 export error Bad {
   code: "demo.bad"
 }
@@ -30,8 +30,7 @@ async try func run(console: Console, clock: Clock) Int {
     return Int.wrappingAdd(x, await w)
   }
 }
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let r = await run(caps.console, caps.clock) or recover -1
-  caps.console.print("recovered ${r}")
+async recovers func main(console: Console, clock: Clock) {
+  let r = await run(console, clock) or recover -1
+  console.print("recovered ${r}")
 }

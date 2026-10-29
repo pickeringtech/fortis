@@ -1,0 +1,47 @@
+// execute: loan item|after loan|shown item|local local|drop local|end|drop item
+// reports: log:level=info,message=drop local,function=cleanup Token|log:level=info,message=drop item,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-338, 7.9, 12.2: `xs.get(0)` lends an element of the list. A binding of that loan holds it and owns nothing,
+// so its end runs no `cleanup`: each element's cleanup runs once, when the list's owner ends. The interpreter and
+// the VM ran it again when the binding's block ended. Here the list is a parameter or a local of the same block,
+// and the loan is also passed on to an optional read parameter. exec_loan_cleanup_library.ft reads through `first()`.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func show(console: Shared[Console], t: Token?) {
+  console.print("shown ${t?.label ?? "none"}")
+}
+
+func loanOnly(console: Shared[Console], xs: List[Token]) {
+  let t = xs.get(0)
+  if t != null {
+    console.print("loan ${t.label}")
+  }
+  console.print("after loan")
+}
+
+func sameBlock(console: Shared[Console]) {
+  let mut xs: List[Token] = List.default()
+  xs.push(Token(label: String.from("local"), console: console.retain()))
+  let t = xs.get(0)
+  console.print("local ${t?.label ?? "none"}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut toks: List[Token] = List.default()
+  toks.push(Token(label: String.from("item"), console: console.retain()))
+  loanOnly(console, toks)
+  show(console, toks.get(0))
+  sameBlock(console)
+  console.print("end")
+}

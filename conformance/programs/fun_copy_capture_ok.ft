@@ -26,8 +26,8 @@ func run() Int {
     return step
   }
   let a = twice()
-  let b = editable bump()
+  let b = bump()
   let c = move finish()
-  editable count()
+  count()
   return Int.saturatingAdd(Int.saturatingAdd(a, b), Int.saturatingAdd(c, move shown()))
 }

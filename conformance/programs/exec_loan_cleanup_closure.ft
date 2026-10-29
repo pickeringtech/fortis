@@ -1,0 +1,52 @@
+// execute: closure captured|closure gone|drop captured|loan item|inside item|after loans|end|drop item
+// reports: log:level=info,message=drop captured,function=cleanup Token|log:level=info,message=drop item,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-08-03
+// D-338, 7.9, 8.3, 12.2: a closure's `alias` capture is a loan, and destroying the closure ends it without
+// destroying anything: a capture of an owned local, a capture of a binding that holds a `get` loan, and a loan the
+// closure's body takes itself. A closure dropped before its captured owner leaves the owner's cleanup to run once,
+// when the owner ends.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func capturesOwner(console: Shared[Console]) {
+  let own = Token(label: String.from("captured"), console: console.retain())
+  {
+    let f = fn[alias own, alias console]() Void {
+      console.print("closure ${own.label}")
+    }
+    f()
+  }
+  console.print("closure gone")
+}
+
+func capturesLoan(console: Shared[Console], xs: List[Token]) {
+  let t = xs.get(0)
+  let f = fn[alias t, alias console]() Void {
+    console.print("loan ${t?.label ?? "none"}")
+  }
+  f()
+  let g = fn[alias xs, alias console]() Void {
+    let u = xs.get(0)
+    console.print("inside ${u?.label ?? "none"}")
+  }
+  g()
+  console.print("after loans")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut toks: List[Token] = List.default()
+  toks.push(Token(label: String.from("item"), console: console.retain()))
+  capturesOwner(console)
+  capturesLoan(console, toks)
+  console.print("end")
+}

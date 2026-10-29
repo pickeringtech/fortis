@@ -1,0 +1,40 @@
+// execute: view a|view b|first a|inner b|after view|end|drop a|drop b
+// reports: log:level=info,message=drop a,function=cleanup Token|log:level=info,message=drop b,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-338, 7.7, 12.2: a `ListView[T]` is a view of a list: a loop over it, its `get` and a view passed on lend the
+// list's elements and own none of them. Each element's cleanup runs once, when the list's owner ends.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func inner(console: Shared[Console], v: ListView[Token]) {
+  let t = v.get(1)
+  console.print("inner ${t?.label ?? "none"}")
+}
+
+func viewed(console: Shared[Console], v: ListView[Token]) {
+  for t in v {
+    console.print("view ${t.label}")
+  }
+  let first = v.get(0)
+  console.print("first ${first?.label ?? "none"}")
+  inner(console, v)
+  console.print("after view")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut toks: List[Token] = List.default()
+  toks.push(Token(label: String.from("a"), console: console.retain()))
+  toks.push(Token(label: String.from("b"), console: console.retain()))
+  viewed(console, toks)
+  console.print("end")
+}

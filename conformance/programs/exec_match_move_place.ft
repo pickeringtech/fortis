@@ -5,28 +5,28 @@
 // 9.8, 7.9: `match move` of a whole local consumes that local. The arm's binding is the owner, and the
 // local must not run cleanup again on the way out. A binding that the arm returns keeps the value; a
 // binding the arm consumes drops it once, before the statement after the match.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
 
 class N {
   console: Shared[Console]
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("drop")
   }
 }
 
-func consume(n: owned N) Void {}
+func consume(n: owned N) {}
 
 func take(console: Shared[Console]) Handle {
   let e = Handle.make(1, alias console)
@@ -35,9 +35,7 @@ func take(console: Shared[Console]) Handle {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   let h = take(console)
   console.print("using ${h.id}")

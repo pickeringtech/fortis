@@ -1,0 +1,278 @@
+{
+ "schema": "fortis.matrix/v1",
+ "language": "1.0",
+ "about": "The supported matrix (Programme 16; PROG-DEL-04, DW-06): every advertised combination of backend, target and cross-feature interaction, each in exactly one class. Full: integration-tested as a combination at every release (an executed scenario per combination). Representative: covered by a named Full combination plus unit coverage, with a mapping record. Unsupported: rejected with a diagnostic (a negative fixture producing it). conformance/tools/matrix_check.py verifies every entry.",
+ "entries": [
+  {
+   "id": "interaction:noalloc+failure+capture",
+   "kind": "interaction",
+   "class": "Full",
+   "backends": [
+    "interpreter",
+    "vm",
+    "native"
+   ],
+   "scenarios": [
+    "conformance/programs/exec_interaction_noalloc_failure_capture.ft"
+   ],
+   "diagnostics": [
+    "conformance/programs/eff_noalloc_observe.ft"
+   ]
+  },
+  {
+   "id": "interaction:pure+closure kinds",
+   "kind": "interaction",
+   "class": "Full",
+   "backends": [
+    "interpreter",
+    "vm",
+    "native"
+   ],
+   "scenarios": [
+    "conformance/programs/exec_interaction_pure_closures.ft"
+   ],
+   "diagnostics": [
+    "conformance/programs/fun_kind_too_weak.ft"
+   ]
+  },
+  {
+   "id": "interaction:async+defer+scope",
+   "kind": "interaction",
+   "class": "Full",
+   "backends": [
+    "interpreter",
+    "vm",
+    "native"
+   ],
+   "scenarios": [
+    "conformance/programs/exec_scope_defer.ft",
+    "acceptance/a2"
+   ],
+   "diagnostics": [
+    "conformance/programs/own_loan_through_defer.ft"
+   ]
+  },
+  {
+   "id": "interaction:views+from+closures",
+   "kind": "interaction",
+   "class": "Full",
+   "backends": [
+    "interpreter",
+    "vm",
+    "native"
+   ],
+   "scenarios": [
+    "conformance/programs/exec_interaction_views_from_closures.ft"
+   ],
+   "diagnostics": [
+    "conformance/programs/own_from_no_origin.ft"
+   ]
+  },
+  {
+   "id": "interaction:linear outcome in a linear container+early return",
+   "kind": "interaction",
+   "class": "Full",
+   "backends": [
+    "interpreter",
+    "vm",
+    "native"
+   ],
+   "scenarios": [
+    "conformance/programs/exec_interaction_linear_container_return.ft"
+   ],
+   "diagnostics": [
+    "conformance/programs/obl_container_early_return.ft"
+   ]
+  },
+  {
+   "id": "interaction:ranged loop+refinement+checked arithmetic",
+   "kind": "interaction",
+   "class": "Full",
+   "backends": [
+    "interpreter",
+    "vm",
+    "native"
+   ],
+   "scenarios": [
+    "conformance/programs/exec_interaction_ranged_refinement.ft"
+   ],
+   "diagnostics": [
+    "conformance/programs/ref_arith_overflow.ft"
+   ]
+  },
+  {
+   "id": "linking:two versions of one package; one name declared by two packages or two modules; types named through an alias",
+   "kind": "feature",
+   "class": "Full",
+   "backends": [
+    "interpreter",
+    "vm",
+    "native"
+   ],
+   "scenarios": [
+    "conformance/packages/exec.twoversions",
+    "conformance/packages/exec.sametypes",
+    "conformance/packages/exec.twomodules",
+    "conformance/packages/exec.aliastypes"
+   ],
+   "diagnostics": [
+    "conformance/packages/bad.alias.member",
+    "conformance/packages/bad.module.types"
+   ],
+   "decision": "X-136"
+  },
+  {
+   "id": "backend:interpreter",
+   "kind": "backend",
+   "class": "Full",
+   "backends": [
+    "interpreter"
+   ],
+   "scenarios": [
+    "acceptance/a",
+    "acceptance/a2",
+    "release-results:interpreter"
+   ]
+  },
+  {
+   "id": "backend:vm",
+   "kind": "backend",
+   "class": "Full",
+   "backends": [
+    "vm"
+   ],
+   "scenarios": [
+    "acceptance/a",
+    "acceptance/a2",
+    "release-results:vm"
+   ]
+  },
+  {
+   "id": "backend:native",
+   "kind": "backend",
+   "class": "Full",
+   "backends": [
+    "native"
+   ],
+   "scenarios": [
+    "acceptance/a",
+    "acceptance/a2",
+    "release-results:native"
+   ]
+  },
+  {
+   "id": "target:x86_64-unknown-linux-gnu",
+   "kind": "target",
+   "class": "Full",
+   "backends": [
+    "native"
+   ],
+   "scenarios": [
+    "acceptance/a",
+    "acceptance/a2"
+   ]
+  },
+  {
+   "id": "target:x86_64-unknown-linux-musl",
+   "kind": "target",
+   "class": "Representative",
+   "representative": "target:x86_64-unknown-linux-gnu",
+   "mapping": "The native backend emits one target-independent #![forbid(unsafe_code)] crate (no cfg on the target) over the runtime crates, whose only platform dependence is the Rust standard library; the target changes only rustc's target and linker. Executing on this target is DW-08's tier-1 verification, which this host cannot run."
+  },
+  {
+   "id": "target:aarch64-unknown-linux-gnu",
+   "kind": "target",
+   "class": "Representative",
+   "representative": "target:x86_64-unknown-linux-gnu",
+   "mapping": "As for x86_64-unknown-linux-musl."
+  },
+  {
+   "id": "target:aarch64-unknown-linux-musl",
+   "kind": "target",
+   "class": "Representative",
+   "representative": "target:x86_64-unknown-linux-gnu",
+   "mapping": "As for x86_64-unknown-linux-musl."
+  },
+  {
+   "id": "target:aarch64-apple-darwin",
+   "kind": "target",
+   "class": "Representative",
+   "representative": "target:x86_64-unknown-linux-gnu",
+   "mapping": "As for x86_64-unknown-linux-musl; the development host adapters use only the standard library's portable file, environment, clock and process APIs."
+  },
+  {
+   "id": "target:x86_64-pc-windows-msvc",
+   "kind": "target",
+   "class": "Representative",
+   "representative": "target:x86_64-unknown-linux-gnu",
+   "mapping": "As for aarch64-apple-darwin."
+  },
+  {
+   "id": "target feature set:wasm32-wasip1 (core, alloc)",
+   "kind": "target",
+   "class": "Full",
+   "backends": [
+    "vm"
+   ],
+   "scenarios": [
+    "features-check:check --target"
+   ],
+   "note": "checking for the target, with its feature set enforced, is Full; native builds for it need its SDK (DW-08)"
+  },
+  {
+   "id": "target feature set:thumbv7em-none-eabihf (core)",
+   "kind": "target",
+   "class": "Full",
+   "backends": [
+    "vm"
+   ],
+   "scenarios": [
+    "features-check:check --target"
+   ]
+  },
+  {
+   "id": "unsupported:a module absent on the target",
+   "kind": "feature",
+   "class": "Unsupported",
+   "diagnostic": "E-NAM-030",
+   "negative": {
+    "command": [
+     "check",
+     "--format",
+     "json",
+     "--target",
+     "wasm32-wasip1",
+     "conformance/build/host.ft"
+    ]
+   }
+  },
+  {
+   "id": "unsupported:a package with a Cargo build script (native builds)",
+   "kind": "feature",
+   "class": "Unsupported",
+   "diagnostic": "E-NAM-032",
+   "negative": {
+    "command": [
+     "build",
+     "--format",
+     "json",
+     "conformance/build/with.build.script"
+    ]
+   }
+  },
+  {
+   "id": "unsupported:a standard package outside the compatibility set",
+   "kind": "feature",
+   "class": "Unsupported",
+   "diagnostic": "E-NAM-031",
+   "negative": {
+    "command": [
+     "check",
+     "--format",
+     "json",
+     "conformance/features/mixed.version"
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,42 @@
+// execute: before|body|before|total 3|dropped 7
+// requires: runtime
+// covers: LANG-11-09, LANG-05-08
+// D-314: an aspect a module declares under the name `ignorable` is that module's aspect, not the core
+// `@ignorable`: the interpreter, the VM and native weave its hooks, and the checkers do not judge its uses as the
+// core aspect's. It may sit on a `try` function, whose Outcome a caller then consumes, and a call statement still
+// drops a result only with `discard`. Only the prelude's `ignorable`, resolved by identity, has no hooks.
+import fortis.host { Console }
+
+export error Negative {
+  code: "demo.negative"
+}
+
+aspect ignorable() {
+  needs c: Console
+  before {
+    c.print("before")
+  }
+}
+
+@ignorable
+func work(c: Console) {
+  c.print("body")
+}
+
+@ignorable
+try func total(c: Console, n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n
+}
+
+func seven() Int => 7
+
+recovers func main(c: Console) {
+  work(c)
+  let t = total(c, 3) or recover 0
+  c.print("total ${t}")
+  discard seven()
+  c.print("dropped ${seven()}")
+}

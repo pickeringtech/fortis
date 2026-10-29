@@ -1,0 +1,33 @@
+// D-364: LR 12.1 says a deferred block may not use a binding of its block that holds a loan (E-OWN-052). Both
+// checkers accept a `defer` that reads `t`, which holds a loan inside an optional (`let t = xs.get(0)`): the
+// check looks only at bindings that hold a loan whole. The interpreter, the VM and native code agree (`body item`,
+// `defer item`, `end`, `drop item`), since the list outlives the block. Pre-existing: v0.0.1 accepts it too, and
+// its interpreter and VM run the cleanup twice.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  {
+    let t = xs.get(0)
+    defer {
+      console.print("defer ${t?.label ?? "none"}")
+    }
+    console.print("body ${t?.label ?? "none"}")
+  }
+  console.print("end")
+}

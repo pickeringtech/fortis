@@ -1,10 +1,7 @@
 // reject: E-NAM-001 (at the marked line)
 // covers: LANG-04-06
-// A module checked on its own is the entry module of an implicit one-module application: its exported `main` is
-// the entry point and must have one of the four forms of 4.6 (D-51.2). `main()` takes no args and is none of them.
-import fortis.host { Host }
-
-export func main() Void {                   // reject: E-NAM-001 — not one of the four forms of 4.6
-  let caps = Host.capabilities()
-  caps.console.print("hi")
+// A module checked on its own is the entry module of an implicit one-module application: its `main` is the entry
+// point and must have one of the four forms of 4.6 (D-51.2). A `pure` main is none of them. (`main()` with no
+// parameters is one since X-345: ent_main_no_params.ft.)
+pure func main() {              // reject: E-NAM-001 — not one of the four forms of 4.6
 }

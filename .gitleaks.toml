@@ -1,0 +1,14 @@
+# gitleaks: the default rules, and one allow-list for a known false positive.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = """The differential reports (conformance/differential/*.json, and the copies kept as evidence) record each
+conformance fixture's sha256 under the fixture's id. Ids such as PRG-auth_missing or PRG-obl_wrapped_access contain
+words the generic-api-key rule looks for, and a sha256 looks like a key. Neither is a secret: the line is an id and
+the digest of a public file. Only a JSON line that is exactly an upper-case-prefixed id and a 64-hex digest matches."""
+targetRules = ["generic-api-key"]
+paths = ['''\.json$''']
+regexTarget = "line"
+regexes = ['''^\s*"[A-Z]+-[A-Za-z0-9_.-]+": "[0-9a-f]{64}",?\s*$''']
+condition = "AND"

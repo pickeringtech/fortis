@@ -4,7 +4,9 @@ Runs `fortisc ir` over every corpus module (and the examples and application A),
 against reference/schemas/ir.schema.json (by hand: the conformance tools have no third-party dependencies), and
 checks the facts for consistency: a closed obligation closes at or after its opening, an exit runs only deferred
 blocks the function registered, and every function carries all five fact families. It reports, per chunk range,
-how many functions carry loans, obligations, effects, observation operations and cleanup edges.
+how many functions carry loans, obligations, effects, observation operations and cleanup edges (the ranges come
+from the delivery plan's ownership table, a maintainers' planning file; without it only the core-stage row is
+counted).
 
   python3 -I conformance/tools/ir_check.py [--json]"""
 from __future__ import annotations
@@ -74,7 +76,10 @@ def chunk_num(c):
 
 
 def main(argv):
-    own = json.load(open(os.path.join(ROOT, "docs", "delivery", "ownership.json"), encoding="utf-8"))
+    sys.path.insert(0, HERE)
+    import planning
+    own_path = planning.optional(planning.OWNERSHIP, "ir", "the per-chunk-range coverage counts (the core-stage row is still counted)")
+    own = json.load(open(own_path, encoding="utf-8")) if own_path else {"rules": {}, "diagnostics": {}}
     syntax = json.load(open(os.path.join(ROOT, "conformance", "results.json"), encoding="utf-8"))["results"]
     fixtures = [r for r in syntax if r["verdict"] != "illustrative" and "statements" not in (r.get("detail") or "") and r["status"] in ("PASS", "INFO") and not r["observed"].startswith("reject:E-SYN")]
     extra = sorted(os.path.join("examples", f) for f in os.listdir(os.path.join(ROOT, "examples")) if f.endswith(".ft"))

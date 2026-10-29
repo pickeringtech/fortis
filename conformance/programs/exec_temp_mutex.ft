@@ -3,28 +3,26 @@
 // covers: LANG-07-07
 // 7.9: `Mutex.create` of a class value is a temporary when nothing binds the mutex. Destroying the mutex
 // destroys the value it owns, so that value's cleanup runs at the end of the statement.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
 
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   discard Mutex.create(Handle.make(1, alias console))
   console.print("after")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
 }

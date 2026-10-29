@@ -1,0 +1,16 @@
+// D-346: a mutex guard returned from a `try` function declared `from` its mutex does not build natively (rustc
+// E0308, the `?` operator's types). The interpreter and the VM print `held 5|done`. Mutexes are in v0.3's scope.
+import fortis.host { Console }
+
+try func lockIt(m: Mutex[Int]) MutexGuard[Int] from m {
+  return m.lockBlocking() or fail
+}
+
+try func main(console: Console) {
+  let m = Mutex.create(5)
+  {
+    let g = lockIt(alias m) or fail
+    console.print("held ${g.get()}")
+  }
+  console.print("done")
+}

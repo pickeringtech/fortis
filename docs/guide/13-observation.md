@@ -3,7 +3,7 @@
 <!-- covers: LR 13 -->
 *Human mode. Agent mode: [Observation, by rule](../agent/13-observation.md). Source of truth: LR 13.*
 
-> Preview: observation (LR 13) arrives in v0.5.
+> Preview: observation schemas, `capture` and `record` (LR 13) arrive in v0.5. Log statements, `log.info`, `log.warn` and `log.error` (LR 13), are in v0.0.2.
 
 Logs and metrics are usually an afterthought: a line printed here, a counter bumped there, and nobody can say
 which facts every request is guaranteed to record. Fortis makes observation part of the language. A function
@@ -21,7 +21,7 @@ version (1 when omitted) and an encoding bound (LR 13).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 observation Checkout {
   version: 1
@@ -43,10 +43,9 @@ pure func checkout(prices: List[Int<0..1000>], coupon: String) Int {
   return total
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let prices = List.of(120, 45, 300)
-  caps.console.print("total ${checkout(prices, "SPRING")}")
+  console.print("total ${checkout(prices, "SPRING")}")
 }
 ```
 
@@ -81,7 +80,7 @@ at the statement, so changing the place afterwards does not change the frame:
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 observation Counter {
   start: Int        required: all
@@ -97,9 +96,8 @@ pure func countUp(start: Int<0..100>) Int {
   return n
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("counted to ${countUp(7)}")
+func main(console: Console) {
+  console.print("counted to ${countUp(7)}")
 }
 ```
 
@@ -147,7 +145,7 @@ try func pay(amount: Int<0..10000>) Int {
   return amount
 }
 
-export recovers func main(args: List[String]) Void {
+recovers func main() {
   let paid = pay(10) or recover 0
 }
 ```
@@ -157,7 +155,7 @@ function:
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Rejected {
   code: "shop.rejected"
@@ -178,11 +176,10 @@ try func pay(amount: Int<0..10000>) Int {
   return amount
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+recovers func main(console: Console) {
   let paid = pay(10) or recover 0
   let refused = pay(0) or recover -1
-  caps.console.print("paid ${paid}, refused ${refused}")
+  console.print("paid ${paid}, refused ${refused}")
 }
 ```
 
@@ -195,7 +192,7 @@ first `await` that could cancel the activation (LR 13, LR 12.4):
 
 ```fortis
 // reject: E-OBS-001
-import fortis.host { Clock, Host }
+import fortis.host { Clock }
 
 observation Wait {
   tier: Int        required: all
@@ -208,9 +205,8 @@ async func slow(clock: Clock, tier: Int) Int {
   return tier
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  discard await slow(caps.clock, 2)
+async func main(clock: Clock) {
+  discard await slow(clock, 2)
 }
 ```
 
@@ -235,7 +231,7 @@ pure func sum(items: List[Int<0..100>]) Int {
   return total
 }
 
-export func main(args: List[String]) Void {
+func main() {
   discard sum(List.of(1, 2))
 }
 ```
@@ -249,7 +245,7 @@ inside loops (LR 13). Its arguments have the same purity requirement as a `captu
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 observation Batch {
   count: Int        required: all
@@ -270,9 +266,8 @@ pure func sum(items: List[Int<0..100>]) Int {
   return total
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("sum ${sum(List.of(4, 5, 6))}")
+func main(console: Console) {
+  console.print("sum ${sum(List.of(4, 5, 6))}")
 }
 ```
 
@@ -297,10 +292,43 @@ pure func size(items: List[Int]) Int {
   return items.count()
 }
 
-export func main(args: List[String]) Void {
+func main() {
   discard size(List.of(1))
 }
 ```
+
+## Logs
+
+`log.info`, `log.warn` and `log.error` write a log record: its level, its message and the function that wrote it
+(LR 13, X-345). Logging is the platform's concern, not the program's, so a log needs no capability and no setup:
+the record goes to standard error, as text on a terminal and as one JSON line on a pipe, where the platform's log
+collection picks it up. It never mixes into standard output, which stays the program's own product:
+
+```fortis
+// accept
+import fortis.host { Console }
+
+func total(prices: List[Int]) Int {
+  log.info("totalling ${prices.count()} prices")
+  let mut sum = 0
+  for p in prices {
+    sum = Int.wrappingAdd(sum, p)
+  }
+  return sum
+}
+
+func main(console: Console) {
+  console.print("total ${total(List.of(3, 4, 5))}")
+}
+```
+
+```output
+total 12
+```
+
+A log statement has the `io` effect, like `report`, so a `pure` function cannot log. A failure is recorded with
+`report e`; a log is for what is not a failure, such as a fallback taken, progress or a summary. `log` is not a
+keyword: a program that already names something `log` keeps it, and there `log.info(...)` is an ordinary call.
 
 ## What the compiler adds
 

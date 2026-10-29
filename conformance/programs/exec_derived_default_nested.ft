@@ -1,0 +1,53 @@
+// execute: inner 0 2|ranks [] true|score 0|wrap [] null 3|color Blue
+// requires: runtime
+// covers: LANG-06-07
+// D-242, 6.10: what `derive Default` still accepts builds on every backend: a class field whose class derives
+// Default (nested twice), a list of a refined type (empty), a refinement that admits 0, and, in a generic class, a
+// list and an optional of the type parameter, whose defaults (empty, `null`) need nothing of it. An enum chooses its
+// default by implementing Default itself and returning the variant.
+import fortis.host { Console }
+
+class Leaf derive Default {
+  v: Int
+  w: Int = 2
+}
+
+class Inner derive Default {
+  leaf: Leaf
+}
+
+class Outer derive Default {
+  inner: Inner
+  ranks: List[Int<1..10>]
+  score: Int<0..10>
+}
+
+class Wrap[T] derive Default {
+  items: List[T]
+  first: T?
+  limit: Int = 3
+}
+
+enum Color implements Default {
+  Red
+  Blue
+
+  export pure func default() Color => Blue
+}
+
+func named(c: Color) String {
+  return match c {
+    Red => "Red"
+    Blue => "Blue"
+  }
+}
+
+func main(console: Console) {
+  let o = Outer.default()
+  console.print("inner ${o.inner.leaf.v} ${o.inner.leaf.w}")
+  console.print("ranks ${o.ranks} ${o.ranks.isEmpty()}")
+  console.print("score ${o.score}")
+  let w: Wrap[Int] = Wrap.default()
+  console.print("wrap ${w.items} ${w.first} ${w.limit}")
+  console.print("color ${named(Color.default())}")
+}

@@ -16,6 +16,7 @@ from typing import Dict, List, Optional, Set
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import diagnostics  # noqa: E402
 import lexer        # noqa: E402
+import reading      # noqa: E402
 import tree         # noqa: E402
 from tree import children, name, tokens, direct_tokens, find, find_all  # noqa: E402
 
@@ -147,41 +148,58 @@ class Resolver:
 
     def check_entry(self):
         """A module checked on its own is the entry module of an implicit one-module application (`fortis run
-        FILE.ft` runs its `main`): an exported `main` it declares must have one of the four forms of LR 4.6, each
-        of which may also carry `recovers` (X-155). A module of a package is judged by the manifest's `entry`
-        instead (resolve.py `check_entry`); a module with no exported `main` is a library module (D-51.2)."""
+        FILE.ft` runs its `main`): the `main` it declares, exported or not (X-345), must have one of the four forms
+        of LR 4.6, each of which may also carry `recovers` (X-155), and each parameter must be one the runtime
+        supplies by type (`E-NAM-005`, `E-NAM-006`). A module of a package is judged by the manifest's `entry`
+        instead (resolve.py `check_entry`); a module with no `main` function and no exported `main` is a library
+        module (D-51.2)."""
         if not self.entry:
             return
-        # any exported declaration named main is the entry point (LR 4.6). A module that exports none is a
-        # library module. One that exports a non-function is not: the entry must be a function of 4.6.
-        exported = [d for d in self.decls if d["name"] == "main" and d["exported"]]
-        if not exported:
+        # the function named main is the entry point (LR 4.6), `export` implied. A module that has none, and exports
+        # no other declaration named main, is a library module. An exported non-function main is not: the entry
+        # must be a function of 4.6.
+        mains = [d for d in self.decls if d["name"] == "main" and (d["kind"] == "func" or d["exported"])]
+        if not mains:
             return
-        main = exported[0]
+        main = next((d for d in mains if d["kind"] == "func"), mains[0])
         if main["kind"] != "func":
             self.rec("E-NAM-001", f"exported main is a {main['kind']}, not one of the forms of 4.6", "LANG-04-06", main["token"],
-                     {"name": "main", "candidates": ["export [async] [try] [recovers] func main(args: List[String]) Void"]})
+                     {"name": "main", "candidates": [reading.ENTRY_FORM]})
             return
         head = find(main["node"], "funcHead")
         mods = find(head, "modifiers")
         words = " ".join(t.text for t in tokens(mods)) if mods else ""
         sig = find(head, "funcSignature")
-        text = " ".join(t.text for t in tokens(sig))
-        if words not in ENTRY_FORMS or text != ENTRY_SIGNATURE:
+        rt = find(sig, "returnType")
+        ret = " ".join(t.text for t in tokens(rt)) if rt is not None else ""     # none: `Void` left out (R6, X-345)
+        if words not in ENTRY_FORMS or ret not in ("Void", "") or find(sig, "typeParams") is not None or find(sig, "whereClause") is not None:
+            text = " ".join(t.text for t in tokens(sig))
             self.rec("E-NAM-001", f"main has signature `{words} func main{text}`, not one of the forms of 4.6", "LANG-04-06", main["token"],
-                     {"name": "main", "candidates": ["export [async] [try] [recovers] func main(args: List[String]) Void"]})
+                     {"name": "main", "candidates": [reading.ENTRY_FORM]})
             return
-        # the token text can match while `List`, `String` or `Void` names a module-level declaration or import.
-        # 4.6's forms use the prelude types (D-51.2)
-        shadowed = self.entry_type_shadowed()
+        # the token text can match while `Void` names a module-level declaration or import. 4.6's forms use the
+        # prelude's Void, and its `List[String]` the prelude's List and String (D-51.2)
+        shadowed = self.entry_type_shadowed(("Void",))
         if shadowed:
             self.rec("E-NAM-001", f"main's `{shadowed}` is not the prelude {shadowed}, so the signature is not one of the forms of 4.6", "LANG-04-06", main["token"],
-                     {"name": "main", "candidates": ["export [async] [try] [recovers] func main(args: List[String]) Void"]})
+                     {"name": "main", "candidates": [reading.ENTRY_FORM]})
+            return
+        for code, msg, tok, fields in reading.param_findings(sig, self.entry_origin):
+            self.rec(code, msg, "LANG-04-06", tok, fields)
 
-    def entry_type_shadowed(self) -> Optional[str]:
+    def entry_origin(self, n: str) -> Optional[str]:
+        """Where the module's name `n` comes from, for 4.6's parameter types (reading.param_findings)."""
+        info = self.module_scope.names.get(n)
+        if info is None:
+            return None
+        if info.get("kind") == "module" and "path" in info:
+            return "alias:" + info["path"]
+        return info.get("origin")
+
+    def entry_type_shadowed(self, names=("List", "String", "Void")) -> Optional[str]:
         """The first of 4.6's `List`, `String` and `Void` that a module-level binding has replaced. An unbound name
         is the prelude's when the prelude is loaded, and a missing prelude is not reported here."""
-        for n in ("List", "String", "Void"):
+        for n in names:
             info = self.module_scope.names.get(n)
             if info is not None and info.get("origin") != "prelude":
                 return n
@@ -271,9 +289,33 @@ class Resolver:
                 self.resolve_expr(find(cr, "recordLit"), s2)
             return
         # const, type, error, contract, observation
-        self.check_types_in(node, scope)
+        self.check_types_beside(node, scope)
         for e in [c for c in children(node) if name(c) in ("constExpr", "expr")]:
             self.resolve_expr(e, scope)
+        if kind == "error":
+            self.check_error_message(node)
+
+    def check_error_message(self, node):
+        """An error's `message` is a template whose `${name}` may name only the payload's fields (LR 10.3; D-340):
+        any other name is undeclared there, and the rendered message would show it unfilled."""
+        ts = direct_tokens(node)
+        tok = next((ts[i + 2] for i in range(len(ts) - 2) if ts[i].text == "message" and ts[i + 1].text == ":" and ts[i + 2].kind == "STR"), None)
+        if tok is None:
+            return
+        fl = find(node, "fieldList")
+        payload = [t.text for t in direct_tokens(fl) if t.kind == "LOWER"] if fl is not None else []
+        rest = tok.text[1:-1]
+        while "${" in rest:
+            after = rest[rest.index("${") + 2:]
+            end = after.find("}")
+            if end < 0:
+                break
+            nm = after[:end]
+            rest = after[end + 1:]
+            if nm not in payload:
+                name_ = next((t for t in ts if t.kind == "UPPER"), None)
+                self.rec("E-NAM-001", f"the message of error {name_.text if name_ else ''} names `${{{nm}}}`, which is not a payload field: a message template may name only the payload's fields (10.3)", "LANG-04-05", tok,
+                         {"name": nm, "candidates": payload})
 
     def check_head(self, node):
         """A head whose kit this toolchain does not install cannot be validated or elaborated, so it is rejected,
@@ -307,14 +349,14 @@ class Resolver:
             self.check_types_in(v, s)
             return
         for fd in [c for c in children(m) if name(c) == "fieldDecl"]:
-            self.check_types_in(fd, s)
-            ce = find(fd, "constExpr")
+            self.check_types_beside(fd, s)
+            ce = tree.child(fd, "constExpr")
             if ce is not None:
                 self.resolve_expr(ce, s)
         cd = find(m, "constDecl")
         if cd is not None:
-            self.check_types_in(cd, s)
-            self.resolve_expr(find(cd, "constExpr"), s)
+            self.check_types_beside(cd, s)
+            self.resolve_expr(tree.child(cd, "constExpr"), s)
         cl = find(m, "cleanupDecl")
         if cl is not None:
             s.declare("self", {"kind": "self"})
@@ -356,8 +398,8 @@ class Resolver:
                     scope.declare(ts[0].text, {"kind": "param"})
             if find(p, "selfParam") is not None:
                 scope.declare("self", {"kind": "self"})
-            self.check_types_in(p, scope)
-            ce = find(p, "constExpr")
+            self.check_types_beside(p, scope)
+            ce = tree.child(p, "constExpr")
             if ce is not None:
                 self.resolve_expr(ce, scope)
 
@@ -476,7 +518,16 @@ class Resolver:
             self.resolve_block(inner, scope)
         else:
             # return/give/recover/report/discard/expect/exprStmt/break/continue
-            if n == "exprStmt":
+            lc = reading.log_call(inner) if n == "exprStmt" else None
+            if lc is not None and scope.lookup("log") is None:
+                # a log statement (LR 13): `log` names nothing here, so it is the statement, not a name
+                _, level, al = lc
+                if level.text not in reading.LOG_LEVELS:
+                    self.rec("E-NAM-001", f"`log.{level.text}` is not a log statement: the levels are info, warn and error (13)", "LANG-13-04", level,
+                             {"name": f"log.{level.text}", "candidates": [f"log.{x}" for x in reading.LOG_LEVELS]})
+                if al is not None:
+                    self.resolve_expr(al, scope)
+            elif n == "exprStmt":
                 self.resolve_expr(inner, scope)
             else:
                 for c in children(inner):
@@ -495,7 +546,8 @@ class Resolver:
             out.append(ts[2])
         if len(ts) == 1 and ts[0].kind == "LOWER" and ts[0].text != "_":
             out.append(ts[0])
-        for pf in find_all(pat, "patternField"):
+        pfs = tree.child(pat, "patternFields")
+        for pf in [c for c in children(pfs) if name(c) == "patternField"] if pfs is not None else []:   # its own: a nested pattern's are its sub-pattern's
             sub = find(pf, "pattern")
             if sub is not None:
                 out += self.pattern_bindings(sub, scope)
@@ -572,6 +624,13 @@ class Resolver:
         for tr in self.typerefs(node, skip_rules):
             self.check_typeref(tr, scope)
         self.check_origins(node, scope, skip_rules)
+
+    def check_types_beside(self, node, scope):
+        """The types of a declaration with an initialiser (a field, a constant, a parameter): every child but its own
+        `constExpr`, which `resolve_expr` reads as a value, so a bare variant there takes the declared type (9.7)."""
+        for c in children(node):
+            if tree.is_node(c) and name(c) != "constExpr":
+                self.check_types_in(c, scope)
 
     def check_typeref(self, tr, scope):
         """One typeRef's own root: `[alias "."] UpperIdent` (its type arguments are typeRefs of their own)."""
@@ -671,7 +730,7 @@ class Resolver:
             rt = next((c for c in children(node) if name(c) == "type"), None)
             if rt is not None:
                 self.check_types_in(rt, s)
-            body = tree.child(node, "funcBody")
+            body = tree.lambda_body(node)
             if body is not None:
                 b = children(body)[0] if body is not None and children(body) and name(children(body)[0]) == "block" else None   # the body itself, not a lambda block inside an expression body
                 if b is not None:
@@ -687,9 +746,12 @@ class Resolver:
                     self.resolve_place(c, scope)
             for arm in [_a for _a in children(node) if name(_a) == "matchArm"]:
                 s = Scope(scope)
-                pat = find(arm, "pattern")
-                for b in self.pattern_bindings(pat, s):
-                    self.declare_binding(b, s, "pattern")
+                seen = set()
+                for pat in [c for c in children(arm) if name(c) == "pattern"]:    # the alternatives of `A | B` (9.8)
+                    for b in self.pattern_bindings(pat, s):
+                        if b.text not in seen:
+                            seen.add(b.text)
+                            self.declare_binding(b, s, "pattern")
                 for c in children(arm):
                     if name(c) == "expr":
                         self.resolve_expr(c, s)
@@ -790,6 +852,18 @@ class Resolver:
             return
         if n == "constTerm":
             ts = direct_tokens(node)
+            tr = children(node)[0] if children(node) else None
+            trs = direct_tokens(tr) if name(tr) == "typeRef" else []
+            if trs and trs[0].kind == "UPPER" and "." not in [t.text for t in ts] and trs[0].text in self.enum_variants and scope.lookup(trs[0].text) is None:
+                # a bare enum variant, in a field, constant or parameter default whose declared type the typer checks it
+                # against (LR 9.7), as in an expression
+                for sub in find_all(tr, "typeRef"):
+                    if sub is not tr:
+                        self.check_typeref(sub, scope)
+                self.check_origins(tr, scope)
+                for c in children(node)[1:]:
+                    self.resolve_expr(c, scope)
+                return
             if ts and ts[0].kind == "LOWER" and not (len(ts) > 1 and ts[1].text == "."):
                 self.module_value(self.check_root(ts[0], scope), ts[0])
                 return

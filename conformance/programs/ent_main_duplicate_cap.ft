@@ -1,0 +1,9 @@
+// reject: E-NAM-006 (at the marked line)
+// covers: LANG-04-06
+// The runtime supplies each type once (4.6, X-345): two `Console` parameters would be two creations of one
+// capability.
+import fortis.host { Console }
+
+func main(console: Console, again: Console) {      // reject: E-NAM-006 — Console twice
+  console.print("x")
+}

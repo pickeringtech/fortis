@@ -3,18 +3,17 @@
 // covers: LANG-03-03
 // The first character decides an identifier's category: lowercase names values and functions, uppercase names
 // types and variants, without a symbol table (3.3).
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Point {
   export x: Int
   export y: Int
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let point = Point(x: 3, y: 4)
-  caps.console.print("Point")
-  caps.console.print("${point.x}")
-  caps.console.print("${point.y}")
-  caps.console.print("lower and Upper")
+  console.print("Point")
+  console.print("${point.x}")
+  console.print("${point.y}")
+  console.print("lower and Upper")
 }

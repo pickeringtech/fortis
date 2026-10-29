@@ -1,15 +1,14 @@
 // execute: defect:stack_exhaustion
 // requires: runtime
 // covers: LANG-10-06
-import fortis.host { Host }
+import fortis.host { Console }
 
 func deep(n: Int) Int => deep(Int.wrappingAdd(n, 1))
 
-export try recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let v = Int.add(deep(0), 1) catch e {
-    caps.console.print("caught")
+try recovers func main(console: Console) {
+  let v = deep(0) + 1 catch e {
+    console.print("caught")
     recover 0
   }
-  caps.console.print("${v}")
+  console.print("${v}")
 }

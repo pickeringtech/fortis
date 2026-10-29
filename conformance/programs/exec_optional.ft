@@ -1,7 +1,7 @@
 // execute: 7|present 3|absent
 // requires: runtime
 // covers: LANG-06-08
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func describe(v: Int?) String {
   return match v {
@@ -10,10 +10,9 @@ pure func describe(v: Int?) String {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let maybe: Int? = null
-  caps.console.print("${maybe ?? 7}")
-  caps.console.print(describe(3))
-  caps.console.print(describe(null))
+  console.print("${maybe ?? 7}")
+  console.print(describe(3))
+  console.print(describe(null))
 }

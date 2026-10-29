@@ -1,0 +1,9 @@
+// reject: E-NAM-005 (at the marked line)
+// covers: LANG-04-06
+// The runtime supplies only `List[String]` and the capabilities of fortis.host (4.6, X-345): an `Int` parameter of
+// the entry `main` has nothing to receive.
+import fortis.host { Console }
+
+func main(console: Console, count: Int) {     // reject: E-NAM-005 — the runtime cannot supply an Int
+  console.print("${count}")
+}

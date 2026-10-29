@@ -2,7 +2,7 @@
 // requires: runtime
 // covers: LANG-11-07
 // Each development adapter refuses its contract's violation with an outcome (DEL-28 adapter contracts).
-import fortis.host { Host, FileSystem, Network, Clock, Process, RawSql, Path }
+import fortis.host { FileSystem, Network, Clock, Process, RawSql, Path, Console }
 try func escape(fs: FileSystem) String {
   let p = Path.parse("../outside.txt") or fail
   return fs.readText(p) or fail
@@ -17,8 +17,8 @@ try func afterClose(fs: FileSystem) Int {
   let p = Path.parse("w.txt") or fail
   let mut f = fs.create(p) or fail
   let data = fs.readAll(p) or fail
-  editable f.close()
-  editable f.writeAll(data) or fail
+  f.close()
+  f.writeAll(data) or fail
   return 0
 }
 try func future(clock: Clock) Duration {
@@ -29,38 +29,37 @@ try func parsed(text: String) Int {
   let p = Path.parse(text) or fail
   return 1
 }
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  discard escape(caps.fileSystem) catch e {
-    caps.console.print(e.code)
+recovers func main(fileSystem: FileSystem, console: Console, network: Network, clock: Clock, process: Process, rawSql: RawSql) {
+  discard escape(fileSystem) catch e {
+    console.print(e.code)
     recover ""
   }
-  discard confined(caps.fileSystem) catch e {
-    caps.console.print(e.code)
+  discard confined(fileSystem) catch e {
+    console.print(e.code)
     recover ""
   }
-  discard afterClose(caps.fileSystem) catch e {
-    caps.console.print(e.code)
+  discard afterClose(fileSystem) catch e {
+    console.print(e.code)
     recover 0
   }
-  discard caps.network.resolve("example.com") catch e {
-    caps.console.print(e.code)
+  discard network.resolve("example.com") catch e {
+    console.print(e.code)
     recover ""
   }
-  discard future(caps.clock) catch e {
-    caps.console.print(e.code)
+  discard future(clock) catch e {
+    console.print(e.code)
     recover Duration.seconds(0)
   }
-  discard caps.process.run("rm", List.default()) catch e {
-    caps.console.print(e.code)
+  discard process.run("rm", List.default()) catch e {
+    console.print(e.code)
     recover 0
   }
-  discard caps.rawSql.execute("drop table users") catch e {
-    caps.console.print(e.code)
+  discard rawSql.execute("drop table users") catch e {
+    console.print(e.code)
     recover 0
   }
   discard parsed("") catch e {
-    caps.console.print(e.code)
+    console.print(e.code)
     recover 0
   }
 }

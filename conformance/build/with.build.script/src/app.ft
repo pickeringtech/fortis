@@ -1,5 +1,5 @@
 // PROG-CMP-06: this package ships a Cargo build script (native/build.rs), so a native build refuses it (E-NAM-032)
 // before Cargo runs. `check` accepts it: a build script is a native-build concern.
-export func main(args: List[String]) Void {
+func main(args: List[String]) {
   discard args.count()
 }

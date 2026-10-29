@@ -158,6 +158,34 @@ impl<'a, T: Show> Show for MaybeOwned<'a, T> {
         (**self).show()
     }
 }
+/// A tuple holds a lent `??` as its `MaybeOwned`, so it owns the fallback the `??` gave and destroys it in element
+/// order (7.9; D-367). A copy of the tuple copies what it owns and holds the same loan, as a copy of a loan is that
+/// loan.
+impl<'a, T: Clone> Clone for MaybeOwned<'a, T> {
+    fn clone(&self) -> Self {
+        match self {
+            MaybeOwned::Borrowed(v) => MaybeOwned::Borrowed(v),
+            MaybeOwned::Owned(v) => MaybeOwned::Owned(v.clone()),
+        }
+    }
+}
+
+/// The present value of an optional, borrowed or owned, as a `MaybeOwned`: a borrowed `p ?? fallback` reads an
+/// optional that is a loan (`xs.get(i)`) or a value (`m.get(k)`, which copies), and the fallback is evaluated only
+/// in the `None` arm (5.7; D-246).
+pub trait IntoMaybeOwned<'a, T> {
+    fn into_maybe_owned(self) -> MaybeOwned<'a, T>;
+}
+impl<'a, T> IntoMaybeOwned<'a, T> for &'a T {
+    fn into_maybe_owned(self) -> MaybeOwned<'a, T> {
+        MaybeOwned::Borrowed(self)
+    }
+}
+impl<'a, T> IntoMaybeOwned<'a, T> for T {
+    fn into_maybe_owned(self) -> MaybeOwned<'a, T> {
+        MaybeOwned::Owned(self)
+    }
+}
 
 // a class's derived `Show` names every field: a Mutex has no display form of its own (it is not Displayable), so it
 // shows as its type, as the VM names it; without this a class holding a Mutex does not build (D-153)

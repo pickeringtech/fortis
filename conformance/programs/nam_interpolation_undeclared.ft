@@ -2,7 +2,7 @@
 // covers: LANG-04-05
 // A name inside an interpolation hole resolves like any other name (3.6); an undeclared one is E-NAM-001.
 func count(items: List[Int]) Int => items.count()
-export func main(args: List[String]) Void {
+func main() {
   let items = List.of(1, 2)
   let shown = "${count(items)} of ${counts(items)}"      // reject: E-NAM-001 — `counts` is not declared
 }

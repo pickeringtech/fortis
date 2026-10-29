@@ -1,0 +1,15 @@
+// reject: E-TYP-150 (at the marked line)
+// covers: LANG-11-09
+// A `try` function's result is an Outcome, which is linear and can never be dropped: `@ignorable` on it is rejected
+// (5.5, 11.8; X-345).
+export error Full {
+  code: "demo.full"
+}
+
+@ignorable                                         // reject: E-TYP-150 — a linear result
+try func add(seen: editable Set[Int], n: Int) Bool {
+  if seen.count() > 10 {
+    fail Full()
+  }
+  return editable seen.add(n)
+}

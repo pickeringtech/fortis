@@ -1,6 +1,6 @@
 // execute: 3|4
 // requires: runtime
-// D-148 (docs/delivery/defects.json): natively, a value passed to a `dynamic I` parameter does not build (rustc E0277,
+// D-148: natively, a value passed to a `dynamic I` parameter does not build (rustc E0277,
 // `Box<dyn Measured>: Measured` is not satisfied), nor does a method call through a type parameter bounded by I (E0599);
 // the checkers accept the program, and the interpreter and the VM print `3|4`.
 import fortis.host { Host }

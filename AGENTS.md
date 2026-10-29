@@ -1,7 +1,8 @@
 # Working in this repository (agents)
 
 Instructions for any agent developing Fortis here: Claude Code reads them through `CLAUDE.md`, Codex and others
-read this file directly.
+read this file directly. [CONTRIBUTING.md](CONTRIBUTING.md) says how to build Fortis and run the gate; the
+`fortis-code` skill (`skills/fortis-code/SKILL.md`) says how to read, check and change Fortis source.
 
 ## Waiting on background work
 
@@ -15,28 +16,23 @@ still in progress, and nobody can tell them apart.
   and no separate watcher is needed:
 
   ```bash
-  timeout 45m codex exec -s read-only - < docs/reviews/x-prompt.md > docs/reviews/x-codex.md 2> "$TMP/x.err"
+  timeout 90m python3 -I conformance/tools/gate.py --json build/gate.json > build/gate.log 2>&1
   echo "exit=$?"    # 124 means the deadline passed
   ```
 
 - **When you have to watch work you did not start, wait on its PID, never on a pattern.**
-  `pgrep -f "codex exec"` run from a shell whose own command line contains `codex exec` matches that shell, so the
-  loop waits on itself forever. Grepping a transcript for "exit" or "done" fails in the opposite direction, firing
-  early, because the tool's own output contains those words.
+  `pgrep -f "gate.py"` run from a shell whose own command line contains `gate.py` matches that shell, so the loop
+  waits on itself forever. Grepping a log for "exit" or "done" fails in the opposite direction, firing early,
+  because the tool's own output contains those words.
 
   ```bash
   pid=12345; deadline=$((SECONDS + 2700))
   while kill -0 "$pid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do sleep 10; done
   if kill -0 "$pid" 2>/dev/null; then echo "TIMEOUT: $pid still running"; else echo "finished"; fi
-  wc -c docs/reviews/x-codex.md; tail -n 5 "$TMP/x.err"
+  wc -c build/gate.log; tail -n 5 build/gate.log
   ```
 
 - **Check in, even before the deadline.** When a wait passes the time the work usually takes, look at the output
   file and the process before waiting longer. Never report work as running without checking.
 - Stop your own watchers once they have done their job.
-
-## External reviews
-
-Design and spike reviews run Codex (`codex exec -s read-only - < prompt > docs/reviews/<name>-codex.md`) from the
-repository root, under the rule above. Read the whole output, and address or record every finding: in a spike's
-design before preregistration, or in its decision record's post-review table after the run.
+- Never stop processes by name or pattern (`pkill -f`, `killall`): stop the PID you started.

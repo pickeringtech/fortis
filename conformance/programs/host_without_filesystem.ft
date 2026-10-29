@@ -6,5 +6,5 @@ try func peek(caps: Capabilities) String {
   let p = Path.parse("note.txt") or fail
   return caps.fileSystem.readText(p) or fail     // reject: E-EFF-010 — io without a FileSystem parameter
 }
-export func main(args: List[String]) Void {
+func main() {
 }

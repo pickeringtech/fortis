@@ -1,0 +1,97 @@
+// execute: first x0|via x0|pick spare|pick x0|arm spare|arm x0|branch spare|branch x0|fallback spare|wrapped x0|drop x0|drop spare2|drop spare|ints 4 1|end
+// requires: runtime
+// covers: LANG-07-06
+// D-381, 7.6: every shape that lends still checks and runs alike on every backend: a result built by nested calls
+// whose results lend, a `match` over `self.items.get(0)` whose arms both lend, an `if` whose branches both give a
+// loan, `self.items.get(0) ?? self.spare` with both sides from `self`, `present` of a lent arm binding, and a tuple
+// of trivial values, which holds nothing.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+class Bag {
+  items: List[Token]
+  spare: Token
+
+  func pick(self) alias Token from self {
+    return self.items.get(0) ?? alias self.spare
+  }
+
+  func pickVia(self) alias Token from self {
+    return self.pick()
+  }
+
+  func arm(self) alias Token from self {
+    return match self.items.get(0) {
+      present(x) => x
+      null => alias self.spare
+    }
+  }
+
+  func branch(self, first: Bool) alias Token from self {
+    return if first {
+      give self.items.get(0) ?? alias self.spare
+    } else {
+      give alias self.spare
+    }
+  }
+
+  func fallback(self) alias Token from self {
+    return self.items.get(0) ?? self.spare
+  }
+
+  func wrapped(self) (alias Token from self)? {
+    return match self.items.get(0) {
+      present(x) => present(x)
+      null => null
+    }
+  }
+}
+
+func first(xs: List[Token]) (alias Token from xs)? {
+  return xs.get(0)
+}
+
+func via(xs: List[Token]) (alias Token from xs)? {
+  return first(alias xs)
+}
+
+func ints(xs: List[Int]) alias (Int, Int) from xs {
+  return (xs.get(0) ?? 0, 1)
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "x0"))
+  console.print("first ${first(alias xs)?.label ?? "none"}")
+  console.print("via ${via(alias xs)?.label ?? "none"}")
+  {
+    let bag = Bag(items: List.default(), spare: make(console, "spare"))
+    let p = alias bag.pickVia()
+    console.print("pick ${p.label}")
+    let full = Bag(items: move xs, spare: make(console, "spare2"))
+    let q = alias full.pickVia()
+    console.print("pick ${q.label}")
+    console.print("arm ${alias bag.arm().label}")
+    console.print("arm ${alias full.arm().label}")
+    console.print("branch ${alias bag.branch(false).label}")
+    console.print("branch ${alias full.branch(true).label}")
+    console.print("fallback ${alias bag.fallback().label}")
+    console.print("wrapped ${alias full.wrapped()?.label ?? "none"}")
+  }
+  let ns: List[Int] = List.of(4)
+  let pair = ints(alias ns)
+  console.print("ints ${pair.0} ${pair.1}")
+  console.print("end")
+}

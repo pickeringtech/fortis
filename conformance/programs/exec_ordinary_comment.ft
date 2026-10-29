@@ -1,9 +1,8 @@
 // accept
 // covers: LANG-04-06
 // a note, not a test request
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("noted")
+func main(console: Console) {
+  console.print("noted")
 }

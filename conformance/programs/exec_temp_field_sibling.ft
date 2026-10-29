@@ -4,19 +4,19 @@
 // covers: LANG-07-09
 // Moving one field out of a statement temporary leaves the others until the end of the statement, after the
 // call (7.9). The class and the anonymous record agree. The moved field is not destroyed again.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  export func consume(owned self) Void {
+  export func consume(owned self) {
     self.console.print("consume ${self.id}")
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
@@ -26,16 +26,14 @@ export class Box {
   export k: Handle
 }
 
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   Box(h: Handle.make(1, alias console), k: Handle.make(2, alias console)).h.consume()
   console.print("after")
   { h: Handle.make(1, alias console), k: Handle.make(2, alias console) }.h.consume()
   console.print("after")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
 }

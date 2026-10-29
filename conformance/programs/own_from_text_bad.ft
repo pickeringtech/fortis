@@ -1,0 +1,42 @@
+// reject: E-OWN-051 (at the marked lines)
+// covers: LANG-07-06
+// D-386, 6.6, 7.6: an interpolated string allocates a fresh `String`, and a literal where a `String` loan is declared
+// converts by allocating one: each is a value of the function's own, which ends with the call, so neither can be the
+// result declared `from` a parameter, nor a view `from static`: E-OWN-051, at the returned expression. Both checkers
+// accepted them; the interpreter and the VM ran the program, and native code refused the interpolation (rustc
+// E0515, a reference to a temporary).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func interpolated(xs: List[Token]) StringView from xs {
+  return "count ${xs.count()}"                              // reject: E-OWN-051 — an interpolation is a fresh String
+}
+
+func interpolatedBody(xs: List[Token]) StringView from xs => "count ${xs.count()}"   // reject: E-OWN-051 — an expression body
+
+func converted(xs: List[Token]) alias String from xs => "plain"   // reject: E-OWN-051 — a literal converts to the String the loan is declared of
+
+func convertedInterpolation(xs: List[Token]) alias String from xs => "n ${xs.count()}"   // reject: E-OWN-051 — and so does an interpolation
+
+func branch(t: Token, empty: Bool) StringView from t {
+  return if empty {                                         // reject: E-OWN-051 — a branch that interpolates, beside one that lends
+    give "none of ${t.label}"
+  } else {
+    give alias t.label
+  }
+}
+
+func fromStatic(xs: List[Token]) StringView from static => "count ${xs.count()}"   // reject: E-OWN-051 — a static view cannot be a fresh String
+
+func mixed(xs: List[Token]) StringView from xs => "\${kept} ${xs.count()}"   // reject: E-OWN-051 — an escaped hole beside a real one still interpolates (D-412)
+
+func main(console: Console) {
+  console.print("loans")
+}

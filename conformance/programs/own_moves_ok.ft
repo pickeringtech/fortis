@@ -5,10 +5,10 @@ export class Box {
   export label: String
 }
 
-func consume(box: owned Box) Void {
+func consume(box: owned Box) {
 }
 
-func flow(flag: Bool) Void {
+func flow(flag: Bool) {
   let mut box = Box(label: "a")
   consume(move box)
   box = Box(label: "b")

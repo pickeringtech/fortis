@@ -1,5 +1,5 @@
 // accept
-pure func kinds() Void {
+pure func kinds() {
   let a: Float32 = 1.5f32
   let b: Float = 1.5
   let c: Float = 2e10

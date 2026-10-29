@@ -1,0 +1,31 @@
+// reject: E-MAT-003 (at the marked lines)
+// covers: LANG-09-05
+// 9.8 (X-345): the alternatives of an or-pattern bind no names, are not `otherwise`, and the arm takes no `when`
+// guard, so the arm body sees the same bindings, none, whichever alternative matched.
+enum Shape {
+  Circle(radius: Int)
+  Square(side: Int)
+  Empty
+}
+
+func size(s: Shape) Int {
+  return match s {
+    Circle(radius: r) | Square(side: r) => r          // reject: E-MAT-003 — `r` is bound by an alternative
+    Empty => 0
+  }
+}
+
+func flat(s: Shape) Bool {
+  return match s {
+    Circle(radius: _) | Square(side: _) when true => false    // reject: E-MAT-003 — a guard on an or-pattern arm
+    Circle(radius: _) => false
+    Square(side: _) => false
+    Empty => true
+  }
+}
+
+func code(n: Int) Int {
+  return match n {
+    0 | otherwise => 1                                // reject: E-MAT-003 — `otherwise` is an arm of its own
+  }
+}

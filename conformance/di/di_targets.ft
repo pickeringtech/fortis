@@ -2,7 +2,7 @@
 // covers: PLAT-03-02
 // Selection (Platform 3.3) within one context: an exact-slot binding beats an exact-consumer binding, which beats
 // a group binding, which beats an untargeted one; the declaration order of the bindings does not matter.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Gateway {
   name: String
@@ -37,13 +37,12 @@ context Production {
   provide Reports
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let app = Production.application()
   let r = app.refunds()
-  caps.console.print(r.primary.name)
-  caps.console.print(app.payouts().gateway.name)
-  caps.console.print(app.preview().gateway.name)
-  caps.console.print("untargeted:${r.backup.name}")
-  caps.console.print("untargeted:${app.reports().gateway.name}")
+  console.print(r.primary.name)
+  console.print(app.payouts().gateway.name)
+  console.print(app.preview().gateway.name)
+  console.print("untargeted:${r.backup.name}")
+  console.print("untargeted:${app.reports().gateway.name}")
 }

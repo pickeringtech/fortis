@@ -5,7 +5,7 @@ export class Tag {
 }
 
 implement Displayable for Tag {
-  pure func display(self, into: editable Builder) Void {
+  pure func display(self, into: editable Builder) {
   }
 }
 

@@ -3,7 +3,7 @@
 // Two levels: an application level holding a Shared gateway (an instance binding) and a Copyable counter, and a
 // request level holding the request's id. Transient bindings are built per use; a Shared slot takes `retain()`,
 // a Copyable one a copy, an owned one a fresh value; the request level holds its own handles of what it uses.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class StripeGateway {
   key: String
@@ -47,12 +47,11 @@ context Production(key: owned String) {
   provide RequestHandler
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let app = Production.application("live")
   let checkout = app.checkoutService()
-  caps.console.print(checkout.pay(5))
-  caps.console.print(app.checkoutService().pay(7))
+  console.print(checkout.pay(5))
+  console.print(app.checkoutService().pay(7))
   let req = app.request(RequestId(value: 42))
-  caps.console.print(req.requestHandler().handle(9))
+  console.print(req.requestHandler().handle(9))
 }

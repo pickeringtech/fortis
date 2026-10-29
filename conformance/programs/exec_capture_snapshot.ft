@@ -3,7 +3,7 @@
 // requires: runtime
 // covers: LANG-13-01
 // 13: capture snapshots the value at the statement; later mutation of the place cannot change the frame.
-import fortis.host { Host }
+import fortis.host { Console }
 observation Trace {
   tier: Int                          required: all
   total: Int                         required: all
@@ -16,7 +16,6 @@ func work(start: Int) Int {
   capture total = n
   return n
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${work(1)}")
+func main(console: Console) {
+  console.print("${work(1)}")
 }

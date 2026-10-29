@@ -1,0 +1,9 @@
+// D-343: a property runs 25 generated cases on the interpreter (`fortis test`, one `test-result` per case, `case 1`
+// to `case 25`) and 100 on the VM (`fortisc test`, one `test-result`, `100 cases`), from different generators, so a
+// property that fails on few inputs can pass on one runner and fail on the other. Here `fortis test` passes all 25
+// cases, and `fortisc test` fails at its case 13 with `n = 7`, minimised to 7 (pilot FRICTION 14).
+pure func notSeven(n: Int) Bool => n != 7
+
+property "seven is rare" forall (n: Int<0..199>) {
+  expect notSeven(n)
+}

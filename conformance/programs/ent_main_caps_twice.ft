@@ -1,0 +1,10 @@
+// reject: E-EFF-010 (at the marked line)
+// covers: LANG-11-07
+// A `main` that takes a capability parameter has had its capabilities created by the runtime, so a call of
+// `Host.capabilities()` would be a second creation (4.6, 11.6; X-345).
+import fortis.host { Console, Host }
+
+func main(console: Console) {
+  let caps = Host.capabilities()                   // reject: E-EFF-010 — the capabilities already exist
+  console.print("x")
+}

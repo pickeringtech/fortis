@@ -11,7 +11,7 @@ export type Small = Int<0..10>
 
 func callback(g: fn() Int) Int => g()
 
-noalloc func dot() Shape => Shape.Dot(n: 1)
+noalloc func dot() Shape => Dot(n: 1)
 
 func callback2(g: fn() Int) Int => g()
 

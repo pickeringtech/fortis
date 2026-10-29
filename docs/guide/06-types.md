@@ -3,7 +3,7 @@
 <!-- covers: LR 6 -->
 *Human mode. Agent mode: [Types, by rule](../agent/06-types.md). Source of truth: LR 6.*
 
-> Preview: refinements (LR 6.3), newtypes (LR 6.9) and generics (LR 6.10) arrive in v0.1. Normalisation, case mapping and the collections beyond `List`, `Map` and `Set` (LR 6.6, LR 6.7) arrive in v0.4.
+> Preview: refinements (LR 6.3), newtypes (LR 6.9) and generics (LR 6.10) arrive in v0.1. Normalisation, case mapping and the collections beyond `List`, `Map` and `Set` (LR 6.6, LR 6.7) arrive in v0.4. `derive Default` (LR 6.10) is in v0.0.2.
 
 Fortis is nominally typed: two types are the same only when they are the same declaration, whatever their
 representation (LR 6.1). There is no top type, no `Any`, no implicit conversion between distinct types and no
@@ -28,7 +28,7 @@ pure func describeOrder(order: OrderId) Int {
   return describe(order)           // reject: E-TYP-040
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -79,14 +79,13 @@ happens on its own (LR 6.3).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let small: Int<0..50> = 20
   let wide: Int<0..100> = small
   let any: Int = wide
-  caps.console.print("${small} ${wide} ${any}")
+  console.print("${small} ${wide} ${any}")
 }
 ```
 
@@ -100,20 +99,19 @@ type, is a pure function that returns an outcome, a success when `x` is in range
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 type Percent = Int<0..100>
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let fine = Percent.validate(75) or fail
-  caps.console.print("accepted ${fine}")
+  console.print("accepted ${fine}")
   let tooBig = Percent.validate(140) catch e {
-    caps.console.print("rejected with ${e.code}")
+    console.print("rejected with ${e.code}")
     report e
     recover Percent(0)
   }
-  caps.console.print("fell back to ${tooBig}")
+  console.print("fell back to ${tooBig}")
 }
 ```
 
@@ -128,7 +126,7 @@ A literal is checked against the type it is given when the program is compiled: 
 
 ```fortis
 // reject: E-REF-001
-export func main(args: List[String]) Void {
+func main() {
   let score: Int<0..100> = 140      // reject: E-REF-001
 }
 ```
@@ -146,7 +144,7 @@ change an unrefined collection and `validate` the result (`E-REF-003`, LR 6.3).
 // reject: E-TYP-020
 type Ratio = Float<0..1>              // reject: E-TYP-020
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -154,28 +152,30 @@ export func main(args: List[String]) Void {
 
 The integer operators `+ - * / % << >>` are proof-required: each is accepted only when the checker can show it
 cannot overflow, divide by zero or shift out of range (LR 6.4). When you cannot or do not want to give that
-proof, every integer type has three families of named operations (LR 6.4):
+proof, handle the failure instead: on `Int`, an operator the checker cannot prove, written as the left operand of
+`or fail`, `or recover` or `catch`, is the checked operation, as in `big + 1 or recover -1` below (LR 6.4). `Int`
+also has three families of named operations (LR 6.4); the sized integer types, `Int32`, `UInt8` and the rest, have
+none yet and get theirs in v0.4:
 
 | Family | Example | Result |
 |---|---|---|
-| Checked | `Int.add(a, b)`, `Int.sub`, `Int.mul`, `Int.div`, `Int.rem`, `Int.shiftLeft` | an outcome that fails with `numeric.overflow`, `numeric.divide_by_zero` or `numeric.shift_range` |
+| Checked | `Int.add(a, b)`, `Int.sub`, `Int.mul`, `Int.div`, `Int.rem`, `Int.shiftLeft`; on `Int`, the operator under a handler | an outcome that fails with `numeric.overflow`, `numeric.divide_by_zero` or `numeric.shift_range` |
 | Wrapping | `Int.wrappingAdd(a, b)`, … | always a value; wraps around in two's complement |
 | Saturating | `Int.saturatingAdd(a, b)`, … | always a value; clamps at the type's bounds |
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+recovers func main(console: Console) {
   let big: Int = 9223372036854775807
-  let checked: Int = Int.add(big, 1) or recover -1
-  caps.console.print("checked ${checked}")
-  caps.console.print("wrapping ${Int.wrappingAdd(big, 1)}")
-  caps.console.print("saturating ${Int.saturatingAdd(big, 1)}")
+  let checked: Int = big + 1 or recover -1
+  console.print("checked ${checked}")
+  console.print("wrapping ${Int.wrappingAdd(big, 1)}")
+  console.print("saturating ${Int.saturatingAdd(big, 1)}")
   let q: Int = Int.div(-7, 2) or recover 0
   let r: Int = Int.rem(-7, 2) or recover 0
-  caps.console.print("-7 / 2 is ${q}, remainder ${r}")
+  console.print("-7 / 2 is ${q}, remainder ${r}")
 }
 ```
 
@@ -200,13 +200,12 @@ value, always with a fractional part (LR 6.5):
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${0.1 + 0.2} ${2e3} ${1.5}")
+func main(console: Console) {
+  console.print("${0.1 + 0.2} ${2e3} ${1.5}")
   let root = Float.sqrt(-1.0)
-  caps.console.print("${root} is NaN: ${Float.isNaN(root)}")
+  console.print("${root} is NaN: ${Float.isNaN(root)}")
 }
 ```
 
@@ -226,7 +225,7 @@ class Reading derive Equatable {    // reject: E-TYP-090
   export celsius: Float
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -241,15 +240,14 @@ still does not fit, the operation fails. Rounding to a scale of your choosing is
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let price = 1.50d
   let total = Decimal.add(price, 2.25d) or fail
   let product = Decimal.mul(1.5d, 1.25d) or fail
-  let rounded = Decimal.round(2.345d, 2, RoundingMode.HalfEven)
-  caps.console.print("${price} ${total} ${product} ${rounded}")
+  let rounded = Decimal.round(2.345d, 2, HalfEven)
+  console.print("${price} ${total} ${product} ${rounded}")
 }
 ```
 
@@ -271,7 +269,7 @@ the view to borrow from (`E-TYP-040`, LR 3.5):
 
 ```fortis
 // reject: E-TYP-040
-export func main(args: List[String]) Void {
+func main() {
   let count = 3
   let label: StringView = "count ${count}"      // reject: E-TYP-040
 }
@@ -284,22 +282,21 @@ the scalar at an offset as an outcome. `text.Builder` accumulates text.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 import fortis.text
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let word: StringView = "naïve"
-  caps.console.print("${word.byteCount()} bytes, ${word.scalarCount()} scalars")
+  console.print("${word.byteCount()} bytes, ${word.scalarCount()} scalars")
   let start = word.slice(0, 3) or fail
   let third = word.scalarAt(2) or fail
   let mut out = text.Builder.create()
-  editable out.append(start)
-  editable out.append(" / ")
-  editable out.appendScalar(third)
-  caps.console.print(out.finish())
+  out.append(start)
+  out.append(" / ")
+  out.appendScalar(third)
+  console.print(out.finish())
   let copied = String.from(word)
-  caps.console.print("an owned copy: ${copied}")
+  console.print("an owned copy: ${copied}")
 }
 ```
 
@@ -324,22 +321,21 @@ indexing](06-proofs.md)). Without a proof, `list.get(i)` returns an optional and
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let mut items = List.of(3, 1, 2)
-  editable items.push(5)
-  let last = editable items.pop() ?? 0
+  items.push(5)
+  let last = items.pop() ?? 0
   let second = items.get(1) ?? 0
   let third = items.at(2) or fail
-  caps.console.print("${items.count()} items; popped ${last}, second ${second}, third ${third}")
-  editable items.set(0, 10) or fail
+  console.print("${items.count()} items; popped ${last}, second ${second}, third ${third}")
+  items.set(0, 10) or fail
   let doubled = items.map(fn(x: Int) Int => Int.saturatingMul(x, 2))
   let large = items.filter(fn(x: Int) Bool => x > 1)
-  caps.console.print("${doubled.count()} doubled, ${large.count()} above one, ${items.countWhere(fn(x: Int) Bool => x > 1)} counted")
+  console.print("${doubled.count()} doubled, ${large.count()} above one, ${items.countWhere(fn(x: Int) Bool => x > 1)} counted")
   for x in items.reversed() {
-    caps.console.print("${x}")
+    console.print("${x}")
   }
 }
 ```
@@ -363,22 +359,21 @@ used in `pure` functions (LR 6.7):
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut ages: Map[String, Int] = Map.default()
-  editable ages.set("brian", 41)
-  editable ages.set("ada", 36)
-  editable ages.set("brian", 42)
-  caps.console.print("${ages.count()} people, ada is ${ages.get("ada") ?? 0}")
+  ages.set("brian", 41)
+  ages.set("ada", 36)
+  ages.set("brian", 42)
+  console.print("${ages.count()} people, ada is ${ages.get("ada") ?? 0}")
   for entry in ages {
-    caps.console.print("${entry.0}: ${entry.1}")
+    console.print("${entry.0}: ${entry.1}")
   }
   let mut seen: Set[Int] = Set.default()
-  let first = editable seen.add(4)
-  let again = editable seen.add(4)
-  caps.console.print("${first} ${again} ${seen.contains(4)}")
+  let first = seen.add(4)
+  let again = seen.add(4)
+  console.print("${first} ${again} ${seen.contains(4)}")
 }
 ```
 
@@ -417,7 +412,7 @@ is a `T` inside `e`.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Address {
   export postcode: Int
@@ -437,19 +432,18 @@ pure func describe(n: Int?) String {
 
 pure func postcodeOf(p: Person) Int => p.address?.postcode ?? 0
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(describe(null))
-  caps.console.print(describe(4))
+func main(console: Console) {
+  console.print(describe(null))
+  console.print(describe(4))
   let ada = Person(name: "Ada", address: Address(postcode: 10115))
   let bo = Person(name: "Bo", address: null)
-  caps.console.print("${postcodeOf(ada)} ${postcodeOf(bo)}")
+  console.print("${postcodeOf(ada)} ${postcodeOf(bo)}")
   let maybe: Int? = null
   let label = match maybe {
     present(v) => "got ${v}"
     null => "got nothing"
   }
-  caps.console.print(label)
+  console.print(label)
 }
 ```
 
@@ -472,19 +466,18 @@ checker insists on exactly one entry per variant (LR 6.9).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 enum Lookup {
   Found
   NotFound
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let pair = (3, "three")
   let person = { name: "Ada", age: 36 }
   let statuses: VariantMap[Lookup, Int] = { Found: 200, NotFound: 404 }
-  caps.console.print("${pair.0} is ${pair.1}; ${person.name} is ${person.age}")
+  console.print("${pair.0} is ${pair.1}; ${person.name} is ${person.age}")
 }
 ```
 
@@ -501,7 +494,7 @@ which is how an optional function is written: `(fn(Int) Bool)?` (LR 6.9).
 // reject: E-TYP-030
 export pure func bounds() (Int, Int) => (1, 2)     // reject: E-TYP-030
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -524,7 +517,7 @@ satisfies them cannot fail to compile.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func occurrences[T](items: List[T], wanted: T) Int where T implements Equatable {
   let mut n = 0
@@ -543,12 +536,11 @@ pure func larger[T](a: T, b: T) T where T implements Comparable, T implements Co
   return copy b
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${occurrences(List.of(1, 2, 1), 1)} ${occurrences(List.of("a", "b"), "c")}")
+func main(console: Console) {
+  console.print("${occurrences(List.of(1, 2, 1), 1)} ${occurrences(List.of("a", "b"), "c")}")
   let pear: String = "pear"
   let apple: String = "apple"
-  caps.console.print("${larger(3, 8)} ${larger(pear, apple)}")
+  console.print("${larger(3, 8)} ${larger(pear, apple)}")
 }
 ```
 
@@ -563,20 +555,19 @@ them, the call is `E-TYP-160`, and the repair is to annotate the binding:
 
 ```fortis
 // reject: E-TYP-160
-export func main(args: List[String]) Void {
+func main() {
   let names = List.default()        // reject: E-TYP-160
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut names: List[String] = List.default()
-  editable names.push("ada")
-  caps.console.print("${names.count()}")
+  names.push("ada")
+  console.print("${names.count()}")
 }
 ```
 
@@ -615,7 +606,7 @@ dispatch only to these interfaces (LR 6.10).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Point derive Equatable, Displayable {
   export x: Int
@@ -628,11 +619,10 @@ enum Size derive Equatable, Comparable, Displayable {
   Large
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let p = Point(x: 1, y: 2)
-  caps.console.print("${p}, equal to itself: ${p == Point(x: 1, y: 2)}")
-  caps.console.print("${Size.Medium}; small before large: ${Size.Small < Size.Large}")
+  console.print("${p}, equal to itself: ${p == Point(x: 1, y: 2)}")
+  console.print("${Size.Medium}; small before large: ${Size.Small < Large}")
 }
 ```
 
@@ -642,7 +632,9 @@ Medium; small before large: true
 ```
 
 `derive Default` builds the value from each field's declared initialiser, and from the field type's own default
-only for fields without one (LR 6.10). `derive From[S]` copies every field of the target from the field of the
+only for fields without one (LR 6.10). It gives the class `Name.default()`, with no arguments, so a class whose fields
+all start empty needs no hand-written constructor, and the header says so; a field whose type has no default, such
+as a class that does not derive it or `Int<1..10>`, makes the derivation an error (`E-TYP-090`). `derive From[S]` copies every field of the target from the field of the
 same name in `S`, which must exist and be copyable; then `Summary.from(customer)` builds the value, and
 `customer.to()` does the same wherever the target type is already known (LR 6.10):
 
@@ -679,28 +671,27 @@ outside a refinement fails with that refinement's own failure, exactly as `valid
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Customer derive Codec, Equatable {
   export name: String
   export age: Int<0..150>
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let ada = Customer(name: "Ada", age: 36)
   let json = ada.toText()
-  caps.console.print(json)
+  console.print(json)
   let back = Customer.fromText(json) or fail
-  caps.console.print("round trip equal: ${back == ada}")
+  console.print("round trip equal: ${back == ada}")
   let fromBinary = Customer.fromBytes(ada.toBytes()) or fail
-  caps.console.print("binary: ${fromBinary.name}")
+  console.print("binary: ${fromBinary.name}")
   let broken = Customer.fromText("{\"name\": \"Bo\"}") catch e {
-    caps.console.print("decoding failed: ${e.code}")
+    console.print("decoding failed: ${e.code}")
     report e
     recover Customer(name: "nobody", age: 0)
   }
-  caps.console.print(broken.name)
+  console.print(broken.name)
 }
 ```
 
@@ -725,18 +716,17 @@ class you declare `trivial`, which is rejected if any field is not trivial (`E-O
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 trivial class Pixel derive Equatable {
   export x: Int
   export y: Int
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let p = Pixel(x: 1, y: 2)
   let q = p
-  caps.console.print("${q == p}")
+  console.print("${q == p}")
 }
 ```
 
@@ -750,7 +740,7 @@ trivial class Tag {                 // reject: E-OWN-030
   export name: String
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -775,14 +765,14 @@ linear value and no exclusive loan (LR 12.3, [Cleanup, async and concurrency](12
 
 ```fortis
 // reject: E-OBL-001
-export func main(args: List[String]) Void {
+func main() {
   let token = Must.create()         // reject: E-OBL-001
 }
 ```
 
 ```fortis
 // accept
-export func main(args: List[String]) Void {
+func main() {
   let token = Must.create()
   Must.discharge(move token)
 }
@@ -795,3 +785,24 @@ be forgotten, only committed or rolled back (LR 6.12). Most linear values you me
 A type parameter is not linear unless it is declared `T: linear`. That matters only where a generic function
 holds a `T` by value; a function that only borrows its `T` can be used with linear types freely, because the
 obligation stays with the caller (LR 6.12).
+
+## Looking up a text key
+
+`Map.get` only reads its key, so a `Map[String, V]` takes the key as a `StringView`: a view of some text, a literal
+or a `String` all look the entry up, and nothing is copied to make a key that is thrown away (LR 6.7, X-345).
+`set` still takes an owned `String`, because the map keeps that one:
+
+```fortis
+// accept
+pure func countOf(counts: Map[String, Int], word: StringView) Int {
+  return counts.get(word) ?? 0
+}
+
+test "a view finds the entry" {
+  let mut counts: Map[String, Int] = Map.default()
+  counts.set("cat", 2)
+  let word: StringView = "cat"
+  expect countOf(counts, word) == 2
+  expect countOf(counts, "dog") == 0
+}
+```

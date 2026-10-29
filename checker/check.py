@@ -25,7 +25,7 @@ CODES = {
     "E-TYP-010", "E-TYP-020", "E-TYP-030",                                    # DEL-07 / DEL-10 declaration-level
     "E-TYP-060", "E-TYP-070", "E-TYP-080", "E-TYP-090", "E-TYP-100",          # DEL-10
     "E-OWN-030", "E-MIX-001",                                                 # DEL-10
-    "E-NAM-002", "E-MAT-001", "E-MAT-002", "E-TYP-050", "E-TYP-110", "E-TYP-120", "E-TYP-130",   # DEL-12
+    "E-NAM-002", "E-MAT-001", "E-MAT-002", "E-MAT-003", "E-TYP-050", "E-TYP-110", "E-TYP-120", "E-TYP-130",   # DEL-12
     "E-TYP-160",                                                                                  # DEL-40: uninferred type arguments (6.10, X-128)
     "E-REF-001", "E-REF-002", "E-REF-003",                                    # DEL-13: the interval domain
     "E-OWN-001", "E-OWN-002", "E-OWN-010", "E-OWN-011", "E-OWN-012", "E-OWN-020", "E-OWN-040",   # DEL-14: loans and moves
@@ -40,6 +40,7 @@ CODES = {
     "E-ASY-003",                                                              # DEL-24: pool launches
     "E-OWN-090",                                                              # DEL-25: unsupported ownership shapes (C.2)
     "E-NAM-034",                                                              # a head whose kit is not installed (LR 16; D-90, X-231)
+    "E-MAT-004",                                                              # a `let` pattern that can fail to match (LR 5.1; D-243)
 }
 # Codes the checker judges only for the forms a layer has reached: a fixture expecting one is PASS when
 # the checker produces it at the marked lines, INFO ("not judged at this layer") when it produces
@@ -63,9 +64,11 @@ def check_tree(lib: names.Library, mtree, file: str, module: str = "main", packa
     global LAST_ELABORATIONS, LAST_TYPER, LAST_DC
     LAST_ELABORATIONS = list(ty.elaborations)
     LAST_TYPER, LAST_DC = ty, dc
+    IMPLIED[file] = set(ty.implied_fails)
     return records + dc.records
 
 
+IMPLIED: Dict[str, set] = {}        # file -> the positions of its test bodies' calls with an implied `or fail` (14; D-319)
 LAST_ELABORATIONS: List[str] = []   # aspect elaboration records of the last checked module (golden tests, LANG-11-09)
 RECORD_TYPES = False                 # when set, the typer records each expression's type (experimental lowering, DEL-25)
 LAST_TYPER = None

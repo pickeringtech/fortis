@@ -1,0 +1,49 @@
+// execute: first a|cleared a|second b|after loan|drop o1|owned o2|drop o2|after owned|end|drop a|drop b
+// reports: log:level=info,message=drop o1,function=cleanup Token|log:level=info,message=drop o2,function=cleanup Token|log:level=info,message=drop a,function=cleanup Token|log:level=info,message=drop b,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-350, 7.9, 12.2: assigning to a `let mut` binding that holds a loan (`let mut t = xs.get(0)`, then `t = null` or
+// `t = xs.get(1)`) replaces the loan and destroys nothing: the list's owner runs each element's cleanup once, when it
+// ends. The interpreter ran the old element's cleanup at the assignment, then again at the owner's end. Assigning to
+// a binding that owns its value still drops the old value at the assignment.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func reassigned(console: Shared[Console], xs: List[Token]) {
+  let mut t = xs.get(0)
+  console.print("first ${t?.label ?? "none"}")
+  t = null
+  console.print("cleared ${xs.get(0)?.label ?? "none"}")
+  t = xs.get(1)
+  console.print("second ${t?.label ?? "none"}")
+}
+
+func replaced(console: Shared[Console]) {
+  let mut o = make(console, "o1")
+  o = make(console, "o2")
+  console.print("owned ${o.label}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  xs.push(make(console, "b"))
+  reassigned(console, xs)
+  console.print("after loan")
+  replaced(console)
+  console.print("after owned")
+  console.print("end")
+}

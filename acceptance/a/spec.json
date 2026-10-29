@@ -17,9 +17,9 @@
   {"feature": "refined numerics with plain operators where the interval domain proves them",
    "source": [["src/ids.ft", "Int<0..20000> => a \\+ b"], ["src/ids.ft", "Int<0..10000000000> => quantity \\* unitCents"]],
    "tests": ["refined arithmetic at its boundaries"], "negatives": ["refinement"]},
-  {"feature": "checked APIs where the domain cannot prove the result",
-   "source": [["src/ids.ft", "Int\\.add\\(sum, v\\) or fail"], ["src/feed.ft", "Int\\.mul\\(value, 10\\) or fail"], ["src/ids.ft", "Int<0\\.\\.10000>\\.validate\\(current \\+ added\\) or fail"]],
-   "tests": ["the checked API fails instead of wrapping", "a sum past the stock range fails its refinement"]},
+  {"feature": "checked operators where the domain cannot prove the result",
+   "source": [["src/ids.ft", "sum = sum \\+ v or fail"], ["src/feed.ft", "value = value \\* 10 \\+ d or fail"], ["src/ids.ft", "Int<0\\.\\.10000>\\.validate\\(current \\+ added\\) or fail"]],
+   "tests": ["a checked operator fails instead of wrapping", "a sum past the stock range fails its refinement"]},
   {"feature": "nominal IDs",
    "source": [["src/ids.ft", "^export type SkuId = Int<1\\.\\.999999>"], ["src/ids.ft", "^export type BinId = Int<1\\.\\.999>"], ["src/feed.ft", "SkuId\\.validate\\("]],
    "tests": ["nominal identifiers are validated at the boundary", "entries validate every field"]},
@@ -56,6 +56,6 @@
   {"file": "src/feed.ft", "old": "  if n == 0 || n > 6 {", "new": "  if n == 0 || n > 7 {", "killed_by": "test", "test": "malformed numbers"},
   {"file": "src/ids.ft", "old": "  if taken > current {", "new": "  if taken > current + 1 {", "killed_by": "test", "test": "taking more than is held is a domain failure"},
   {"file": "src/ledger.ft", "old": "    return self.items.countWhere(fn[threshold](item: Item) Bool => item.quantity < threshold)", "new": "    return self.items.countWhere(fn[threshold](item: Item) Bool => item.quantity <= threshold)", "killed_by": "test", "test": "closures of the three kinds"},
-  {"file": "src/ledger.ft", "old": "    editable self.items.set(found, Item(sku: sku, name: copy item.name, quantity: left)) or fail", "new": "    editable self.items.set(found, Item(sku: sku, name: copy item.name, quantity: item.quantity)) or fail", "killed_by": "run"}
+  {"file": "src/ledger.ft", "old": "    self.items.set(found, Item(sku, name: copy item.name, quantity: left)) or fail", "new": "    self.items.set(found, Item(sku, name: copy item.name, quantity: item.quantity)) or fail", "killed_by": "run"}
  ]
 }

@@ -1,9 +1,8 @@
 // execute: 127.0.0.1
 // requires: runtime
 // covers: LANG-11-07
-import fortis.host { Host, Network }
+import fortis.host { Network, Console }
 try func lookup(net: Network) String => net.resolve("localhost") or fail
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(lookup(caps.network) or fail)
+try func main(console: Console, network: Network) {
+  console.print(lookup(network) or fail)
 }

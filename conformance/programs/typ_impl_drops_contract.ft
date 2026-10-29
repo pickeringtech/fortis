@@ -32,5 +32,5 @@ export class Kept implements Scorer {
   Settled func settle(self, x: Int) Int => x
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }

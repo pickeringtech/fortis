@@ -1,0 +1,120 @@
+// execute: arm e-fb e-own|drop e-own|drop e-fb|after arm 1|give g-fb g-own|drop g-own|given g-fb|drop g-fb|after given|nested n-fb n-in n-fb2 n-out|drop n-out|drop n-fb2|drop n-in|drop n-fb|after nested 2|lent item l-own|drop l-own|after lent 3|if i-fb i-own|drop i-own|drop i-fb|after if 4|drop x-own|drop x-fb|after expr arm 5|list item|end|drop item
+// reports: log:level=info,message=drop e-own,function=cleanup Token|log:level=info,message=drop e-fb,function=cleanup Token|log:level=info,message=drop g-own,function=cleanup Token|log:level=info,message=drop g-fb,function=cleanup Token|log:level=info,message=drop n-out,function=cleanup Token|log:level=info,message=drop n-fb2,function=cleanup Token|log:level=info,message=drop n-in,function=cleanup Token|log:level=info,message=drop n-fb,function=cleanup Token|log:level=info,message=drop l-own,function=cleanup Token|log:level=info,message=drop i-own,function=cleanup Token|log:level=info,message=drop i-fb,function=cleanup Token|log:level=info,message=drop x-own,function=cleanup Token|log:level=info,message=drop x-fb,function=cleanup Token|log:level=info,message=drop item,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-372, 7.9: a `match` expression that moves a tuple whose element holds a value of the tuple's own (a `??` whose
+// fallback was moved) gives that value to the arm's binding, which destroys it at the end of the arm, as the
+// statement form does: with a block arm, an arm that gives the part out (the receiving binding then owns it), a
+// nested pattern, and an expression arm. The VM treated the binding as a loan and never ran the cleanup. A part that
+// is a loan still destroys nothing, and an `if` whose branch takes the same parts by `let` agrees. The parts are
+// slots holding the token with the cleanup, so that no backend announces the bindings' drops in its trace: native
+// code announces none for an arm's bindings (D-344), and the output and the log records show every cleanup.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+class Slot {
+  token: Token
+}
+
+func make(console: Shared[Console], label: StringView) Slot {
+  return Slot(token: Token(label: String.from(label), console: console.retain()))
+}
+
+func exprMatch(console: Shared[Console], empty: List[Slot]) {
+  let d = make(console, "e-fb")
+  let pair = (empty.get(0) ?? move d, make(console, "e-own"))
+  let n = match move pair {
+    (a, b) => {
+      console.print("arm ${a.token.label} ${b.token.label}")
+      give 1
+    }
+  }
+  console.print("after arm ${n}")
+}
+
+func givenOut(console: Shared[Console], empty: List[Slot]) {
+  let d = make(console, "g-fb")
+  let pair = (empty.get(0) ?? move d, make(console, "g-own"))
+  {
+    let t = match move pair {
+      (a, b) => {
+        console.print("give ${a.token.label} ${b.token.label}")
+        give move a
+      }
+    }
+    console.print("given ${t.token.label}")
+  }
+  console.print("after given")
+}
+
+func nested(console: Shared[Console], empty: List[Slot]) {
+  let d = make(console, "n-fb")
+  let e = make(console, "n-fb2")
+  let outer = ((empty.get(0) ?? move d, make(console, "n-in")), empty.get(0) ?? move e, make(console, "n-out"))
+  let n = match move outer {
+    ((a, b), c, x) => {
+      console.print("nested ${a.token.label} ${b.token.label} ${c.token.label} ${x.token.label}")
+      give 2
+    }
+  }
+  console.print("after nested ${n}")
+}
+
+func lentPart(console: Shared[Console], xs: List[Slot]) {
+  let pair = (xs.get(0) ?? make(console, "unused"), make(console, "l-own"))
+  let n = match move pair {
+    (a, b) => {
+      console.print("lent ${a.token.label} ${b.token.label}")
+      give 3
+    }
+  }
+  console.print("after lent ${n}")
+}
+
+func ifTakes(console: Shared[Console], empty: List[Slot]) {
+  let d = make(console, "i-fb")
+  let pair = (empty.get(0) ?? move d, make(console, "i-own"))
+  let n = if true {
+    let (a, b) = move pair
+    console.print("if ${a.token.label} ${b.token.label}")
+    give 4
+  } else {
+    give 0
+  }
+  console.print("after if ${n}")
+}
+
+func exprArm(console: Shared[Console], empty: List[Slot]) {
+  let d = make(console, "x-fb")
+  let pair = (empty.get(0) ?? move d, make(console, "x-own"))
+  let n = match move pair {
+    (a, b) => 5
+  }
+  console.print("after expr arm ${n}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Slot] = List.default()
+  let mut xs: List[Slot] = List.default()
+  xs.push(make(console, "item"))
+  exprMatch(console, empty)
+  givenOut(console, empty)
+  nested(console, empty)
+  lentPart(console, xs)
+  ifTakes(console, empty)
+  exprArm(console, empty)
+  match xs.get(0) {
+    present(s) => console.print("list ${s.token.label}")
+    null => console.print("list none")
+  }
+  console.print("end")
+}

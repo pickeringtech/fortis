@@ -7,7 +7,7 @@
 export class Bag {
   export items: List[Int]
 
-  export func drain(editable self) Void {
+  export func drain(editable self) {
     self.items = List.default()
   }
 }

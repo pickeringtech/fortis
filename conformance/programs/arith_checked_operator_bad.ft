@@ -1,0 +1,22 @@
+// reject: E-REF-002, E-TYP-040, E-ERR-001 (at the marked lines)
+// covers: LANG-06-04
+// 6.4 (X-345): only the left operand of `or fail`, `or recover` or `catch`, when it is `Int` arithmetic, is a checked
+// region. An unproved operator anywhere else is still `E-REF-002`: under a comparison, inside a call's argument, on a
+// type with no checked family (`Int32`), or bound unhandled. A region whose operators are all proved cannot fail, so
+// handling it is `E-TYP-040`; `or fail` outside a `try` function is `E-ERR-001`, as for a call. An unproved operator
+// in a handler's operand is reported once, as `E-REF-002`, and the handler adds nothing.
+try func step(n: Int) Int => n
+
+try func uses(a: Int, b: Int, c: Int, w: Int32, v: Int32, small: Int<0..10>) Int {
+  let s = a + b                                 // reject: E-REF-002 — not handled: write `a + b or fail`
+  let t = a + b == c or fail                    // reject: E-REF-002, E-TYP-040 — the region would be a Bool
+  let u = step(a * b) or fail                   // reject: E-REF-002 — `or fail` handles the call, not its argument
+  let x = w * v or fail                         // reject: E-REF-002 — Int32 has no checked operation
+  let y = small * 3 + 1 or fail                 // reject: E-TYP-040 — proved safe: drop `or fail`
+  let z = a + step(b) or fail                   // reject: E-TYP-040 — an outcome is not an operand
+  return a * b + c or fail
+}
+
+func total(a: Int, b: Int) Int {
+  return a + b or fail                          // reject: E-ERR-001 — `or fail` outside a `try` function
+}

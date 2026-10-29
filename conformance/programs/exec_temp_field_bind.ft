@@ -4,16 +4,16 @@
 // covers: LANG-07-07
 // 7.9: a field moved out of a temporary at a binding, a return, a constructor or an owned argument
 // leaves that temporary. The temporary is still destroyed, and it does not destroy the field again.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
@@ -26,11 +26,11 @@ func take(console: Shared[Console]) Handle {
   return Box(h: Handle.make(2, alias console)).h
 }
 
-func eat(h: owned Handle, console: Shared[Console]) Void {
+func eat(h: owned Handle, console: Shared[Console]) {
   console.print("eaten")
 }
 
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   {
     let h = Box(h: Handle.make(1, alias console)).h
     console.print("held")
@@ -50,9 +50,7 @@ func run(console: Shared[Console]) Void {
   console.print("after eat")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
 }

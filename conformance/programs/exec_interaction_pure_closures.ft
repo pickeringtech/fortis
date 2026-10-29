@@ -3,7 +3,7 @@
 // covers: LANG-11-01, LANG-08-01, LANG-08-02
 // Programme 16, interaction `pure` + closure kinds: a `pure` function takes a `pure fn` callback, builds a pure
 // `fn` over a trivial capture and consumes a `fn once` that moves a fresh value; all of it stays pure.
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func applyTwice(f: pure fn(Int) Int, x: Int) Int => f(f(x))
 
@@ -21,10 +21,9 @@ pure func finish(items: owned List[Int]) Int {
   return move consume()
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${applyTwice(pure fn(x: Int) Int => Int.wrappingMul(x, 2), 3)}")
-  caps.console.print("${applyTwice(pure fn(x: Int) Int => Int.wrappingAdd(x, 3), 0)}")
-  caps.console.print("${finish(List.of(1, 2, 3))}")
-  caps.console.print("scaled ${scaledBy(10, List.of(1, 2))}")
+func main(console: Console) {
+  console.print("${applyTwice(pure fn(x: Int) Int => Int.wrappingMul(x, 2), 3)}")
+  console.print("${applyTwice(pure fn(x: Int) Int => Int.wrappingAdd(x, 3), 0)}")
+  console.print("${finish(List.of(1, 2, 3))}")
+  console.print("scaled ${scaledBy(10, List.of(1, 2))}")
 }

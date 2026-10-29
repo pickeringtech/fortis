@@ -1,5 +1,6 @@
-// D-252: `?.code()` on an optional enum value is a method call; the interpreter prints 1|1, the VM stops with
-// "no payload field `code`" and the native build fails (E0615).
+// D-252: on this master both checkers reject `lights.get(0)?.code()` with E-TYP-040 (`code` is a method, called as
+// `.code()`, never taken as a value), so the VM stop the record names ("no payload field `code`") and the native
+// build failure (E0615) are not reached; its note says so. The loop's `l.code()` is accepted.
 import fortis.host { Host }
 
 enum Light derive Equatable {

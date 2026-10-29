@@ -1,0 +1,84 @@
+// reject: E-OWN-051 (at the marked lines)
+// covers: LANG-07-06
+// D-381, 7.6: a result declared `from` a parameter is a loan, so the expression that produces it must lend. A value
+// constructed by the function (a tuple or a record, a value inside `present`, a constructor, an arm or a branch
+// that gives a value of its own, a call whose result is owned, a closure's `from` result built the same way) would
+// be held by the caller as a loan of what ends with the call: E-OWN-051, at the returned expression. Both checkers
+// accepted the tuple, the record, the `present` and the arms (D-377); the interpreter ran the fallback's cleanup,
+// the VM lost it (D-381) and native code refused the program.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func makePair(console: Shared[Console], d: owned Token) (Token, Int) {
+  return (move d, 1)
+}
+
+func tuple(empty: List[Token], d: owned Token) alias (Token, Int) from empty {
+  return (empty.get(0) ?? move d, 1)                        // reject: E-OWN-051 — a tuple is a value of the function's own
+}
+
+func rec(empty: List[Token], d: owned Token) alias { item: Token, n: Int } from empty {
+  return { item: empty.get(0) ?? move d, n: 1 }             // reject: E-OWN-051 — a record too
+}
+
+func tupleBody(empty: List[Token], d: owned Token) alias (Token, Int) from empty => (empty.get(0) ?? move d, 1)   // reject: E-OWN-051 — an expression body
+
+func viaCall(empty: List[Token], console: Shared[Console], d: owned Token) alias (Token, Int) from empty {
+  return makePair(console, move d)                          // reject: E-OWN-051 — a call whose result is owned
+}
+
+func wrapped(empty: List[Token], d: owned Token) (alias Token from empty)? {
+  return present(empty.get(0) ?? move d)                    // reject: E-OWN-051 — inside present
+}
+
+func matched(empty: List[Token], d: owned Token) alias Token from empty {
+  return match empty.get(0) {                               // reject: E-OWN-051 — an arm gives a value of the function's own (D-377)
+    present(x) => x
+    null => move d
+  }
+}
+
+func branched(empty: List[Token], d: owned Token, first: Bool) (alias Token from empty)? {
+  return if first {                                         // reject: E-OWN-051 — a branch gives one
+    give empty.get(0) ?? move d
+  } else {
+    give empty.get(1)
+  }
+}
+
+func blockArm(empty: List[Token], console: Shared[Console]) alias Token from empty {
+  return match empty.get(0) {                               // reject: E-OWN-051 — a block arm gives a local
+    present(x) => x
+    null => {
+      let made = make(console, "made")
+      give move made
+    }
+  }
+}
+
+func constructed(empty: List[Token], console: Shared[Console]) alias Token from empty {
+  return Token(label: String.from("new"), console: console.retain())   // reject: E-OWN-051 — a constructor
+}
+
+func closed(empty: List[Token], console: Shared[Console], d: owned Token) {
+  let f = fn once[alias empty, move d]() alias (Token, Int) from empty {
+    return (empty.get(0) ?? move d, 1)                      // reject: E-OWN-051 — a closure's from result
+  }
+  let r = move f()
+  console.print("closure ${r.0.label}")
+}
+
+func main(console: Console) {
+  console.print("loans")
+}

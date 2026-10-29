@@ -1,0 +1,63 @@
+// execute: error warning|true false|3 note|2
+// requires: runtime
+// covers: LANG-09-05
+// 9.7 (X-345): an enum variant is written bare wherever the expected type is that enum: an argument, a return, an
+// annotated binding, a field or payload initialiser, the other operand of `==`, and a pattern.
+import fortis.host { Console }
+
+enum Severity derive Equatable {
+  Error
+  Warning
+  Note
+}
+
+enum Problem {
+  Unbalanced(by: Int)
+  MalformedDate
+  Unused
+}
+
+class Finding {
+  severity: Severity
+  problem: Problem
+}
+
+func severityOf(p: Problem) Severity {
+  return match p {
+    Unbalanced(by: _) | MalformedDate => Error
+    Unused => Note
+  }
+}
+
+func word(s: Severity) String {
+  return match s {
+    Error => "error"
+    Warning => "warning"
+    Note => "note"
+  }
+}
+
+func isError(s: Severity) Bool => s == Error
+
+func amount(p: Problem) Int {
+  return match p {
+    Unbalanced(by: n) => n
+    MalformedDate | Unused => 0
+  }
+}
+
+func main(console: Console) {
+  let w: Severity = Warning
+  console.print("${word(severityOf(MalformedDate))} ${word(w)}")
+  console.print("${isError(Error)} ${isError(w)}")
+  let f = Finding(severity: Note, problem: Unbalanced(by: 3))
+  console.print("${amount(f.problem)} ${word(f.severity)}")
+  let mut seen = 0
+  let all: List[Severity] = List.of(Error, Note, Error)
+  for s in all {
+    if s == Error {
+      seen = Int.wrappingAdd(seen, 1)
+    }
+  }
+  console.print("${seen}")
+}

@@ -1,0 +1,19 @@
+// execute: the product|more of it
+// reports: log:level=warn,message=a fallback was taken,function=fallback|log:level=info,message=starting with 2,function=main|log:level=error,message=gave up
+// requires: runtime
+// covers: LANG-13-04
+// `log.info`, `log.warn` and `log.error` write `log` records to the diagnostic plane, never to standard output, and
+// need no capability (13; X-345, X-147): a function without a Console logs. `console.print` is the program's product.
+import fortis.host { Console }
+
+func fallback(n: Int) Int {
+  log.warn("a fallback was taken")
+  return n
+}
+
+func main(console: Console) {
+  log.info("starting with ${fallback(2)}")
+  console.print("the product")
+  console.print("more of it")
+  log.error("gave up")
+}

@@ -1,26 +1,25 @@
 // execute: 0|3|9
 // requires: runtime
 // covers: LANG-09-02
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Counter {
   export count: Int = 0
   export step: Int
 
-  export func bump(editable self) Void {
+  export func bump(editable self) {
     self.count = Int.wrappingAdd(self.count, self.step)
   }
 
   export pure func triple(self) Int => Int.saturatingMul(self.count, 3)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut c = Counter(step: 3)
-  caps.console.print("${c.count}")
-  editable c.bump()
-  caps.console.print("${c.count}")
-  editable c.bump()
-  editable c.bump()
-  caps.console.print("${c.triple() / 3}")
+  console.print("${c.count}")
+  c.bump()
+  console.print("${c.count}")
+  c.bump()
+  c.bump()
+  console.print("${c.triple() / 3}")
 }

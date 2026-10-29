@@ -1,6 +1,6 @@
 // Types: refinements proved or validated, newtypes, enums with payloads, exhaustive match.
 // Run: bin/fortis run examples/05_types.ft
-import fortis.host { Host }
+import fortis.host { Console }
 
 export type Age = Int<0..150>
 
@@ -28,20 +28,19 @@ func classify(age: Age) String {
   return "adult"
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let shapes = List.of(Shape.Circle(radius: 2), Shape.Rect(width: 3, height: 4), Shape.Point)
+recovers func main(console: Console) {
+  let shapes = List.of(Shape.Circle(radius: 2), Rect(width: 3, height: 4), Point)
   for s in shapes {
-    caps.console.print("${s.label()} has area ${s.area()}")
+    console.print("${s.label()} has area ${s.area()}")
   }
   let checked = Age.validate(42) catch e {
     recover Age(0)
   }
-  caps.console.print("42 is a ${classify(checked)}")
+  console.print("42 is a ${classify(checked)}")
   match Age.validate(200) {
-    success(a) => caps.console.print("accepted ${a}")
+    success(a) => console.print("accepted ${a}")
     failure(f) => {
-      caps.console.print("rejected 200")
+      console.print("rejected 200")
       report f
     }
   }

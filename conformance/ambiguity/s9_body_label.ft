@@ -1,0 +1,15 @@
+// accept: S9: a body that opens with a labelled loop, `{ name :`, is a body, not a record type (X-345)
+func scan(xs: List[Int]) {
+  outer: for x in xs {
+    if x > 1 {
+      break outer
+    }
+  }
+}
+func assign(n: Int) Int {
+  let mut m = n
+  {
+    m = 1
+  }
+  return m
+}

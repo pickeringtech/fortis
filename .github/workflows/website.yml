@@ -1,0 +1,58 @@
+# Publishes https://fortis.picktech.co.uk whenever master changes something the site is built from, in the public
+# repository only. Its master changes once per release (release.yml's publish job), so the site always shows the
+# latest release, never work that is merged but not yet released.
+# The site is built here (it needs fortisc for highlighting) and pushed to the `website` branch by
+# website/publish.sh; Forge's push-to-deploy then deploys that branch. Actions are pinned to full commit SHAs, with
+# the version they were taken from in a comment.
+name: Website
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "website/**"
+      - "README.md"
+      - "docs/**"
+      - "skills/**"
+      - "library/**"
+      - "compiler/**"
+      - "conformance/tools/site.py"
+      - ".github/workflows/website.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: website
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'pickeringtech/fortis'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable branch, 2026-10-16
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: compiler
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install Pillow (the social-preview image)
+        run: python3 -m pip install --quiet pillow
+      - name: Build fortisc (the documentation highlights Fortis with it)
+        run: cargo build --release --manifest-path compiler/Cargo.toml
+      - name: Check the site
+        run: python3 -I website/build.py --check
+      - name: Publish to the website branch
+        run: |
+          git config user.name "fortis-website"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          bash website/publish.sh

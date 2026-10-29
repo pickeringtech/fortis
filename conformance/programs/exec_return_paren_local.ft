@@ -1,0 +1,54 @@
+// execute: in lambda|got lambda|drop lambda|after paren marked nested|n 3|drop nested|drop marked|drop paren
+// requires: runtime
+// covers: LANG-07-07, LANG-07-01
+// D-313: `return (x)` of a local is `return x`: the checkers and the IR read the returned place through its
+// parentheses, and so does the interpreter, so the value moves to the caller and its cleanup runs once, there, at
+// the caller's block exit, on every backend. `return (move x)` moves it as written, and is what `fortis fmt` turns
+// into `return (x)`; `return ((x))` is the same place again. A trivial local is read as before.
+import fortis.host { Console }
+
+export class Res {
+  console: Shared[Console]
+  label: String
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func paren(console: Shared[Console]) Res {
+  let r = Res(console: console.retain(), label: "paren")
+  return (r)
+}
+
+func marked(console: Shared[Console]) Res {
+  let r = Res(console: console.retain(), label: "marked")
+  return (move r)
+}
+
+func nested(console: Shared[Console]) Res {
+  let r = Res(console: console.retain(), label: "nested")
+  return ((r))
+}
+
+func count() Int {
+  let n = 3
+  return (n)
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let build = fn[alias console]() Res {
+    let b = Res(console: console.retain(), label: "lambda")
+    console.print("in lambda")
+    return (b)
+  }
+  {
+    let got = build()
+    console.print("got ${got.label}")
+  }
+  let a = paren(console)
+  let b = marked(console)
+  let c = nested(console)
+  console.print("after ${a.label} ${b.label} ${c.label}")
+  console.print("n ${count()}")
+}

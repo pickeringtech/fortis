@@ -1,0 +1,17 @@
+// execute: 0 arguments|stored text
+// requires: runtime
+// covers: LANG-04-06
+// Each parameter is supplied by its type, in any order and under any name: the arguments, a file system and a
+// console (4.6, X-345). `main` lends each one to the functions it calls.
+import fortis.host { Console, FileSystem, Path }
+
+try func store(files: FileSystem, path: Path, text: StringView) {
+  files.writeAll(path, text) or fail
+}
+
+try func main(files: FileSystem, args: List[String], out: Console) {
+  out.print("${args.count()} arguments")
+  let path = Path.parse("main-parameters.txt") or fail
+  store(files, path, "stored text") or fail
+  out.print(files.readText(path) or fail)
+}

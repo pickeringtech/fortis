@@ -31,6 +31,6 @@ through a library that does so.
 ## What a later edition plans
 
 Fenced blocks of another language, written inside a module with a language tag and typed holes, checked by an
-embedding binding and lowered to a typed value (PROG-PRD-29 to PROG-PRD-32), are **not part of Language 1.0**;
+embedding binding and lowered to a typed value, are **not part of Language 1.0**;
 they move to a later edition (X-145). Until then, none of that syntax exists, and a program that tries it is a
 syntax error (LR 3.2). The word `embed` is set aside for that edition (X-145).

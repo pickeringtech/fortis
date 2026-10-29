@@ -1,0 +1,15 @@
+// reject: E-DEF-002 (at the marked line)
+// covers: LANG-12-01, LANG-07-04
+// X-345 (R16): `return x` of a local moves it, as `return move x` does, so a deferred block that names the local
+// would read it after the move (12.1).
+import fortis.host { Console }
+export class Note {
+  export text: String
+}
+func make(console: Console) Note {
+  let n = Note(text: String.from("kept"))
+  defer {
+    console.print(n.text)
+  }
+  return n                                           // reject: E-DEF-002: the defer above names n
+}

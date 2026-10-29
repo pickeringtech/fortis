@@ -1,0 +1,86 @@
+// execute: or x0|catch x0|null none|fail x0|refail none|return x0|chain x0|end|drop x0
+// reports: runtime-failure:fixture.missing|runtime-failure:fixture.missing
+// requires: runtime
+// covers: LANG-07-06
+// D-385, 7.6: an outcome expression whose recovery lends checks and runs alike on every backend: the caller holds
+// the loan the recovery drew from the parameter (`or recover xs.get(0)`, a `recover` or a `return` in a `catch`
+// handler, a chain of recoveries), a `null` recovery holds nothing, `or fail` and a handler that re-fails leave the
+// failure to the caller, and the list destroys its element once, at the end.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+error Missing {
+  code: "fixture.missing"
+}
+
+try func lookup(xs: List[Token], want: StringView) (alias Token from xs)? {
+  for x in alias xs {
+    if x.label == want {
+      return present(x)
+    }
+  }
+  fail Missing()
+}
+
+recovers func viaOr(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or recover xs.get(0)
+}
+
+recovers func viaCatch(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) catch e {
+    report e
+    recover xs.get(0)
+  }
+}
+
+recovers func viaNull(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or recover null
+}
+
+try func viaFail(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or fail
+}
+
+try func viaRefail(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) catch e {
+    fail move e
+  }
+}
+
+recovers func viaReturn(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) catch e {
+    report e
+    return xs.get(0)
+  }
+}
+
+recovers func viaChain(xs: List[Token], want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or recover lookup(alias xs, "x0") or recover xs.get(0)
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "x0"))
+  console.print("or ${viaOr(alias xs, "nope")?.label ?? "none"}")
+  console.print("catch ${viaCatch(alias xs, "nope")?.label ?? "none"}")
+  console.print("null ${viaNull(alias xs, "nope")?.label ?? "none"}")
+  let f = viaFail(alias xs, "x0") or recover null
+  console.print("fail ${f?.label ?? "none"}")
+  let g = viaRefail(alias xs, "nope") or recover null
+  console.print("refail ${g?.label ?? "none"}")
+  console.print("return ${viaReturn(alias xs, "nope")?.label ?? "none"}")
+  console.print("chain ${viaChain(alias xs, "nope")?.label ?? "none"}")
+  console.print("end")
+}

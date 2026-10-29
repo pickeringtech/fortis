@@ -3,11 +3,11 @@
 export class Invoice {
   export lines: List[Int]
   export title: String
-  export func issue(editable self) Void {
+  export func issue(editable self) {
   }
 }
 
-func conflict(invoice: editable Invoice) Void {
+func conflict(invoice: editable Invoice) {
   let title = alias invoice.title
   let count = alias invoice.lines
   editable invoice.issue()                  // reject: E-OWN-010 — exclusive loan while read loans are active

@@ -14,6 +14,10 @@ pub struct LoanData {
     pub holder: Option<String>,
     pub depth: i64,
     pub line: usize,
+    /// kept by a result that holds it inside an optional, a tuple or a record (D-348)
+    pub nested: bool,
+    /// the read path it was drawn through (a cursor, a read loan): its own uses keep it (7.6)
+    pub via: Option<String>,
 }
 
 pub type Loan = Rc<RefCell<LoanData>>;
@@ -182,7 +186,7 @@ impl Owners {
     pub fn add_loan(&mut self, path: &str, mode: &str, holder: Option<&str>, depth: i64, line: usize) -> Loan {
         let owner = self.owner_path(path);
         crate::journal::loan(&owner, mode, holder, depth, line);
-        let l = Rc::new(RefCell::new(LoanData { owner, mode: mode.into(), holder: holder.map(|s| s.to_string()), depth, line }));
+        let l = Rc::new(RefCell::new(LoanData { owner, mode: mode.into(), holder: holder.map(|s| s.to_string()), depth, line, nested: false, via: None }));
         self.loans.push(l.clone());
         if let Some(h) = holder {
             self.holders.insert(h, l.clone());

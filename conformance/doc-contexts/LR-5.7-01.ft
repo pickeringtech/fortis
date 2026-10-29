@@ -4,13 +4,13 @@ export class Buffer {
   export pure func length(self) Int => self.items.count()
 }
 
-func update(buffer: editable Buffer, n: Int) Void {
-  editable buffer.items.push(n)
+func update(buffer: editable Buffer, n: Int) {
+  buffer.items.push(n)
 }
 
 func consume(buffer: owned Buffer) Int => buffer.length()
 
-func example() Void {
+func example() {
   let mut buffer = Buffer(items: List.default())
   // {{example}}
 }

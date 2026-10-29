@@ -2,9 +2,9 @@
 // requires: runtime
 // covers: LANG-12-04
 // PROG-NFR-13: the detached-task queue has a declared bound (256); overflow is a visible defect, not silence.
-import fortis.host { Host, Supervisor }
+import fortis.host { Supervisor, Console }
 async func tick(n: Int) Int => n
-async func flood(supervisor: Supervisor) Void {
+async func flood(supervisor: Supervisor) {
   scope tasks {
     for i in 1..300 {
       let t = tasks.launch(tick(i))
@@ -12,9 +12,8 @@ async func flood(supervisor: Supervisor) Void {
     }
   }
 }
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("filling")
-  await flood(caps.supervisor)
-  caps.console.print("never")
+async func main(console: Console, supervisor: Supervisor) {
+  console.print("filling")
+  await flood(supervisor)
+  console.print("never")
 }

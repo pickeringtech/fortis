@@ -7,7 +7,7 @@ export class SecretAccess implements Authority {}
 export trusted func reveal[T](secret: Secret[T], cap: SecretAccess) T
 export class FileSystem implements Authority {
   export trusted try func readText(self, path: Path) String
-  export trusted try func writeAll(self, path: Path, text: StringView) Void
+  export trusted try func writeAll(self, path: Path, text: StringView)
   export trusted try func readAll(self, path: Path) Bytes
   export trusted try func open(self, path: Path) File
   export trusted try func create(self, path: Path) File
@@ -15,14 +15,14 @@ export class FileSystem implements Authority {
 }
 export class File {
   export trusted try func readAll(editable self) Bytes
-  export trusted try func writeAll(editable self, data: BytesView) Void
-  export trusted func close(editable self) Void
+  export trusted try func writeAll(editable self, data: BytesView)
+  export trusted func close(editable self)
 }
 export class Network implements Authority {
   export trusted try func resolve(self, host: StringView) String
 }
 export class Clock implements Authority {
-  export trusted async func sleep(self, duration: Duration) Void
+  export trusted async func sleep(self, duration: Duration)
   export trusted func now(self) Timestamp
   export trusted func frozen(self, instant: Timestamp) Clock
   export trusted try func elapsedSince(self, earlier: Timestamp) Duration
@@ -39,7 +39,7 @@ export class Process implements Authority {
 }
 export class Supervisor implements Authority {}
 export class Console implements Authority {
-  export trusted func print(self, text: StringView) Void
+  export trusted func print(self, text: StringView)
 }
 export class RawSql implements Authority {
   export trusted try func execute(self, statement: StringView) Int

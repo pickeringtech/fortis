@@ -3,25 +3,24 @@
 // covers: LANG-08-02
 // 8.2 (D-151): a `fn mut` closure's `move` capture is the closure's own state, so an assignment to it in the body is
 // still there at the next call, whether the value is trivial or a collection.
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let n = 0
   let mut counter = fn mut[move n]() Int {
     n = Int.wrappingAdd(n, 1)
     return n
   }
-  let a = editable counter()
-  let b = editable counter()
-  let c = editable counter()
-  caps.console.print("${a} ${b} ${c}")
+  let a = counter()
+  let b = counter()
+  let c = counter()
+  console.print("${a} ${b} ${c}")
   let items = List.of(1)
   let mut grow = fn mut[move items]() String {
     let shown = "${items}"
     items = List.of(1, 1)
-    return move shown
+    return shown
   }
-  caps.console.print(editable grow())
-  caps.console.print(editable grow())
+  console.print(grow())
+  console.print(grow())
 }

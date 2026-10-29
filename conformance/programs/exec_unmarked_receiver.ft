@@ -1,0 +1,44 @@
+// execute: 4|bump 1|bump 3|bump 3|c 3 [1, 2, 3]|[5][6]|added 7
+// requires: runtime
+// covers: LANG-07-01, LANG-08-02
+// X-345 (R1, R2): unmarked receivers of `editable self` methods and unmarked `fn mut` calls change their place on
+// every backend, exactly as the marked forms do.
+import fortis.host { Host }
+export class Counter {
+  export n: Int
+  export seen: List[Int]
+  export func bump(editable self) Int {
+    self.n = Int.saturatingAdd(self.n, 1)
+    self.seen.push(self.n)
+    return self.n
+  }
+  export func bumpTwice(editable self) Int {
+    discard self.bump()
+    return self.bump()
+  }
+}
+func single(c: editable Counter) Int => c.bump()
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let mut xs = List.of(1, 2)
+  xs.push(3)
+  editable xs.push(4)
+  caps.console.print("${xs.count()}")
+  let mut c = Counter(n: 0, seen: List.default())
+  caps.console.print("bump ${single(editable c)}")
+  caps.console.print("bump ${c.bumpTwice()}")
+  caps.console.print("bump ${c.n}")
+  caps.console.print("c ${c.n} ${c.seen}")
+  let mut text = Builder.create()
+  let mut total = 0
+  {
+    let mut add = fn mut[editable total, editable text](n: Int) Void {
+      total = Int.saturatingAdd(total, n)
+      text.append("[${n}]")
+    }
+    add(5)
+    editable add(6)
+  }
+  caps.console.print(text.finish())
+  caps.console.print("added ${Int.saturatingSub(total, 4)}")
+}

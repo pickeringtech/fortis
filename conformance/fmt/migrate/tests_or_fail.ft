@@ -1,0 +1,32 @@
+// In test and property bodies `or fail` after a call or after integer arithmetic is implied: it goes, and so do the
+// parentheses `expect` needed around it. A lambda's body and a call whose outcome is consumed keep theirs (14; X-345,
+// R7).
+export error Negative {
+  code: "demo.negative"
+}
+
+try func half(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n / 2
+}
+
+test "halves" {
+  expect (half(4) or fail) == 2
+  let q = half(half(8) or fail) or fail
+  expect q == 2
+  let r = half(-1) catch e {
+    report e
+    recover 0
+  }
+  expect r == 0
+  let four = half(8) or fail
+  expect (four + 1 or fail) == 5
+  let twice = fn(n: Int) Int => half(n) or recover 0
+  expect twice(6) == 3
+}
+
+property "halving a small number" forall (n: Int<0..100>) {
+  expect (half(n) or fail) <= n
+}

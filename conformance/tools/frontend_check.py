@@ -4,9 +4,10 @@ Every module fixture of the corpus and every package fixture is checked by both;
 `code@line` records restricted to the codes the reference judges (checker/check.py CODES and PARTIAL; a syntax
 fixture is judged by the syntax runner's record). A package fixture whose expect.json pins its complete records
 (`records`: file, line, column, code, message, candidates) must give exactly those in both checkers. A fixture's completing chunk is the latest completing chunk of the
-rules its header `covers` and the codes it expects (docs/delivery/ownership.json); `--slice DEL-13` selects the
-fixtures complete by that chunk, which must agree exactly (DEL-31 criterion 1). Every other fixture is compared too and
-reported, so later slices see what remains.
+rules its header `covers` and the codes it expects (the delivery plan's ownership table); `--slice DEL-13` selects
+the fixtures complete by that chunk, which must agree exactly (DEL-31 criterion 1). Every other fixture is compared too
+and reported, so later slices see what remains. The ownership table is a maintainers' planning file: in a checkout
+without it, every fixture is in the slice, so every fixture must agree.
 
 Also compared on every fixture: the declaration IR (checker/decl_ir.py against `fortisc decls`), the control-flow
 graph of every block-bodied function (checker/cfg.py against `fortisc cfg`), and the parse tree (the generated
@@ -14,7 +15,7 @@ Python parser and the recogniser against `fortisc parse`, the ambiguity corpus i
 validated against the DEL-03 schema (diagnostics.validate); `--binary` names another build of fortisc (the debug
 build), whose observations must equal the release build's (PROG-VM-04).
 
-  python3 -I conformance/tools/frontend_check.py [--slice DEL-13] [--binary compiler/target/debug/fortisc] [--all]
+  python3 -I conformance/tools/frontend_check.py [--slice DEL-13] [--binary compiler/target/debug/fortisc] [--all] [--records-only]
 Writes build/rust-frontend/results.json (fixture -> {reference, frontend, slice, agree}) and the summary."""
 from __future__ import annotations
 
@@ -39,6 +40,8 @@ def chunk_num(c):
 
 
 def completing(src: str, codes, own) -> int:
+    if own is None:
+        return 0            # no ownership table: every fixture is in every slice
     m = re.search(r"^// covers: (.*)$", src, re.M)
     covers = re.findall(r"LANG-\d\d-\d\d", m.group(1)) if m else []
     owners = [own["rules"].get(r, {}).get("completes") for r in covers] + [own["diagnostics"].get(c) for c in codes]
@@ -79,7 +82,9 @@ def main(argv):
     import resolve
     from checker import check
     slice_to = chunk_num(argv[argv.index("--slice") + 1]) if "--slice" in argv else 13
-    own = json.load(open(os.path.join(ROOT, "docs", "delivery", "ownership.json"), encoding="utf-8"))
+    import planning
+    own_path = planning.optional(planning.OWNERSHIP, "frontend", "the slice by completing chunk (every fixture must agree instead)")
+    own = json.load(open(own_path, encoding="utf-8")) if own_path else None
     syntax = json.load(open(os.path.join(ROOT, "conformance", "results.json"), encoding="utf-8"))["results"]
     rec = fparser.load_grammar(os.path.join(ROOT, "reference", "grammar", "fortis.ebnf"))
     lib = names.Library(rec)
@@ -141,9 +146,12 @@ def main(argv):
                     (ref if who == "reference" else mine).append(f"{who}: pinned records differ")      # never agrees
                     pinned_bad.append(f"PKG-{d} ({who})")
         covers = expect.get("covers", [])
-        owners = [own["rules"].get(c, {}).get("completes") for c in covers] + ([own["diagnostics"].get(expect["code"])] if expect.get("code") else [])
-        owners = [o for o in owners if o]
-        cc = max((chunk_num(o) for o in owners), default=None) if owners else None
+        if own is None:
+            owners, cc = [], 0          # no ownership table: every fixture is in every slice
+        else:
+            owners = [own["rules"].get(c, {}).get("completes") for c in covers] + ([own["diagnostics"].get(expect["code"])] if expect.get("code") else [])
+            owners = [o for o in owners if o]
+            cc = max((chunk_num(o) for o in owners), default=None) if owners else None
         results["PKG-" + d] = {"path": os.path.relpath(full, ROOT), "reference": ref, "frontend": mine, "completing": cc, "slice": cc is not None and cc <= slice_to, "agree": ref == mine}
     # ---- the declaration IR, the CFGs and the parse trees -------------------------------------
     import diagnostics
@@ -155,13 +163,17 @@ def main(argv):
     from checker import decl_ir
     from checker.decls import DeclChecker
     module_paths = [r["path"] for r in fixtures if not r["observed"].startswith("reject:E-SYN")]
-    rust_ir = rust_sections("decls", module_paths)
-    rust_sum = rust_sections("summaries", module_paths)
+    amb = sorted(os.path.join("conformance", "ambiguity", f) for f in os.listdir(os.path.join(ROOT, "conformance", "ambiguity")) if f.endswith(".ft"))
+    if "--records-only" in argv:
+        # the gate's quick tier: the two checkers' records on every fixture, without the deeper comparisons
+        print("frontend: --records-only: the declaration IR, CFGs, effect summaries and parse trees are not compared")
+        module_paths, amb = [], []
+    rust_ir = rust_sections("decls", module_paths) if module_paths else {}
+    rust_sum = rust_sections("summaries", module_paths) if module_paths else {}
     from checker import effects as fxmod
     sum_bad, sum_n = [], 0
-    rust_cfg = rust_sections("cfg", module_paths)
-    amb = sorted(os.path.join("conformance", "ambiguity", f) for f in os.listdir(os.path.join(ROOT, "conformance", "ambiguity")) if f.endswith(".ft"))
-    rust_parse = rust_sections("parse", module_paths + amb)
+    rust_cfg = rust_sections("cfg", module_paths) if module_paths else {}
+    rust_parse = rust_sections("parse", module_paths + amb) if module_paths + amb else {}
     ir_bad, cfg_bad, cfg_n, parse_bad, parse_n = [], [], 0, [], 0
 
     def pydump(t, d, out):

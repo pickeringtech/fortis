@@ -1,0 +1,68 @@
+// reject: E-OWN-051 (at the marked lines)
+// covers: LANG-07-06
+// D-373, 7.6: a function whose result is declared `from` a parameter lends what it returns, so a value of its own
+// returned there (a `??` whose fallback is moved or made, at any depth or on either side, a moved local, a fresh
+// value, a copy) would be held as a loan by the caller's binding and owned by nobody: the interpreter and the VM
+// never ran its cleanup, and native code refused the program (rustc E0515). It is E-OWN-051, as a loan of a local
+// or a temporary returned is. Both checkers accepted every shape here.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+class Note {
+  label: String
+}
+
+class Bag {
+  items: List[Token]
+  spare: Token
+
+  func pick(self) alias Token from self {
+    return self.items.get(0) ?? alias self.spare
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func fallbackMoved(empty: List[Token], d: owned Token) alias Token from empty {
+  return empty.get(0) ?? move d                               // reject: E-OWN-051 — the fallback is the function's own
+}
+
+func fallbackMade(empty: List[Token], console: Shared[Console]) alias Token from empty {
+  return empty.get(0) ?? make(console, "made")                // reject: E-OWN-051 — a fresh value too
+}
+
+func asBody(empty: List[Token], d: owned Token) alias Token from empty => empty.get(0) ?? move d   // reject: E-OWN-051 — an expression body
+
+func nested(empty: List[Token], d: owned Token) alias Token from empty {
+  return empty.get(0) ?? (empty.get(1) ?? move d)             // reject: E-OWN-051 — at any depth
+}
+
+func leftOwned(o: owned Token?, bag: Bag) alias Token from bag {
+  return move o ?? alias bag.pick()                           // reject: E-OWN-051 — the owned side on the left
+}
+
+func moved(empty: List[Token], d: owned Token) alias Token from empty {
+  return move d                                               // reject: E-OWN-051 — a moved local
+}
+
+func copied(notes: List[Note], d: owned Note) alias Note from notes {
+  let v = notes.get(0)
+  return copy v ?? move d                                     // reject: E-OWN-051 — a copy is the function's own
+}
+
+func wrapped(empty: List[Token], d: owned Token) (alias Token from empty)? {
+  return present(move d)                                      // reject: E-OWN-051 — inside the optional
+}
+
+func main(console: Console) {
+  console.print("loans")
+}

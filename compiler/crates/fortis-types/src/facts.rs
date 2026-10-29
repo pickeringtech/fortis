@@ -2,11 +2,12 @@
 //!
 //! The checker enforces most of what 9.3 lists as always present in formatted source: a lambda's kind
 //! (`E-FUN-010`), parameter-mode markers at call sites (`E-OWN`) and `from` regions are required in every accepted
-//! program, so formatting cannot lose them. Two facts may be left unwritten, and the formatter prints them back:
+//! program, so formatting cannot lose them. One fact may be left unwritten, and the formatter prints it back: the
+//! single-word modifiers a named contract expands to, printed after the contract's name, which is kept (11.5: an
+//! aspect may need the name).
 //!
-//! - a lambda's `pure` and `noalloc`, which 8.2 lets source omit and the checker infers from the lambda's summary;
-//! - the single-word modifiers a named contract expands to, printed after the contract's name, which is kept
-//!   (11.5: an aspect may need the name).
+//! A lambda's inferred `pure` and `noalloc` are not printed back (8.2, X-345): the callee's parameter type states what
+//! the lambda must be, and the checker enforces it there; `fortis view` shows the inferred summary. Written ones stay.
 //!
 //! `inferred` lists them as insertions at token positions, only for a module the checker accepts: inference over a
 //! rejected module is not a fact.
@@ -17,7 +18,6 @@ use fortis_diag::Record;
 use fortis_syntax::view::N;
 use fortis_syntax::{Parsed, Token};
 
-use crate::effects::PURE_FORBIDS;
 
 /// The modifier words in their canonical order (7.1; the grammar's `modifiers`).
 pub const ORDER: &[&str] = &["trusted", "pure", "noalloc", "async", "try", "recovers"];
@@ -56,20 +56,6 @@ pub fn inferred(parsed: &Parsed, file: &str) -> (Vec<Record>, Vec<Insertion>) {
         let root = N::new(&parsed.root, &parsed.toks);
         for n in root.walk() {
             match n.name() {
-                "lambda" => {
-                    let Some(info) = ty.closure_info.get(&n.id()) else { continue };
-                    let Some(eff) = &info.eff else { continue };
-                    let written: Vec<&Token> = n.child_node("modifiers").map(|m| m.tokens()).unwrap_or_default();
-                    let Some(fn_tok) = n.direct_tokens().into_iter().find(|t| t.text == "fn") else { continue };
-                    let mut want = BTreeSet::new();
-                    if !eff.effects.iter().any(|(k, _)| PURE_FORBIDS.contains(&k.as_str())) {
-                        want.insert("pure".to_string());
-                    }
-                    if !eff.has("alloc") {
-                        want.insert("noalloc".to_string());
-                    }
-                    complete(&written, fn_tok, &want, "lambda", &mut out);
-                }
                 "funcHead" | "methodHead" => {
                     let written: Vec<&Token> = n.child_node("modifiers").map(|m| m.tokens()).unwrap_or_default();
                     let Some(func) = n.direct_tokens().into_iter().find(|t| t.text == "func") else { continue };
@@ -124,15 +110,15 @@ mod tests {
     }
 
     #[test]
-    fn a_pure_lambda_gets_both_claims_in_canonical_order() {
+    fn a_lambda_gets_no_claims_printed_back() {
         let src = "func f(xs: List[Int]) Int {\n  let ys = xs.map(fn(x: Int) Int => Int.wrappingAdd(x, 1))\n  return ys.count()\n}\n";
-        assert!(reprint(src).contains("xs.map(pure noalloc fn(x: Int)"));
+        assert_eq!(reprint(src), src);
     }
 
     #[test]
-    fn a_written_claim_keeps_its_place() {
+    fn a_written_lambda_claim_stays() {
         let src = "func f(xs: List[Int]) Int {\n  let ys = xs.map(pure fn(x: Int) Int => Int.wrappingAdd(x, 1))\n  return ys.count()\n}\n";
-        assert!(reprint(src).contains("xs.map(pure noalloc fn(x: Int)"));
+        assert_eq!(reprint(src), src);
     }
 
     #[test]
@@ -143,7 +129,7 @@ mod tests {
 
     #[test]
     fn a_rejected_module_gets_no_facts() {
-        let src = "func f(xs: List[Int]) Int {\n  let ys = xs.map(fn(x: Int) Int => Int.wrappingAdd(x, true))\n  return ys.count()\n}\n";
+        let src = "export contract Fast {\n  pure\n}\n\nexport Fast func sq(v: Int) Int => Int.wrappingAdd(v, true)\n";
         let p = fortis_syntax::parse_module(src).unwrap();
         let (records, ins) = inferred(&p, "t.ft");
         assert!(!records.is_empty() && ins.is_empty());

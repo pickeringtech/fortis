@@ -3,18 +3,17 @@
 // requires: runtime
 // covers: LANG-10-06
 // 12.6: the supervisor of a detached task observes TaskCompletion.Defect; the defect never reaches main as a value.
-import fortis.host { Host, Console, Supervisor }
+import fortis.host { Console, Supervisor }
 async func broken() Int {
   injectDefect("contract_violation")
 }
-async func run(supervisor: Supervisor) Void {
+async func run(supervisor: Supervisor) {
   scope tasks {
     let t = tasks.launch(broken())
     tasks.detach(move t, supervisor)
   }
 }
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  await run(caps.supervisor)
-  caps.console.print("done")
+async func main(supervisor: Supervisor, console: Console) {
+  await run(supervisor)
+  console.print("done")
 }

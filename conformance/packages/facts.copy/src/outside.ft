@@ -6,7 +6,7 @@ pure func copied() Tagged {
   let t = Tagged.first("a")
   return copy t
 }
-pure func flag() Void {
+pure func flag() {
   let f = enabled()
   let g = f
   let _ = g

@@ -20,7 +20,7 @@ func label[T](x: T) String where T implements Shown => x.show()
 
 async func work() Int => 1
 
-export func main(args: List[String]) Void {
+func main() {
   let a = label(Shiny(n: 1))
   let b = label(Plain(n: 2))                         // reject: E-TYP-090 — Plain does not implement Shown
 }
@@ -49,12 +49,12 @@ func asText[C](c: C) String where C implements Conv[String] => c.conv()
 func useText(n: Num) String => asText(n)             // reject: E-TYP-090 — Num converts to Int, not String
 
 export interface Sink[S] where S implements Copyable {
-  func put(self, s: S) Void
+  func put(self, s: S)
 }
 
 class FutSink implements Sink[Future[Int]] {
   export n: Int
-  func put(self, s: Future[Int]) Void {
+  func put(self, s: Future[Int]) {
   }
 }
 

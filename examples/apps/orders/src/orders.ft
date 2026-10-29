@@ -20,15 +20,15 @@ observation OrderProcessed {
 export try func process(order: Order) Money {
   capture orderId = copy order.id
   capture lineCount = order.lines.count()
-  let mut total = Money.zero(Currency.GBP)
+  let mut total = Money.zero(GBP)
   for line in order.lines {
     total = Money.add(total, lineTotal(line) or fail) or fail
   }
   capture total = total.amount
-  return move total
+  return total
 }
 
 test "an order's total is the sum of its lines" {
-  let order = Order.fromText("{\"id\":\"o1\",\"customer\":\"ann\",\"lines\":[{\"sku\":\"tea\",\"quantity\":2,\"unitPrice\":\"1.50\"},{\"sku\":\"cake\",\"quantity\":1,\"unitPrice\":\"3.25\"}]}") or fail
-  expect (process(order) or fail).amount == 6.25d
+  let order = Order.fromText("{\"id\":\"o1\",\"customer\":\"ann\",\"lines\":[{\"sku\":\"tea\",\"quantity\":2,\"unitPrice\":\"1.50\"},{\"sku\":\"cake\",\"quantity\":1,\"unitPrice\":\"3.25\"}]}")
+  expect process(order).amount == 6.25d
 }

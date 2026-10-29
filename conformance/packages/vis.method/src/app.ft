@@ -1,7 +1,7 @@
 // reject: E-NAM-004 (at the marked line)
 import vis.method.util { Thing }
 
-export func main(args: List[String]) Void {
+func main() {
   let t = Thing.create()
   let n = t.hidden()                      // reject: E-NAM-004 — hidden is private to util
 }

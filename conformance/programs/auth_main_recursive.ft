@@ -3,7 +3,7 @@
 // D-110: the entry `main` is called only by the runtime, once; a call of it from Fortis code would create the
 // capabilities a second time (11.6).
 import fortis.host { Host }
-export func main(args: List[String]) Void {
+export func main(args: List[String]) {
   let caps = Host.capabilities()
   caps.console.print("run")
   if args.count() < 2 {

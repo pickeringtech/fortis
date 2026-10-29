@@ -1,7 +1,6 @@
-import fortis.host { Host }
+import fortis.host { Console }
 import exec.runfile.util { limit }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("limit ${limit()}")
+func main(console: Console) {
+  console.print("limit ${limit()}")
 }

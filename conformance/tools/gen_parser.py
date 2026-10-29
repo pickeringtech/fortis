@@ -41,12 +41,14 @@ Tup = Tuple[str, ...]
 #     the parser backtracks locally within the statement. The cases: a statement starting with a place
 #     is an assignment when an assignment operator follows the place, else an expression; a `for`
 #     header tries `move place`, then a range, then an expression; `let x = move p` is the plain let;
-#     a parenthesised type is tried before a tuple type; a `.member(` postfix is a method call.
+#     a parenthesised type is tried before a tuple type; a `.member(` postfix is a method call; a function head
+#     tries a return type before none, so a body `{` is a body unless it parses as a record type (X-345).
 POLICIES = {
     ("*", "option"): "P2", ("*", "repetition"): "P2",
     ("statement", "alternative"): "P3", ("forStmt", "alternative"): "P3", ("letStmt", "alternative"): "P3",
     ("postfix", "alternative"): "P3", ("primaryExpr", "alternative"): "P3", ("type", "alternative"): "P3",
     ("namedType", "alternative"): "P3", ("matchArm", "alternative"): "P3", ("mixinMember", "alternative"): "P3",
+    ("funcSignature", "alternative"): "P3",
 }
 
 

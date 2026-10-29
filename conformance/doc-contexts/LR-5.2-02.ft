@@ -1,4 +1,4 @@
 // context: LR-5.2-02 (Language Reference 5.2, if as an expression)
-func example(count: Int) Void {
+func example(count: Int) {
   // {{example}}
 }

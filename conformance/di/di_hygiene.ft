@@ -2,7 +2,7 @@
 // covers: PLAT-03-01
 // Generated names never capture an input: an input named like a generated local (`a` for an `A` instance, `v1`
 // like a temporary) keeps its own value.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class A {
   size: Int = 7
@@ -26,9 +26,8 @@ context Production(a: Int, v1: Int) {
   provide Extra
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let app = Production.application(5, 3)
-  caps.console.print(app.report().line())
-  caps.console.print("v1 ${app.extra().count}")
+  console.print(app.report().line())
+  console.print("v1 ${app.extra().count}")
 }

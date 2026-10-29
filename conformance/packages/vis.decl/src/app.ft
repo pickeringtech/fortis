@@ -1,7 +1,7 @@
 // reject: E-NAM-004 (at the marked line)
 import vis.decl.util as util
 
-export func main(args: List[String]) Void {
+func main() {
   let a = util.visible()
   let b = util.helper()                   // reject: E-NAM-004 — helper is private to util
 }

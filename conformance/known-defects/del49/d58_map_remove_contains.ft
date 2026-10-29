@@ -1,0 +1,12 @@
+// D-58.7: `Map` has no `remove` and no `contains` (the pilot needed both, FRICTION 3; LR 6.7 lists `default`, `get`,
+// `set`, `count` and `iterate` only): both checkers report E-NAM-001 for `m.contains("a")` and for `m.remove("a")`,
+// naming the operations the map has.
+import fortis.host { Console }
+
+func main(console: Console) {
+  let mut m: Map[String, Int] = Map.default()
+  m.set("a", 1)
+  console.print("${m.contains("a")}")
+  m.remove("a")
+  console.print("${m.count()}")
+}

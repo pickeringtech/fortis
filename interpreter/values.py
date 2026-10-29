@@ -48,6 +48,10 @@ class Report:
 class Instance:
     cls: "ClassInfo"
     fields: Dict[str, Any]
+    # its owner has destroyed it: its cleanup ran and its fields were destroyed. A second destruction, which only a
+    # program the checker should have refused can reach (two owners of one value, D-352), does nothing, so cleanup
+    # runs exactly once (7.9, 12.2; D-348)
+    destroyed: bool = field(default=False, compare=False, repr=False)
 
     def display(self) -> str:
         if self.cls.name == "Scalar":
@@ -55,6 +59,42 @@ class Instance:
         if "display" in self.cls.methods:
             return "<display>"
         return f"{self.cls.name}(" + ", ".join(f"{k}: {display(v)}" for k, v in self.fields.items()) + ")"
+
+
+class LentTuple(tuple):
+    """A tuple that holds a loan beside the elements it owns (`(xs.get(0), make())`): `lent` are the indices of the
+    elements it borrows. Destroying it destroys only the others (7.9; D-349). A copy copies the elements it owns and
+    holds the same loans, as a copy of a loan is that loan."""
+    def __new__(cls, items, lent):
+        t = super().__new__(cls, items)
+        t.lent = frozenset(lent)
+        return t
+
+    def __deepcopy__(self, memo):
+        return LentTuple([x if i in self.lent else copy.deepcopy(x, memo) for i, x in enumerate(self)], self.lent)
+
+
+class LentRecord(dict):
+    """A record literal that holds a loan beside the fields it owns (`{ item: xs.get(0), n: 1 }`): `lent` are the
+    names of the fields it borrows. Destroying it destroys only the others (7.9; D-349). A copy copies the fields it
+    owns and holds the same loans."""
+    def __init__(self, items, lent):
+        super().__init__(items)
+        self.lent = frozenset(lent)
+
+    def __deepcopy__(self, memo):
+        return LentRecord({k: x if k in self.lent else copy.deepcopy(x, memo) for k, x in self.items()}, self.lent)
+
+
+def lent_parts(v):
+    """The indices or field names an aggregate borrows rather than owns (7.9; D-349)."""
+    return getattr(v, "lent", frozenset())
+
+
+def retuple(old, items):
+    """A tuple rebuilt from `old` with new elements in the same places: it borrows what `old` borrowed."""
+    lent = lent_parts(old)
+    return LentTuple(items, lent) if lent else tuple(items)
 
 
 @dataclass
@@ -93,6 +133,9 @@ class Closure:
     owned: List[str] = field(default_factory=list)
     # its `owned` parameters, in order: a call destroys those its body has not moved, last (7.9; D-152)
     owned_params: List[str] = field(default_factory=list)
+    # the function a log record in its body names: `lambda@LINE:COL` of its `fn`, as the IR names it (13; D-323)
+    label: str = "lambda"
+    is_try: bool = False            # a `try fn` lambda: a failure in its body is the call's outcome (10.2, 8.2)
 
 
 @dataclass
@@ -107,6 +150,8 @@ class ClassInfo:
     field_types: Dict[str, Any] = field(default_factory=dict)   # name -> declared type node (decoding, 6.10)
     type_params: List[str] = field(default_factory=list)
     consts: Dict[str, Any] = field(default_factory=dict)        # associated constant -> its constExpr node (9.3)
+    # declared `trivial class` (6.11): its values are copied, never moved, as the checkers' `is_trivial` says (D-411)
+    trivial: bool = False
 
     def __deepcopy__(self, memo):
         return self          # declaration metadata: a copied value keeps its class (equality compares it by identity)
@@ -188,6 +233,28 @@ def display(v) -> str:
     if isinstance(v, Void):
         return "Void"
     return repr(v)
+
+
+def render_message(template: str, payload: Dict[str, str]) -> str:
+    """A failure's message (10.3; D-340): the `message` of an `error` declaration is a template, stored as written
+    between its quotes and rendered when the failure is displayed. Each `${name}` that names a payload field becomes
+    that field's text, as the record's `payload` shows it; any other text is kept as it is. The VM and native code
+    render through fortis-runtime's `render_message`, the same rule."""
+    out, rest = [], template
+    while "${" in rest:
+        at = rest.index("${")
+        out.append(rest[:at])
+        after = rest[at + 2:]
+        end = after.find("}")
+        if end < 0:
+            out.append(rest[at:])
+            rest = ""
+            break
+        name = after[:end]
+        out.append(payload[name] if name in payload else "${" + name + "}")
+        rest = after[end + 1:]
+    out.append(rest)
+    return "".join(out)
 
 
 def deep_copy(v):

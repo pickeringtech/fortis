@@ -15,6 +15,7 @@ derived from the specification's examples, and the syntax layer that runs it.
 | `corpus/` | Generated. One `.ft` per example, named `<doc>-<section>-<ordinal>` (`LR` Language Reference, `PS` Platform Specification, `OV` overview). Do not edit; edit the document. |
 | `programs/` | Hand-written programs: the three independent programs the deciding review cycle traced (CLI, two-module `derive Codec`, async transaction). |
 | `results.json` | Written by `run.py --json`; the evidence record for the syntax layer. |
+| `di/` | The dependency injection kit's programs, which `tools/di_check.py` runs; `di/lazy/` and `di/noalloc/` are SP-08's lazy-edge and noalloc programs, moved from `spikes/SP-08/` so that every checkout runs them. |
 
 ## Running
 

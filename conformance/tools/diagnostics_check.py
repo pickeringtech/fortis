@@ -1,6 +1,7 @@
 """DEL-03 checks: schema validity of every record of a run, class inventory by identity against
-Programme 7.1, one positive golden and one negative record per class present, two renderings
-carrying the same set, and corrections that apply and make the pinned fixture pass.
+Programme 7.1 (when the Delivery Programme, a maintainers' planning file, is in the checkout), one positive
+golden and one negative record per class present, two renderings carrying the same set, and corrections that
+apply and make the pinned fixture pass.
 `--regenerate` rewrites the golden records from the pinned fixtures."""
 import json
 import os
@@ -13,11 +14,11 @@ import diagnostics  # noqa: E402
 import parser       # noqa: E402
 import run          # noqa: E402
 import diagnose     # noqa: E402
+import planning     # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GOLDEN = os.path.join(ROOT, "conformance", "diagnostics", "golden")
 NEGATIVE = os.path.join(ROOT, "conformance", "diagnostics", "negative")
-DP = os.path.join(ROOT, "docs", "Fortis_Delivery_Programme.md")
 PINNED = {   # code -> fixture that produces exactly one record of that code
     "E-SYN-000": "conformance/programs/syntax_missing_return_type.ft",
     "E-SYN-001": "conformance/programs/syntax_semicolon.ft",
@@ -27,7 +28,11 @@ PINNED = {   # code -> fixture that produces exactly one record of that code
 
 
 def programme_classes():
-    t = open(DP, encoding="utf-8").read()
+    """The class inventory of Programme 7.1, or None in a checkout without the Delivery Programme."""
+    dp = planning.optional(planning.PROGRAMME, "diagnostics", "the class inventory against Programme 7.1")
+    if not dp:
+        return None
+    t = open(dp, encoding="utf-8").read()
     sec = t[t.index("### 7.1"):t.index("### 7.2")]
     return [r.split("|")[1].strip() for r in sec.splitlines() if r.startswith("| ") and not r.startswith("| Class") and not r.startswith("|---")]
 
@@ -46,7 +51,7 @@ def main(argv):
     # 1. class inventory by identity
     classes = programme_classes()
     ours = [c["name"] for c in diagnostics.CLASSES]
-    if classes != ours:
+    if classes is not None and classes != ours:
         errors.append(f"class inventory differs from Programme 7.1: {set(classes) ^ set(ours)}")
     # 2. produce records for the pinned fixtures; compare or regenerate goldens
     os.makedirs(GOLDEN, exist_ok=True)
@@ -114,7 +119,8 @@ def main(argv):
             errors.append(f"{code}: applying the correction does not make {PINNED[code]} parse: {why}")
         else:
             applied += 1
-    print(f"classes: {len(classes)} (identity match: {classes == ours}); golden records: {len(produced)}; run records validated: {n}; negatives rejected: {len(diagnostics.CLASSES)}; corrections applied and re-checked: {applied}")
+    match = "not checked" if classes is None else classes == ours
+    print(f"classes: {len(ours) if classes is None else len(classes)} (identity match: {match}); golden records: {len(produced)}; run records validated: {n}; negatives rejected: {len(diagnostics.CLASSES)}; corrections applied and re-checked: {applied}")
     if errors:
         print("ERRORS:")
         for e in errors:

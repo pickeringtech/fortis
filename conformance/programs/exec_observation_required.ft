@@ -3,7 +3,7 @@
 // reports: observation-frame:schema=Lookup,outcome=success
 // covers: LANG-13-02
 // A required observation field is assigned exactly once on every applicable exit (13).
-import fortis.host { Host }
+import fortis.host { Console }
 
 observation Lookup {
   key: Int        required: all
@@ -18,8 +18,7 @@ try func lookup(key: Int) Int {
   return v
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let v = lookup(3) or fail
-  caps.console.print("${v}")
+  console.print("${v}")
 }

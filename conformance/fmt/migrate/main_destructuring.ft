@@ -1,0 +1,25 @@
+// A whole `Capabilities(...)` destructuring becomes the one parameter the body uses, under its binding's name; the
+// bindings nothing reads go, and `args`, which the body reads, stays (4.6; X-345, R4, R8).
+import fortis.host { Host, Capabilities, Console }
+
+class Resource {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) Void {
+    self.console.print("release ${self.id}")
+  }
+}
+
+func work(console: Shared[Console]) Void {
+  let first = Resource(id: 1, console: console.retain())
+  let second = Resource(id: 2, console: console.retain())
+  console.print("working")
+}
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+  let console = Shared.create(move out)
+  work(console)
+  console.print("done with ${args.count()} arguments")
+}

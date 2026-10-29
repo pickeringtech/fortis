@@ -1,7 +1,7 @@
 // Outcomes: a `try` function fails with a declared error; callers must consume the outcome
 // with `or fail`, `or recover`, `catch` or `match`. `report` writes one runtime record to stderr.
 // Run: bin/fortis run examples/02_outcomes.ft
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error NotEven {
   code: "demo.not_even"
@@ -33,16 +33,15 @@ recovers func describe(n: Int) String {
 }
 
 // main carries `recovers` because `describe` and `halfOrZero` discharge failures silently (the effect is transitive).
-export try recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(describe(8))
-  caps.console.print(describe(7))
-  caps.console.print("recovered: ${halfOrZero(7)}")
+try recovers func main(console: Console) {
+  console.print(describe(8))
+  console.print(describe(7))
+  console.print("recovered: ${halfOrZero(7)}")
   let v = half(9) catch e {
     report e                               // one runtime-failure record on stderr
     recover -1
   }
-  caps.console.print("after report: ${v}")
+  console.print("after report: ${v}")
   let two = half(4) or fail                // propagates to the caller of main: exit 1 with a record
-  caps.console.print("propagated: ${two}")
+  console.print("propagated: ${two}")
 }

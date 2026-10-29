@@ -4,8 +4,8 @@
 // covers: LANG-11-03
 // SP-04-async adapter review, supplementary to the preregistered workload: the executor's trusted intrinsics a
 // `noalloc` async function reaches (a sleep that suspends, inline awaits, `join`) allocate in no phase.
-import fortis.host { Host, Clock }
-noalloc async func nap(clock: Clock) Void {
+import fortis.host { Clock, Console }
+noalloc async func nap(clock: Clock) {
   await clock.sleep(1ms)
 }
 noalloc async func step(clock: Clock, n: Int) Int {
@@ -17,11 +17,10 @@ noalloc async func pair(clock: Clock) Int {
   let (a, b) = move both
   return Int.wrappingAdd(a, b)
 }
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  await nap(caps.clock)
-  caps.console.print("slept")
-  let s = await pair(caps.clock)
-  caps.console.print("${s}")
-  caps.console.print("done")
+async func main(clock: Clock, console: Console) {
+  await nap(clock)
+  console.print("slept")
+  let s = await pair(clock)
+  console.print("${s}")
+  console.print("done")
 }

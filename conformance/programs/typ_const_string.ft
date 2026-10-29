@@ -3,6 +3,6 @@
 // An unannotated constant has its initialiser's type (4.2). `limit` is an Int, so it is not a String.
 const limit = 5
 
-export func main(args: List[String]) Void {
+func main() {
   let s: String = limit                  // reject: E-TYP-040
 }

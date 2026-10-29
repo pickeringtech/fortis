@@ -4,12 +4,12 @@
 // covers: LANG-07-07
 // 7.9: a destructuring `let` drops every owning part it does not bind, at that statement. A bound part drops with
 // its binding. The discarded part is not a block local, so its cleanup is not a `drop N` trace event (D-305).
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 class N {
   id: Int
   console: Shared[Console]
-  cleanup(editable self) Void { self.console.print("drop ${self.id}") }
+  cleanup(editable self) { self.console.print("drop ${self.id}") }
 }
 
 class Hold {
@@ -17,39 +17,37 @@ class Hold {
   gone: N
 }
 
-func discarded(console: Shared[Console]) Void {
+func discarded(console: Shared[Console]) {
   let x = (N(id: 1, console: console.retain()), 0)
   let (_, n) = move x
   console.print("end ${n}")
 }
 
-func kept(console: Shared[Console]) Void {
+func kept(console: Shared[Console]) {
   let y = (N(id: 2, console: console.retain()), 0)
   let (a, _) = move y
   console.print("held ${a.id}")
 }
 
-func discardedSibling(console: Shared[Console]) Void {
+func discardedSibling(console: Shared[Console]) {
   let y = (N(id: 3, console: console.retain()), N(id: 4, console: console.retain()))
   let (a, _) = move y
   console.print("held ${a.id}")
 }
 
-func bothBound(console: Shared[Console]) Void {
+func bothBound(console: Shared[Console]) {
   let z = (N(id: 5, console: console.retain()), N(id: 6, console: console.retain()))
   let (a, b) = move z
   console.print("end both ${a.id} ${b.id}")
 }
 
-func fieldWild(console: Shared[Console]) Void {
+func fieldWild(console: Shared[Console]) {
   let h = Hold(kept: N(id: 8, console: console.retain()), gone: N(id: 9, console: console.retain()))
   let Hold(kept: k, gone: _) = move h
   console.print("held field ${k.id}")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   discarded(console)
   kept(console)

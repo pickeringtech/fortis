@@ -3,7 +3,7 @@
 // A string literal is a `StringView from static` (6.6): passing one where the result borrows from the parameter is
 // not a loan of a temporary.
 pure func head(text: StringView) StringView from text => text
-export func main(args: List[String]) Void {
+func main() {
   let h = head("static text")
   let n = h.scalarCount()
 }

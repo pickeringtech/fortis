@@ -1,4 +1,4 @@
-//! The `context` body (DI schema v1, spikes/SP-08/design.md section 2): `parent`, level inputs, groups and
+//! The `context` body (DI schema v1, SP-08's design, section 2): `parent`, level inputs, groups and
 //! `provide` bindings, parsed from the head body's statements.
 
 use fortis_syntax::{Kind, Token};

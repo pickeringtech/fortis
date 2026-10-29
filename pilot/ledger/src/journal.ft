@@ -141,15 +141,15 @@ export trivial class Period derive Equatable {
 }
 
 test "flags print their marks" {
-  expect flagMark(Flag.Cleared) == "*"
-  expect flagMark(Flag.Pending) == "!"
-  expect flagMark(Flag.Unmarked) == " "
+  expect flagMark(Cleared) == "*"
+  expect flagMark(Pending) == "!"
+  expect flagMark(Unmarked) == " "
 }
 
 test "a period holds its ends" {
-  let period = Period(first: Date.of(2026, 1, 1) or fail, last: Date.of(2026, 1, 31) or fail)
-  expect period.holds(Date.of(2026, 1, 1) or fail)
-  expect period.holds(Date.of(2026, 1, 31) or fail)
-  expect !period.holds(Date.of(2026, 2, 1) or fail)
+  let period = Period(first: Date.of(2026, 1, 1), last: Date.of(2026, 1, 31))
+  expect period.holds(Date.of(2026, 1, 1))
+  expect period.holds(Date.of(2026, 1, 31))
+  expect !period.holds(Date.of(2026, 2, 1))
   expect period.days() == 31
 }

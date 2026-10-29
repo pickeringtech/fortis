@@ -4,19 +4,18 @@
 // covers: LANG-10-06, LANG-12-04
 // 10.8: unbounded recursion in a detached task exhausts its stack. The VM and the interpreter terminate the task
 // and keep the process, and its supervisor records TaskCompletion.Defect; native code aborts the process (DEL-40).
-import fortis.host { Host, Supervisor }
+import fortis.host { Supervisor, Console }
 func deep(n: Int) Int => deep(Int.wrappingAdd(n, 1))
 async func broken() Int {
   return deep(0)
 }
-async func run(supervisor: Supervisor) Void {
+async func run(supervisor: Supervisor) {
   scope tasks {
     let t = tasks.launch(broken())
     tasks.detach(move t, supervisor)
   }
 }
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  await run(caps.supervisor)
-  caps.console.print("done")
+async func main(supervisor: Supervisor, console: Console) {
+  await run(supervisor)
+  console.print("done")
 }

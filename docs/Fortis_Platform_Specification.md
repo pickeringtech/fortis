@@ -80,7 +80,7 @@ import fortis.runtime { Application }
 import fortis.http.server { Router }
 import fortis.data.postgres as pg
 
-export try func main(args: List[String]) Void {
+try func main() {
   let caps = Host.capabilities()            // see section 2
   let app = Application.build(move caps)
   app.run() or fail                         // a failing main reports once and exits 1
@@ -129,7 +129,7 @@ A **capability** is a value of a nominal type that carries authority to perform 
 
 Rules:
 
-- Capabilities are created only by one direct call of `Host.capabilities()` in the entry `main`, once per process (Language Reference 4.6, 11.6). The checker rejects every other use (`E-EFF-010`); a backend asked for a second creation stops the run with the runtime-invariant defect (Language Reference 10.8).
+- Capabilities are created once per process: by the runtime, which supplies them to the entry `main` as the parameters it declares, or, in an entry `main` that declares none, by one direct call of `Host.capabilities()` (Language Reference 4.6, 11.6). The checker rejects every other use of `Host.capabilities()` (`E-EFF-010`); a backend asked for a second creation stops the run with the runtime-invariant defect (Language Reference 10.8).
 - Capabilities are attenuated by methods that return a narrower value: `fs.subtree(path)`, `net.allowHosts(list)`, `clock.frozen(instant)`.
 - Capabilities are `Shareable` and may be transferred to tasks; a task that was not given a capability cannot acquire one.
 - A capability cannot be constructed from its fields, serialized, captured by an observation, or recovered from a `Failure`.
@@ -161,7 +161,7 @@ Shutdown, on signal or on request: stop intake; cancel and join tasks under the 
 | ID | Requirement | Acceptance evidence | Old ID |
 |---|---|---|---|
 | PLAT-02-01 | The executor MUST implement the Language Reference execution model exactly: cooperative single-thread `launch` with `await`-only cancellation; `Shareable`-gated parallel and blocking pools with cancellation at `await` and `checkpoint()`. | Executor conformance suite shared with the VM. | implements LANG-12-03, LANG-12-05 in the adapter |
-| PLAT-02-02 | Capabilities MUST be unforgeable nominal values obtainable only from one direct call of `Host.capabilities()` in the entry `main`. | Construction/serialization/capture negative tests. | new |
+| PLAT-02-02 | Capabilities MUST be unforgeable nominal values obtainable only as the entry `main`'s parameters, or from one direct call of `Host.capabilities()` in an entry `main` that takes none. | Construction/serialization/capture negative tests. | new |
 | PLAT-02-03 | Every I/O function in `fortis` MUST take its authority (a capability or a per-activation authority) explicitly. | API inventory lint. | new |
 | PLAT-02-04 | Startup and shutdown MUST follow the typed order with accountable cleanup and one report on failure. | Partial startup/drain/deadline tests. | APP-001 |
 | PLAT-02-05 | Every executor adapter MUST document cancellation safety and partial effects. | Adapter metadata and fault tests. | ASY-005 |
@@ -171,7 +171,7 @@ Shutdown, on signal or on request: stop intake; cancel and join tasks under the 
 
 ## 3. Dependency injection kit
 
-The dependency injection kit lets an application declare what a class needs (`inject`), what supplies it (`provide`) and in which environment (`context`), and then generates the constructors and scope classes that wire everything together. An application imports it to replace hand-written wiring with declarations the compiler checks. It is a library with a code generator, not a runtime registry. This section is the kit's first version (DI schema v1), revised to the subset SP-08 established (Delivery Programme 12; `spikes/SP-08/decision.md`).
+The dependency injection kit lets an application declare what a class needs (`inject`), what supplies it (`provide`) and in which environment (`context`), and then generates the constructors and scope classes that wire everything together. An application imports it to replace hand-written wiring with declarations the compiler checks. It is a library with a code generator, not a runtime registry. This section is the kit's first version (DI schema v1), revised to the subset SP-08 established (Delivery Programme 12; SP-08's decision record).
 
 ### 3.1 Elaboration
 
@@ -469,7 +469,7 @@ The head's vocabulary is closed: `table`, `key`, `timestamps`, `softDelete`, `be
 | `.orderBy`, `.limit`, `.offset`, `.including(Customer.relations.invoices)` | chainable; `including` eager-loads a relation with one extra query |
 | `.all(db)`, `.first(db)`, `.count(db)`, `.paginate(db, cursor:)` | execution; each is `async try` and returns owned values |
 | `Customer.create(editable db, name: …, …)` → `Customer` | insert; takes every column except a generated key and the server-maintained columns (`createdAt`, `updatedAt`, `deletedAt`) as named arguments, and nothing else |
-| `editable customer.save(editable db)` | writes the changed columns (dirty tracking is generated); nothing is written without this call |
+| `customer.save(editable db)` | writes the changed columns (dirty tracking is generated); nothing is written without this call |
 | `move customer.delete(editable db)` | soft-deletes when `softDelete` is declared |
 | `Customer.business()` | a declared scope, chainable |
 | `Customer.withDeleted()`, `Customer.unscoped()` | explicit opt-outs, chainable |
@@ -564,7 +564,7 @@ async try func processOrder(order: Order) Receipt {
   capture provider = order.payment.provider
   let receipt = await Payments.charge(order) or fail
   capture transactionId = receipt.transactionId
-  return move receipt
+  return receipt
 }
 ```
 
@@ -735,7 +735,7 @@ server component Counter {
   state { count: Int<0..1000000> }
 
   try action increment(editable self) Void {
-    let next = Int.add(self.state.count, 1) or fail
+    let next = self.state.count + 1 or fail
     self.state.count = Int<0..1000000>.validate(next) or fail
   }
 
@@ -948,11 +948,11 @@ export class AppConfig {
 }
 ```
 
-Inside `main`:
+Inside `main`, which declares the `Environment` and `FileSystem` capabilities and the arguments as its parameters:
 
 ```fortis
 // illustrative
-let config: AppConfig = Config.load(caps.environment, caps.fileSystem, args) or fail
+let config: AppConfig = Config.load(environment, fileSystem, args) or fail
 ```
 
 **Layers**, lowest to highest precedence: field defaults; `config/base.yaml` then `config/<stage>.yaml`, where `<stage>` is the environment variable `FORTIS_STAGE` (default `development`), read before anything else; a `.env` file in the project root; the process environment; the command-line arguments passed to `load`. Values merge leaf by leaf (a later layer replaces a field, never a whole section); a null in a file means "unset, use the lower layer"; a key appearing twice in one source is an error.

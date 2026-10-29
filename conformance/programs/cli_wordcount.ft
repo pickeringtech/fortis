@@ -1,16 +1,15 @@
 // accept — src/app.ft in package acme.summary; project.yaml has `entry: app`
 // Deciding-cycle program 1 (Codex 27, Grok 27): a CLI that takes FileSystem and Console from
 // Host.capabilities(), reads a file and prints a summary, using only operations the reference names.
-import fortis.host { Host, Path }
+import fortis.host { Path, FileSystem, Console }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(fileSystem: FileSystem, console: Console, args: List[String]) {
   let fileArgument = 1
   if fileArgument < args.count() {                       // length fact: fileArgument indexes args (LR 6.3)
     let path = Path.parse(args[fileArgument]) or fail
-    let content = caps.fileSystem.readText(path) or fail
-    caps.console.print("${content.scalarCount()} scalars in ${args[fileArgument]}")
+    let content = fileSystem.readText(path) or fail
+    console.print("${content.scalarCount()} scalars in ${args[fileArgument]}")
     return
   }
-  caps.console.print("usage: summary <file>")
+  console.print("usage: summary <file>")
 }

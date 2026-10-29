@@ -18,10 +18,10 @@ try func shared(m: Mutex[Shared[Int]]) Int {
   return 1
 }
 
-try func capability(m: Mutex[Console]) Void {
+try func capability(m: Mutex[Console]) {
   let g = m.lockBlocking() or fail
   let c = g.get()                                     // reject: E-TYP-090 — a capability is not Copyable
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }

@@ -1,0 +1,50 @@
+// execute: chain 3|tagged 2|pair 1 none|picked 7
+// requires: runtime
+// covers: LANG-09-05
+// D-307: a bare variant of a generic enum where the expected type is a payload field of that enum (`tail:
+// Chain[T]`) takes the type arguments its own payload fixes, as the qualified form does, so native code builds it:
+// it was typed with the enum's own unsubstituted parameter, and the generated Rust named `T` (rustc E0425). A
+// variant whose payload fixes nothing (`Nothing`) takes them from the expected type (9.7; X-345, R15).
+import fortis.host { Console }
+
+export enum Chain[T] {
+  End(value: T)
+  Next(tail: Chain[T])
+}
+
+export enum Opt[T] {
+  Nothing
+  Some(value: T)
+}
+
+export enum Pair[T] {
+  Two(left: Opt[T], right: Opt[T])
+}
+
+func depth[T](c: Chain[T]) Int {
+  return match c {
+    End(value: _) => 1
+    Next(tail: t) => Int.saturatingAdd(depth(t), 1)
+  }
+}
+
+func shown(o: Opt[Int]) String {
+  return match o {
+    Nothing => "none"
+    Some(value: v) => "${v}"
+  }
+}
+
+func main(console: Console) {
+  let c = Chain.Next(tail: Next(tail: End(value: 4)))
+  console.print("chain ${depth(c)}")
+  let tagged: Chain[String] = Next(tail: End(value: "x"))
+  console.print("tagged ${depth(tagged)}")
+  let p: Pair[Int] = Two(left: Some(value: 1), right: Nothing)
+  let text = match p {
+    Two(left: l, right: r) => "${shown(l)} ${shown(r)}"
+  }
+  console.print("pair ${text}")
+  let picked: Opt[Int] = Some(value: 7)
+  console.print("picked ${shown(picked)}")
+}

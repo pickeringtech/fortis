@@ -1,0 +1,15 @@
+// reject: E-OWN-052 (at the marked line)
+// covers: LANG-07-04, LANG-12-01, LANG-03-06
+// D-391: the loans held by a block's own bindings end before its deferred blocks run (12.1), and a binding named
+// only inside a string interpolation is named (3.6): a view binding of the block cannot be used inside the defer,
+// in a hole as anywhere else. Both checkers once read the holes of a deferred block for its effects but not for
+// its places, so this was accepted where `discard seen.used` is E-OWN-052.
+export class Buffer {
+  export used: Int
+  export func peek(self) alias Buffer from self => alias self
+}
+func run(items: Buffer) Int {
+  let seen = items.peek()
+  defer { discard "${seen.used} used" }     // reject: E-OWN-052: seen's loan has ended when the defer runs
+  return seen.used
+}

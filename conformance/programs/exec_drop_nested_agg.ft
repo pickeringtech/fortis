@@ -4,12 +4,12 @@
 // 7.9: destroying a class, enum or tuple destroys an aggregate nested in it (a list field, a map field, an enum
 // payload, a nested tuple), once, when that owner dies. A field's cleanup is not a `drop N` trace event (D-306).
 // The bare list and the direct class field are the same rule with nothing nested between the owner and the value.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 class N {
   id: Int
   console: Shared[Console]
-  cleanup(editable self) Void { self.console.print("drop ${self.id}") }
+  cleanup(editable self) { self.console.print("drop ${self.id}") }
 }
 
 class Box { items: List[N] }
@@ -20,41 +20,39 @@ class Outer { item: N }
 
 enum Bag { Items(xs: List[N]) }
 
-func classList(console: Shared[Console]) Void {
+func classList(console: Shared[Console]) {
   let b = Box(items: List.of(N(id: 1, console: console.retain()), N(id: 2, console: console.retain())))
   console.print("list")
 }
 
-func classMap(console: Shared[Console]) Void {
+func classMap(console: Shared[Console]) {
   let mut items: Map[Int, N] = Map.default()
-  editable items.set(1, N(id: 3, console: console.retain()))
+  items.set(1, N(id: 3, console: console.retain()))
   let b = Carrier(items: move items)
   console.print("map")
 }
 
-func enumList(console: Shared[Console]) Void {
+func enumList(console: Shared[Console]) {
   let b = Bag.Items(xs: List.of(N(id: 4, console: console.retain())))
   console.print("enum")
 }
 
-func nested(console: Shared[Console]) Void {
+func nested(console: Shared[Console]) {
   let t = ((N(id: 5, console: console.retain()), N(id: 6, console: console.retain())), 0)
   console.print("tuple")
 }
 
-func bareList(console: Shared[Console]) Void {
+func bareList(console: Shared[Console]) {
   let xs = List.of(N(id: 7, console: console.retain()))
   console.print("bare")
 }
 
-func direct(console: Shared[Console]) Void {
+func direct(console: Shared[Console]) {
   let o = Outer(item: N(id: 8, console: console.retain()))
   console.print("field")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   classList(console)
   classMap(console)

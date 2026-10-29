@@ -15,6 +15,6 @@ try func loadAccount(id: Int) Account {
   return Account(name: "user ${id}")
 }
 
-recovers func example(id: Int) Void {
+recovers func example(id: Int) {
   // {{example}}
 }

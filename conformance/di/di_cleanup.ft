@@ -2,7 +2,7 @@
 // covers: PLAT-03-04, PLAT-02-04
 // Held instances are dropped in reverse dependency order when their scope ends (Platform 3.2); a construction
 // that fails drops what was already built, in reverse order, and reaches the caller once (Platform 2.3).
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export error Down {
   code: "demo.down"
@@ -10,7 +10,7 @@ export error Down {
 
 export class Pool {
   console: Shared[Console]
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("drop pool")
   }
 }
@@ -18,7 +18,7 @@ export class Pool {
 export class Cache {
   inject pool: Shared[Pool]
   console: Shared[Console]
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("drop cache")
   }
 }
@@ -43,7 +43,7 @@ context Production(console: owned Shared[Console], up: Bool) {
   provide Cache using factory openCache { lifetime: application }
 }
 
-recovers func serve(console: Shared[Console], up: Bool) Void {
+recovers func serve(console: Shared[Console], up: Bool) {
   let app = Production.application(console.retain(), up) catch e {
     console.print("failed:${e.code}")
     return
@@ -51,9 +51,7 @@ recovers func serve(console: Shared[Console], up: Bool) Void {
   console.print("request done")
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+recovers func main(out: Console) {
   let console = Shared.create(move out)
   serve(console, true)
   serve(console, false)

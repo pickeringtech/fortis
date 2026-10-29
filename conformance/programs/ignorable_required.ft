@@ -1,0 +1,11 @@
+// reject: E-TYP-140 (at the marked line)
+// covers: LANG-05-08
+// A result not declared `@ignorable` still needs `discard` (5.5; X-345, R17).
+func remember(seen: editable Set[Int], n: Int) Bool {
+  return editable seen.add(n)
+}
+
+func main() {
+  let mut seen: Set[Int] = Set.default()
+  remember(editable seen, 7)                       // reject: E-TYP-140 — the Bool is unused
+}

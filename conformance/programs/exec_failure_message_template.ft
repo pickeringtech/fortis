@@ -1,0 +1,67 @@
+// execute: reported 0 0 0 0|done
+// reports: runtime-failure:code=demo.late,message=late 3|runtime-failure:code=demo.moved,message=ann moved from 4 to 5|runtime-failure:code=demo.plain,message=nothing to fill in|runtime-failure:code=demo.bare,message=
+// requires: runtime
+// covers: LANG-10-03
+// D-340, 10.3: an `error` declaration's `message` is a template, kept as written between its quotes and rendered
+// when the failure is displayed: each `${name}` becomes that payload field's text, as the record's payload shows
+// it. The interpreter stored the quotes (`"\"late ${n}\""`), the VM and native did not, and no backend filled in
+// the payload; parity compares each reported failure's message on the three backends.
+import fortis.host { Console }
+
+export error Late {
+  code: "demo.late"
+  payload { n: Int }
+  message: "late ${n}"
+}
+
+export error Moved {
+  code: "demo.moved"
+  payload { who: String<scalars: ..16>, was: Int, now: Int }
+  message: "${who} moved from ${was} to ${now}"
+}
+
+export error Plain {
+  code: "demo.plain"
+  message: "nothing to fill in"
+}
+
+export error Bare {
+  code: "demo.bare"
+}
+
+try func late(n: Int) Int {
+  fail Late(n: n)
+}
+
+try func moved(who: String<scalars: ..16>) Int {
+  fail Moved(who: who, was: 4, now: 5)
+}
+
+try func plain() Int {
+  fail Plain()
+}
+
+try func bare() Int {
+  fail Bare()
+}
+
+func main(console: Console) {
+  let a = late(3) catch e {
+    report e
+    recover 0
+  }
+  let b = moved("ann") catch e {
+    report e
+    recover 0
+  }
+  let c = plain() catch e {
+    report e
+    recover 0
+  }
+  let d = bare() catch e {
+    report e
+    recover 0
+  }
+  console.print("reported ${a} ${b} ${c} ${d}")
+  console.print("done")
+}

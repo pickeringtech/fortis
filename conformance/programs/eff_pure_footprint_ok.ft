@@ -2,22 +2,22 @@
 // covers: LANG-11-02
 export class Cell {
   export value: Int
-  export pure func set(editable self, value: Int) Void {
+  export pure func set(editable self, value: Int) {
     self.value = value
   }
 }
-pure func fill(c: editable Cell, v: Int) Void {
+pure func fill(c: editable Cell, v: Int) {
   c.value = v
-  editable c.set(v)
+  c.set(v)
 }
 pure func build() Cell {
   let mut cell = Cell(value: 0)
-  editable cell.set(1)
+  cell.set(1)
   cell.value = 2
-  return move cell
+  return cell
 }
 pure func collect(n: Int) List[Int] {
   let mut out: List[Int] = List.default()
-  editable out.push(n)
-  return move out
+  out.push(n)
+  return out
 }

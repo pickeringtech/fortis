@@ -13,6 +13,6 @@ try func check(n: Int) Int {
   }
   return n
 }
-export try func main(args: List[String]) Void {
+try func main() {
   discard check(3) or fail
 }

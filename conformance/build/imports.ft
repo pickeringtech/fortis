@@ -7,7 +7,7 @@ import fortis.time
 import fortis.collections
 import fortis.numeric
 
-export func main(args: List[String]) Void {
+func main(args: List[String]) {
   let mut total = 0
   for a in args {
     total = Int.wrappingAdd(total, a.scalarCount())

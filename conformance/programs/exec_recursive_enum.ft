@@ -3,7 +3,7 @@
 // covers: LANG-09-05
 // A recursive enum is boxed on every variant field that reaches it by value, including through a record or a
 // newtype (D-55). A nested pattern and a consuming match's guard see the payload, not the box.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export enum E derive Equatable {
   End
@@ -34,7 +34,7 @@ pure func nested(e: E) Int {
 func taken(e: owned E) Int {
   return match move e {
     End => 0
-    Next(tail: x) when x == E.End => 1
+    Next(tail: x) when x == End => 1
     Next(tail: _) => 2
   }
 }
@@ -54,11 +54,10 @@ pure func wrapped(e: N) Int {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("nested ${nested(E.Next(tail: E.End))}")
-  caps.console.print("deeper ${nested(E.Next(tail: E.Next(tail: E.End)))}")
-  caps.console.print("guard ${taken(E.Next(tail: E.End))}")
-  caps.console.print("record ${recorded(R.Next(tail: {inner: R.End}))}")
-  caps.console.print("newtype ${wrapped(N.End)}")
+func main(console: Console) {
+  console.print("nested ${nested(Next(tail: End))}")
+  console.print("deeper ${nested(Next(tail: Next(tail: End)))}")
+  console.print("guard ${taken(Next(tail: End))}")
+  console.print("record ${recorded(Next(tail: {inner: End}))}")
+  console.print("newtype ${wrapped(End)}")
 }

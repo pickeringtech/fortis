@@ -1,0 +1,17 @@
+// D-353: a function whose result is an optional loan of text, `(alias String from xs)?`, does not build natively
+// (rustc E0308). The interpreter and the VM print `a|none`.
+import fortis.host { Console }
+
+func firstName(xs: List[String]) (alias String from xs)? {
+  return xs.get(0)
+}
+
+func main(console: Console) {
+  let mut xs: List[String] = List.default()
+  xs.push(String.from("a"))
+  let n = firstName(alias xs)
+  console.print("${n ?? "none"}")
+  let ys: List[String] = List.default()
+  let m = firstName(alias ys)
+  console.print("${m ?? "none"}")
+}

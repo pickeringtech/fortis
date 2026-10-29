@@ -1,6 +1,6 @@
 // accept — src/report.ft in package acme.reporting
 import fortis.text
-import fortis.host { Host }
+import fortis.host { FileSystem, Console }
 import acme.billing.invoices { Invoice, CustomerId }
 import acme.reporting.store { Archive, Invoices }   // illustrative dependency
 
@@ -21,25 +21,24 @@ export pure try func summarise(invoices: List[Invoice]) String {
   let mut out = text.Builder.create()           // fresh local storage: mutation is still pure
   for invoice in invoices {                     // read loan of each invoice
     let total = invoice.total() or fail         // propagate failure, keep the success value
-    editable out.appendLine("${invoice.customer}: ${total}")
+    out.appendLine("${invoice.customer}: ${total}")
   }
   return out.finish()
 }
 
 // Ownership is explicit when an existing value is involved.
-export func archive(store: editable Archive, invoices: owned List[Invoice]) Void {
+export func archive(store: editable Archive, invoices: owned List[Invoice]) {
   let count = invoices.count()
-  editable store.add(move invoices)             // `store` is loaned exclusively; `invoices` is given away
-  editable store.note("archived ${count}")
+  store.add(move invoices)                      // `store` changes, as its parameter says; `invoices` is given away
+  store.note("archived ${count}")
 }
 
 // The entry point. `try main` that fails prints one report and exits 1.
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()                // I/O needs an explicit capability value
-  let invoices = Invoices.load(caps.fileSystem, args) or fail
+try func main(fileSystem: FileSystem, console: Console, args: List[String]) {
+  let invoices = Invoices.load(fileSystem, args) or fail
   let reportText = summarise(invoices) catch e { // explicit binding; must end in recover/return/fail
     report e                                    // consumes the failure; it cannot also be propagated
     recover "no report"
   }
-  caps.console.print(reportText)
+  console.print(reportText)
 }

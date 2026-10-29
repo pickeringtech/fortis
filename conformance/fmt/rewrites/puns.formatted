@@ -1,0 +1,32 @@
+// Formatter rewrite R9 (LR 5.8, 9.2, X-345): `name: name` becomes the pun `name` where that means the same: in a
+// class constructor, after a named argument, and where the parameter in that position has the name and every argument
+// before it is positional. Elsewhere, and with a marker, the label stays.
+class Item {
+  sku: Int
+  held: Int
+  wanted: Int
+}
+
+class Holder {
+  name: String
+}
+
+error Insufficient {
+  code: "demo.insufficient"
+  payload { sku: Int, held: Int, wanted: Int }
+}
+
+func place(sku: Int, held: Int, wanted: Int) Int => sku
+
+func reorder(held: Int, sku: Int) Int => sku
+
+try func shapes(sku: Int, held: Int, wanted: Int, name: owned String) Int {
+  let item = Item(sku, held, wanted)
+  let holder = Holder(name: move name)
+  let a = place(sku, held: 1, wanted)
+  let b = reorder(sku: sku, held)
+  if held < wanted {
+    fail Insufficient(sku: sku, held, wanted)
+  }
+  return Int.wrappingAdd(a, b)
+}

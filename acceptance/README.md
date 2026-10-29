@@ -29,7 +29,7 @@ status, the commit and whether the worktree was clean) and `semantic_correctness
 Application A uses the language core and `fortis.host` only:
 
 - `ids` declares nominal IDs (`SkuId`, `BinId`) and refined arithmetic. A plain operator is used where the
-  interval domain proves the result, and a checked API or `validate` elsewhere.
+  interval domain proves the result, and a checked operator (`sum + v or fail`) or `validate` elsewhere.
 - `feed` is a `noalloc` parser over `StringView` (fields are views `from` the line) and `BytesView` (bytes read in
   place).
 - `ledger` holds owned items, copies a name with an explicit `copy`, and returns views `from self`. It uses
@@ -38,7 +38,7 @@ Application A uses the language core and `fortis.host` only:
   load with an `observation` schema. Running it starts no task, pool, DI registry or exporter.
 
 Application A2 uses the core only: `async try func main` on the core executor; the `FileSystem`, `Environment` and
-`SecretAccess` authorities from `Host.capabilities()`; one `launchBlocking` task that reads the manifest's files on the
+`SecretAccess` authorities as parameters of `main`, which the runtime supplies; one `launchBlocking` task that reads the manifest's files on the
 blocking pool; a `scope` of cooperative tasks, one per file, counting words; a synchronous `defer` that reports the
 end of every run; and a missing input whose `fs.not_found` travels to main and is reported once at the entry
 boundary. Its executor traces show one blocking launch and no parallel pool, and it starts no DI registry or exporter.

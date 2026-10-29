@@ -2,18 +2,17 @@
 // requires: runtime
 // covers: LANG-09-07
 // The matching instantiation is the constructor. `Level[Int].High` is `fn(Int) Level[Int]`.
-import fortis.host { Host }
+import fortis.host { Console }
 
 enum Level[T] {
   High(value: T)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let f: fn(Int) Level[Int] = Level[Int].High
   let v = f(5)
   let n = match v {
     High(value) => value
   }
-  caps.console.print("${n}")
+  console.print("${n}")
 }

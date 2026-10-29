@@ -3,7 +3,7 @@
 // An `after` hook may fail only when the result is not linear: a failing after would leave it with no consumer (11.8).
 export class Tx {
   witness: Must
-  export func commit(owned self) Void {
+  export func commit(owned self) {
     let Tx(witness: w) = move self
     Must.discharge(move w)
   }

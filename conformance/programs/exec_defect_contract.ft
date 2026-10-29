@@ -2,9 +2,8 @@
 // requires: runtime
 // covers: LANG-10-06
 // 10.8: a contract violation in trusted code terminates the task; the main task's defect ends the program (exit 3).
-import fortis.host { Host }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("before")
+import fortis.host { Console }
+func main(console: Console) {
+  console.print("before")
   injectDefect("contract_violation")
 }

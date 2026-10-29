@@ -10,5 +10,5 @@ export aspect announced() {
   }
 }
 @announced()
-export func main(args: List[String]) Void {
+func main() {
 }

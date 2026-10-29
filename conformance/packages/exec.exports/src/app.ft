@@ -1,8 +1,7 @@
 // LANG-04-03: an exported module of another package is imported and used.
-import fortis.host { Host }
+import fortis.host { Console }
 import exp.lib.api { answer }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("answer ${answer()}")
+func main(console: Console) {
+  console.print("answer ${answer()}")
 }

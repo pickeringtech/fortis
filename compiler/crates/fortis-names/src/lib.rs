@@ -6,6 +6,7 @@ pub mod library;
 pub mod lock;
 pub mod sha256;
 pub mod project;
+pub mod reading;
 pub mod resolve;
 pub mod resolver;
 

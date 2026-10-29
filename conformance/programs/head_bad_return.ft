@@ -1,3 +1,5 @@
 // reject: E-SYN-000 (at the marked line)
 // covers: LANG-08-01
-export func nothing() { }                   // reject: E-SYN-000 — the success type must be written (Void)
+// The success type follows `)` directly, with no `->` (8.1). A head may leave out a `Void` result (X-345), so a head
+// with no result at all is no longer this error.
+export func nothing() -> Void { }            // reject: E-SYN-000: no arrow before the success type

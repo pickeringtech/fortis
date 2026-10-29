@@ -3,7 +3,7 @@
 // A future stored in a local is linear; `await move f` consumes it at the await, so it is not live across that
 // cancellation point (X-123).
 async func work(n: Int) Int => n
-export async func main(args: List[String]) Void {
+async func main() {
   let f = work(1)
   let v = await move f
   discard v

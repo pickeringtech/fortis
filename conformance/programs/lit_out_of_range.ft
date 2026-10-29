@@ -1,7 +1,7 @@
 // reject: E-REF-001 (at the marked lines)
 // covers: LANG-03-05
 // An integer literal must fit its target type; the literal's interval is exact (3.5).
-pure func ranges() Void {
+pure func ranges() {
   let a: Int8 = 128                        // reject: E-REF-001
   let b: Int16 = -32769                    // reject: E-REF-001
   let c: Int32 = 2147483648                // reject: E-REF-001

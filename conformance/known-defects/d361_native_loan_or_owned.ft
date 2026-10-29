@@ -1,0 +1,36 @@
+// D-361: a binding that holds a loan or a value of its own, decided when the program runs, does not build natively:
+// an `if` that gives a loan on one branch and moves a value in on the other (rustc E0308, `if` and `else` have
+// incompatible types), and assigning a value of its own to a `let mut` binding that held a loan (E0308). The
+// interpreter and the VM print `if x|drop d|if d|drop d|now fresh|drop fresh|end|drop x`: the binding owns, and
+// destroys, only the value it was given.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], s: StringView) Token => Token(label: String.from(s), console: console.retain())
+
+func pick(console: Shared[Console], xs: List[Token], lend: Bool) {
+  let d = make(console, "d")
+  let v = if lend { give xs.get(0) } else { give move d }
+  console.print("if ${v?.label ?? "none"}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "x"))
+  pick(console, xs, true)
+  pick(console, xs, false)
+  {
+    let mut t = xs.get(0)
+    t = make(console, "fresh")
+    console.print("now ${t?.label ?? "none"}")
+  }
+  console.print("end")
+}

@@ -3,9 +3,9 @@
 export class Box {
   export label: String
 }
-func consume(b: owned Box) Void {
+func consume(b: owned Box) {
 }
-func run(n: Int<0..3>) Void {
+func run(n: Int<0..3>) {
   let mut box = Box(label: "a")
   for i in 0..n {
     consume(move box)

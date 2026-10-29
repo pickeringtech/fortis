@@ -1,0 +1,53 @@
+// reject: E-OWN-001, E-OWN-002 (at the marked lines)
+// covers: LANG-07-01, LANG-06-08
+// D-341, 5.7, 7.6: a `??` whose result can be a loan is a loan: its fallback lends (a nested lent `??`, at any
+// depth), or an operand is a place read through a loan (a read parameter, a binding that holds a loan, `self` in a
+// method that borrows it). Where it meets an owned expectation, a copyable value needs `copy` (E-OWN-001) and one
+// that is not Copyable has no owned copy (E-OWN-002). Both checkers typed these as owned, so a loan escaped into
+// ownership through the `??`.
+import fortis.host { Console }
+
+class Item {
+  name: String
+}
+
+class Member {
+  nick: String?
+
+  func label(self) String {
+    return self.nick ?? "anon"                                // reject: E-OWN-001 — a field of the borrowed self
+  }
+}
+
+func nestedShared(o: owned Shared[Item]?, ys: List[Shared[Item]], d: owned Shared[Item]) Shared[Item] {
+  return move o ?? (ys.get(0) ?? move d)                      // reject: E-OWN-002 — the nested `??` lends
+}
+
+func nestedText(o: owned String?, ys: List[String], d: owned String) String {
+  return move o ?? (ys.get(0) ?? move d)                      // reject: E-OWN-001 — text too
+}
+
+func deeper(o: owned Item?, p: owned Item?, ys: List[Item], d: owned Item) Item {
+  return move o ?? (move p ?? (ys.get(0) ?? move d))          // reject: E-OWN-001 — at any depth
+}
+
+func bound(o: owned Item?, ys: List[Item], d: owned Item) {
+  let item: Item = move o ?? (ys.get(0) ?? move d)            // reject: E-OWN-001 — an owned binding
+}
+
+func held(o: owned Item?, ys: List[Item], d: owned Item) Item {
+  let h = ys.get(0)
+  return move o ?? (h ?? move d)                              // reject: E-OWN-001 — a binding that holds a loan
+}
+
+func param(s: Shared[Item]?, d: owned Shared[Item]) Shared[Item] {
+  return s ?? move d                                          // reject: E-OWN-002 — a read parameter lends
+}
+
+func paramText(s: String?, d: owned String) String {
+  return s ?? move d                                          // reject: E-OWN-001 — a read parameter's text
+}
+
+func main(console: Console) {
+  console.print("loans")
+}

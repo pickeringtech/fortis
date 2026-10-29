@@ -1,13 +1,12 @@
 // execute: 10|15|7
 // requires: runtime
 // covers: LANG-05-09
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func scale(value: Int, factor: Int = 5) Int => Int.wrappingMul(value, factor)
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${scale(2)}")
-  caps.console.print("${scale(3)}")
-  caps.console.print("${scale(value: 7, factor: 1)}")
+func main(console: Console) {
+  console.print("${scale(2)}")
+  console.print("${scale(3)}")
+  console.print("${scale(value: 7, factor: 1)}")
 }

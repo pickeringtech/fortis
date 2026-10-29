@@ -18,18 +18,17 @@ and the signalling for cancellation and deadlines (LR 15, LR 12.5).
 
 ```fortis
 // accept
-import fortis.host { Clock, Console, Host }
+import fortis.host { Clock, Console }
 
-async func pause(clock: Clock, console: Console) Void {
+async func pause(clock: Clock, console: Console) {
   console.print("sleeping")
   await clock.sleep(10ms)
   console.print("awake")
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  await pause(caps.clock, caps.console)
-  caps.console.print("main done")
+async func main(clock: Clock, console: Console) {
+  await pause(clock, console)
+  console.print("main done")
 }
 ```
 
@@ -40,7 +39,7 @@ main done
 ```
 
 An `async` entry runs on the core cooperative executor as the root task, and its completion ends the process
-(LR 4.6). A minimal synchronous program starts no executor it did not ask for (PROG-NFR-14).
+(LR 4.6). A minimal synchronous program starts no executor it did not ask for.
 [Cleanup, async and concurrency](12-async.md) covers scopes, launches and cancellation.
 
 ## The task reporter
@@ -58,19 +57,19 @@ then discarded (LR 15). While developing you can choose the plan `permit-all` by
 like any plan (LR 15).
 
 Every record is written as text on a terminal and as one JSON line otherwise, so a program run inside an agent
-session is as easy to query as one run under an exporter (LR 4.6, Programme 7.4).
+session is as easy to query as one run under an exporter (LR 4.6).
 
 ## Authorities and capabilities
 
 Input and output need authority, and authority is a value. The core defines the marker interface `Authority` and
 ten *capabilities*, which are process-wide authorities: `FileSystem`, `Network`, `Clock`, `Random`,
-`Environment`, `Process`, `Supervisor`, `Console`, `SecretAccess` and `RawSql` (LR 15, LR 11.6). They are
-created by exactly one call, `Host.capabilities()` from `fortis.host`, which only `main` may make, and only once
-(LR 11.6). From there they are passed, as ordinary parameters, to whatever needs them.
+`Environment`, `Process`, `Supervisor`, `Console`, `SecretAccess` and `RawSql` (LR 15, LR 11.6). The runtime
+creates them once, at start, and supplies each one the entry `main` declares as a parameter (LR 4.6, LR 11.6).
+From there they are passed, as ordinary parameters, to whatever needs them.
 
 ```fortis
 // accept
-import fortis.host { FileSystem, Host, Path }
+import fortis.host { FileSystem, Path, Console, Network, Process, Clock, Random }
 
 try func saveAndLoad(fs: FileSystem) String {
   let path = Path.parse("notes.txt") or fail
@@ -78,18 +77,17 @@ try func saveAndLoad(fs: FileSystem) String {
   return fs.readText(path) or fail
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let text = saveAndLoad(caps.fileSystem) or fail
-  caps.console.print("read back: ${text}")
-  let address = caps.network.resolve("localhost") or fail
-  caps.console.print("localhost is ${address}")
-  let status = caps.process.run("true", List.of()) or fail
-  caps.console.print("true exits ${status}")
-  let frozen = caps.clock.frozen(Timestamp.epoch())
-  caps.console.print("a frozen clock reads ${frozen.now()}")
-  let seeded = caps.random.seeded(42)
-  caps.console.print("seeded draw: ${seeded.below(100)}")
+try func main(fileSystem: FileSystem, console: Console, network: Network, process: Process, clock: Clock, random: Random) {
+  let text = saveAndLoad(fileSystem) or fail
+  console.print("read back: ${text}")
+  let address = network.resolve("localhost") or fail
+  console.print("localhost is ${address}")
+  let status = process.run("true", List.of()) or fail
+  console.print("true exits ${status}")
+  let frozen = clock.frozen(Timestamp.epoch())
+  console.print("a frozen clock reads ${frozen.now()}")
+  let seeded = random.seeded(42)
+  console.print("seeded draw: ${seeded.below(100)}")
 }
 ```
 
@@ -103,19 +101,20 @@ seeded draw: 13
 
 `saveAndLoad` can touch the file system because, and only because, it takes a `FileSystem`. A reader can see
 from its signature everything it may reach; a function whose body reaches I/O through a capability without taking
-an authority is rejected (`E-EFF-010`, LR 11.6), and so is a call to `Host.capabilities()` anywhere but `main`.
-`report` is the one exception: it needs the `io` effect but no capability, because it writes only to the
-diagnostic plane (LR 11.6, LR 10.6).
+an authority is rejected (`E-EFF-010`, LR 11.6), and so is a call to `Host.capabilities()`, the way older code
+creates the capabilities in `main`, anywhere but `main`. `report` and the log statements are the exceptions: they
+need the `io` effect but no capability, because they write only to the diagnostic plane (LR 11.6, LR 10.6,
+LR 13).
 
 ```fortis
 // reject: E-EFF-010
 import fortis.host { Host }
 
-func sneak() Void {
+func sneak() {
   let caps = Host.capabilities()     // reject: E-EFF-010
 }
 
-export func main(args: List[String]) Void {
+func main() {
   sneak()
 }
 ```
@@ -161,14 +160,13 @@ development file system starts empty, so the file is not there:
 
 ```fortis
 // accept (exit status 1)
-import fortis.host { Host, Path }
+import fortis.host { Path, Console, FileSystem }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("reading config.txt")
+try func main(console: Console, fileSystem: FileSystem) {
+  console.print("reading config.txt")
   let path = Path.parse("config.txt") or fail
-  let text = caps.fileSystem.readText(path) or fail
-  caps.console.print(text)
+  let text = fileSystem.readText(path) or fail
+  console.print(text)
 }
 ```
 
@@ -195,7 +193,7 @@ program writes those itself (D-58):
 | `fortis.numeric` | `abs`, `min` and `max`; LR 6.5 places transcendental functions in `fortis.numeric.math`, which does not exist yet (D-58) |
 | `fortis.time` | `Duration` and `Timestamp` operations |
 | `fortis.money` | `Money`: a `Decimal` amount with a run-time `Currency`; arithmetic fails on a currency mismatch |
-| `fortis.host` | the capabilities, `Host.capabilities()`, `Path`, `Secret[T]` and `reveal` |
+| `fortis.host` | the capabilities, `Path`, `Secret[T]` and `reveal`, and `Host.capabilities()`, which older code calls in `main` |
 
 `fortis.time` gives `Duration.days`, `hours`, `minutes`, `seconds` and `milliseconds`, the fallible
 `Duration.add`, `sub` and `multiply`, comparison operators on `Duration`, and `Timestamp.epoch`, `add`, `after`
@@ -203,15 +201,14 @@ and `before`. A `Duration` displays in the largest unit that divides it exactly 
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let half = Duration.milliseconds(500)
   let total = Duration.add(half, Duration.seconds(1)) or fail
-  caps.console.print("${Duration.minutes(90)} ${total} ${half}")
+  console.print("${Duration.minutes(90)} ${total} ${half}")
   let later = Timestamp.add(Timestamp.epoch(), Duration.days(1)) or fail
-  caps.console.print("${Timestamp.after(later, Timestamp.epoch())}")
+  console.print("${Timestamp.after(later, Timestamp.epoch())}")
 }
 ```
 
@@ -229,14 +226,13 @@ needs the `SecretAccess` capability, so every place a secret is opened is visibl
 
 ```fortis
 // accept
-import fortis.host { Host, reveal }
+import fortis.host { reveal, Environment, SecretAccess, Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let home = caps.environment.get("HOME")
+func main(environment: Environment, secretAccess: SecretAccess, console: Console) {
+  let home = environment.get("HOME")
   if home != null {
-    let value = reveal(home, caps.secretAccess)
-    caps.console.print("HOME is set: ${value.byteCount() > 0}")
+    let value = reveal(home, secretAccess)
+    console.print("HOME is set: ${value.byteCount() > 0}")
   }
 }
 ```

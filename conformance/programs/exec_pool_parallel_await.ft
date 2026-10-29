@@ -4,7 +4,7 @@
 // covers: LANG-12-03, LANG-12-05
 // 12.4: a parallel task observes cancellation at an `await` (here a sleep on a Clock moved into it: capability
 // values are Shareable and cross the launch by move) as well as at checkpoint().
-import fortis.host { Host, Capabilities, Console, Clock }
+import fortis.host { Console, Clock }
 export error Bad {
   code: "demo.bad"
 }
@@ -25,9 +25,7 @@ async try func run(pool: owned Clock) Int {
     return Int.wrappingAdd(x, await w)
   }
 }
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(fileSystem: fs, network: net, clock: poolClock, random: rnd, environment: envc, process: proc, supervisor: sup, console: console, secretAccess: sec, rawSql: sql) = move caps
+async recovers func main(poolClock: Clock, console: Console) {
   let r = await run(move poolClock) or recover -1
   console.print("recovered ${r}")
 }

@@ -22,9 +22,9 @@
  "min_failure_origins": 0,
  "features": [
   {"feature": "async try func main run by the core executor",
-   "source": [["src/main.ft", "^export async try func main\\(args: List\\[String\\]\\) Void"]], "run": ["^total 18 words in 3 files$"]},
-  {"feature": "FileSystem and Environment capability values from Host.capabilities()",
-   "source": [["src/main.ft", "let caps = Host\\.capabilities\\(\\)"], ["src/main.ft", "fileSystem: fs, environment: env"], ["src/main.ft", "env\\.get\\(\"TALLY_MIN\"\\)"], ["src/main.ft", "fs\\.readText\\("]],
+   "source": [["src/main.ft", "^async try func main\\(fs: FileSystem, env: Environment, access: SecretAccess, console: Console\\) \\{"]], "run": ["^total 18 words in 3 files$"]},
+  {"feature": "FileSystem and Environment capabilities as parameters of main",
+   "source": [["src/main.ft", "main\\(fs: FileSystem, env: Environment"], ["src/main.ft", "env\\.get\\(\"TALLY_MIN\"\\)"], ["src/main.ft", "fs\\.readText\\("]],
    "run": ["^minimum word length 4$"]},
   {"feature": "synchronous defer",
    "source": [["src/main.ft", "^  defer \\{"]], "run": ["^tally finished$"]},

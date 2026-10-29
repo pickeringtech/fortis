@@ -1,4 +1,4 @@
-// SP-07 workload (spikes/SP-07/design.md 11): three scopes whose state types are disjoint, `shop`, `meter` and
+// SP-07 workload (SP-07's design, section 11): three scopes whose state types are disjoint, `shop`, `meter` and
 // `billing`. conformance/reload/generate.py writes each version from this template: `{{V}}` is the version, and each
 // function body carries its version marker and coefficients as literals in the body, so a result says which version
 // of each function computed it. The edits of edits.json are textual replacements applied before the substitution.

@@ -4,7 +4,7 @@
 // covers: LANG-11-03, LANG-13-02, LANG-10-01
 // Programme 16, interaction `noalloc` + failure + capture: a `noalloc try` function observed with trivial fields
 // captures on its success and failure paths and fails with a payload of trivial fields; nothing allocates.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error TooBig {
   code: "demo.too_big"
@@ -28,12 +28,11 @@ noalloc try func checked(n: Int<0..1000>) Int {
   return n
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+recovers func main(console: Console) {
   let a = checked(42) or recover -1
-  caps.console.print("${a}")
+  console.print("${a}")
   let b = checked(500) catch e {
-    caps.console.print("caught ${e.code}")
+    console.print("caught ${e.code}")
     recover -1
   }
   discard b

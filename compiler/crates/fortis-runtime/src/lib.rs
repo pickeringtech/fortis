@@ -3,6 +3,7 @@
 
 pub mod big;
 pub mod decimal;
+pub mod failure;
 pub mod float;
 pub mod telemetry;
 pub mod time;

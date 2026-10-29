@@ -1,22 +1,21 @@
 // execute: 20.00|3.000|0.3333333333333333333333333333|2.34|2.36|2.35|1.50|true|0.5
 // requires: runtime
 // covers: LANG-06-04
-import fortis.host { Host }
+import fortis.host { Console }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let r1 = Decimal.add(19.99d, 0.01d) or fail
-  caps.console.print("${r1}")
+  console.print("${r1}")
   let r2 = Decimal.mul(1.5d, 2.00d) or fail
-  caps.console.print("${r2}")
+  console.print("${r2}")
   let r3 = Decimal.div(1d, 3d) or fail
-  caps.console.print("${r3}")
-  caps.console.print("${Decimal.round(2.345d, 2, RoundingMode.HalfEven)}")
-  caps.console.print("${Decimal.round(2.355d, 2, RoundingMode.HalfEven)}")
-  caps.console.print("${Decimal.round(2.345d, 2, RoundingMode.HalfAwayFromZero)}")
+  console.print("${r3}")
+  console.print("${Decimal.round(2.345d, 2, HalfEven)}")
+  console.print("${Decimal.round(2.355d, 2, HalfEven)}")
+  console.print("${Decimal.round(2.345d, 2, HalfAwayFromZero)}")
   let r4 = Decimal.sub(2.00d, 0.5d) or fail
-  caps.console.print("${r4}")
-  caps.console.print("${1.50d == 1.5d}")
+  console.print("${r4}")
+  console.print("${1.50d == 1.5d}")
   let r5 = Decimal.rem(7.5d, 3.5d) or fail
-  caps.console.print("${r5}")
+  console.print("${r5}")
 }

@@ -1,5 +1,5 @@
 // Rejected on purpose: run `bin/fortis check examples/10_rejected.ft` to see the checker's records.
-import fortis.host { Host, Capabilities }
+import fortis.host { Capabilities, Console }
 
 export error Odd {
   code: "demo.odd"
@@ -13,7 +13,7 @@ try func half(n: Int) Int {
 }
 
 // E-OBL-001: the outcome of half is dropped; it must be consumed.
-func dropsOutcome(n: Int) Void {
+func dropsOutcome(n: Int) {
   half(n)
 }
 
@@ -24,11 +24,10 @@ func useAfterMove(items: owned List[Int]) Int {
 }
 
 // E-EFF-001: a `pure` function cannot perform I/O.
-pure func notPure(caps: Capabilities) Void {
+pure func notPure(caps: Capabilities) {
   caps.console.print("side effect")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("never runs")
+func main(console: Console) {
+  console.print("never runs")
 }

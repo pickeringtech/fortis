@@ -6,6 +6,6 @@ export error Boom {
   code: "demo.boom"
 }
 
-export try func main(args: List[String]) Void {
+try func main() {
   fail Boom()
 }

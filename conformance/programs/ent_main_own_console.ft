@@ -1,0 +1,8 @@
+// reject: E-NAM-005 (at the marked line)
+// covers: LANG-04-06
+// A module's own class named `Console` is not the capability of fortis.host, so the runtime has none to supply
+// (4.6, X-345; D-145).
+export class Console {}
+
+func main(console: Console) {                 // reject: E-NAM-005 — not the host's Console
+}

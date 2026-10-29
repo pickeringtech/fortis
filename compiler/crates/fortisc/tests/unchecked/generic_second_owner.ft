@@ -1,0 +1,35 @@
+// backstop: y id|drop id|t id|g g|drop g|list g|end
+// D-348, D-352: a generic body returns its read parameter, or a list's loan, as an owned `T` (the generics hole,
+// open for v0.1), so two bindings each own one value. The first owner's destruction runs the cleanup and the second
+// finds the value destroyed: the cleanup runs once on every runtime. The interpreter ran it twice.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func id[T](x: T) T { return x }
+
+func first[T](xs: List[T]) T? { return xs.get(0) }
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let t = Token(label: String.from("id"), console: console.retain())
+  {
+    let y = id(t)
+    console.print("y ${y.label}")
+  }
+  console.print("t ${t.label}")
+  let mut xs: List[Token] = List.default()
+  xs.push(Token(label: String.from("g"), console: console.retain()))
+  {
+    let g = first(xs)
+    console.print("g ${g?.label ?? "none"}")
+  }
+  console.print("list ${xs.get(0)?.label ?? "none"}")
+  console.print("end")
+}

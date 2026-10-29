@@ -3,7 +3,7 @@
 // covers: LANG-03-02
 // A statement continues onto the next line after a trailing operator, comma or opening bracket, or before a leading
 // continuation token (`.`, `or`, `??`, `)`, `]`); otherwise a newline ends it (3.2).
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Missing {
   code: "demo.missing"
@@ -22,21 +22,20 @@ recovers func lookup(n: Int) Int {
   return v
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+recovers func main(console: Console) {
   let total = Int.wrappingAdd(
     1,
     5
   )
-  caps.console.print("${total}")
-  caps.console.print("${lookup(-1)}")
+  console.print("${total}")
+  console.print("${lookup(-1)}")
   let name: String? = null
-  caps.console.print(name
+  console.print(name
     ?? "fallback")
   let words = List.of("ok", "no")
-  caps.console.print(words
+  console.print(words
     .get(0) ?? "")
   let sum = 1 +
     10
-  caps.console.print("${sum}")
+  console.print("${sum}")
 }

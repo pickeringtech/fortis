@@ -3,6 +3,6 @@
 // it may not create the capabilities (11.6, LANG-11-07).
 import caps.minter.lib
 
-export func main(args: List[String]) Void {
+export func main(args: List[String]) {
   lib.main(copy args)
 }

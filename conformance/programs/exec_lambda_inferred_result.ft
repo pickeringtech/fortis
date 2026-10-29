@@ -1,0 +1,17 @@
+// execute: 6 50 [item 1, item 2, item 3] 2
+// requires: runtime
+// covers: LANG-08-01
+// 8.2 (X-345): lambdas whose expression bodies leave out the return type run the same on every backend.
+import fortis.host { Console }
+
+func apply(f: fn(Int) Int, x: Int) Int => f(x)
+
+func scored(f: fn(Int) Int<0..100>, x: Int) Int<0..100> => f(x)
+
+func main(console: Console) {
+  let double: fn(Int) Int = fn(x) => Int.wrappingMul(x, 2)
+  let xs: List[Int] = List.of(1, 2, 3)
+  let labels = xs.map(fn(x) => "item ${x}")
+  let big = xs.countWhere(fn(x) => x > 1)
+  console.print("${apply(double, 3)} ${scored(fn(x) => 50, 9)} ${labels} ${big}")
+}

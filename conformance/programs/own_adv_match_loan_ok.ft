@@ -12,6 +12,6 @@ func run(h: editable Holder) Int {
     Circle(radius: x) => x
     Square(side: s) => s
   }
-  h.shape = Shape.Circle(radius: r)
+  h.shape = Circle(radius: r)
   return r
 }

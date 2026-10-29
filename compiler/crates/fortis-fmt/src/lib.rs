@@ -15,12 +15,16 @@
 //! The result is checked before it is returned: relexed, it must give the same tokens, and parsed, the same tree.
 //! A layout the rules would get wrong is an error, never a changed program. `format(format(x)) == format(x)`.
 //!
-//! `format_reprinting` first prints back the inferred facts of a module the checker accepts (Programme 9.3, X-130):
-//! a lambda's inferred `pure` and `noalloc`, and the single-word modifiers of each named contract. The module with
-//! the facts written must check exactly as before. `fortis fmt` uses it.
+//! `format_reprinting` first rewrites the old forms v0.0.2 replaced (`old_forms`, X-345), then prints back the inferred facts of a module the checker accepts (Programme 9.3, X-130):
+//! the single-word modifiers of each named contract (a lambda's inferred `pure` and `noalloc` are not printed, LR 8.2,
+//! X-345). The module with the facts written must check exactly as before. `fortis fmt` uses it.
+
+mod old_forms;
+pub mod migrate;
 
 use fortis_syntax::lexer::{lex, Kind, Token};
 use fortis_types::facts::{self, Insertion};
+pub use fortis_types::check::Unit;
 use fortis_syntax::tree::{Child, Node};
 
 #[derive(Debug)]
@@ -155,10 +159,53 @@ struct Row<'a> {
 /// `format` after printing back the inferred facts of an accepted module (a module with records, or a fragment, is
 /// laid out only); returns the text and the facts printed.
 pub fn format_reprinting(src: &str, file: &str) -> Result<(String, Vec<Insertion>), FormatError> {
-    let src = src.replace("\r\n", "\n");
+    format_migrating(src, file).map(|(t, ins, _)| (t, ins))
+}
+
+/// `format_reprinting` after rewriting an accepted module into the v0.0.2 reading forms where they mean the same
+/// (`fortis_types::migrate`, X-345); returns the text, the facts printed and the number of rewrites. The rewritten
+/// module must be accepted again, or nothing is written.
+pub fn format_migrating(src: &str, file: &str) -> Result<(String, Vec<Insertion>, usize), FormatError> {
+    format_migrating_in(src, Unit::Alone(file))
+}
+
+/// `format_migrating` for a module checked as `unit` says. A module of a package whose imports do not resolve on
+/// their own is rewritten, and each rewrite verified, in its package (the module's file replaced in memory, nothing
+/// else read differently); its inferred facts are not printed back, as for any module that does not check alone.
+pub fn format_migrating_in(src: &str, unit: Unit) -> Result<(String, Vec<Insertion>, usize), FormatError> {
+    let file = match unit {
+        Unit::Alone(file) => file.to_string(),
+        Unit::Package { file, .. } => file.display().to_string(),
+    };
+    let file = file.as_str();
+    // the old forms first (`old_forms`), then the reading forms (`fortis_types::migrate`)
+    let src = old_forms::rewrite_in(&src.replace("\r\n", "\n"), unit)?.0;
     let mut ins = Vec::new();
     let mut text = src.clone();
+    let mut rewritten = 0;
+    // a rewrite that overlaps another waits for the next round, so the result is a fixed point
+    for _ in 0..4 {
+        let Ok(parsed) = fortis_syntax::parse_module(&text) else { break };
+        let (records, edits) = fortis_types::migrate::rewrites_in(&parsed, &text, unit);
+        if !records.is_empty() {
+            if rewritten > 0 {
+                return Err(FormatError::Changed(format!("the rewritten module is rejected: {}", records[0].code)));
+            }
+            break;
+        }
+        if edits.is_empty() {
+            break;
+        }
+        let (next, n) = fortis_types::migrate::apply(&text, &edits);
+        if fortis_syntax::parse_module(&next).is_err() {
+            return Err(FormatError::Changed("a rewrite does not parse".into()));
+        }
+        text = next;
+        rewritten += n;
+    }
+    let src = text.clone();
     if let Ok(parsed) = fortis_syntax::parse_module(&src) {
+        // the facts are printed back only for a module that checks on its own
         let (records, found) = facts::inferred(&parsed, file);
         if records.is_empty() && !found.is_empty() {
             text = facts::apply(&src, &found);
@@ -169,9 +216,18 @@ pub fn format_reprinting(src: &str, file: &str) -> Result<(String, Vec<Insertion
                 return Err(FormatError::Changed(format!("the reprinted facts change the check: {} records, {} facts still unwritten", records.len(), left.len())));
             }
             ins = found;
+        } else if rewritten > 0 && !records.is_empty() {
+            // a package module is judged in its package, where each round's rewrite was found and checked
+            let records = match unit {
+                Unit::Alone(_) => records,
+                Unit::Package { .. } => fortis_types::check::check_unit_with(&parsed, &src, unit, |_| ()).0,
+            };
+            if let Some(r) = records.first() {
+                return Err(FormatError::Changed(format!("the rewritten module is rejected: {}", r.code)));
+            }
         }
     }
-    format(&text).map(|t| (t, ins))
+    format(&text).map(|t| (t, ins, rewritten))
 }
 
 pub fn format(src: &str) -> Result<String, FormatError> {
@@ -371,6 +427,24 @@ mod tests {
 
     fn fmt(s: &str) -> String {
         format(s).unwrap()
+    }
+
+    #[test]
+    fn a_package_module_is_rewritten_in_its_package() {
+        // `app` imports `Tally` from `util`, so it checks only in its package: alone it keeps its markers
+        let dir = std::env::temp_dir().join(format!("fortis-fmt-pkg-{}", std::process::id()));
+        let pkg = dir.join("demo.tally");
+        std::fs::create_dir_all(pkg.join("src")).unwrap();
+        std::fs::write(pkg.join("project.yaml"), "schema: fortis.project/v1\nname: demo.tally\nversion: 0.1.0\nentry: app\nexports: []\ndependencies:\n  fortis: \"1.0\"\n").unwrap();
+        std::fs::write(pkg.join("src/util.ft"), "export class Tally {\n  export n: Int\n  export func bump(editable self) {\n    self.n = Int.saturatingAdd(self.n, 1)\n  }\n}\n").unwrap();
+        let src = "import demo.tally.util { Tally }\n\nfunc count() Tally {\n  let mut t = Tally(n: 0)\n  editable t.bump()\n  return move t\n}\n\nfunc main() {\n  let t = count()\n}\n";
+        let app = pkg.join("src/app.ft");
+        std::fs::write(&app, src).unwrap();
+        let alone = format_migrating(src, "app.ft").unwrap().0;
+        let packaged = format_migrating_in(src, Unit::Package { dir: &pkg, file: &app }).unwrap().0;
+        std::fs::remove_dir_all(&dir).ok();
+        assert!(alone.contains("editable t.bump()") && alone.contains("return move t"), "{alone}");
+        assert!(packaged.contains("\n  t.bump()\n") && packaged.contains("\n  return t\n"), "{packaged}");
     }
 
     #[test]

@@ -1,15 +1,53 @@
 # Fortis
 
-Fortis is a statically checked, compiled, general-purpose programming language designed so that software
-written mostly by AI agents can be read, reviewed and trusted by people. A reader of a file or a diff can answer,
-without tooling, who owns each value, which calls can change it, which calls can fail and who handles the
-failure, what effects a function has, and when an observation is recorded: every one of those decisions is
-written in the source ([Language Reference 1](docs/Fortis_Language_Reference.md#1-what-fortis-is)). The checked
-program runs on a development VM and compiles to safe Rust.
+![The Fortis emblem: a fortress tower set in a shield](website/assets/logo-256.png)
+
+**Written by AI. Reviewed by people.**
+
+AI agents now write a lot of the code we ship, and they write it faster than anyone can read it. Fortis is a
+programming language built for that world. Every decision that matters, who owns a value, what can change it,
+what can fail and who handles it, what a function is allowed to do, is written in the source, so a person reading a
+file or a diff can see it at a glance and trust what they approve.
+
+[Website](https://fortis.picktech.co.uk) · [Tour](docs/guide/tour.md) · [Guide](docs/guide/README.md) ·
+[For agents](docs/agent/README.md) · [Release notes](docs/releases/v0.0.2.md)
+
+## Why Fortis
+
+**You can review it without running it in your head.** Fortis puts the important facts on the line where they
+happen. A value that may change is declared so, with `let mut` or `editable`, and a method call that changes it
+needs no further mark. A function that changes something you hand it is marked at the call:
+`normalise(editable readings)`. A function that can fail says so in its signature. You don't have to trace the
+whole program to know what one line does.
+
+**Failures can't hide.** A call that can fail must be handled: passed up, reported, or recovered from, and the
+compiler checks that it is. Nothing is silently swallowed, so the unhappy path is as easy to review as the happy
+one.
+
+**Memory is safe, with no garbage collector.** Every value has one owner. Borrowing and moving are checked, and
+cleanup runs exactly once, at a point you can see in the code.
+
+**Promises are checked, not trusted.** Mark a function `pure` and the compiler proves it has no effects. Printing,
+files, the network and the clock all need a capability that is handed in explicitly, so nothing reaches the
+outside world by accident.
+
+**One program, three ways to run it, one meaning.** The same checked program runs on a reference interpreter, on a
+fast development VM, and as a native executable compiled through safe Rust (`#![forbid(unsafe_code)]`). All three
+must agree on every program, and the test suite holds them to it.
+
+**Made for agents as well as people.** The documentation comes in two editions: a guide for people, and a
+reference written for coding agents, with rules by ID and a fix for every error. Every compiler message is also a
+structured record, so an agent can read it and correct its own code. The [`fortis-code`](skills/fortis-code/SKILL.md)
+skill and the website's `llms.txt` give agents the whole language in a form they can use.
+
+**The docs can't drift.** Every example in the documentation is checked and run on all three backends whenever the
+code changes. If the docs say a program prints something, it does.
+
+## See it
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Empty {
   code: "demo.empty"
@@ -23,20 +61,19 @@ pure try func mean(readings: ListView[Int<0..1000>]) Int {
   }
   let mut total = 0
   for r in readings {
-    total = Int.add(total, r) or fail
+    total = total + r or fail
   }
   return total / n
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut readings: List[Int<0..1000>] = List.of(12, 30, 18)
-  editable readings.push(40)
+  readings.push(40)
   let m = mean(readings) catch e {
     report e
     recover 0
   }
-  caps.console.print("mean of ${readings.count()} readings: ${m}")
+  console.print("mean of ${readings.count()} readings: ${m}")
 }
 ```
 
@@ -44,25 +81,18 @@ export func main(args: List[String]) Void {
 mean of 4 readings: 25
 ```
 
-Every decision is on the page: `editable` marks the one line that changes `readings`; `try` says `mean` can fail,
-and its caller must consume that outcome (here with `catch`, which reports the failure and recovers); `pure` is a
-promise the checker verifies; integer arithmetic is either proved safe (the division, after the test on `n`) or
-checked (`Int.add`); and output needs the `Console` capability, which only `main` can obtain.
+That's a whole program. Reading it, you can tell without running anything:
 
-## Status
+- `mean` can fail (`try`), and `fail Empty()` is where it does.
+- `mean` has no side effects (`pure`), and the compiler checks the claim.
+- `readings` changes, and its declaration says so: `let mut`. The `push` needs no other marker.
+- The caller decides what a failure means here: `catch` reports it, then carries on with `0`.
+- The addition can't silently overflow: `total + r` is checked, and `or fail` passes an overflow up.
+- Printing needs the console, which `main` declares as a parameter and the runtime supplies.
 
-Fortis Language 1.0, the core language, is being built and is not released. The specification is settled apart
-from the parts still being decided by open spikes, and the toolchain implements it with three backends that must
-agree on every program: a definitional interpreter (the reference), a development VM, and a native backend that
-lowers the checked program to a `#![forbid(unsafe_code)]` Rust crate. The tier-1 platform for Language 1.0 is
-Linux x86-64 (register row X-143). The platform kits (HTTP, data, web UI, telemetry and the others) are planned
-separately and follow the core. Progress is tracked chunk by chunk in the delivery plan
-and its status board.
+## Try it in two minutes
 
-## Building the tools and running a program
-
-The tools need Python 3 (the reference toolchain, no third-party packages) and a Rust toolchain with `cargo`
-(the production compiler, which has no external crates). From the repository root:
+You need Python 3 and a Rust toolchain with `cargo`. From a checkout of this repository:
 
 ```sh
 cargo build --release --manifest-path compiler/Cargo.toml
@@ -72,57 +102,56 @@ Save the example above as `mean.ft`, then:
 
 | To | Run |
 |---|---|
-| check it: syntax, names, types, ownership, outcomes, effects | `bin/fortis check mean.ft` |
-| run it on the definitional interpreter | `bin/fortis run mean.ft` (words after the file are `main`'s arguments) |
-| run its tests (a file or a package directory) | `bin/fortis test mean.ft` |
+| check it | `bin/fortis check mean.ft` |
+| run it | `bin/fortis run mean.ft` |
+| test it | `bin/fortis test mean.ft` |
 | build a native executable | `bin/fortis build mean.ft --out mean` |
-| run it on the development VM | `compiler/target/release/fortisc vm mean.ft` |
-| read Fortis source as the compiler sees it | `bin/fortis view mean.ft` |
-| lay it out canonically | `bin/fortis fmt --write mean.ft` |
+| format it | `bin/fortis fmt --write mean.ft` |
 
-Every finding and runtime report is a record: text on a terminal, JSON lines on a pipe, and `--format json` or
-`--format text` overrides the choice (Programme 7.4).
+Then take [the tour](docs/guide/tour.md).
 
-## Documentation
+## Where it's going
 
-The documentation comes in two modes, built from the same sources and checked against the toolchain: every
-example is run, and every rule cites the Language Reference section that states it.
+Fortis is released in steps. Each release is a usable piece of the language, with its own documentation.
 
-- **Human mode**: [the guide](docs/guide/README.md), starting with [a tour](docs/guide/tour.md), with a chapter
-  per section of the Language Reference, [worked examples](docs/guide/worked-examples.md), and notes for readers
-  coming from [Rust](docs/guide/from-rust.md), [TypeScript](docs/guide/from-typescript.md) and
+| Release | What it gives you |
+|---|---|
+| v0.0.1 | Real programs: modules, functions, classes, enums, ownership and failures, checked, run, built, formatted and tested |
+| **v0.0.2** (now) | Code that says only what matters: fewer markers, capabilities as `main`'s parameters, built-in logging |
+| v0.1 | Domain modelling: interfaces, generics, refinements and contracts |
+| v0.2 | Effects you can trust, property tests, packages with dependencies |
+| v0.3 | Concurrency: async, tasks and structured scopes |
+| v0.4 | A complete standard library |
+| v0.5 and v0.6 | Production and scale: observation, runtime kits, an incremental compiler |
+| v1.0 | Stability: editions and migrations, and performance measured against Rust |
+
+v0.0.2 is an early release. Its [known limitations](docs/guide/known-limitations.md) are listed in full, and the
+tier-1 platform is Linux x86-64.
+
+## Learn more
+
+- [The tour](docs/guide/tour.md): Fortis from the first program.
+- [The guide](docs/guide/README.md): the language chapter by chapter, with [worked examples](docs/guide/worked-examples.md)
+  and notes for people coming from [Rust](docs/guide/from-rust.md), [TypeScript](docs/guide/from-typescript.md) and
   [Python](docs/guide/from-python.md).
-- **Agent mode**: [the reference for agents](docs/agent/README.md): rules by ID, record schemas and correction
-  patterns, for AI agents writing Fortis. Agents should also install the `fortis-code` skill
-  ([skills/fortis-code](skills/fortis-code/SKILL.md)) with `bin/fortis skill install`.
-- **Website**: `python3 -I conformance/tools/site.py` builds a static site from both modes, with search, offline.
-- **Specifications**, the source of truth: the [overview](docs/Fortis_Specification.md), the
-  [Language Reference](docs/Fortis_Language_Reference.md), the
-  [Platform Specification](docs/Fortis_Platform_Specification.md) (the kits), the
-  Delivery Programme (requirements, gates and evidence), and the
-  decision register.
+- [The agent reference](docs/agent/README.md): the same language, written for coding agents.
+- [The Language Reference](docs/Fortis_Language_Reference.md): the specification, and the source of truth.
 
-## Repository map
+## For contributors
 
 | Directory | Contents |
 |---|---|
-| [compiler/](compiler) | the production toolchain in Rust (`fortisc`): parser, checker, formatter, `fortis view`, typed IR, validator, VM and native lowering |
+| [compiler/](compiler) | the production toolchain in Rust (`fortisc`): parser, checker, formatter, typed IR, VM and native lowering |
 | [checker/](checker) | the reference checker in Python, which must agree with the production one on every fixture |
-| [interpreter/](interpreter) | the definitional interpreter, the oracle the other backends are compared with |
-| [library/](library) | the standard package `fortis`, written in Fortis with trusted intrinsics |
-| [reference/](reference) | the grammar (`fortis.ebnf`), the record schemas and the library signatures |
+| [interpreter/](interpreter) | the definitional interpreter, the reference the other backends are compared with |
+| [library/](library) | the standard package `fortis`, written in Fortis |
 | [conformance/](conformance) | the conformance corpus and its harnesses, including the documentation checks |
-| [acceptance/](acceptance) | the acceptance applications, each run on every backend |
-| [examples/](examples) | small runnable programs |
-| docs/delivery/ | the delivery plan: chunks, gates, status and evidence |
-| spikes/ | the proof spikes: preregistrations, experiments and decision records |
-| [skills/](skills) | the official agent skill `fortis-code` |
+| [website/](website) | the website, built from this repository |
+| [docs/releases/](docs/releases) | the release notes |
 
-## Contributing
-
-Agents and people working on Fortis itself follow [AGENTS.md](AGENTS.md); changes to the language go through the
-specification and the decision register first, and every chunk of work passes its own scripted criteria
-(the delivery plan).
+To work on Fortis itself, start with [CONTRIBUTING.md](CONTRIBUTING.md); agents also follow
+[AGENTS.md](AGENTS.md). Changes to the language go through the Language Reference first. To report a security
+problem, see [SECURITY.md](SECURITY.md).
 
 ## Licence
 

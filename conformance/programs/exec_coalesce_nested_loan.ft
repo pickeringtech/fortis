@@ -1,0 +1,128 @@
+// execute: nest hi|nest yo|fallback nest|nest fb|interp hi|interp yo|fallback interp|interp fb|nf hi|kept|nf yo|kept|boom|caught demo.boom|items a|items b|fallback item|items fb|three yo|fallback three|three fb|param p|param yo|fallback param|param fb|map mv|map yo|fallback map|map fb|place yo|place dd|first hi|first none
+// requires: runtime
+// covers: LANG-05-07, LANG-06-08
+// D-339, 5.7: a `??` whose fallback is itself a lent `??` (`xs.get(0) ?? ys.get(0) ?? noisy()`) runs each fallback
+// only when everything to its left is null, through text and class items, a map value, an optional read parameter
+// and a place, in an argument and in an interpolation, and with `?? (boom() or fail)` innermost. Native code
+// borrowed the inner `??` inside the outer one's arm, where it ended (rustc E0716), so none of these built. A
+// returned copy of an optional loan (`let v = xs.get(0)`, `return copy v`) is the owned `String?`.
+import fortis.host { Console }
+
+export error Boom {
+  code: "demo.boom"
+}
+
+export class Item {
+  export name: String
+}
+
+func noisy(console: Console, label: StringView) String {
+  console.print("fallback ${label}")
+  return String.from("fb")
+}
+
+func noisyItem(console: Console) Item {
+  console.print("fallback item")
+  return Item(name: String.from("fb"))
+}
+
+try func boom(console: Console) String {
+  console.print("boom")
+  fail Boom()
+}
+
+func show(console: Console, label: StringView, s: String) {
+  console.print("${label} ${s}")
+}
+
+func showItem(console: Console, label: StringView, it: Item) {
+  console.print("${label} ${it.name}")
+}
+
+func nest(console: Console, xs: List[String], ys: List[String]) {
+  show(console, "nest", xs.get(0) ?? ys.get(0) ?? noisy(console, "nest"))
+}
+
+func interpNest(console: Console, xs: List[String], ys: List[String]) {
+  console.print("interp ${xs.get(0) ?? ys.get(0) ?? noisy(console, "interp")}")
+}
+
+try func nestFail(console: Console, xs: List[String], ys: List[String]) String {
+  show(console, "nf", xs.get(0) ?? ys.get(0) ?? (boom(console) or fail))
+  return String.from("kept")
+}
+
+func items(console: Console, xs: List[Item], ys: List[Item]) {
+  showItem(console, "items", xs.get(0) ?? ys.get(0) ?? noisyItem(console))
+}
+
+func three(console: Console, xs: List[String], ys: List[String], zs: List[String]) {
+  show(console, "three", xs.get(0) ?? ys.get(0) ?? zs.get(0) ?? noisy(console, "three"))
+}
+
+func param(console: Console, s: String?, ys: List[String]) {
+  show(console, "param", s ?? ys.get(0) ?? noisy(console, "param"))
+}
+
+func maps(console: Console, m: Map[String, String], ys: List[String]) {
+  show(console, "map", m.get("k") ?? ys.get(0) ?? noisy(console, "map"))
+}
+
+func place(console: Console, xs: List[String], ys: List[String], d: String) {
+  show(console, "place", xs.get(0) ?? ys.get(0) ?? d)
+}
+
+func first(xs: List[String]) String? {
+  let v = xs.get(0)
+  return copy v
+}
+
+recovers func settle(console: Console, o: owned Outcome[String]) {
+  let v = move o catch e {
+    recover "caught ${e.code}"
+  }
+  console.print(v)
+}
+
+recovers func main(console: Console) {
+  let mut xs: List[String] = List.default()
+  xs.push(String.from("hi"))
+  let mut ys: List[String] = List.default()
+  ys.push(String.from("yo"))
+  let none: List[String] = List.default()
+  let mut its: List[Item] = List.default()
+  its.push(Item(name: String.from("a")))
+  let mut js: List[Item] = List.default()
+  js.push(Item(name: String.from("b")))
+  let noItems: List[Item] = List.default()
+  let mut m: Map[String, String] = Map.default()
+  m.set(String.from("k"), String.from("mv"))
+  let noMap: Map[String, String] = Map.default()
+  nest(console, xs, ys)
+  nest(console, none, ys)
+  nest(console, none, none)
+  interpNest(console, xs, ys)
+  interpNest(console, none, ys)
+  interpNest(console, none, none)
+  let a: Outcome[String] = nestFail(console, xs, ys)
+  settle(console, move a)
+  let b: Outcome[String] = nestFail(console, none, ys)
+  settle(console, move b)
+  let c: Outcome[String] = nestFail(console, none, none)
+  settle(console, move c)
+  items(console, its, js)
+  items(console, noItems, js)
+  items(console, noItems, noItems)
+  three(console, none, none, ys)
+  three(console, none, none, none)
+  param(console, String.from("p"), ys)
+  param(console, null, ys)
+  param(console, null, none)
+  maps(console, m, ys)
+  maps(console, noMap, ys)
+  maps(console, noMap, none)
+  place(console, none, ys, String.from("dd"))
+  place(console, none, none, String.from("dd"))
+  console.print("first ${first(xs) ?? "none"}")
+  console.print("first ${first(none) ?? "none"}")
+}

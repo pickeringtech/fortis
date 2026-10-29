@@ -9,7 +9,7 @@ class Host {
   export pure func capabilities() Int => 10
 }
 
-export func main(args: List[String]) Void {
+func main() {
   let caps = platform.Host.capabilities()
   caps.console.print("no arguments")
   caps.console.print("${Host.capabilities()}")

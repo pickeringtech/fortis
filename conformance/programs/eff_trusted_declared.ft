@@ -5,7 +5,7 @@
 // (reference/library/effects/fortis.json), however the call names it. `reveal` takes a SecretAccess and its data says
 // it allocates: before, `peek` was accepted by both checkers (it may not perform io, and only `reveal` gives it any), and
 // `lean`, which calls it through a module alias, by fortisc.
-import fortis.host { Host, Secret, SecretAccess, reveal }
+import fortis.host { Secret, SecretAccess, reveal }
 import fortis.host as h
 
 export contract NoIo {
@@ -18,6 +18,5 @@ noalloc func lean(s: Secret[String], access: SecretAccess) String => h.reveal(s,
 
 func shown(s: Secret[String], access: SecretAccess) String => reveal(s, access)
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main() {
 }

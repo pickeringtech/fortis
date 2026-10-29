@@ -1,8 +1,7 @@
 // The import names a member this module does not export (LANG-04-04). Running the file is the package.
 import bad.runfile.member.util { ceiling }
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("ran")
+func main(console: Console) {
+  console.print("ran")
 }

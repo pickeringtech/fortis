@@ -3,16 +3,15 @@
 // covers: LANG-04-03
 // `clock.Duration.seconds` kept as a function value is fortis.time's method, not this program's class of the
 // same name (D-142). A bare `Duration.seconds` is still the program's method.
-import fortis.host { Host }
+import fortis.host { Console }
 import fortis.time as clock
 
 class Duration {
   export pure func seconds(n: Int) Int => 99
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let f: fn(Int<0..>) clock.Duration = clock.Duration.seconds
-  caps.console.print("${f(1)}")
-  caps.console.print("${Duration.seconds(1)}")
+  console.print("${f(1)}")
+  console.print("${Duration.seconds(1)}")
 }

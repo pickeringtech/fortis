@@ -1,0 +1,59 @@
+// D-379: a `fn once` closure whose result is declared `from` a `move` capture may return that capture
+// (`fn once[move t]() Token from t { return move t }`): both checkers accept it, but a `move` capture is the
+// closure's own value, destroyed when the consuming call ends (7.9), so the returned loan outlives its owner. 7.6
+// rejects a loan of what ends with the call (E-OWN-051: D-373 for a function's own value, D-377 for an arm's), and
+// a `move` capture is such a value. With a capture of a binding that owns its `??` fallback (`let t = empty.get(0)
+// ?? move d`), the interpreter and the VM keep the value until the receiving binding's block ends (`returned r-fb|
+// drop r-fb|after returned`), and native code refuses the program (rustc: lifetime may not live long enough) since
+// D-378's fix made the closure own the value; before that fix it ran the fallback's cleanup after the enclosing
+// block (`returned r-fb|after returned|drop r-fb`). With a capture of an owned binding (`let t = make(…)`, `return
+// alias t`), the interpreter destroys the capture with the call and then reads the destroyed value (`drop r-own|
+// returned r-own`), the VM fails dynamically (`r` was moved) and native code refuses the program. Pre-existing since
+// v0.0.1, whose checker accepted the owned form and whose interpreter kept the value until the binding ended. Found
+// by the v0.0.2-rc.8 fix stream's sweep of D-378.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func returnedFallback(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "r-fb")
+  let t = empty.get(0) ?? move d
+  {
+    let f = fn once[move t, alias console]() Token from t {
+      return move t
+    }
+    let r = move f()
+    console.print("returned ${r.label}")
+  }
+  console.print("after returned")
+}
+
+func returnedOwned(console: Shared[Console]) {
+  let t = make(console, "r-own")
+  {
+    let f = fn once[move t, alias console]() Token from t {
+      return alias t
+    }
+    let r = move f()
+    console.print("returned ${r.label}")
+  }
+  console.print("after owned")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  returnedFallback(console, empty)
+  returnedOwned(console)
+  console.print("end")
+}

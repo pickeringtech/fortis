@@ -302,6 +302,17 @@ impl<'t, 'a> Builder<'t, 'a> {
         let line = line_of(n);
         let kids = n.kids();
         let ty = self.node_ty(n);
+        // a test body's integer arithmetic with an unproved operator is a checked region with an implied `or fail`
+        // (14, 6.4; X-345): the checker names it by its first operator
+        let arith_root = (matches!(n.name(), "additiveExpr" | "multiplicativeExpr" | "shiftExpr") && kids.len() > 1)
+            || (n.name() == "unaryExpr" && kids.len() == 2 && kids[0].tok().map_or(false, |t| t.text == "-"));
+        if arith_root && !self.ty.implied_regions.is_empty() {
+            let ops = fortis_types::typer::expr::region_operators(C::N(n));
+            if ops.iter().next().map_or(false, |first| self.ty.implied_regions.contains(first)) {
+                let r = self.region(C::N(n), line)?;
+                return Ok(Expr::new(ExprKind::OrFail(bx(r)), ty, line));
+            }
+        }
         match n.name() {
             "expr" | "exprStmt" | "literal" if kids.len() == 1 => self.propagate(kids[0]),
             "outcomeExpr" => self.outcome(n),
@@ -380,7 +391,10 @@ impl<'t, 'a> Builder<'t, 'a> {
                 }
                 self.propagate(kids[0])
             }
-            "markerExpr" => self.marker(n),
+            "markerExpr" => {
+                let e = self.marker(n)?;
+                Ok(self.implied_fail(e, fortis_names::reading::call_name_token(n)))
+            }
             "postfixExpr" => self.postfix_expr(n),
             "primaryExpr" => self.primary(n),
             "constTerm" => self.const_term(n),
@@ -445,7 +459,9 @@ impl<'t, 'a> Builder<'t, 'a> {
                 }
             }
         };
-        let v = owned(self, kids[0])?;
+        // integer arithmetic with checked operators: the left operand is the region's outcome (6.4, X-345)
+        let ops = fortis_types::typer::expr::region_operators(kids[0]);
+        let v = if !ops.is_empty() && ops.iter().any(|o| self.ty.checked_ops.contains(o)) { self.region(kids[0], line)? } else { owned(self, kids[0])? };
         if words.len() >= 2 && words[0] == "or" && words[1] == "fail" {
             return Ok(Expr::new(ExprKind::OrFail(bx(v)), ty, line));
         }
@@ -463,6 +479,101 @@ impl<'t, 'a> Builder<'t, 'a> {
             return Ok(Expr::new(ExprKind::Catch { value: bx(v), bind, handler }, ty, line));
         }
         err(line, "outcome expression")
+    }
+
+    /// A checked region (6.4, X-345) as an `Outcome[Int]` value. Its operands and operators are taken in evaluation
+    /// order, each value into a temporary; a checked operator calls the checked intrinsic (`Int.add`, …, `-x` as
+    /// `Int.sub(0, x)`) and matches the outcome: a failure is the region's value, a success continues with the rest.
+    fn region(&mut self, c: C<'a>, line: u32) -> BResult<Expr> {
+        let mut steps: Vec<RegionStep> = Vec::new();
+        let last = self.region_steps(c, &mut steps)?;
+        let out_ty = named_args("Outcome", vec![int()]);
+        let mut cur = Expr::new(ExprKind::Success(bx(last)), out_ty.clone(), line);
+        for step in steps.into_iter().rev() {
+            match step {
+                RegionStep::Value(l, e) => {
+                    let ln = e.line;
+                    let stmts = vec![Stmt { line: ln, temps: vec![], kind: StmtKind::Let { local: l, init: e } }, Stmt { line: ln, temps: vec![], kind: StmtKind::Give(cur) }];
+                    cur = Expr::new(ExprKind::Block(Block { stmts, locals: vec![l], line: ln, defers: vec![] }), out_ty.clone(), ln);
+                }
+                RegionStep::Checked(l, f, name, a, b, ln) => {
+                    let (pa, pb) = if name == "Int.shiftLeft" { ("a", "bits") } else { ("a", "b") };
+                    let args = vec![Arg { param: pa.into(), mode: Mode::Read, value: a }, Arg { param: pb.into(), mode: Mode::Read, value: b }];
+                    let call = Expr::new(ExprKind::Call { callee: Callee::Intrinsic(name), args }, out_ty.clone(), ln);
+                    let failed = Expr::new(
+                        ExprKind::Call { callee: Callee::Intrinsic("Outcome.failure".into()), args: vec![Arg { param: "f".into(), mode: Mode::Owned, value: Expr::new(ExprKind::Place(Place::local(f), Use::Move), named("Failure"), ln) }] },
+                        out_ty.clone(),
+                        ln,
+                    );
+                    let arms = vec![
+                        Arm { pattern: Pattern::Success(Box::new(Pattern::Bind(l))), guard: None, locals: vec![l], body: ArmBody::Expr(cur) },
+                        Arm { pattern: Pattern::Failure(Box::new(Pattern::Bind(f))), guard: None, locals: vec![f], body: ArmBody::Expr(failed) },
+                    ];
+                    cur = Expr::new(ExprKind::Match { scrutinee: bx(call), arms }, out_ty.clone(), ln);
+                }
+            }
+        }
+        Ok(cur)
+    }
+
+    /// The steps of a checked region, in evaluation order; returns the expression reading the region's value.
+    fn region_steps(&mut self, c: C<'a>, steps: &mut Vec<RegionStep>) -> BResult<Expr> {
+        let n = match c {
+            C::N(n) => n,
+            C::T(t) => return self.literal_tok(t, None),
+        };
+        let kids = n.kids();
+        let line = line_of(n);
+        let temp = |b: &mut Self| b.fb().add_local("arith", int(), false, LocalKind::Let);
+        match n.name() {
+            "additiveExpr" | "multiplicativeExpr" | "shiftExpr" if kids.len() > 1 => {
+                let mut v = self.region_steps(kids[0], steps)?;
+                let mut i = 1;
+                while i < kids.len() {
+                    let op = kids[i].tok().unwrap().clone();
+                    let r = self.region_steps(kids[i + 1], steps)?;
+                    let l = temp(self);
+                    if self.ty.checked_ops.contains(&(op.line, op.col)) {
+                        let f = self.fb().add_local("failure", named("Failure"), false, LocalKind::Binding);
+                        steps.push(RegionStep::Checked(l, f, checked_intrinsic(&op.text).into(), v, r, tok_line(&op)));
+                    } else {
+                        let bop = BinOp::from_symbol(&op.text).ok_or_else(|| BuildError { line, message: format!("operator {}", op.text) })?;
+                        steps.push(RegionStep::Value(l, Expr::new(ExprKind::Binary(bop, bx(v), bx(r)), int(), tok_line(&op))));
+                    }
+                    v = Expr::new(ExprKind::Place(Place::local(l), Use::Read), int(), tok_line(&op));
+                    i += 2;
+                }
+                Ok(v)
+            }
+            "unaryExpr" if kids.len() == 2 && kids[0].tok().map_or(false, |t| t.text == "-") => {
+                let op = kids[0].tok().unwrap().clone();
+                let x = self.region_steps(kids[1], steps)?;
+                let l = temp(self);
+                if self.ty.checked_ops.contains(&(op.line, op.col)) {
+                    let f = self.fb().add_local("failure", named("Failure"), false, LocalKind::Binding);
+                    let zero = Expr::new(ExprKind::Const(Const::Int(0)), int(), tok_line(&op));
+                    steps.push(RegionStep::Checked(l, f, "Int.sub".into(), zero, x, tok_line(&op)));
+                } else {
+                    steps.push(RegionStep::Value(l, Expr::new(ExprKind::Unary(UnOp::Neg, bx(x)), int(), tok_line(&op))));
+                }
+                Ok(Expr::new(ExprKind::Place(Place::local(l), Use::Read), int(), tok_line(&op)))
+            }
+            "primaryExpr" if kids.len() == 3 && kids[0].tok().map_or(false, |t| t.text == "(") => self.region_steps(kids[1], steps),
+            _ if kids.len() == 1 && kids[0].node().map_or(false, |k| matches!(n.name(), "expr" | "outcomeExpr" | "coalesceExpr" | "orExpr" | "andExpr" | "bitOrExpr" | "bitXorExpr" | "bitAndExpr" | "equalityExpr" | "relationalExpr" | "shiftExpr" | "additiveExpr" | "multiplicativeExpr" | "unaryExpr" | "postfixExpr") && k.name() != "") => {
+                self.region_steps(kids[0], steps)
+            }
+            _ => {
+                // an operand: evaluated once, in order, into a temporary (a literal needs none)
+                let e = self.expr(n)?;
+                if matches!(e.kind, ExprKind::Const(_)) {
+                    return Ok(e);
+                }
+                let e = self.coerce(e, &int());
+                let l = temp(self);
+                steps.push(RegionStep::Value(l, e));
+                Ok(Expr::new(ExprKind::Place(Place::local(l), Use::Read), int(), line))
+            }
+        }
     }
 
     // ---- names and places -----------------------------------------------------------------------------------
@@ -807,9 +918,10 @@ impl<'t, 'a> Builder<'t, 'a> {
                     "error" => {
                         let mut fields = Vec::new();
                         let payload: Vec<String> = d.payload.keys().cloned().collect();
-                        for (i, a) in al.map(arg_nodes).unwrap_or_default().into_iter().enumerate() {
-                            let at = a.direct_tokens();
-                            let name = if at.len() > 1 && at[1].text == ":" { at[0].text.clone() } else { payload.get(i).cloned().unwrap_or_default() };
+                        let args = al.map(arg_nodes).unwrap_or_default();
+                        let labels = arg_labels(&args, false);
+                        for (i, a) in args.into_iter().enumerate() {
+                            let name = labels[i].clone().unwrap_or_else(|| payload.get(i).cloned().unwrap_or_default());
                             let want = d.payload.get(&name).cloned().unwrap_or_else(|| unknown(""));
                             let v = self.expr(a.child_node("expr").or_else(|| a.child_node("constExpr")).unwrap())?;
                             fields.push((name, self.coerce(v, &want)));
@@ -956,9 +1068,10 @@ impl<'t, 'a> Builder<'t, 'a> {
     fn variant_fields(&mut self, d: &DeclRef<'a>, vname: &str, al: Option<N<'a>>) -> BResult<Vec<(String, Expr)>> {
         let payload = d.variants.get(vname).cloned().unwrap_or_default();
         let mut out = Vec::new();
-        for (i, a) in al.map(arg_nodes).unwrap_or_default().into_iter().enumerate() {
-            let at = a.direct_tokens();
-            let name = if at.len() > 1 && at[1].text == ":" { at[0].text.clone() } else { payload.get(i).map(|p| p.0.clone()).unwrap_or_default() };
+        let args = al.map(arg_nodes).unwrap_or_default();
+        let labels = arg_labels(&args, false);
+        for (i, a) in args.into_iter().enumerate() {
+            let name = labels[i].clone().unwrap_or_else(|| payload.get(i).map(|p| p.0.clone()).unwrap_or_default());
             let want = payload.iter().find(|p| p.0 == name).map(|p| p.1.clone()).unwrap_or_else(|| unknown(""));
             let e = a.child_node("expr").or_else(|| a.child_node("constExpr")).unwrap();
             let v = self.expr_moved(e)?;
@@ -975,7 +1088,9 @@ impl<'t, 'a> Builder<'t, 'a> {
         let mut spread: Option<Expr> = None;
         let mut spread_move = false;
         let mut pos = 0usize;
-        for a in al.map(arg_nodes).unwrap_or_default() {
+        let cargs = al.map(arg_nodes).unwrap_or_default();
+        let labels = arg_labels(&cargs, true);
+        for (ai, a) in cargs.into_iter().enumerate() {
             let at = a.direct_tokens();
             if at.first().map_or(false, |t| t.text == "...") {
                 let marker = at.get(1).map(|t| t.text.clone()).unwrap_or_default();
@@ -984,8 +1099,8 @@ impl<'t, 'a> Builder<'t, 'a> {
                 spread = Some(self.place_expr(pl, if spread_move { Use::Move } else { Use::Copy })?);
                 continue;
             }
-            let name = if at.len() > 1 && at[1].text == ":" {
-                at[0].text.clone()
+            let name = if let Some(l) = &labels[ai] {
+                l.clone()
             } else {
                 let n = names.get(pos).cloned().unwrap_or_default();
                 pos += 1;
@@ -1039,20 +1154,113 @@ impl<'t, 'a> Builder<'t, 'a> {
             return Ok(Expr::new(ExprKind::Block(body), ty, line));
         }
         let mut fields = given;
+        // `Name.default()` of a class deriving Default (no argument list): a field without an initialiser takes its
+        // type's default (6.10, X-345)
+        let derived = al.is_none() && d.derives.iter().any(|(n, _)| n == "Default");
+        if derived {
+            self.enter_default(d, line)?;
+        }
+        let mut done: BResult<()> = Ok(());
         for f in &names {
             if !fields.iter().any(|(n, _)| n == f) {
                 let ce = self.class_default(d, f);
-                match ce {
-                    Some(ce) => {
-                        let ft = d.fields.get(f).unwrap().0.clone();
-                        let v = self.const_expr(ce)?;
-                        fields.push((f.clone(), self.coerce(v, &ft)));
+                let ft = d.fields.get(f).unwrap().0.clone();
+                let v = match ce {
+                    Some(ce) => self.const_expr(ce).map(|v| self.coerce(v, &ft)),
+                    None if derived => self.type_default(&ft, line),
+                    None => err(line, format!("{}: field `{f}` not given", d.name)),
+                };
+                match v {
+                    Ok(v) => fields.push((f.clone(), v)),
+                    Err(e) => {
+                        done = Err(e);
+                        break;
                     }
-                    None => return err(line, format!("{}: field `{f}` not given", d.name)),
                 }
             }
         }
+        if derived {
+            self.defaulting.pop();
+        }
+        done?;
         Ok(Expr::new(ExprKind::Construct { ty: self.tname(&d.name, &d.type_identity()), fields }, ty, line))
+    }
+
+    /// Starts building the derived default of a class or newtype `d`. One already being built is a cycle, which the
+    /// checkers reject (E-TYP-090; D-335, D-336): the build stops with an error naming it, never a stack overflow.
+    fn enter_default(&mut self, d: &DeclRef<'a>, line: u32) -> BResult<()> {
+        let key = (d.module.clone(), d.name.clone());
+        if let Some(i) = self.defaulting.iter().position(|(k, _)| *k == key) {
+            let mut cycle: Vec<String> = self.defaulting[i..].iter().map(|(_, n)| n.clone()).collect();
+            cycle.push(d.name.clone());
+            return err(line, format!("the default of {} contains itself ({}), which the checker rejects (E-TYP-090)", d.name, cycle.join(" -> ")));
+        }
+        self.defaulting.push((key, d.name.clone()));
+        Ok(())
+    }
+
+    /// The value of a type's `Default` (6.10): `false`, `0`, `0.0`, `0s`, empty text, bytes and collections, `null` for an
+    /// optional, `default()` of a class that derives it or of a class or enum that implements it, and a newtype's
+    /// representation's default, at any depth; the checker has proved the type has one (E-TYP-090; D-242).
+    fn type_default(&mut self, ft: &Type, line: u32) -> BResult<Expr> {
+        const INTS: &[&str] = &["Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "Byte"];
+        // a declaration other than the prelude's is itself, whatever its name (a user's `class Array`)
+        if let Some(d) = self.ty.decl_of(ft).filter(|d| !(d.module == "fortis.prelude" && d.type_identity().is_empty())) {
+            // a newtype's value is its representation (6.9), so its default is the representation's, wrapped as `Name(v)`
+            if d.kind == "type" {
+                if let Some(repr) = d.alias.clone() {
+                    self.enter_default(&d, line)?;
+                    let v = self.type_default(&repr, line);
+                    self.defaulting.pop();
+                    return Ok(Expr::new(ExprKind::Wrap { ty: self.tname(&d.name, &d.type_identity()), value: bx(v?) }, ft.clone(), line));
+                }
+            }
+            if d.kind == "class" && d.derives.iter().any(|(n, _)| n == "Default") {
+                return self.construct(&d, None, ft.clone(), line);
+            }
+            // a class or an enum that implements Default itself: its `default()`
+            if matches!(d.kind.as_str(), "class" | "enum") && d.implements.iter().any(|i| i.name == "Default") {
+                if let Some(sig) = d.methods.get("default").cloned().filter(|s| s.receiver.is_none()) {
+                    let mut subst: BTreeMap<String, Type> = BTreeMap::new();
+                    subst.insert("Self".into(), named_of_decl(&d, vec![]));
+                    if let Type::Named(tn) = strip(ft) {
+                        for (p, a) in d.type_params.iter().zip(tn.args.iter()) {
+                            subst.insert(p.clone(), a.clone());
+                        }
+                    }
+                    let args = self.call_args(&sig, None, &subst, line)?;
+                    let callee = match self.member_function(&d, "default", &sig) {
+                        Some(f) => Callee::Func(f),
+                        None => Callee::Intrinsic(format!("{}.default", d.name)),
+                    };
+                    return Ok(Expr::new(ExprKind::Call { callee, args }, ft.clone(), line));
+                }
+            }
+        }
+        let konst = |k: Const| Ok(Expr::new(ExprKind::Const(k), ft.clone(), line));
+        let name = match ft {
+            Type::Optional(_) => return konst(Const::Null),
+            Type::Refined { base, .. } => base.name.clone(),
+            Type::Named(n) => n.name.clone(),
+            _ => return err(line, format!("a field of type {} has no default", ft.show())),
+        };
+        match name.as_str() {
+            "Bool" => konst(Const::Bool(false)),
+            n if INTS.contains(&n) => konst(Const::Int(0)),
+            "Float" => konst(Const::Float(0f64.to_bits())),
+            "Float32" => konst(Const::Float32(0f32.to_bits())),
+            "Duration" => konst(Const::Duration(0)),
+            "String" => {
+                let v = Expr::new(ExprKind::Const(Const::Str(String::new())), string(), line);
+                Ok(self.coerce(v, ft))
+            }
+            "Bytes" => konst(Const::Bytes(Vec::new())),
+            "List" | "Map" | "Set" | "OrderedMap" => Ok(Expr::new(ExprKind::Call { callee: Callee::Intrinsic(format!("{name}.default")), args: vec![] }, ft.clone(), line)),
+            _ => match self.ty.decl_of(ft) {
+                Some(cd) if cd.kind == "class" && cd.derives.iter().any(|(n, _)| n == "Default") => self.construct(&cd, None, ft.clone(), line),
+                _ => err(line, format!("a field of type {} has no default", ft.show())),
+            },
+        }
     }
 
     fn class_default(&self, d: &DeclRef<'a>, fname: &str) -> Option<N<'a>> {
@@ -1082,14 +1290,15 @@ impl<'t, 'a> Builder<'t, 'a> {
         let params = sig.params.clone();
         let mut out: Vec<Arg> = Vec::new();
         let args = al.map(arg_nodes).unwrap_or_default();
+        let labels = arg_labels(&args, false);
         for (i, a) in args.iter().enumerate() {
             let at = a.direct_tokens();
             if at.first().map_or(false, |t| t.text == "...") {
                 return err(line, "a spread argument outside a constructor");
             }
             let e = a.child_node("expr").or_else(|| a.child_node("constExpr")).unwrap();
-            let p = if at.len() > 1 && at[0].kind == Kind::Lower && at[1].text == ":" {
-                params.iter().find(|p| p.0 == at[0].text).cloned()
+            let p = if let Some(l) = &labels[i] {
+                params.iter().find(|p| &p.0 == l).cloned()
             } else if !params.is_empty() && params.last().unwrap().2.starts_with("...") && i + 1 >= params.len() {
                 params.last().cloned()
             } else {
@@ -1285,6 +1494,11 @@ impl<'t, 'a> Builder<'t, 'a> {
     /// A call of a value: a closure, a function value.
     fn call_value(&mut self, f: Expr, al: Option<N<'a>>, ty: Type, line: u32) -> BResult<Expr> {
         let args = self.untyped_args(al)?;
+        // a `fn mut` called without `editable` takes the exclusive loan the marker would have (8.2, X-345)
+        let f = match f.kind {
+            ExprKind::Place(p, Use::Read) if matches!(strip(&f.ty), Type::Fn { kind, .. } if kind == "fn mut") => Expr { kind: ExprKind::Place(p, Use::Editable), ..f },
+            _ => f,
+        };
         if let ExprKind::FuncRef(name) = &f.kind {
             if let Some(intr) = name.strip_prefix("intrinsic:") {
                 return Ok(Expr::new(ExprKind::Call { callee: Callee::Intrinsic(intr.to_string()), args }, ty, line));
@@ -1302,7 +1516,10 @@ impl<'t, 'a> Builder<'t, 'a> {
         let prim = kids[0].node().unwrap();
         let pfs: Vec<N<'a>> = kids[1..].iter().filter_map(|k| k.node()).collect();
         if pfs.is_empty() {
-            return self.propagate(C::N(prim));
+            // a type-rooted call (`Code.validate(s)`, `Name.parse(s)`) is all primary: in a test body it has the
+            // implied `or fail` the checker recorded at its member name, as a call with postfixes has (14; D-308)
+            let e = self.propagate(C::N(prim))?;
+            return Ok(self.implied_fail(e, fortis_names::reading::primary_call_token(prim)));
         }
         let pk = prim.kids();
         let mut start = 0usize;
@@ -1364,14 +1581,32 @@ impl<'t, 'a> Builder<'t, 'a> {
         } else {
             cur = self.expr(prim)?;
         }
-        for pf in &pfs[start..] {
+        // a test body's implied `or fail` (14, X-345): the checker names each such call by its name token
+        cur = if start == 1 { self.implied_fail(cur, first_lower.as_ref()) } else { self.implied_fail(cur, fortis_names::reading::primary_call_token(prim)) };
+        for (j, pf) in pfs.iter().enumerate().skip(start) {
             // a call used as the receiver of the next postfix is a fresh value. Hold it when nothing owns it
             // yet, so `make().ping()` destroys the handle at the end of the statement (7.9). An owned method
             // takes that temporary back out.
             cur = self.hold(cur);
             cur = self.apply_postfix(cur, *pf)?;
+            cur = self.implied_fail(cur, fortis_names::reading::postfix_call_token(&pfs, j, Some(prim)));
         }
         Ok(cur)
+    }
+
+    /// The call named at `tok` with the implied `or fail` of a test body (14, LANG-14-03; X-345), when the checker
+    /// recorded one there: its success value, and its failure fails the test as `or fail` would.
+    pub fn implied_fail(&self, e: Expr, tok: Option<&Token>) -> Expr {
+        let Some(tok) = tok else { return e };
+        if !self.ty.implied_fails.contains(&(tok.line, tok.col)) {
+            return e;
+        }
+        let success = match strip(&e.ty) {
+            Type::Named(n) if n.name == "Outcome" && !n.args.is_empty() => n.args[0].clone(),
+            _ => return e,
+        };
+        let line = e.line;
+        Expr::new(ExprKind::OrFail(bx(e)), success, line)
     }
 
     pub fn apply_postfix(&mut self, cur: Expr, pf: N<'a>) -> BResult<Expr> {
@@ -1433,7 +1668,13 @@ impl<'t, 'a> Builder<'t, 'a> {
         };
         let pl = kids[1].node().unwrap();
         if kids.len() == 2 {
-            return self.place_expr(pl, u);
+            let e = self.place_expr(pl, u)?;
+            // `copy v` of a local holding an optional loan is the owned value it lends, as the checker types it:
+            // `T?`, or `T` where a null test narrowed `v` (7.5; D-341)
+            if u == Use::Copy && known(&ty) && matches!(strip(&e.ty), Type::Optional(i) if i.is_loan()) {
+                return Ok(Expr { ty, ..e });
+            }
+            return Ok(e);
         }
         let rest = &kids[2..];
         let mut cur: Expr;
@@ -1593,7 +1834,7 @@ impl<'t, 'a> Builder<'t, 'a> {
             }
         }
         self.fbs.push(fb);
-        let body = n.child_node("funcBody").ok_or_else(|| BuildError { line, message: "a lambda without a body".into() });
+        let body = fortis_types::typer::expr::lambda_body(n).ok_or_else(|| BuildError { line, message: "a lambda without a body".into() });
         let built = body.and_then(|b| self.func_body(b));
         let fb = self.fbs.pop().unwrap();
         let built = built?;
@@ -1650,7 +1891,16 @@ impl<'t, 'a> Builder<'t, 'a> {
             let locals = self.fb().pop_scope();
             let mut a = r?;
             a.locals = locals;
+            // an or-pattern `A | B => body` (9.8, X-345) is one arm per alternative, in order, sharing the body built
+            // once: the alternatives bind nothing and take no guard, so whichever matches runs the same code
+            let mut alts = Vec::new();
+            for p in arm.child_nodes("pattern").into_iter().skip(1) {
+                let mut b = a.clone();
+                b.pattern = self.pattern(p, &st, false)?;
+                alts.push(b);
+            }
             arms.push(a);
+            arms.extend(alts);
         }
         Ok((scrutinee, arms))
     }
@@ -1831,6 +2081,46 @@ fn unescape(s: &str) -> String {
 
 /// The arguments of an argument list: `arg`s, or the `constArg`s of a constant expression's call (a field default
 /// `List.of(10, 20)`, a constant `Money.of(…)`), whose arguments were once dropped (defect D-22).
+/// One step of a checked region (6.4, X-345): a value into a temporary, or a checked operation whose success binds
+/// the temporary (the failure binding, the intrinsic, its operands, the line).
+enum RegionStep {
+    Value(LocalId, Expr),
+    Checked(LocalId, LocalId, String, Expr, Expr, u32),
+}
+
+/// The checked intrinsic of an operator (6.4).
+fn checked_intrinsic(op: &str) -> &'static str {
+    match op {
+        "+" => "Int.add",
+        "-" => "Int.sub",
+        "*" => "Int.mul",
+        "/" => "Int.div",
+        "%" => "Int.rem",
+        _ => "Int.shiftLeft",
+    }
+}
+
+/// The labels of a call's arguments, in order: a named argument's, or a bare local name's where it is a pun (after a
+/// named argument, or anywhere in a class's generated constructor: `wanted` is `wanted: wanted`, 5.8, 9.2, X-345);
+/// `None` for a positional argument or a spread.
+fn arg_labels(args: &[N], constructor: bool) -> Vec<Option<String>> {
+    let mut seen_named = false;
+    let mut out = Vec::new();
+    for a in args {
+        let at = a.direct_tokens();
+        if at.len() > 1 && at[0].kind == Kind::Lower && at[1].text == ":" {
+            seen_named = true;
+            out.push(Some(at[0].text.clone()));
+        } else if let Some(p) = (seen_named || constructor).then(|| fortis_types::typer::expr::pun_name(*a)).flatten() {
+            seen_named = true;
+            out.push(Some(p.text.clone()));
+        } else {
+            out.push(None);
+        }
+    }
+    out
+}
+
 fn arg_nodes<'a>(al: N<'a>) -> Vec<N<'a>> {
     let args = al.child_nodes("arg");
     if args.is_empty() {

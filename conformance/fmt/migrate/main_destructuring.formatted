@@ -1,0 +1,23 @@
+// A whole `Capabilities(...)` destructuring becomes the one parameter the body uses, under its binding's name; the
+// bindings nothing reads go, and `args`, which the body reads, stays (4.6; X-345, R4, R8).
+import fortis.host { Console }
+
+class Resource {
+  export id: Int
+  export console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("release ${self.id}")
+  }
+}
+
+func work(console: Shared[Console]) {
+  let first = Resource(id: 1, console: console.retain())
+  let second = Resource(id: 2, console: console.retain())
+  console.print("working")
+}
+
+func main(out: Console, args: List[String]) {
+  let console = Shared.create(move out)
+  work(console)
+  console.print("done with ${args.count()} arguments")
+}

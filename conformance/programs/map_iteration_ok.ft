@@ -4,7 +4,7 @@
 func copyAll(source: Map[Int, Int]) Map[Int, Int] {
   let mut out: Map[Int, Int] = Map.default()
   for entry in source {
-    editable out.set(entry.0, entry.1)
+    out.set(entry.0, entry.1)
   }
-  return move out
+  return out
 }

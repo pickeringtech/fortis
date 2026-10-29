@@ -5,7 +5,7 @@
 // D-27 (13): an observed activation whose task is cancelled before it starts produces a frame marked `not_started`
 // without any captured fields, after the task's `not_started` lifecycle record, on every backend, whether the task
 // was launched from the call or from a future bound first and moved to another local.
-import fortis.host { Host, Console }
+import fortis.host { Console }
 
 export error Bad {
   code: "demo.bad"
@@ -53,10 +53,9 @@ async try func runBound(console: Console) Int {
   }
 }
 
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let r = await run(caps.console) or recover -1
-  caps.console.print("recovered ${r}")
-  let s = await runBound(caps.console) or recover -1
-  caps.console.print("recovered ${s}")
+async recovers func main(console: Console) {
+  let r = await run(console) or recover -1
+  console.print("recovered ${r}")
+  let s = await runBound(console) or recover -1
+  console.print("recovered ${s}")
 }

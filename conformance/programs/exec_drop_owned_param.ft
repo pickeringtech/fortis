@@ -3,24 +3,22 @@
 // covers: LANG-07-07
 // 7.9: an `owned` parameter is the function's own value, destroyed at its exit unless the function moves it on.
 // (Defect D-17: the interpreter and the VM never destroyed an owned parameter.)
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 export class Res {
   console: Shared[Console]
   label: String
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("drop ${self.label}")
   }
 }
-func take(r: owned Res, console: Shared[Console]) Void {
+func take(r: owned Res, console: Shared[Console]) {
   console.print("take")
 }
 func keep(r: owned Res, console: Shared[Console]) Res {
   console.print("kept ${r.label}")
   return move r
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   take(Res(console: console.retain(), label: "a"), console)
   console.print("after take")

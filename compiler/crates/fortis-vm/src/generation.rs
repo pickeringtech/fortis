@@ -1,4 +1,4 @@
-//! Generations of a program in a development session (Platform 11.2; spikes/SP-07/design.md 3, 4 and 6): the
+//! Generations of a program in a development session (Platform 11.2; SP-07's design, sections 3, 4 and 6): the
 //! identities that stay stable across edits, the fingerprints a reload compares, the classification of a reload
 //! into changes, and the sets (Rep, Dep) that decide which scopes it restarts.
 

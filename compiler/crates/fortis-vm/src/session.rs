@@ -1,4 +1,4 @@
-//! The development session (spikes/SP-07/design.md 2 and 5–9): a host that keeps a program's long-lived state in
+//! The development session (SP-07's design, sections 2 and 5–9): a host that keeps a program's long-lived state in
 //! scopes, runs each root invocation on the generation current when it starts, reloads new source, and restarts the
 //! scopes a reload affects. `fortisc dev` drives it from a script; the session writes a semantic event log (JSON
 //! lines) and, apart, the physical measurements (resident memory, live generation objects, task threads).
@@ -115,9 +115,11 @@ fn show_failure(v: &Value) -> String {
     match v {
         Value::Failure(f) => {
             let f = f.borrow();
-            let payload: Vec<String> = f.payload.iter().map(|(k, v)| format!("{k}={}", display(v))).collect();
+            let shown: Vec<(String, String)> = f.payload.iter().map(|(k, v)| (k.to_string(), display(v))).collect();
+            let payload: Vec<String> = shown.iter().map(|(k, v)| format!("{k}={v}")).collect();
             let cause = f.cause.as_ref().map(|c| format!(" cause {}", show_failure(&Value::Failure(c.clone())))).unwrap_or_default();
-            format!("{}{{{}}} \"{}\"{cause}", f.code, payload.join(", "), f.message)
+            // the message template rendered with the payload (10.3; D-340)
+            format!("{}{{{}}} \"{}\"{cause}", f.code, payload.join(", "), fortis_runtime::failure::render_message(&f.message, &shown))
         }
         other => display(other),
     }

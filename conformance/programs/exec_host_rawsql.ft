@@ -2,12 +2,11 @@
 // requires: runtime
 // covers: LANG-11-07
 // The development RawSql adapter has no database: every statement fails.
-import fortis.host { Host, RawSql }
+import fortis.host { RawSql, Console }
 try func count(sql: RawSql) Int => sql.execute("select 1") or fail
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let n = count(caps.rawSql) catch e {
-    caps.console.print(e.code)
+recovers func main(rawSql: RawSql, console: Console) {
+  let n = count(rawSql) catch e {
+    console.print(e.code)
     recover 0
   }
 }

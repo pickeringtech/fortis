@@ -1,0 +1,55 @@
+// v0.0.2 old forms (X-345): `fortis fmt` drops a `Void` return type, an `editable` before a receiver whose root
+// shows it may change, and the `move` of `return move local`. Everything else stays as written.
+export class Tally {
+  order: List[String]
+  export func add(editable self, word: StringView) {
+    self.order.push(String.from(word))
+  }
+  export func size(self) Int => self.order.count()
+  cleanup(editable self) {
+  }
+}
+
+export interface Sized {
+  func size(self) Int
+  func clear(editable self)
+}
+
+func fill(t: editable Tally) {
+  t.add("a")
+}
+
+func build() Tally {
+  let mut t = Tally(order: List.default())
+  t.add("b")
+  fill(editable t)
+  {
+    let r = editable t
+    r.add("c")
+  }
+  return t
+}
+
+func keep(t: owned Tally) Tally {
+  return move t
+}
+
+export trivial class Point {
+  export x: Int
+  export func shift(editable self) {
+    self.x = 1
+  }
+}
+
+func moved() Int {
+  let mut p = Point(x: 0)
+  p.shift()
+  return p.x
+}
+
+func numbers() List[Int] {
+  let mut xs = List.of(1)
+  xs.push(2)
+  let n = 3
+  return xs
+}

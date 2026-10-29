@@ -5,7 +5,7 @@ export class Db implements Connection {
   export trusted func transaction(self) Tx
 }
 export class Tx implements Connection, Abandonable {
-  export trusted async try func commit(owned self) Void
-  export trusted func rollback(owned self) Void
-  func abandon(owned self) Void {}
+  export trusted async try func commit(owned self)
+  export trusted func rollback(owned self)
+  func abandon(owned self) {}
 }

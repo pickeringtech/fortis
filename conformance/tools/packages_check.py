@@ -251,7 +251,9 @@ def main(argv):
         results.append({"id": f"PKG-{name}", "path": os.path.relpath(d, ROOT), "verdict": expect["verdict"], "codes": want or ([expect.get("code")] if expect.get("code") else []),
                         "covers": expect.get("covers", []), "stage": "core", "packages": [], "status": status, "backend": "names", "commit": commit,
                         "sha256": dir_hash(d), "command": "python3 -I conformance/tools/packages_check.py", "expected": expected, "observed": observed,
-                        "diagnostics": records})
+                        # the results are committed: a message's paths are written relative to the repository root
+                        "diagnostics": [dict(r, message=r["message"].replace(ROOT + os.sep, "")) if isinstance(r.get("message"), str) else r
+                                        for r in records]})
         print(f"{status:4} PKG-{name:<20} expected {expected:<18} observed {observed}")
     json.dump({"results": results}, open(os.path.join(PK, "results.json"), "w", encoding="utf-8"), indent=2)
     print(f"\n{len(results)} package fixtures, {failures} FAIL")

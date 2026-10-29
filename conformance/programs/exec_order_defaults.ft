@@ -2,15 +2,14 @@
 // requires: runtime
 // covers: LANG-05-07
 // 5.8: a default is re-evaluated at each call that omits the argument: every call gets a fresh list.
-import fortis.host { Host }
+import fortis.host { Console }
 func fill(items: owned List[Int] = List.default()) Int {
   let mut mine = move items
-  editable mine.push(1)
+  mine.push(1)
   return mine.count()
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${fill()}")
-  caps.console.print("${fill()}")
-  caps.console.print("${fill()}")
+func main(console: Console) {
+  console.print("${fill()}")
+  console.print("${fill()}")
+  console.print("${fill()}")
 }

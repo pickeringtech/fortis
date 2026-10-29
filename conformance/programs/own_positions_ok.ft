@@ -5,18 +5,18 @@ export class User derive Equatable {
   export name: String
   export age: Int
   export pure func label(self) StringView from self => alias self.name
-  export func rename(editable self, name: String) Void {
+  export func rename(editable self, name: String) {
     self.name = copy name
   }
   export func retire(owned self) Int => self.age
 }
 
-func keep(user: owned User) Void {
+func keep(user: owned User) {
 }
 
 func look(user: User) Int => user.age
 
-func change(user: editable User) Void {
+func change(user: editable User) {
   user.age = 1
 }
 
@@ -37,7 +37,7 @@ func positions(name: String, count: Int) Int {
   let same = user == seen                            // comparison operands: implicit read loans
   let text = "${user.name}"                          // interpolation: implicit read loan
   let mut third = User(name: "x", age: 3)
-  editable third.rename("y")                         // editable self receiver
+  third.rename("y")                         // editable self receiver
   let age = move third.retire()                      // owned self receiver
   return Int.saturatingAdd(n, age)
 }

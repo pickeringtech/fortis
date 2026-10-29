@@ -3,7 +3,7 @@
 // covers: LANG-09-05
 // Constructing a recursive enum and binding its payload by name builds with the fields boxed. A wildcard does
 // not look inside the box, so this neighbour stays valid on either side of the nested-pattern fix.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export enum Tree {
   Leaf
@@ -20,8 +20,7 @@ pure func tag(t: Tree) Int {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let t = Tree.Node(left: Tree.Leaf, right: Tree.Leaf)
-  caps.console.print("built ${tag(t)}")
+func main(console: Console) {
+  let t = Tree.Node(left: Leaf, right: Leaf)
+  console.print("built ${tag(t)}")
 }

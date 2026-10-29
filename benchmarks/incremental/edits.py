@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The SP-12 edit script (spikes/SP-12/design.md 5): a deterministic editing session over the application workload.
+"""The SP-12 edit script (SP-12's design, section 5): a deterministic editing session over the application workload.
 
 `Script(pkg_dir, seed, plan)` reads the package's texts and manifest, and yields edits one at a time. An edit is the
 whole new text of one module (the daemon's full-document sync) with its description: its kind, its role (`open`,

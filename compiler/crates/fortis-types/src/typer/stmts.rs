@@ -236,6 +236,9 @@ impl<'a> Typer<'a> {
                 return;
             }
         }
+        if self.log_statement(inner, env) {
+            return;
+        }
         let t = self.infer(Some(e), env, None);
         let s = strip(&t).clone();
         if self.is_linear(&t) && self.path_of_expr(Some(e)).is_none() {
@@ -261,7 +264,7 @@ impl<'a> Typer<'a> {
                 Json::obj([("obligation_origin", Json::str(format!("{}:{}", t0.line, t0.col))), ("unconsumed_path", Json::str("statement result"))]),
                 corr,
             );
-        } else if known(&s) && s != void() && s != never() && !self.is_linear(&t) && e.find("matchExpr").is_none() {
+        } else if known(&s) && s != void() && s != never() && !self.is_linear(&t) && e.find("matchExpr").is_none() && !self.ignorable_call(e) {
             let c = self.insert_before("discard the value", ftok(e), "discard ");
             self.rec_c(
                 "E-TYP-140",
@@ -317,11 +320,39 @@ impl<'a> Typer<'a> {
                 }
                 self.pending = None;
                 let rt_ = self.ret_type.clone();
+                let local = self.returned_local(e, env);
+                if local.is_some() {
+                    self.in_marker = true; // its read is the move below, as in `return move x`
+                }
+                let recording = self.lends_result(rt_.as_ref()); // the parts of a `from` result are judged by their types (D-381)
                 let t = self.infer(Some(e), env, rt_.as_ref());
+                if let Some(local) = &local {
+                    self.in_marker = false;
+                    if self.is_bearing(&t) {
+                        // X-345: `return x` of a local `let` binding is `return move x` (7.4, 7.5)
+                        self.use_place(Some(local), ftok(e), "move", env);
+                        self.pending = Some((local.clone(), "move".into(), ftok(e).clone()));
+                        self.implicit_moves.insert(e.id());
+                    } else {
+                        self.use_place(Some(local), ftok(e), "read", env);
+                    }
+                } else if let Some((ppath, mk, mtok)) = self.pending.clone() {
+                    // `return move x` of a local whose move the bare form already shows: the formatter drops `move`
+                    let bare = e.find("markerExpr").map_or(false, |m| m.kids().len() == 2 && m.find("place").map_or(false, |p| p.tokens().len() == 1));
+                    let local_let = env_lookup(env, &ppath).map_or(false, |b| (b.kind == "let" || b.kind == "mut") && b.depth > 0);
+                    if mk == "move" && bare && local_let && self.is_bearing(&t) {
+                        self.redundant_markers.insert((mtok.line, mtok.col));
+                    }
+                }
                 let pe = self.path_of_expr(Some(e));
                 self.consume(pe, ftok(e).line, "returned");
                 if let Some(rt) = &rt_ {
                     self.expect(&t, rt, ftok(e), "returned value");
+                    self.loan_into_owned(&t, Some(rt), ftok(e), "the returned value");
+                    self.owned_into_lent(&t, Some(rt), e, env);
+                }
+                if recording {
+                    self.node_types = None;
                 }
                 let rp = self.path_of_expr(Some(e));
                 let mut rt = rt_.clone().unwrap_or_else(|| unknown(""));
@@ -332,16 +363,28 @@ impl<'a> Typer<'a> {
                         break;
                     }
                 }
-                let origin: Option<String> = match &rt {
+                let mut origin: Option<String> = match &rt {
                     Type::Loan { origin, .. } => Some(origin.clone()),
                     Type::Fn { origin, .. } if !origin.is_empty() => Some(origin.clone()),
                     _ => None,
                 };
+                if origin.is_none() {
+                    if let Some(r) = &rt_ {
+                        let mut nested = Vec::new();
+                        Self::nested_origins(r, true, &mut nested);
+                        if nested.len() == 1 {
+                            origin = Some(nested[0].0.clone()); // `((alias T from xs)?, Int)`
+                        }
+                    }
+                }
+                // a loan held inside an optional, a tuple or a record is returned only when the result lends one; an
+                // owned result was reported by loan_into_owned (D-341, D-348)
+                let lends = rt_.as_ref().map_or(false, |r| Self::lent(r).is_some());
                 let mut loan_roots: Vec<String> = Vec::new();
                 if let Some((ppath, mk, _)) = self.pending.take() {
                     if mk == "move" {
                         for l in &self.own.loans {
-                            if l.borrow().holder.as_deref() == Some(root_of(&ppath).as_str()) {
+                            if l.borrow().holder.as_deref() == Some(root_of(&ppath).as_str()) && (lends || !l.borrow().nested) {
                                 loan_roots.push(root_of(&l.borrow().owner));
                             }
                         }
@@ -367,7 +410,9 @@ impl<'a> Typer<'a> {
                     }
                 }
                 for l in &self.carried {
-                    loan_roots.push(root_of(&l.borrow().owner));
+                    if lends || !l.borrow().nested {
+                        loan_roots.push(root_of(&l.borrow().owner));
+                    }
                 }
                 self.carried.clear();
                 if origin.is_none() && !loan_roots.is_empty() {
@@ -530,6 +575,18 @@ impl<'a> Typer<'a> {
                 }
             }
             self.pattern(pat, &pt, env, true);
+            let bad = if known(&pt) { self.let_refutable(pat, &pt) } else { None };
+            if let Some(bad) = bad {
+                // a `let` destructures a class, tuple or record: its pattern matches every value (5.1; D-243)
+                let at = ftok(bad);
+                self.rec(
+                    "E-MAT-004",
+                    format!("a `let` pattern must match every value of {}, but `{}` can fail to match: use `match` to handle the other cases", pt.show(), at.text),
+                    "LANG-05-01",
+                    at,
+                    Json::obj([("missing_variants", Json::Arr(vec![])), ("arm_set", Json::str(&pt.show()))]),
+                );
+            }
             for b in self.names_in(pat) {
                 if let Some(bt) = env_get(env, &b) {
                     if self.is_linear(&bt) {
@@ -553,6 +610,7 @@ impl<'a> Typer<'a> {
                 self.typ("E-TYP-040", "an interpolated literal is a fresh String; a binding annotated StringView cannot hold it (3.5)".into(), ftok(e.unwrap()), "String", "an interpolated literal", &nm.text, "LANG-03-05");
             } else {
                 self.expect(&have, &want, ftok(e.unwrap()), "initialiser");
+                self.loan_into_owned(&have, Some(&want), ftok(e.unwrap()), &format!("`{}`", nm.text));
             }
             t = self.with_closure(&want, &have);
             self.set_fact(Some(&nm.text), &have);
@@ -614,6 +672,8 @@ impl<'a> Typer<'a> {
             }
         }
         self.last_closure = None;
+        let d = self.depth;
+        self.keep_nested(binding, d, t, e); // a loan inside an optional, a tuple or a record (7.3; D-348)
         let inner = strip(t).clone();
         let lifetime_value = self.decl_of(&inner).map_or(false, |d2| d2.kind == "class" && d2.lifetime.is_some());
         for l in self.carried.clone() {
@@ -733,7 +793,9 @@ impl<'a> Typer<'a> {
         }
         if !path.contains('.') && self.use_ok {
             let rtext = root.text.clone();
-            self.own.loans.retain(|l| l.borrow().holder.as_deref() != Some(rtext.as_str()));
+            let old: Vec<Loan> = self.own.loans.iter().filter(|l| l.borrow().holder.as_deref() == Some(rtext.as_str())).cloned().collect();
+            self.own.loans.retain(|l| l.borrow().holder.as_deref() != Some(rtext.as_str())); // the old value's stored loans end with it (7.9)
+            self.assign_nested(&root, b.as_ref(), &rt, e, old, env);
         }
         if let Some((ppath, mk, mtok)) = self.pending.take() {
             if mk == "move" {
@@ -759,6 +821,8 @@ impl<'a> Typer<'a> {
         if known(&decl_t) {
             if let Some(e) = e {
                 self.expect(&rt, &decl_t, ftok(e), "assigned value");
+                let declared = self.declared_type(pl, env);
+                self.loan_into_owned(&rt, Some(&declared), ftok(e), &format!("`{path}`"));
             }
         }
         // the first lambda stored in a closure binding pins it, including after `= null` (8.4)
@@ -774,6 +838,42 @@ impl<'a> Typer<'a> {
             }
         }
         self.set_fact(Some(&path), &rt);
+    }
+
+    /// `t = e` where the new value holds a loan inside an optional, a tuple or a record (`t = xs.get(1)`): `t` holds its
+    /// loans until the end of the block that declares `t`, and the old ones too when `e` reads `t` (the new value can be
+    /// the old one: `t = t ?? xs.get(1)`). An owner declared in a deeper block than `t` is dropped while `t` still lends
+    /// it: E-OWN-011 (7.3, 7.9; D-348).
+    pub fn assign_nested(&mut self, root: &Token, b: Option<&Binding>, rt: &Type, e: Option<N<'a>>, old: Vec<Loan>, env: &Env) {
+        let depth = match b {
+            Some(b) if b.kind == "let" || b.kind == "mut" => b.depth,
+            _ => self.depth,
+        };
+        let held = self.keep_nested(&root.text, depth, rt, e);
+        if !old.is_empty() && self.holds_loan(rt) && e.map_or(false, |e| e.tokens().iter().any(|tk| tk.text == root.text)) {
+            self.own.loans.extend(old);
+        }
+        for l in held {
+            let (owner, mode) = {
+                let ld = l.borrow();
+                (ld.owner.clone(), ld.mode.clone())
+            };
+            if let Some(ob) = env_lookup(env, &root_of(&owner)) {
+                if (ob.kind == "let" || ob.kind == "mut") && ob.depth > depth {
+                    let r = &root.text;
+                    self.own_err(
+                        "E-OWN-011",
+                        format!("`{r}` keeps a loan of `{owner}`, which is dropped at the end of its block while `{r}` lives on"),
+                        root,
+                        &owner,
+                        &format!("{mode} loan held by {r}"),
+                        "LANG-07-05",
+                        &format!("until the end of {r}'s block"),
+                    );
+                    break;
+                }
+            }
+        }
     }
 
     pub fn declared_type(&mut self, pl: N<'a>, env: &Env) -> Type {
@@ -1008,6 +1108,24 @@ impl<'a> Typer<'a> {
         }
     }
 
+    /// `return x` moves `x` when `x` is a local `let` binding of the function: its use visibly ends there (7.5,
+    /// X-345). A field, a parameter, a capture or any other expression keeps the markers of 7.5.
+    fn returned_local(&self, e: N<'a>, env: &Env) -> Option<String> {
+        if e.find("markerExpr").is_some() {
+            return None;
+        }
+        let path = self.path_of_expr(Some(e))?;
+        if path.contains('.') || path.contains('[') {
+            return None;
+        }
+        let b = env_lookup(env, &path)?;
+        if (b.kind == "let" || b.kind == "mut") && b.depth > 0 {
+            Some(path)
+        } else {
+            None
+        }
+    }
+
     /// `give` and `recover` hand their value to the enclosing binding: an existing ownership-bearing place needs a
     /// marker, and `move` moves it on this path (7.1; X-120). An expression match arm is its `give` (9.8; D-159).
     pub fn branch_value(&mut self, e: Option<N<'a>>, t: &Type, word: &str) {
@@ -1036,10 +1154,11 @@ impl<'a> Typer<'a> {
         }
     }
 
-    pub fn body(&mut self, body: Option<N<'a>>, env: &Env, ret: &Type, head_tok: &Token, label: &str) {
+    /// Check a function or lambda body; an expression body's type is returned (an inferred lambda result, 8.2).
+    pub fn body(&mut self, body: Option<N<'a>>, env: &Env, ret: &Type, head_tok: &Token, label: &str) -> Option<Type> {
         let body = match body {
             Some(b) => b,
-            None => return,
+            None => return None,
         };
         let b = body.kid(0).and_then(|c| c.node()).filter(|n| n.name() == "block");
         if let Some(b) = b {
@@ -1055,6 +1174,7 @@ impl<'a> Typer<'a> {
         } else {
             let e = body.find("expr");
             self.carried_temps.clear();
+            let recording = self.lends_result(Some(ret)); // the parts of a `from` result are judged by their types (D-381)
             let t = self.infer(e, env, Some(ret));
             // the body's value is returned: a future in it that borrows a temporary outlives it (12.3; D-31)
             let temps = std::mem::take(&mut self.carried_temps);
@@ -1062,7 +1182,12 @@ impl<'a> Typer<'a> {
             if known(ret) {
                 if let Some(e) = e {
                     self.expect(&t, ret, ftok(e), &format!("{label} result"));
+                    self.loan_into_owned(&t, Some(ret), ftok(e), &format!("the {label} result"));
+                    self.owned_into_lent(&t, Some(ret), e, env);
                 }
+            }
+            if recording {
+                self.node_types = None;
             }
             // an expression body is the return of its expression: an existing place needs a marker (7.1; X-118)
             if let Some(e) = e {
@@ -1084,7 +1209,9 @@ impl<'a> Typer<'a> {
             if let Some(e) = e {
                 self.obs_exit("success", ftok(e), "the expression body");
             }
+            return Some(t);
         }
+        None
     }
 
     pub fn params_env(&self, sig: &Sig<'a>, env: &Env) -> Env {
@@ -1188,6 +1315,7 @@ impl<'a> Typer<'a> {
                     }
                     self.check_result_origin(&sig, &d.name, &tok);
                     self.check_param_defaults(&sig, &d.name);
+                    self.check_ignorable(&sig, &d.name);
                     if sig.body.is_some() {
                         self.current_aspects = d.aspects.clone();
                         self.run_body(&sig, None, "self", &tok, &format!("function {}", d.name));
@@ -1297,6 +1425,7 @@ impl<'a> Typer<'a> {
                     }
                     self.check_result_origin(sig, &format!("{}.{mname}", d.name), &stok);
                     self.check_param_defaults(sig, &format!("{}.{mname}", d.name));
+                    self.check_ignorable(sig, &format!("{}.{mname}", d.name));
                     if sig.body.is_some() {
                         let recv = sig.receiver.clone().unwrap_or_else(|| "self".into());
                         self.run_body(sig, Some(self_t.clone()), &recv, &stok, &format!("method {}.{mname}", d.name));
@@ -1408,7 +1537,12 @@ impl<'a> Typer<'a> {
         let blk = *node.child_nodes("block").last().unwrap();
         let label = self.current_label.clone();
         self.journal_begin(&label, node.tokens()[0].line);
+        self.test_body = true; // `or fail` is implied in the body (14, X-345)
+        for init in fortis_names::reading::outcome_lets(blk) {
+            self.mark_consumed(Some(init)); // a binding the body consumes as an outcome keeps it (14)
+        }
         self.walk_block(blk, &env);
+        self.test_body = false;
         self.summaries.insert(label.clone(), self.eff.clone()); // a test's effects, as a body's (the IR and its validator read it)
         self.journal_end();
         self.self_type = None;

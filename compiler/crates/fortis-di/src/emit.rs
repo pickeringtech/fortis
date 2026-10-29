@@ -1,4 +1,4 @@
-//! The generated declarations of one resolved context (spikes/SP-08/design.md section 4): `class C` with
+//! The generated declarations of one resolved context (SP-08's design, section 4): `class C` with
 //! `application(inputs)`, one class per level holding that level's instances, a factory method per transient
 //! binding, an accessor per held instance and a creator method per contained level. Every expression is the most
 //! direct ordinary one; the core judges it.

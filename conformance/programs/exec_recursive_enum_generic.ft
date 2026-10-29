@@ -4,7 +4,7 @@
 // A generic enum that contains itself, and a non-generic enum that reaches itself only through a generic
 // class, are boxed the same way a monomorphic recursive enum is (D-55). A heap collection stays the
 // indirection boundary: the field is not boxed again.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export enum Chain[T] {
   End(value: T)
@@ -51,12 +51,11 @@ func trees(f: Forest) Int {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let c = Chain.Next(tail: Chain.Next(tail: Chain.End(value: 4)))
+func main(console: Console) {
+  let c = Chain.Next(tail: Next(tail: End(value: 4)))
   let t = Tree.Node(child: Hold(value: Tree.Leaf))
-  let f = Forest.Many(trees: List.of(Forest.None, Forest.None))
-  caps.console.print("chain ${depth(c)}")
-  caps.console.print("held ${held(move t)}")
-  caps.console.print("forest ${trees(f)}")
+  let f = Forest.Many(trees: List.of(None, None))
+  console.print("chain ${depth(c)}")
+  console.print("held ${held(move t)}")
+  console.print("forest ${trees(f)}")
 }

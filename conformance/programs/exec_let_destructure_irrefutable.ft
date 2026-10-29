@@ -1,0 +1,38 @@
+// execute: class 1 2|nested 3 4 x|tuple 5 6|record 7 8|mixed 9 10|wild 11
+// requires: runtime
+// covers: LANG-05-01
+// D-243, 5.1: a `let` pattern that always matches is accepted and runs on every backend: a class destructure, one
+// nested in another, a tuple, a record, a tuple of a class, and `_` for a part not needed. Only a pattern that can
+// fail to match (a variant, a literal, `null`, `present(…)`) is E-MAT-004.
+import fortis.host { Console }
+
+class Point {
+  x: Int
+  y: Int
+}
+
+class Labelled {
+  point: Point
+  label: String
+}
+
+func main(console: Console) {
+  let p = Point(x: 1, y: 2)
+  let Point(x: a, y: b) = move p
+  console.print("class ${a} ${b}")
+  let l = Labelled(point: Point(x: 3, y: 4), label: "x")
+  let Labelled(point: Point(x: c, y: d), label: s) = move l
+  console.print("nested ${c} ${d} ${s}")
+  let t = (5, 6)
+  let (e, f) = move t
+  console.print("tuple ${e} ${f}")
+  let r = { a: 7, b: 8 }
+  let { a: g, b: h } = move r
+  console.print("record ${g} ${h}")
+  let m = (Point(x: 9, y: 10), 0)
+  let (Point(x: i, y: j), _) = move m
+  console.print("mixed ${i} ${j}")
+  let w = Point(x: 11, y: 12)
+  let Point(x: k, y: _) = move w
+  console.print("wild ${k}")
+}

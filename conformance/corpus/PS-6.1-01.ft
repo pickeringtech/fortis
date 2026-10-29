@@ -15,5 +15,5 @@ async try func processOrder(order: Order) Receipt {
   capture provider = order.payment.provider
   let receipt = await Payments.charge(order) or fail
   capture transactionId = receipt.transactionId
-  return move receipt
+  return receipt
 }

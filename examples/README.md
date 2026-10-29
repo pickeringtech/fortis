@@ -1,8 +1,7 @@
 # Fortis examples
 
 Runnable programs for the reference toolchain. Every example is checked statically and then run on the
-definitional interpreter; nothing here compiles to native code yet (the first native slice is DEL-25 in
-`docs/delivery/`).
+definitional interpreter; nothing here compiles to native code yet (the first native slice is delivery chunk DEL-25).
 
 ```
 bin/fortis run  examples/01_hello.ft

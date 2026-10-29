@@ -1,0 +1,9 @@
+// A function that returns an `Outcome` it built is not a failing call, so its `or fail` is not implied: the module
+// would not check without it, and the formatter leaves the test as it is (14; X-345, R7).
+func built(n: Int) Outcome[Int] {
+  return Outcome.success(n)
+}
+
+test "a built outcome" {
+  expect (built(3) or fail) == 3
+}

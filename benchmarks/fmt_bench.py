@@ -2,8 +2,9 @@
 
 `python3 -I benchmarks/fmt_bench.py [--json]`
 
-Conditions, workload, edits and the figure are those of benchmarks/PREREGISTRATION-DEL-43.md: the module
-`check_workload.module(0, 13)` (refused if its digest differs from the preregistered one), 1,000 cumulative edits
+Conditions, workload, edits and the figure are those of DEL-43's preregistration: the module
+`check_workload.module(0, 13)` (refused if its digest differs from the preregistered one, when the preregistration,
+a maintainers' planning file, is in the checkout), 1,000 cumulative edits
 from a seeded stream, five passes in one warm process (`compiler/crates/fortis-fmt/examples/edit_bench.rs`), and
 the pooled p95 against the SHOULD budget of 10 ms.
 """
@@ -18,14 +19,19 @@ ROOT = os.path.abspath(os.path.join(HERE, ".."))
 sys.path.insert(0, HERE)
 import check_workload  # noqa: E402
 
-WORKLOAD_SHA256 = open(os.path.join(HERE, "PREREGISTRATION-DEL-43.md"), encoding="utf-8").read().split("module sha256 `")[1].split("`")[0]
+PREREGISTRATION = os.path.join(HERE, "PREREGISTRATION-DEL-43.md")
+WORKLOAD_SHA256 = (open(PREREGISTRATION, encoding="utf-8").read().split("module sha256 `")[1].split("`")[0]
+                   if os.path.exists(PREREGISTRATION) else None)
 BUDGET_MS = 10.0
 
 
 def main(argv):
     text = check_workload.module(0, 13)
     digest = hashlib.sha256(text.encode()).hexdigest()
-    if digest != WORKLOAD_SHA256:
+    if WORKLOAD_SHA256 is None:
+        print(f"fmt-bench: skipped comparing the workload's digest with the preregistered one: "
+              f"{os.path.relpath(PREREGISTRATION, ROOT)} is a maintainers' planning file and is not in this checkout", file=sys.stderr)
+    elif digest != WORKLOAD_SHA256:
         print(f"the workload's digest {digest} is not the preregistered {WORKLOAD_SHA256}")
         return 1
     path = os.path.join(ROOT, "build", "bench", "fmt-1k.ft")

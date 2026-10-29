@@ -2,12 +2,11 @@
 // requires: runtime
 // covers: LANG-11-07
 // The development Process adapter starts no process: it simulates `true` and `false`.
-import fortis.host { Host, Process }
+import fortis.host { Process, Console }
 try func status(p: Process, program: StringView) Int => p.run(program, List.default()) or fail
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let ok = status(caps.process, "true") or fail
-  let bad = status(caps.process, "false") or fail
-  caps.console.print("${ok}")
-  caps.console.print("${bad}")
+try func main(process: Process, console: Console) {
+  let ok = status(process, "true") or fail
+  let bad = status(process, "false") or fail
+  console.print("${ok}")
+  console.print("${bad}")
 }

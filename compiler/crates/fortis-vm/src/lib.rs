@@ -62,9 +62,30 @@ fn run_main_here(prog: &Program, file: &str, args: &[String], decl_files: &HashM
         Ok(i) => i,
         Err(_) => return Observed { text: "dynamic:no main".into(), out: vec![], trace: vec![], reports: vec![], failure_lines: vec![], exit_code: 2, threads: 0 },
     };
-    let pname = prog.functions[fi].params.first().map(|p| p.name.clone()).unwrap_or_else(|| "args".into());
-    let argv = Value::list(args.iter().map(|a| Value::str(a)).collect());
-    let r = vm.call(fi, if prog.functions[fi].params.is_empty() { vec![] } else { vec![(pname, argv)] }, &[]);
+    // each parameter of the entry `main` is supplied by its type (4.6, X-345): the command-line arguments for
+    // `List[String]`, and for a capability type that capability, all created once, before `main` runs (11.6)
+    let params: Vec<(String, String)> = prog.functions[fi].params.iter().map(|p| (p.name.clone(), entry_kind(&prog.functions[fi].locals[p.local as usize].ty))).collect();
+    let caps = if params.iter().any(|(_, k)| k != "List") {
+        match intrinsics::call(&mut vm, "Host.capabilities", vec![]) {
+            Ok(c) => Some(c),
+            Err(_) => return Observed { text: "dynamic:the capabilities could not be created".into(), out: vec![], trace: vec![], reports: vec![], failure_lines: vec![], exit_code: 2, threads: 0 },
+        }
+    } else {
+        None
+    };
+    let mut argv_bound = Vec::new();
+    for (pname, kind) in params {
+        let v = if kind == "List" {
+            Value::list(args.iter().map(|a| Value::str(a)).collect())
+        } else {
+            match &caps {
+                Some(Value::Obj(o)) => o.borrow().fields.iter().find(|(f, _)| &**f == fortis_names_field(&kind)).map(|(_, v)| v.clone()).unwrap_or(Value::Void),
+                _ => Value::Void,
+            }
+        };
+        argv_bound.push((pname, v));
+    }
+    let r = vm.call(fi, argv_bound, &[]);
     // an async main runs as the main task (4.6)
     let r = match r {
         Ok(Value::Future(f)) => match f.work.borrow_mut().take() {
@@ -149,7 +170,7 @@ fn run_tests_here(prog: &Program, file: &str, decl_files: &HashMap<String, Strin
                 cases.push((String::new(), vec![]));
             }
             for (cname, rec) in &t.cases {
-                let mut fr = machine::Frame { locals: vec![], func: fi, consumed: None };
+                let mut fr = machine::Frame { locals: vec![], func: fi, consumed: None, lent: std::collections::HashSet::new(), owned: std::collections::HashSet::new(), ret_lent: true };
                 let v = vm.eval(&mut fr, rec).unwrap_or(Value::Null);
                 cases.push((cname.clone(), row_param.clone().map(|p| vec![(p, v)]).unwrap_or_default()));
             }
@@ -198,7 +219,7 @@ fn run_tests_here(prog: &Program, file: &str, decl_files: &HashMap<String, Strin
                     ("fail", format!("actual=failure {code} expected=success"))
                 }
                 Ok(_) | Err(Exit::Flow(Flow::Return(_))) => ("pass", String::new()),
-                Err(Exit::Halt(Halt::Dynamic(m))) if m.starts_with("expect:") => ("fail", m[7..].to_string()),
+                Err(Exit::Halt(Halt::Dynamic(m))) if m.starts_with("expect:") => ("fail", crate::testing::expect_parts(&m).1.to_string()),
                 Err(Exit::Halt(Halt::Dynamic(m))) => ("error", m),
                 Err(Exit::Halt(Halt::Cancel)) => ("error", "cancelled".to_string()),
                 Err(Exit::Halt(Halt::Shutdown)) => ("error", "shutdown".to_string()),
@@ -231,4 +252,28 @@ fn run_tests_here(prog: &Program, file: &str, decl_files: &HashMap<String, Strin
     let unbuilt = if prog.unbuilt_tests.is_empty() { String::new() } else { format!(", {} unbuilt", prog.unbuilt_tests.len()) };
     vm.flush_failures();
     Observed { text: format!("{passed} passed, {failed} failed{unbuilt}"), out: vm.out, trace: vm.trace, reports: vm.reports, failure_lines: vm.failure_lines, exit_code: if failed > 0 { 1 } else { 0 }, threads: 0 }
+}
+
+/// The type name an entry `main` parameter is supplied by (4.6): `List` (the arguments) or a capability type.
+fn entry_kind(t: &fortis_types::types::Type) -> String {
+    match fortis_types::types::strip(t) {
+        fortis_types::types::Type::Named(n) => n.name.clone(),
+        _ => String::new(),
+    }
+}
+
+/// The field of `Capabilities` that holds a capability type (fortis.host), as fortis-names' reading module names it.
+fn fortis_names_field(ty: &str) -> &'static str {
+    match ty {
+        "FileSystem" => "fileSystem",
+        "Network" => "network",
+        "Clock" => "clock",
+        "Random" => "random",
+        "Environment" => "environment",
+        "Process" => "process",
+        "Supervisor" => "supervisor",
+        "Console" => "console",
+        "SecretAccess" => "secretAccess",
+        _ => "rawSql",
+    }
 }

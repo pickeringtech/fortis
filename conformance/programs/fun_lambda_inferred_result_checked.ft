@@ -1,0 +1,13 @@
+// reject: E-REF-001, E-TYP-040 (at the marked lines)
+// covers: LANG-08-01
+// 8.2 (X-345): where the function type a lambda is passed to names a result type, an expression body without its
+// own is checked against that type, as against a written one.
+func scored(f: fn(Int) Int<0..100>, x: Int) Int<0..100> => f(x)
+
+func apply(f: fn(Int) Int, x: Int) Int => f(x)
+
+func use(n: Int) Int {
+  let a = scored(fn(x) => x, n)            // reject: E-REF-001 — x is an Int, the result must be Int<0..100>
+  let b = apply(fn(x) => "text", n)        // reject: E-TYP-040 — the result must be Int
+  return Int.wrappingAdd(a, b)
+}

@@ -8,7 +8,7 @@ async try func readText(fs: FileSystem, p: Path) String {
   return fs.readText(p) or fail              // reject: E-EFF-020 — FileSystem.readText blocks
 }
 
-async try func writeAll(fs: FileSystem, p: Path) Void {
+async try func writeAll(fs: FileSystem, p: Path) {
   fs.writeAll(p, "text") or fail             // reject: E-EFF-020 — FileSystem.writeAll blocks
 }
 
@@ -29,7 +29,7 @@ async try func drained(fs: FileSystem, f: owned File) Bytes {
   return editable file.readAll() or fail     // reject: E-EFF-020 — File.readAll blocks
 }
 
-async try func appended(fs: FileSystem, f: owned File, data: BytesView) Void {
+async try func appended(fs: FileSystem, f: owned File, data: BytesView) {
   let mut file = move f
   editable file.writeAll(data) or fail       // reject: E-EFF-020 — File.writeAll blocks
 }
@@ -42,5 +42,5 @@ async try func rows(sql: RawSql) Int {
   return sql.execute("select 1") or fail     // reject: E-EFF-020 — RawSql.execute blocks
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }

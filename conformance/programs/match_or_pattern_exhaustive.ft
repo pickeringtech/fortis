@@ -1,0 +1,30 @@
+// reject: E-MAT-001, E-MAT-002 (at the marked lines)
+// covers: LANG-09-05
+// 9.8 (X-345): exhaustiveness counts each alternative as covering its case, so a variant that no alternative names
+// is still reported; a catch-all alternative over a closed enum is a catch-all arm.
+enum Light {
+  Red
+  Amber
+  Green
+  Off
+}
+
+func stop(l: Light) Bool {
+  return match l {                                   // reject: E-MAT-001 — `Off` is not covered
+    Red | Amber => true
+    Green => false
+  }
+}
+
+func go(l: Light) Bool {
+  return match l {
+    Green => true
+    Red | _ => false                                 // reject: E-MAT-002 — `_` makes this a catch-all arm
+  }
+}
+
+func known(l: Light) Bool {
+  return match l {
+    Red | Amber | Green | Off => true
+  }
+}

@@ -7,6 +7,6 @@ class Gateway {
 
 func payShadowed(g: gw.Gateway) Bool => true
 
-func lambdaShadowed() Void {
+func lambdaShadowed() {
   let g = fn(c: gw.Gateway) Int => 1
 }

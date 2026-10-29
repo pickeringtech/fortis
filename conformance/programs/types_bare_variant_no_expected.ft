@@ -1,0 +1,21 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-06-01
+// 9.7 (X-345, D-304): the bare form of a variant is read only where the expected type is its enum. Where nothing
+// expects the enum (an unannotated binding, a generic argument no expected type fixes, another type, the left side of
+// a comparison) the value would have no type, and no backend could build it, so both checkers reject it and ask for
+// the qualified form. The annotated forms are accepted.
+enum Severity derive Equatable {
+  Error
+  Note
+}
+
+func uses(s: Severity) Int {
+  let xs = List.of(Error, Note)              // reject: E-TYP-040 — nothing fixes List.of's element type
+  let x = Error                              // reject: E-TYP-040 — write `Severity.Error`
+  let n: Int = Note                          // reject: E-TYP-040 — an Int is expected, not a Severity
+  let same = Error == s                      // reject: E-TYP-040 — the left operand has no expected type
+  let ys: List[Severity] = List.of(Error, Note)
+  let y: Severity = Error
+  let fine = s == Error
+  return ys.count()
+}

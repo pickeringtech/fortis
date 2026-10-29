@@ -4,12 +4,12 @@
 // 7.9: a `_` over a generic wrapper, or over the field whose type is that wrapper's type parameter, drops
 // that part at the `let`. The bound `Int` stays. The discarded part is not a block local, so it leaves no
 // `drop` trace (D-330).
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 class N {
   id: Int
   console: Shared[Console]
-  cleanup(editable self) Void { self.console.print("drop ${self.id}") }
+  cleanup(editable self) { self.console.print("drop ${self.id}") }
 }
 
 class Hold[T] {
@@ -21,27 +21,25 @@ class Hold2[T] {
   item: T
 }
 
-func tuple(console: Shared[Console]) Void {
+func tuple(console: Shared[Console]) {
   let x: (Hold[N], Int) = (Hold(item: N(id: 1, console: console.retain())), 0)
   let (_, n) = move x
   console.print("after tuple ${n}")
 }
 
-func field(console: Shared[Console]) Void {
+func field(console: Shared[Console]) {
   let h: Hold[N] = Hold(item: N(id: 2, console: console.retain()))
   let Hold(item: _) = move h
   console.print("after field")
 }
 
-func kept(console: Shared[Console]) Void {
+func kept(console: Shared[Console]) {
   let h: Hold2[N] = Hold2(kept: 0, item: N(id: 3, console: console.retain()))
   let Hold2(kept: k, item: _) = move h
   console.print("after kept ${k}")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   tuple(console)
   field(console)

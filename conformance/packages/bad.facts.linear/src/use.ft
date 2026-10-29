@@ -3,6 +3,6 @@
 import bad.facts.linear.hold { Box }
 
 func keep(b: owned Box) Int => move b.finish()
-func leave(b: owned Box) Void {
+func leave(b: owned Box) {
   let dropped = move b                       // reject: E-OBL-001 — Box is linear in the module that declares it
 }

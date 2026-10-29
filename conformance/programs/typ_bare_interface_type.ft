@@ -27,7 +27,7 @@ export class Kept {
 
 func charged[G](g: G) Bool where G implements PaymentGateway => g.charge(5)
 
-export func main(args: List[String]) Void {
+func main() {
   let lambda = fn(g: PaymentGateway) Int => 1             // reject: E-TYP-040 — a lambda's parameter
   let ok = charged(Stripe(key: 1))
   let k = Kept(gateway: Stripe(key: 2), shared: Shared.create(Stripe(key: 3)))

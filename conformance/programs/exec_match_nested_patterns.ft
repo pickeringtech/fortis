@@ -1,0 +1,119 @@
+// execute: depth 1 2 3 3|last 4 5 6 0|short true true false|light stop go|first 7|deep 1 2 3 4|flat 1 1 1 0
+// requires: runtime
+// covers: LANG-09-05
+// 9.8: a field pattern may itself be a variant pattern, to any depth, named or positional, with or without an
+// or-pattern around it. Each variant pattern names its own fields only (a nested pattern's fields are not the outer
+// variant's), bindings come from every level, and exhaustiveness counts the nested cases as D-79's one-field rule
+// does: `Next(tail: End(…))` and `Next(tail: Next(…))` together cover `Next`, and `T(M(X)) | T(M(Y)) | T(N)`
+// covers `T`. A class destructure in a `let` nests the same way.
+import fortis.host { Console }
+
+enum Leaf {
+  X
+  Y
+}
+
+enum Mid {
+  M(leaf: Leaf)
+  N
+}
+
+enum Top {
+  T(mid: Mid)
+  U
+}
+
+enum Chain {
+  End(value: Int)
+  Next(tail: Chain)
+}
+
+enum Light {
+  Red
+  Amber
+  Green
+}
+
+enum Signal {
+  Shown(light: Light)
+  Dark
+}
+
+class Pair {
+  left: Int
+  right: Int
+}
+
+class Framed {
+  pair: Pair
+  label: String
+}
+
+func depth(c: Chain) Int {
+  return match c {
+    End(value: _) => 1
+    Next(tail: End(value: _)) => 2
+    Next(tail: Next(tail: _)) => 3
+  }
+}
+
+func last(c: Chain) Int {
+  return match c {
+    End(value: v) => v
+    Next(tail: End(value: v)) => v
+    Next(tail: Next(tail: End(value: v))) => v
+    Next(tail: Next(tail: Next(tail: _))) => 0
+  }
+}
+
+func short(c: Chain) Bool {
+  return match c {
+    End(value: _) | Next(tail: End(value: _)) => true
+    Next(tail: Next(tail: _)) => false
+  }
+}
+
+func act(s: Signal) String {
+  return match s {
+    Shown(light: Red) | Shown(light: Amber) | Dark => "stop"
+    Shown(light: Green) => "go"
+  }
+}
+
+func deep(t: Top) Int {
+  return match t {
+    T(M(X)) => 1
+    T(M(Y)) => 2
+    T(N) => 3
+    U => 4
+  }
+}
+
+func flat(t: Top) Int {
+  return match t {
+    T(M(X)) | T(M(Y)) | T(N) => 1
+    U => 0
+  }
+}
+
+func first(f: owned Framed) String {
+  let Framed(pair: Pair(left: a, right: _), label: l) = move f
+  return "${l} ${a}"
+}
+
+func main(console: Console) {
+  let one = Chain.End(value: 4)
+  let two = Chain.Next(tail: End(value: 5))
+  let three = Chain.Next(tail: Next(tail: End(value: 6)))
+  let four = Chain.Next(tail: Next(tail: Next(tail: End(value: 7))))
+  console.print("depth ${depth(one)} ${depth(two)} ${depth(three)} ${depth(four)}")
+  console.print("last ${last(one)} ${last(two)} ${last(three)} ${last(four)}")
+  console.print("short ${short(one)} ${short(two)} ${short(three)}")
+  console.print("light ${act(Shown(light: Amber))} ${act(Shown(light: Green))}")
+  console.print(first(Framed(pair: Pair(left: 7, right: 1), label: "first")))
+  let tx = Top.T(mid: M(leaf: X))
+  let ty = Top.T(mid: M(leaf: Y))
+  let tn = Top.T(mid: N)
+  console.print("deep ${deep(tx)} ${deep(ty)} ${deep(tn)} ${deep(Top.U)}")
+  console.print("flat ${flat(tx)} ${flat(ty)} ${flat(tn)} ${flat(Top.U)}")
+}

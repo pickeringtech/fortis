@@ -27,7 +27,7 @@ use fortis_types::types::{strip, Type};
 use crate::machine::{Exit, Flow, Frame, Halt, Vm, R};
 use crate::pyrandom::PyRandom;
 use crate::sync::Rc;
-use crate::value::Value;
+use crate::value::{TupleVal, Value};
 
 /// What to run and how.
 #[derive(Clone, Debug)]
@@ -49,11 +49,13 @@ pub struct Options {
     pub replay: Option<PathBuf>,
     /// the command a replay names (`fortis test FILE`)
     pub command: String,
+    /// the file each declaration's records name, by origin, as `report_files` gives them (D-302)
+    pub decl_files: std::collections::HashMap<String, String>,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Options { test: None, case: None, seed: None, cases: 100, fuel: 5_000_000, shrink_budget: 2_000, fuzz: None, replay: None, command: "fortis test".into() }
+        Options { test: None, case: None, seed: None, cases: 100, fuel: 5_000_000, shrink_budget: 2_000, fuzz: None, replay: None, command: "fortis test".into(), decl_files: Default::default() }
     }
 }
 
@@ -74,7 +76,12 @@ pub struct Outcome {
 /// Run the program's tests as `opts` selects, on a thread with the VM's stack.
 pub fn run(prog: &Program, file: &str, opts: &Options) -> Outcome {
     let (prog, file, opts) = (prog, file.to_string(), opts.clone());
-    crate::on_big_stack(move || Runner { vm: Vm::new(prog, &file), prog, opts, records: vec![], passed: 0, failed: 0 }.all())
+    crate::on_big_stack(move || {
+        let mut vm = Vm::new(prog, &file);
+        // a record names the module that declares its origin, relative to its package, as `fortis test` does (D-302)
+        vm.decl_files = opts.decl_files.clone();
+        Runner { vm, prog, opts, records: vec![], passed: 0, failed: 0 }.all()
+    })
 }
 
 type Args = Vec<(String, Value)>;
@@ -113,9 +120,24 @@ fn slug(title: &str) -> String {
     format!("{}-{:08x}", s.chars().take(40).collect::<String>(), fnv(title.as_bytes()) as u32)
 }
 
+/// A failing expect's message, `expect:LINE:EVIDENCE`, as its line and its evidence (`actual=… expected=…`).
+pub fn expect_parts(m: &str) -> (i64, &str) {
+    let body = m.strip_prefix("expect:").unwrap_or(m);
+    match body.split_once(':') {
+        Some((line, rest)) if line.chars().all(|c| c.is_ascii_digit()) && !line.is_empty() => (line.parse().unwrap_or(0), rest),
+        _ => (0, body),
+    }
+}
+
+/// A test result's evidence, the shape `fortis test` gives: what happened, what was expected, and the failing
+/// `expect`'s line, or 0 when no expect failed (14).
+fn evidence(actual: &str, expected: &str, line: i64) -> Json {
+    Json::obj([("actual", Json::str(actual)), ("expected", Json::str(expected)), ("line", Json::Int(line))])
+}
+
 /// The status and evidence of one case's result.
 fn classify(r: R<Value>) -> (&'static str, Json) {
-    let ev = |actual: String, expected: &str| Json::obj([("actual", Json::str(&actual)), ("expected", Json::str(expected))]);
+    let ev = |actual: String, expected: &str| evidence(&actual, expected, 0);
     match r {
         Ok(v) if v.is_failure() => {
             let code = match &v {
@@ -133,10 +155,10 @@ fn classify(r: R<Value>) -> (&'static str, Json) {
             ("fail", ev(format!("failure {code}"), "success"))
         }
         Err(Exit::Halt(Halt::Dynamic(m))) if m.starts_with("expect:") => {
-            let body = &m[7..];
+            let (line, body) = expect_parts(&m);
             match body.strip_prefix("actual=").and_then(|b| b.split_once(" expected=")) {
-                Some((a, e)) => ("fail", ev(a.to_string(), e)),
-                None => ("fail", ev(body.to_string(), "true")),
+                Some((a, e)) => ("fail", evidence(a, e, line)),
+                None => ("fail", evidence(body, "true", line)),
             }
         }
         Err(Exit::Halt(Halt::Dynamic(m))) if m.starts_with("budget:") => ("error", ev(format!("hang: {}", &m[8..]), "the case completes within its budget")),
@@ -187,7 +209,7 @@ fn generate(rng: &mut PyRandom, ty: &Type, depth: usize) -> Result<Value, String
         return if rng.random() < 0.2 { Ok(Value::Null) } else { generate(rng, inner, depth) };
     }
     if let Type::Tuple(ts) = strip(ty) {
-        return Ok(Value::Tuple(Rc::new(ts.iter().map(|t| generate(rng, t, depth + 1)).collect::<Result<Vec<_>, _>>()?)));
+        return Ok(Value::Tuple(Rc::new(TupleVal::from(ts.iter().map(|t| generate(rng, t, depth + 1)).collect::<Result<Vec<_>, _>>()?))));
     }
     if is_int(ty) {
         let (lo, hi) = int_range(ty);
@@ -233,7 +255,7 @@ fn from_json(j: &Json, ty: &Type) -> Option<Value> {
         return if *j == Json::Null { Some(Value::Null) } else { from_json(j, inner) };
     }
     if let (Type::Tuple(ts), Some(Json::Arr(items))) = (strip(ty), j.get("tuple")) {
-        return Some(Value::Tuple(Rc::new(ts.iter().zip(items).map(|(t, x)| from_json(x, t)).collect::<Option<Vec<_>>>()?)));
+        return Some(Value::Tuple(Rc::new(TupleVal::from(ts.iter().zip(items).map(|(t, x)| from_json(x, t)).collect::<Option<Vec<_>>>()?))));
     }
     if is_int(ty) {
         let i = match j {
@@ -376,7 +398,7 @@ fn shrinks(v: &Value, ty: &Type) -> Vec<Value> {
                     for c in shrinks(&t[i], &ts[i]) {
                         let mut u = (**t).clone();
                         u[i] = c;
-                        out.push(Value::Tuple(Rc::new(u)));
+                        out.push(Value::Tuple(Rc::new(TupleVal::from(u))));
                     }
                 }
             }
@@ -481,7 +503,7 @@ fn mutate(rng: &mut PyRandom, v: &Value, ty: &Type, depth: usize) -> Value {
                     let mut u = (**t).clone();
                     let i = rng.below(u.len() as u128) as usize;
                     u[i] = mutate(rng, &u[i], &ts[i], depth + 1);
-                    return Value::Tuple(Rc::new(u));
+                    return Value::Tuple(Rc::new(TupleVal::from(u)));
                 }
             }
             v.clone()
@@ -517,7 +539,7 @@ impl<'p> Runner<'p> {
                 }
             }
             for (title, reason) in &self.prog.unbuilt_tests {
-                self.result(title, "", "error", Json::obj([("actual", Json::str(&format!("unbuilt: {reason}"))), ("expected", Json::str("a built test"))]));
+                self.result(title, "", "error", evidence(&format!("unbuilt: {reason}"), "a built test", 0));
             }
         }
         Outcome { records: self.records, passed: self.passed, failed: self.failed }
@@ -537,8 +559,31 @@ impl<'p> Runner<'p> {
         self.vm.fuel = Some(self.opts.fuel);
         self.vm.coverage = cover.then(HashSet::new);
         self.vm.obs.push(None);
+        let first = self.vm.reports.len();
+        let first_failure = self.vm.failure_lines.len();
         let r = self.vm.call(fi, args, &[]);
         self.vm.obs.pop();
+        // every record the case wrote, in the order it wrote them and before its result, as `fortis test`, `fortisc vm`
+        // and native code write them: a log record (13, LANG-13-04), and a reported failure (`report e`, 10.6,
+        // LANG-10-06) as the structured record its failure line carries, which is the interpreter's
+        let mut failures = self.vm.failure_lines[first_failure.min(self.vm.failure_lines.len())..].iter();
+        for rec in self.vm.reports[first.min(self.vm.reports.len())..].iter() {
+            match rec.first().filter(|(k, _)| k == "kind").map(|(_, v)| v.as_str()) {
+                Some("log") => {
+                    let mut fields: Vec<(&str, Json)> = rec.iter().map(|(k, v)| (k.as_str(), Json::str(v))).collect();
+                    fields.push(("rule", Json::str("LANG-13-04")));
+                    self.records.push(Json::obj(fields));
+                }
+                Some("runtime-failure") => {
+                    if let Some(line) = failures.next() {
+                        if let Ok(j) = Json::parse(line) {
+                            self.records.push(j);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
         self.vm.out.clear();
         self.vm.fuel = None;
         let cov = self.vm.coverage.take().unwrap_or_default();
@@ -553,7 +598,7 @@ impl<'p> Runner<'p> {
             rows.push((String::new(), vec![]));
         }
         for (name, rec) in &t.cases {
-            let mut fr = Frame { locals: vec![], func: fi, consumed: None };
+            let mut fr = Frame { locals: vec![], func: fi, consumed: None, lent: std::collections::HashSet::new(), owned: std::collections::HashSet::new(), ret_lent: true };
             let v = self.vm.eval(&mut fr, rec).unwrap_or(Value::Null);
             rows.push((name.clone(), row_param.clone().map(|p| vec![(p, v)]).unwrap_or_default()));
         }
@@ -583,7 +628,7 @@ impl<'p> Runner<'p> {
             let args = match self.generated(t, &mut rng) {
                 Ok(a) => a,
                 Err(why) => {
-                    self.result(&t.title, &name, "error", Json::obj([("actual", Json::str(&why)), ("expected", Json::str("a generator for every parameter"))]));
+                    self.result(&t.title, &name, "error", evidence(&why, "a generator for every parameter", 0));
                     return;
                 }
             };
@@ -663,7 +708,7 @@ impl<'p> Runner<'p> {
             match self.generated(t, &mut rng) {
                 Ok(a) => seeds.push(a),
                 Err(why) => {
-                    self.result(&t.title, "fuzz", "error", Json::obj([("actual", Json::str(&why)), ("expected", Json::str("a generator for every parameter"))]));
+                    self.result(&t.title, "fuzz", "error", evidence(&why, "a generator for every parameter", 0));
                     return;
                 }
             }
@@ -750,7 +795,7 @@ impl<'p> Runner<'p> {
         let parsed = match Json::parse(text.trim()) {
             Ok(j) => Some(j),
             Err(e) => {
-                self.result("replay", &path.display().to_string(), "error", Json::obj([("actual", Json::str(&e)), ("expected", Json::str("a saved input"))]));
+                self.result("replay", &path.display().to_string(), "error", evidence(&e, "a saved input", 0));
                 return;
             }
         };
@@ -759,13 +804,13 @@ impl<'p> Runner<'p> {
             _ => None,
         });
         let Some(t) = title.and_then(|x| self.prog.tests.iter().find(|t| t.title == x)) else {
-            self.result("replay", &path.display().to_string(), "error", Json::obj([("actual", Json::str("the file names no test of this program")), ("expected", Json::str("a saved input"))]));
+            self.result("replay", &path.display().to_string(), "error", evidence("the file names no test of this program", "a saved input", 0));
             return;
         };
         let inputs = parsed.as_ref().and_then(|j| j.get("inputs")).cloned().unwrap_or(Json::Null);
         let args: Option<Args> = t.generators.iter().map(|(n, ty)| inputs.get(n).and_then(|x| from_json(x, ty)).map(|v| (n.clone(), v))).collect();
         let (Some(args), Ok(fi)) = (args, self.vm.func_index(&t.function)) else {
-            self.result(&t.title, "replay", "error", Json::obj([("actual", Json::str("the saved inputs do not fit the property's parameters")), ("expected", Json::str("a saved input"))]));
+            self.result(&t.title, "replay", "error", evidence("the saved inputs do not fit the property's parameters", "a saved input", 0));
             return;
         };
         let (status, ev, _) = self.case(fi, args, false);

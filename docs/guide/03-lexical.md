@@ -15,12 +15,11 @@ then letters, digits or underscores. Unicode is welcome everywhere else: in stri
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let word = "café"
-  caps.console.print("${word}: ${word.scalarCount()} scalars, ${word.byteCount()} bytes")
+  console.print("${word}: ${word.scalarCount()} scalars, ${word.byteCount()} bytes")
 }
 ```
 
@@ -41,7 +40,7 @@ the edit that deletes the semicolon:
 
 ```fortis
 // reject: E-SYN-001
-export func main(args: List[String]) Void {
+func main() {
   let a = 1; let b = 2          // reject: E-SYN-001
 }
 ```
@@ -68,15 +67,14 @@ where a reviewer wants it:
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure try func half(n: Int) Int {
   if n % 2 != 0 { return 0 }
   return Int.div(n, 2) or fail
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+recovers func main(console: Console) {
   let words: List[String] = List.of("alpha", "beta", "gamma")
   let count = words
     .reversed()
@@ -89,12 +87,12 @@ export recovers func main(args: List[String]) Void {
   let total = 1 +
     2 +
     3
-  caps.console.print("${count} ${n} ${h} ${total}")
+  console.print("${count} ${n} ${h} ${total}")
   if total > 5 {
-    caps.console.print("big")
+    console.print("big")
   }
-  else {
-    caps.console.print("small")
+    else {
+    console.print("small")
   }
 }
 ```
@@ -110,7 +108,7 @@ parse error rather than a silent change of meaning (LR 3.2):
 
 ```fortis
 // reject: E-SYN-000
-export func main(args: List[String]) Void {
+func main() {
   let a = 1
   let b = 2
   let total = a
@@ -149,7 +147,7 @@ Keywords are reserved: none of them can name a declaration, a binding or a param
 
 ```fortis
 // reject: E-SYN-002
-export func main(args: List[String]) Void {
+func main() {
   let match = 1                 // reject: E-SYN-002
 }
 ```
@@ -164,19 +162,18 @@ same:
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Celsius {
   export degrees: Int
 
   // `from` is a keyword, but a method or associated function may use it as its name.
-  export pure func from(degrees: Int) Celsius => Celsius(degrees: degrees)
+  export pure func from(degrees: Int) Celsius => Celsius(degrees)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let reading = Celsius.from(21)
-  caps.console.print("${reading.degrees} degrees")
+  console.print("${reading.degrees} degrees")
 }
 ```
 
@@ -193,10 +190,9 @@ Each literal has a form and a type (LR 3.5):
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let million = 1_000_000
   let mask = 0xFF
   let flags = 0b1010
@@ -209,9 +205,9 @@ export func main(args: List[String]) Void {
   let wait = 250ms
   let later = 2min
   let none: Int? = null
-  caps.console.print("${million} ${mask} ${flags} ${mode}")
-  caps.console.print("${ratio} ${big} ${single} ${price} ${ready}")
-  caps.console.print("${wait} ${later} ${none ?? -1}")
+  console.print("${million} ${mask} ${flags} ${mode}")
+  console.print("${ratio} ${big} ${single} ${price} ${ready}")
+  console.print("${wait} ${later} ${none ?? -1}")
 }
 ```
 
@@ -231,7 +227,7 @@ export func main(args: List[String]) Void {
 
 ```fortis
 // reject: E-REF-001
-export func main(args: List[String]) Void {
+func main() {
   let small: Int<0..10> = 11    // reject: E-REF-001
 }
 ```
@@ -240,12 +236,11 @@ A byte string `b"abc"` is a `BytesView` of static bytes (LR 3.5):
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let magic = b"FTS1"
-  caps.console.print("${magic.byteCount()} bytes")
+  console.print("${magic.byteCount()} bytes")
 }
 ```
 
@@ -262,7 +257,7 @@ it, because there would be nothing for the view to point into once the statement
 
 ```fortis
 // reject: E-TYP-040
-export func main(args: List[String]) Void {
+func main() {
   let name = "ada"
   let fixed: StringView = "hello"
   let built: String = "hello, ${name}"
@@ -277,17 +272,16 @@ type that implements `Displayable` (LR 3.6):
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 func note(console: Console, label: StringView, value: Int) Int {
   console.print("evaluating ${label}")
   return value
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${note(caps.console, "a", 1)} then ${note(caps.console, "b", 2)}")
-  caps.console.print("""a raw ${string}""")
+func main(console: Console) {
+  console.print("${note(console, "a", 1)} then ${note(console, "b", 2)}")
+  console.print("""a raw ${string}""")
 }
 ```
 
@@ -305,7 +299,7 @@ binding (LR 3.6):
 
 ```fortis
 // reject: E-TYP-040
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Opaque {
   export n: Int
@@ -313,13 +307,12 @@ class Opaque {
 
 try func risky(n: Int) Int => n
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let o = Opaque(n: 1)
-  caps.console.print("${o}")                // reject: E-TYP-040
-  caps.console.print("${risky(2)}")         // reject: E-TYP-040
+  console.print("${o}")                // reject: E-TYP-040
+  console.print("${risky(2)}")         // reject: E-TYP-040
   let r = risky(2) or fail
-  caps.console.print("${r}")
+  console.print("${r}")
 }
 ```
 
@@ -334,7 +327,7 @@ documentation-comment syntax (LR 3.7):
 ```fortis
 // reject: E-SYN-000
 /* not a comment in Fortis */  // reject: E-SYN-000
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -343,15 +336,14 @@ documentation (LR 3.7). `fortis view --decls` lists each declaration with it:
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 // The number of whole minutes in a number of seconds.
 // Rounds down: 119 seconds is one minute.
 export pure func minutes(seconds: Int<0..86400>) Int => seconds / 60
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${minutes(119)}")
+func main(console: Console) {
+  console.print("${minutes(119)}")
 }
 ```
 

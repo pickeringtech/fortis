@@ -1,0 +1,44 @@
+// execute: hello|n 3|n 0|early|cleaned|done
+// requires: runtime
+// covers: LANG-08-01, LANG-07-07
+// X-345 (R6): heads without `Void` run on every backend as the written form does, `main` and `cleanup` included.
+import fortis.host { Console }
+interface Resettable {
+  func reset(editable self)
+}
+class Box implements Resettable {
+  export n: Int
+  export func reset(editable self) {
+    self.n = 0
+  }
+  export func show(self, console: Console) => console.print("n ${self.n}")
+}
+class Tidy {
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("cleaned")
+  }
+}
+func greet(console: Console) {
+  console.print("hello")
+}
+func early(console: Console, n: Int) {
+  if n > 0 {
+    console.print("early")
+    return
+  }
+  console.print("late")
+}
+func main(out: Console) {
+  greet(out)
+  let mut b = Box(n: 3)
+  b.show(out)
+  b.reset()
+  b.show(out)
+  early(out, 1)
+  let console = Shared.create(move out)
+  {
+    let t = Tidy(console: console.retain())
+  }
+  console.print("done")
+}

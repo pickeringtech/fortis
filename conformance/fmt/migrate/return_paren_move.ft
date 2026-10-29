@@ -1,0 +1,23 @@
+// `return (move r)` of a local: the formatter drops the `move`, as from `return move r`, and `return (r)` moves `r`
+// as `return r` does, so its cleanup runs once, in the caller, after `after` (7.5; X-345, R16; D-313). fmt_check runs
+// `main` before and after the formatter, and both print `made|after|drop`.
+import fortis.host { Console }
+
+export class Res {
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop")
+  }
+}
+
+func make(console: Shared[Console]) Res {
+  let r = Res(console: console.retain())
+  console.print("made")
+  return (move r)
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let kept = make(console)
+  console.print("after")
+}

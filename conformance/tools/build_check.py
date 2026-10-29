@@ -5,11 +5,14 @@ sets enforced before native compilation.
 
 Every build runs with the network blocked (`unshare -rn`).
 
-1. **Reproducible from clean clones** (PROG-NFR-22): the committed tree is cloned twice into different directories;
+1. **Reproducible from clean clones** (PROG-NFR-22): the committed tree is cloned twice into different directories
+   (a tree that is not a git checkout, such as a plain download, is copied twice, less its build output);
    each clone builds its own compiler (paths remapped) and then `examples/apps/orders` against one `fortis.lock`
    written by the first clone's compiler. Both clones must verify the lockfile (so their compilers are identical)
    and produce byte-identical executables; their manifests may differ only in the fields the manifest itself
-   lists as nondeterministic, and the ELF sections that differ are disclosed (none are expected).
+   lists as nondeterministic, and the ELF sections that differ are disclosed (none are expected). The full tier
+   runs the clones; `--no-clones` (the quick tier) leaves them out but still builds one package copied to two
+   directories, which must give byte-identical executables that hold neither directory (D-302).
 2. **No build scripts, vendored crates** (PROG-CMP-06): a package that ships a build script is refused before Cargo
    runs (E-NAM-032, and no crate is generated); the crate graph of a build holds only the toolchain's path crates.
 3. **Compile and link apart; no rewrites** (PROG-NFR-07): a build reports compile and link time separately (the link
@@ -113,6 +116,18 @@ def main(argv):
         pkgs = sorted(p["name"] for p in json.loads(crate_graph.stdout)["packages"]) if crate_graph.returncode == 0 else []
         expect("the crate graph holds only the generated crate and the toolchain's vendored runtime crates, none with a build script",
                pkgs == ["fb_orders", "fortis-native", "fortis-runtime"], pkgs)
+        # 1, in one checkout: where a package lies does not reach its executable (D-302). Two copies build to the
+        # same bytes, and neither executable holds the directory it was built from.
+        places = [os.path.join(work, "here", "orders"), os.path.join(work, "a-second-place", "deeper", "orders")]
+        copies = []
+        for i, place in enumerate(places):
+            shutil.copytree(os.path.join(ROOT, "examples", "apps", "orders"), place)
+            exe = os.path.join(out, f"orders-{i}")
+            code, so, se = run([FORTISC, "build", "--format", "text", "--out", exe, place])
+            copies.append(open(exe, "rb").read() if code == 0 else (so + se)[-300:])
+        ok = all(isinstance(b, bytes) for b in copies)
+        expect("a package built from two directories gives byte-identical executables, and neither holds its directory (D-302)",
+               ok and copies[0] == copies[1] and not any(work.encode() in b for b in copies), copies if not ok else "the executables differ or hold the directory")
         # 4. changes exposed
         grow_dir = os.path.join(work, "grow")
         os.makedirs(grow_dir)
@@ -154,13 +169,22 @@ def main(argv):
         expect("importing standard modules performs no runtime work: the VM observes the same run (PLAT-01-04)", vm[0] == vm[1] and "observed: " in vm[0], vm)
         # 1. reproducible from clean clones
         if "--no-clones" not in argv:
-            commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip()
-            dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], capture_output=True, text=True, cwd=ROOT).stdout.strip()
+            # a git checkout is cloned at its commit; a plain download (no git) is copied, less its build output
+            in_git = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], capture_output=True, text=True, cwd=ROOT).stdout.strip() == "true"
+            commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip() if in_git else "(not a git checkout)"
+            dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], capture_output=True, text=True, cwd=ROOT).stdout.strip() if in_git else ""
             clones = [os.path.join(work, "clone-a"), os.path.join(work, "the-second-clone")]
             built = []
             for c in clones:
-                subprocess.run(["git", "clone", "-q", "--no-hardlinks", ROOT, c], check=True)
-                subprocess.run(["git", "checkout", "-q", commit], cwd=c, check=True)
+                if in_git:
+                    subprocess.run(["git", "clone", "-q", "--no-hardlinks", ROOT, c], check=True)
+                    subprocess.run(["git", "checkout", "-q", commit], cwd=c, check=True)
+                else:
+                    sys.path.insert(0, HERE)
+                    import hygiene_check
+                    for rel in hygiene_check.walked_files():
+                        os.makedirs(os.path.dirname(os.path.join(c, rel)), exist_ok=True)
+                        shutil.copy2(os.path.join(ROOT, rel), os.path.join(c, rel), follow_symlinks=False)
                 env = dict(os.environ, RUSTFLAGS=f"--remap-path-prefix={c}=/fortis --remap-path-prefix={os.path.expanduser('~')}/.cargo=/cargo", CARGO_TARGET_DIR=os.path.join(c, "compiler", "target"))
                 t0 = time.time()
                 code, so, se = run(["cargo", "build", "--release", "--offline", "-q", "-p", "fortisc"], cwd=os.path.join(c, "compiler"), env=env, timeout=7200)

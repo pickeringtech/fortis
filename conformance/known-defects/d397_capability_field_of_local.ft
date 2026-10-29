@@ -1,0 +1,28 @@
+// D-397: I/O through the capability field of a local the function made (`let d = make(console, "x")` then
+// `d.console.print(…)`) in a function that takes an Authority value (`Shared[Console]`, 11.6) passes both checkers
+// and runs on the interpreter (`local x|end`), but the VM's IR validation refuses it (`refused-ir:C1.capability`:
+// the receiver is not derived from a parameter through places alone) and the native build reports that refusal
+// as E-INT-001, "internal compiler defect: the typed IR is invalid", which mislabels a validation rule stricter
+// than the Language Reference as a defect of the compiler. v0.0.1 behaved the same. Found by the v0.0.2-rc.9
+// wide review (GLM 5.3).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func throughLocal(console: Shared[Console]) {
+  let d = make(console, "x")
+  d.console.print("local ${d.label}")
+}
+
+func main(console: Console) {
+  let shared = Shared.create(move console)
+  throughLocal(shared)
+  shared.print("end")
+}

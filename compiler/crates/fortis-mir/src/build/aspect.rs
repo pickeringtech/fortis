@@ -29,7 +29,7 @@ impl<'t, 'a> Builder<'t, 'a> {
         for u in uses {
             let ts = u.direct_tokens();
             let aname = ts[1].text.clone();
-            if aname == "observe" {
+            if self.core_aspect(&aname) {
                 continue;
             }
             let line = line_of(*u);

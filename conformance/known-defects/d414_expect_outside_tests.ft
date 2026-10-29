@@ -1,0 +1,31 @@
+// D-414: `expect` in an ordinary function body (`inBody`), or in a deferred block of one (`inDefer`), passes both
+// checkers, and the backends then disagree on a failing one: the interpreter crashes with an uncaught Python
+// `ExpectFailure` traceback (exit 1, no record), the VM reports a dynamic check failure (`dynamic:expect:LINE:
+// actual=false expected=true`, exit 2) and native code refuses the program at build time (E-INT-002, "the Rust
+// generated for main::function inBody does not compile", rustc E0308). With the defer alone the three behave the
+// same way. Only a test body gives `expect` a meaning (11.3: a failed `expect` fails the test); outside one no
+// backend has a defined outcome. v0.0.1 behaved the same. Found by the v0.0.2-rc.10 re-check (GLM 5.3 on
+// OpenCode).
+import fortis.host { Console }
+
+func inBody(console: Shared[Console]) Int {
+  let n = 0
+  expect n > 0
+  return 1
+}
+
+func inDefer(console: Shared[Console]) Int {
+  let n = 0
+  defer {
+    expect n > 0
+    console.print("never")
+  }
+  return 1
+}
+
+func main(console: Console) {
+  let shared = Shared.create(move console)
+  shared.print("got ${inBody(shared)}")
+  shared.print("got ${inDefer(shared)}")
+  shared.print("end")
+}

@@ -149,6 +149,8 @@ pub fn call(g: &mut FnGen, name: &str, args: &[Arg], ty: &Type, line: u32) -> St
         // ---- host
         "Host.capabilities" => "rt::host::capabilities()".to_string(),
         "Console.print" => format!("{}.print(&{})", any(g, 0), any(g, 1)),
+        // a log statement (13, LANG-13-04): the diagnostic plane, named by the function that wrote it
+        "log.info" | "log.warn" | "log.error" => format!("rt::records::log({:?}, &{}, {:?})", &name[4..], any(g, 0), crate::gen::source_name(g.f)),
         "Clock.now" => format!("{}.now()", any(g, 0)),
         "Clock.frozen" => format!("{}.frozen({})", any(g, 0), arg(1)),
         "Clock.elapsedSince" => format!("{}.elapsed_since({})", any(g, 0), arg(1)),
@@ -295,7 +297,14 @@ pub fn call(g: &mut FnGen, name: &str, args: &[Arg], ty: &Type, line: u32) -> St
         "List.set" => format!("rt::collections::list_set({}, {}, {})", arg(0), arg(1), value(g, 2)),
         "Array.set" => format!("{{ let __i = {}; {}[__i as usize] = {}; }}", arg(1), any(g, 0), value(g, 2)),
         "List.iterate" => format!("rt::collections::Cursor::new({})", arg(0)),
-        "ListCursor.next" => format!("{}.next()", any(g, 0)),
+        "ListCursor.next" => {
+            // `(alias T from self)?`: a loan of the item, or the item itself when it is trivial, as `List.get`
+            if trivial(ty, g.prog) || matches!(ty, Type::Optional(i) if crate::types::trivial(i, g.prog)) {
+                format!("{}.next().copied()", any(g, 0))
+            } else {
+                format!("{}.next()", any(g, 0))
+            }
+        }
         "List.consumeEach" => format!("{{ let mut __f = {}; for __x in {} {{ (__f)(__x); }} }}", value(g, 1), value(g, 0)),
         "Array.filled" => {
             let v = value(g, 0);
@@ -303,8 +312,14 @@ pub fn call(g: &mut FnGen, name: &str, args: &[Arg], ty: &Type, line: u32) -> St
         }
         "Map.default" => "rt::OrderedMap::new()".to_string(),
         "Map.get" => {
+            // `(alias V from self)?`: a loan of the value, or the value itself when it is trivial, as `List.get`. A
+            // copy would be a second owner, and its drop would run the value's `cleanup` again (12.2; D-338)
             let k = key(g, args, 1);
-            format!("{}.get({k}).cloned()", any(g, 0))
+            if trivial(ty, g.prog) || matches!(ty, Type::Optional(i) if crate::types::trivial(i, g.prog)) {
+                format!("{}.get({k}).copied()", any(g, 0))
+            } else {
+                format!("{}.get({k})", any(g, 0))
+            }
         }
         "Map.set" => format!("{}.set({}, {})", any(g, 0), value(g, 1), value(g, 2)),
         "Map.count" | "Set.count" => format!("{}.count()", any(g, 0)),

@@ -35,7 +35,7 @@ Using a keyword where a name is declared is `E-SYN-002`: a variable, a parameter
 
 ```fortis
 // reject: E-SYN-002
-export func main(args: List[String]) Void {
+func main() {
   let match = 3          // reject: E-SYN-002
 }
 ```
@@ -49,7 +49,7 @@ class Span {
   export until: Int
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -64,19 +64,18 @@ the grammar simply accepts a keyword where a member name is expected. This is wh
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Query {
   export limit: Int
-  export pure func from(limit: Int) Query => Query(limit: limit)
+  export pure func from(limit: Int) Query => Query(limit)
   export pure func where(self, n: Int) Int => n
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let q = Query.from(5)
   let text = String.from("view")
-  caps.console.print("${q.where(3)} ${q.limit} ${text}")
+  console.print("${q.where(3)} ${q.limit} ${text}")
 }
 ```
 
@@ -93,13 +92,12 @@ A handful of words have a fixed meaning in one place but are not reserved: `laun
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let capability = "read"
   let lazy = true
-  caps.console.print("${capability} ${lazy}")
+  console.print("${capability} ${lazy}")
 }
 ```
 

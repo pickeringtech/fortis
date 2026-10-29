@@ -1,7 +1,7 @@
 // execute: adult|rejected refinement.out_of_range|minor
 // requires: runtime
 // covers: LANG-06-03
-import fortis.host { Host }
+import fortis.host { Console }
 export type Age = Int<0..150>
 func classify(age: Age) String {
   if age < Age(18) {
@@ -9,16 +9,15 @@ func classify(age: Age) String {
   }
   return "adult"
 }
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+recovers func main(console: Console) {
   let a = Age.validate(42) or recover Age(0)
-  caps.console.print(classify(a))
+  console.print(classify(a))
   match Age.validate(200) {
-    success(ok) => caps.console.print("accepted")
+    success(ok) => console.print("accepted")
     failure(f) => {
-      caps.console.print("rejected ${f.code}")
+      console.print("rejected ${f.code}")
       report f
     }
   }
-  caps.console.print(classify(Age(3)))
+  console.print(classify(Age(3)))
 }

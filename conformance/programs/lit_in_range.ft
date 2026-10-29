@@ -1,7 +1,7 @@
 // accept
 // covers: LANG-03-05
 // Boundary values of every built-in integer type, hexadecimal, binary and octal forms, digit separators.
-pure func ranges() Void {
+pure func ranges() {
   let a: Int8 = -128
   let b: Int8 = 127
   let c: Int16 = 32767

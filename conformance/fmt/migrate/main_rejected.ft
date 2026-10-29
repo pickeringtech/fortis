@@ -1,0 +1,6 @@
+// D-309: the entry rewrite is syntactic, so a rejected module keeps its `main` as written. Here the module's own
+// `List` makes `args: List[String]` the wrong form of 4.6 (E-NAM-001); dropping the unread `args` would turn the
+// rejection into an acceptance. Only `Void` goes, which leaves the record where it was (X-345, R6).
+export class List[T] {}
+
+export func main(args: List[String]) Void {}

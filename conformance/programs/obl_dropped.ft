@@ -2,6 +2,6 @@
 // covers: LANG-10-01
 try func half(n: Int) Int => n
 
-func use(n: Int) Void {
+func use(n: Int) {
   half(n)                                   // reject: E-OBL-001 — outcome dropped at end of block
 }

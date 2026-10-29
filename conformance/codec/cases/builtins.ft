@@ -1,20 +1,19 @@
 // The codec-eligible built-ins: each value is written as <name>.json and <name>.bin into the development
 // FileSystem and decoded back from both; every printed line must end "true true".
-import fortis.host { Host, Console, FileSystem, Path }
+import fortis.host { Console, FileSystem, Path }
 import fortis.money { Money, Currency }
-try func save(fs: FileSystem, name: String, text: String, bytes: Bytes) Void {
+try func save(fs: FileSystem, name: String, text: String, bytes: Bytes) {
   let tp = Path.parse("${name}.json") or fail
   fs.writeAll(tp, text) or fail
   let bp = Path.parse("${name}.bin") or fail
   let mut f = fs.create(bp) or fail
-  defer { editable f.close() }
-  editable f.writeAll(bytes) or fail
+  defer { f.close() }
+  f.writeAll(bytes) or fail
 }
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  roundTrips(caps.fileSystem, caps.console) or fail
+try func main(fileSystem: FileSystem, console: Console) {
+  roundTrips(fileSystem, console) or fail
 }
-try func roundTrips(fs: FileSystem, out: Console) Void {
+try func roundTrips(fs: FileSystem, out: Console) {
   let b: Bool = true
   save(fs, "bool", b.toText(), b.toBytes()) or fail
   let b1 = Bool.fromText(b.toText()) or fail
@@ -127,7 +126,7 @@ try func roundTrips(fs: FileSystem, out: Console) Void {
   let c1 = Currency.fromText(cur.toText()) or fail
   let c2 = Currency.fromBytes(cur.toBytes()) or fail
   out.print("currency ${c1 == cur} ${c2 == cur}")
-  let m = Money.of(Currency.GBP, 19.99d)
+  let m = Money.of(GBP, 19.99d)
   save(fs, "money", m.toText(), m.toBytes()) or fail
   let m1 = Money.fromText(m.toText()) or fail
   let m2 = Money.fromBytes(m.toBytes()) or fail
@@ -143,16 +142,16 @@ try func roundTrips(fs: FileSystem, out: Console) Void {
   let a2 = Array[Int, 3].fromBytes(a.toBytes()) or fail
   out.print("array ${a1.count() == 3} ${a2.count() == 3}")
   let mut mp: Map[String, Int] = Map.default()
-  editable mp.set("b", 2)
-  editable mp.set("a", 1)
+  mp.set("b", 2)
+  mp.set("a", 1)
   save(fs, "map", mp.toText(), mp.toBytes()) or fail
   let mp1 = Map[String, Int].fromText(mp.toText()) or fail
   let mp2 = Map[String, Int].fromBytes(mp.toBytes()) or fail
   out.print("map ${mp1.toText() == mp.toText()} ${mp2.toText() == mp.toText()}")
   let mut st: Set[Int] = Set.default()
-  discard editable st.add(30)
-  discard editable st.add(10)
-  discard editable st.add(20)
+  discard st.add(30)
+  discard st.add(10)
+  discard st.add(20)
   save(fs, "set", st.toText(), st.toBytes()) or fail
   let st1 = Set[Int].fromText(st.toText()) or fail
   let st2 = Set[Int].fromBytes(st.toBytes()) or fail

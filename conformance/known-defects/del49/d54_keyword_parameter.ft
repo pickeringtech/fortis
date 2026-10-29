@@ -1,0 +1,10 @@
+// D-54.6: a parameter named with a keyword (`from`) is E-SYN-002 from `fortisc check` and from the reference checker
+// ("keyword 'from' used as an identifier", LR 3.4), and E-SYN-000, the generic syntax error, from `fortisc vm`. Both
+// tools refuse the program; only the record differs.
+import fortis.host { Console }
+
+pure func show(from: Int) Int => from
+
+func main(console: Console) {
+  console.print("${show(3)}")
+}

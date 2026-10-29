@@ -1,0 +1,50 @@
+// execute: red square 3 blue|green blue|blue dot
+// requires: runtime
+// covers: LANG-09-05
+// 9.7 (X-345): a bare variant in a field initialiser takes the field's type, with or without a payload, and builds the
+// same value as the qualified form on every backend; a class constant, a module constant and a parameter default
+// with a declared type do the same.
+import fortis.host { Console }
+
+enum Hue {
+  Red
+  Green
+  Blue
+}
+
+enum Shape {
+  Dot
+  Square(side: Int)
+}
+
+class Paint {
+  hue: Hue = Red
+  shape: Shape = Square(side: 3)
+  other: Hue = Hue.Blue
+  const base: Hue = Green
+}
+
+const fallback: Hue = Blue
+
+func named(h: Hue) String {
+  return match h {
+    Red => "red"
+    Green => "green"
+    Blue => "blue"
+  }
+}
+
+func outline(s: Shape = Dot) String {
+  return match s {
+    Dot => "dot"
+    Square(side: n) => "square ${n}"
+  }
+}
+
+func main(console: Console) {
+  let p = Paint()
+  console.print("${named(p.hue)} ${outline(p.shape)} ${named(p.other)}")
+  console.print("${named(Paint.base)} ${named(fallback)}")
+  let q = Paint(hue: Blue)
+  console.print("${named(q.hue)} ${outline()}")
+}

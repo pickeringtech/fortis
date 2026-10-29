@@ -1,0 +1,39 @@
+// execute: plain 0|paren 0|assigned 0|small 0|mix -4|checked 0
+// requires: runtime
+// covers: LANG-06-02, LANG-06-04
+// D-240: the checker proves `x % -1` safe (the remainder is 0 whatever `x` is), so no backend may fail or abort on
+// it: `Int.MIN % -1` is 0, as `Int.rem` gives it, on the interpreter, the VM and native, where Rust's `%` panics.
+// The same holds bare, through parentheses, as `%=`, on a sized integer, and inside a checked region of v0.0.2,
+// where the region's other operator overflows and is recovered.
+import fortis.host { Console }
+
+func plain(x: Int) Int => x % -1
+
+func paren(x: Int) Int => x % (0 - 1)
+
+func assigned(x: Int) Int {
+  let mut y = x
+  y %= -1
+  return y
+}
+
+func small(x: Int32) Int32 {
+  let m: Int32 = -1
+  return x % m
+}
+
+recovers func mix(x: Int) Int => x % -1 + x + x or recover -4
+
+try recovers func checked(x: Int, y: Int) Int => x % y or recover -5
+
+recovers func main(console: Console) {
+  let min = -9223372036854775807 - 1
+  console.print("plain ${plain(min)}")
+  console.print("paren ${paren(min)}")
+  console.print("assigned ${assigned(min)}")
+  let least: Int32 = -2147483648
+  console.print("small ${small(least)}")
+  console.print("mix ${mix(min)}")
+  let c = checked(min, -1) or recover -6
+  console.print("checked ${c}")
+}

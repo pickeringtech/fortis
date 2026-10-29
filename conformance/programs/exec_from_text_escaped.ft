@@ -1,0 +1,24 @@
+// execute: a${b}c|e${not}|s${t}|end
+// requires: runtime
+// covers: LANG-07-06, LANG-03-06
+// D-412, 3.6, 6.6, 7.6: `\${` is the text `${`, not a hole, so a string literal whose only `${` is escaped has no
+// interpolation: it is a view of static storage and lends where a view `from` a parameter is declared, as an
+// expression body, as a returned value and where the view is declared `from static`. Both checkers judged it by a
+// raw search for `${` and rejected it as the function's own; every backend prints it literally.
+import fortis.host { Console }
+
+func escaped(xs: List[Int]) StringView from xs => "a\${b}c"
+
+func escapedBody(xs: List[Int]) StringView from xs {
+  return "e\${not}"
+}
+
+func escapedStatic(xs: List[Int]) StringView from static => "s\${t}"
+
+func main(console: Console) {
+  let xs: List[Int] = List.of(1)
+  console.print("${escaped(alias xs)}")
+  console.print("${escapedBody(alias xs)}")
+  console.print("${escapedStatic(alias xs)}")
+  console.print("end")
+}

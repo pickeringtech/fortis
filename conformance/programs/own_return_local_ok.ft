@@ -1,0 +1,53 @@
+// accept
+// covers: LANG-07-01, LANG-07-04
+// X-345 (R16): `return x` moves `x` when `x` is a local `let` or `let mut` binding of the function, or of the lambda
+// whose body returns it: nothing can use it afterwards. `return move x` is still accepted.
+export class Entry {
+  export word: String
+  export count: Int
+}
+
+pure func entries(words: List[String]) List[Entry] {
+  let mut out: List[Entry] = List.default()
+  for w in words {
+    out.push(Entry(word: copy w, count: 1))
+  }
+  return out
+}
+
+func first(words: List[String]) Entry {
+  let e = Entry(word: String.from("none"), count: 0)
+  if words.count() > 0 {
+    let picked = Entry(word: String.from("some"), count: 1)
+    return picked
+  }
+  return e
+}
+
+func renamed(name: StringView) String {
+  let mut s = String.from(name)
+  s = String.from("x")
+  return s
+}
+
+func marked() List[Int] {
+  let xs = List.of(1, 2)
+  return move xs
+}
+
+func viaLambda() Int {
+  let make = fn() List[Int] {
+    let ys = List.of(3)
+    return ys
+  }
+  let got = make()
+  return got.count()
+}
+
+func reinitialised() List[Int] {
+  let mut xs = List.of(1)
+  let ys = move xs
+  xs = List.of(2)
+  discard ys.count()
+  return xs
+}

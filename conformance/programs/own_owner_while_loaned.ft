@@ -4,7 +4,7 @@ export class Cell {
   export value: Int
 }
 
-func use(c: editable Cell) Void {
+func use(c: editable Cell) {
   let r = editable c
   r.value = 1
   discard c.value                           // reject: E-OWN-011 — c is suspended while r is live

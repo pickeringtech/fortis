@@ -1,0 +1,17 @@
+{
+  "G1": {
+    "description": "the synchronous language without defer, host capabilities, codecs and async; fixtures enter it when none of their `requires:` tags names an excluded feature",
+    "excluded features": [
+      "defer",
+      "async",
+      "scope",
+      "pools",
+      "host",
+      "codec",
+      "defects"
+    ]
+  },
+  "core": {
+    "description": "every core-stage fixture (no kit package imported)"
+  }
+}

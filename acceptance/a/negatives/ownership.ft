@@ -27,8 +27,8 @@ export class Ledger {
   export func empty() Ledger => Ledger(items: List.default())
 
   // Takes ownership of the item.
-  export func add(editable self, item: owned Item) Void {
-    editable self.items.push(item)
+  export func add(editable self, item: owned Item) {
+    self.items.push(item)
   }
 
   export func count(self) Int => self.items.count()
@@ -63,7 +63,7 @@ export class Ledger {
     }
     let item = self.items.at(found) or fail
     let left = withdrawn(item.quantity, quantity) or fail
-    editable self.items.set(found, Item(sku: sku, name: copy item.name, quantity: left)) or fail
+    self.items.set(found, Item(sku, name: copy item.name, quantity: left)) or fail
     return left
   }
 
@@ -75,7 +75,7 @@ export class Ledger {
     }
     let item = self.items.at(found) or fail
     let now = restocked(item.quantity, delivery.quantity) or fail
-    editable self.items.set(found, Item(sku: item.sku, name: copy item.name, quantity: now)) or fail
+    self.items.set(found, Item(sku: item.sku, name: copy item.name, quantity: now)) or fail
     return now
   }
 
@@ -85,9 +85,9 @@ export class Ledger {
   }
 
   // `fn mut`: the visitor may change what it captured; it is passed by exclusive loan.
-  export func visit(self, visitor: editable fn mut(Item) Void) Void {
+  export func visit(self, visitor: editable fn mut(Item) Void) {
     for item in self.items {
-      editable visitor(item)
+      visitor(item)
     }
   }
 
@@ -95,9 +95,9 @@ export class Ledger {
   export func takeAll(editable self, orders: ListView[Entry]) List[Outcome[Int<0..10000>]] {
     let mut results: List[Outcome[Int<0..10000>]] = List.default()
     for order in orders {
-      editable results.push(editable self.take(order.sku, order.quantity))
+      results.push(self.take(order.sku, order.quantity))
     }
-    return move results
+    return results
   }
 }
 
@@ -107,7 +107,7 @@ export func close(ledger: owned Ledger) Summary {
   for item in ledger.items {
     units = Int.saturatingAdd(units, item.quantity)
   }
-  return Summary(skus: ledger.count(), units: units)
+  return Summary(skus: ledger.count(), units)
 }
 
 // Two stock levels summed with a plain operator: the interval domain proves it (6.3).
@@ -115,21 +115,21 @@ export func pairTotal(a: Item, b: Item) Int<0..20000> => combined(a.quantity, b.
 
 func sample() Ledger {
   let mut ledger = Ledger.empty()
-  editable ledger.add(Item(sku: SkuId(1), name: String.from("widget"), quantity: 40))
-  editable ledger.add(Item(sku: SkuId(2), name: String.from("gear"), quantity: 0))
-  editable ledger.add(Item(sku: SkuId(3), name: String.from("bolt"), quantity: 10000))
-  return move ledger
+  ledger.add(Item(sku: SkuId(1), name: String.from("widget"), quantity: 40))
+  ledger.add(Item(sku: SkuId(2), name: String.from("gear"), quantity: 0))
+  ledger.add(Item(sku: SkuId(3), name: String.from("bolt"), quantity: 10000))
+  return ledger
 }
 
 test "withdrawals at the boundaries" {
   let mut ledger = sample()
-  expect (editable ledger.take(SkuId(1), 40) or fail) == 0
-  expect (editable ledger.take(SkuId(3), 0) or fail) == 10000
-  let over = editable ledger.take(SkuId(2), 1) catch e {
+  expect ledger.take(SkuId(1), 40) == 0
+  expect ledger.take(SkuId(3), 0) == 10000
+  let over = ledger.take(SkuId(2), 1) catch e {
     expect e.code == "stock.insufficient"
     recover 0
   }
-  let unknown = editable ledger.take(SkuId(9), 1) catch e {
+  let unknown = ledger.take(SkuId(9), 1) catch e {
     expect e.code == "stock.unknown_sku"
     recover 0
   }
@@ -138,8 +138,8 @@ test "withdrawals at the boundaries" {
 
 test "deliveries stay inside the stock range" {
   let mut ledger = sample()
-  expect (editable ledger.receive(Entry(sku: SkuId(2), bin: BinId(1), quantity: 10000)) or fail) == 10000
-  let full = editable ledger.receive(Entry(sku: SkuId(3), bin: BinId(1), quantity: 1)) catch e {
+  expect ledger.receive(Entry(sku: SkuId(2), bin: BinId(1), quantity: 10000)) == 10000
+  let full = ledger.receive(Entry(sku: SkuId(3), bin: BinId(1), quantity: 1)) catch e {
     expect e.code == "refinement.out_of_range"
     recover 10000
   }
@@ -175,7 +175,7 @@ test "closures of the three kinds" {
 test "every outcome of a batch is consumed" {
   let mut ledger = sample()
   let orders = List.of(Entry(sku: SkuId(1), bin: BinId(1), quantity: 10), Entry(sku: SkuId(2), bin: BinId(1), quantity: 1))
-  let results = editable ledger.takeAll(orders)
+  let results = ledger.takeAll(orders)
   expect results.count() == 2
   let mut good = 0
   let mut bad = 0

@@ -2,7 +2,7 @@
 // covers: PLAT-03-01
 // An `inject` slot becomes a field where it is written, so a field that spans several lines next to it is left
 // whole (only the word `inject` leaves the slot's line).
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Rate {
   percent: Int
@@ -22,7 +22,6 @@ context Production {
   provide Policy
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(Production.application().policy().describe())
+func main(console: Console) {
+  console.print(Production.application().policy().describe())
 }

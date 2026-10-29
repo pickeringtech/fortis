@@ -43,14 +43,14 @@ Further reading:
 - [Worked examples](worked-examples.md): larger programs, each explained line by line.
 - Notes for readers coming from [Rust](from-rust.md), [TypeScript](from-typescript.md) and [Python](from-python.md).
 - The [glossary](glossary.md): kit, package, head, binding, verifier and the other terms.
-- [Known limitations of v0.0.1](known-limitations.md): what this release refuses or does not yet do, and the workaround for each.
+- [Known limitations of v0.0.2](known-limitations.md): what this release refuses or does not yet do, and the workaround for each.
 - The [core library](../agent/library.md): every operation of the standard modules, with its contract, generated
   from the library's declarations.
 
 ## How the examples are checked
 
 Every example in this guide is a program that the real toolchain checks and runs, so the guide cannot drift
-from the language (PROG-TST-08). An example's first line says what is expected of it, in the same notation as
+from the language. An example's first line says what is expected of it, in the same notation as
 the LR (LR 0):
 
 - `// accept`: both checkers accept it, and it runs. A program with `main` runs on all three backends (the

@@ -1,11 +1,11 @@
 {
- "grammar_sha256": "c383b8df6bb6969b485a2e57bc97bd208aecd7960bfb91211a7a54e7df7bee8a",
+ "grammar_sha256": "92246869e741341209aa1a55156eb9cb1dedec9eccc73c8802789cdae27f0167",
  "kmax": 3,
  "runs": [
   {
    "k": 1,
-   "decisions": 287,
-   "conflicts": 84,
+   "decisions": 293,
+   "conflicts": 85,
    "undocumented": 10,
    "conflict_list": [
     {
@@ -204,6 +204,18 @@
       "KIND:NL"
      ],
      "policy": "P2"
+    },
+    {
+     "rule": "funcSignature",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "{"
+     ],
+     "policy": "P3"
     },
     {
      "rule": "paramList",
@@ -1053,8 +1065,8 @@
   },
   {
    "k": 2,
-   "decisions": 287,
-   "conflicts": 42,
+   "decisions": 293,
+   "conflicts": 43,
    "undocumented": 2,
    "conflict_list": [
     {
@@ -1071,6 +1083,19 @@
       "KIND:UPPER pure",
       "KIND:UPPER recovers",
       "KIND:UPPER trusted"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "funcSignature",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "{ KIND:LOWER",
+      "{ KIND:NL"
      ],
      "policy": "P3"
     },
@@ -1695,8 +1720,8 @@
   },
   {
    "k": 3,
-   "decisions": 287,
-   "conflicts": 35,
+   "decisions": 293,
+   "conflicts": 36,
    "undocumented": 0,
    "conflict_list": [
     {
@@ -1713,6 +1738,19 @@
       "KIND:UPPER KIND:UPPER pure",
       "KIND:UPPER KIND:UPPER recovers",
       "KIND:UPPER KIND:UPPER trusted"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "funcSignature",
+     "where": "alternative",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "{ KIND:LOWER :",
+      "{ KIND:NL KIND:LOWER"
      ],
      "policy": "P3"
     },

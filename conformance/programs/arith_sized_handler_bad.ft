@@ -1,0 +1,16 @@
+// reject: E-REF-002, E-TYP-040 (at the marked lines)
+// covers: LANG-06-04
+// 6.4 (X-345): the sized integer types have no checked operation, so an unproved operator on one stays `E-REF-002`
+// under `or fail`, `or recover` and `catch`, and its record asks for a refined type or a test, not `Int.add`. It is
+// reported once: the handler does not add an `E-TYP-040` saying the arithmetic is proved safe. `>>` has no checked
+// operation on `Int` either. A region that is proved, on a sized type too, still cannot fail (`E-TYP-040`).
+try func sized(a: Int32, b: Int32, c: UInt8, d: UInt8, n: Int, k: Int, small: Int32<0..10>) Int32 {
+  let s = a + b or fail                         // reject: E-REF-002 — Int32 has no checked operation
+  let q = a / b or recover 0                    // reject: E-REF-002 — the divisor may be zero
+  let p = c * d catch e {                       // reject: E-REF-002 — UInt8 has no checked operation
+    give 0
+  }
+  let h = n >> k or fail                        // reject: E-REF-002 — `>>` has no checked operation
+  let t = small + small or fail                 // reject: E-TYP-040 — proved safe: drop `or fail`
+  return small
+}

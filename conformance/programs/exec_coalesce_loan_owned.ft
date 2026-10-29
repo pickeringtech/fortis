@@ -1,0 +1,99 @@
+// execute: label ann|label anon|text yo|text dd|text oo|item b|fallback item|item fb|param p|param dd|show oo|show yo|fallback show|show fb|item o|item b|fallback item|item fb
+// requires: runtime
+// covers: LANG-07-01, LANG-06-08
+// D-341, 5.7, 7.6: a `??` whose result can be a loan is read where it is lent, and made owned with `copy`: a field of
+// the borrowed `self`, a nested lent `??` behind an owned optional, a read parameter. Lent to a read parameter, each
+// fallback still runs only when everything to its left is null; returned with `copy`, the value is the caller's own.
+import fortis.host { Console }
+
+class Item {
+  name: String
+}
+
+class Member {
+  nick: String?
+
+  func label(self) String {
+    return copy self.nick ?? "anon"
+  }
+}
+
+func noisy(console: Console, label: StringView) String {
+  console.print("fallback ${label}")
+  return String.from("fb")
+}
+
+func noisyItem(console: Console) Item {
+  console.print("fallback item")
+  return Item(name: String.from("fb"))
+}
+
+func show(console: Console, label: StringView, s: String) {
+  console.print("${label} ${s}")
+}
+
+func showItem(console: Console, label: StringView, it: Item) {
+  console.print("${label} ${it.name}")
+}
+
+func maybe(given: Bool) String? {
+  if given {
+    return String.from("oo")
+  }
+  return null
+}
+
+func maybeItem(given: Bool) Item? {
+  if given {
+    return Item(name: String.from("o"))
+  }
+  return null
+}
+
+func nestedText(o: owned String?, ys: List[String], d: owned String) String {
+  let h = ys.get(0)
+  return move o ?? (copy h ?? move d)
+}
+
+func nestedItem(ys: List[Item], d: owned Item) Item {
+  let h = ys.get(0)
+  return copy h ?? move d
+}
+
+func param(s: String?, d: owned String) String {
+  return copy s ?? move d
+}
+
+func lent(console: Console, given: Bool, ys: List[String]) {
+  show(console, "show", maybe(given) ?? (ys.get(0) ?? noisy(console, "show")))
+}
+
+func lentItem(console: Console, given: Bool, ys: List[Item]) {
+  showItem(console, "item", maybeItem(given) ?? (ys.get(0) ?? noisyItem(console)))
+}
+
+func main(console: Console) {
+  let named = Member(nick: String.from("ann"))
+  let plain = Member(nick: null)
+  console.print("label ${named.label()}")
+  console.print("label ${plain.label()}")
+  let mut ys: List[String] = List.default()
+  ys.push(String.from("yo"))
+  let none: List[String] = List.default()
+  console.print("text ${nestedText(null, ys, String.from("dd"))}")
+  console.print("text ${nestedText(null, none, String.from("dd"))}")
+  console.print("text ${nestedText(String.from("oo"), ys, String.from("dd"))}")
+  let mut items: List[Item] = List.default()
+  items.push(Item(name: String.from("b")))
+  let noItems: List[Item] = List.default()
+  console.print("item ${nestedItem(items, Item(name: String.from("d"))).name}")
+  console.print("item ${nestedItem(noItems, noisyItem(console)).name}")
+  console.print("param ${param(String.from("p"), String.from("dd"))}")
+  console.print("param ${param(null, String.from("dd"))}")
+  lent(console, true, ys)
+  lent(console, false, ys)
+  lent(console, false, none)
+  lentItem(console, true, items)
+  lentItem(console, false, items)
+  lentItem(console, false, noItems)
+}

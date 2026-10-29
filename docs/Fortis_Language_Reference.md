@@ -1,6 +1,6 @@
 # Fortis Language Reference
 
-**Document:** FSPEC-0.2-LR • **Date:** 22 October 2026 • **Status:** normative reference for Fortis Language 1.0 (the core). Companion documents: `Fortis_Specification.md` (overview and index), `Fortis_Platform_Specification.md` (kits), `Fortis_Delivery_Programme.md` (requirements register, gates, evidence). The normative grammar is `reference/grammar/fortis.ebnf`.
+**Document:** FSPEC-0.2-LR • **Date:** 22 October 2026 • **Status:** normative reference for Fortis Language 1.0 (the core). Companion documents: `Fortis_Specification.md` (overview and index), `Fortis_Platform_Specification.md` (kits), the Delivery Programme (requirements register, gates, evidence; kept with the maintainers' planning records). The normative grammar is `reference/grammar/fortis.ebnf`.
 
 ## Contents
 
@@ -95,7 +95,7 @@ Two deliberate costs. `(f() or fail).amount` needs its parentheses because `or` 
 
 What was removed to keep noise down: semicolons; `///` and `/* */` comment forms; `yield`; `or die`; `nostate`; a separate `self: editable Self` spelling (now `editable self`, like any parameter); `alias editable` (now `editable`); `alias type` transparent aliases (so `alias` has one meaning and `type X = …` is always nominal); `within` (a stored loan says `from r` like a returned one); `give` in single-expression match arms (only block arms need it); empty `fn[]` capture lists; `::` paths; operator overloading; implicit `it`; postfix `?` for errors; `new` (constructors are named `create`, `of` or `from`); `return` in expression-bodied functions.
 
-The formatter prints every inferred fact in canonical form, so a formatted file shows the closure kind, the loan modes and the modifiers the checker used; a reader of a formatted file never has to infer them.
+The formatter prints every inferred fact in canonical form, so a formatted file shows the closure kind, the loan modes and the modifiers the checker used; a reader of a formatted file never has to infer them. The one exception is a lambda's inferred `pure` and `noalloc`, which the formatter does not print back (one the author wrote is kept): the function type the lambda is passed to states what it must be, and the checker enforces it there (8.2, X-345).
 
 ## 2. A complete worked module
 
@@ -322,7 +322,7 @@ Underscores may separate digit groups. A literal of a trivial type is a fresh va
 
 ### 3.6 Strings and interpolation
 
-`${expression}` inside a double-quoted string interpolates. The interpolated text is on one line and contains no comment. The expression is evaluated exactly once, left to right with the rest of the string, and must have a type implementing `Displayable`. An interpolated expression cannot be a fallible call or an `await`; write the call on its own line and interpolate the binding. Interpolation takes an implicit read loan of the places it names. Escaping for HTML or other contexts is never part of string interpolation; templates in the Web UI kit apply contextual escaping separately.
+`${expression}` inside a double-quoted string interpolates. The interpolated text is on one line and contains no comment. The expression is evaluated exactly once, left to right with the rest of the string, and must have a type implementing `Displayable`. An interpolated expression cannot be a fallible call or an `await`; write the call on its own line and interpolate the binding. Interpolation takes an implicit read loan of the places it names. A backslash escapes the character after it, so `\${` is the text `${` and opens no hole: a literal whose every `${` is escaped has no interpolation and is a `StringView from static` (3.5, 6.6). Escaping for HTML or other contexts is never part of string interpolation; templates in the Web UI kit apply contextual escaping separately.
 
 ### 3.7 Comments
 
@@ -394,19 +394,33 @@ Shadowing a visible binding with a `let` is an error (`E-NAM-003`). Fields are a
 
 ### 4.6 Entry point
 
-An application package names an entry module in `project.yaml` (`entry: app`). That module must export a function named `main` with one of these signatures:
+An application package names an entry module in `project.yaml` (`entry: app`). That module must declare a function named `main` with one of these heads, where `…` is the parameter list described below:
 
 ```fortis
 // illustrative
-export func main(args: List[String]) Void
-export try func main(args: List[String]) Void
-export async func main(args: List[String]) Void
-export async try func main(args: List[String]) Void
+func main(…)
+try func main(…)
+async func main(…)
+async try func main(…)
 ```
 
-Each form may also carry `recovers`, which a `main` whose summary has that effect writes like any function (8.1, 11.2; X-155): it is transitive, so without it no program could recover a failure anywhere `main` reaches, and it changes nothing a caller relies on, since `main` has none. An `async` entry runs on the core cooperative executor as the root task; its completion ends the process.
+`main` returns nothing: its result type is `Void`, written or left out (8.1, X-345). Each form may also carry `recovers`, which a `main` whose summary has that effect writes like any function (8.1, 11.2; X-155): it is transitive, so without it no program could recover a failure anywhere `main` reaches, and it changes nothing a caller relies on, since `main` has none. An `async` entry runs on the core cooperative executor as the root task; its completion ends the process. `export` may be written before any form and is implied when it is not: the entry module's `main` is the entry whether or not it is exported (X-345).
 
-The **entry `main`** is that function: the `main` of the manifest's entry module, or of a single-file program. It obtains I/O authority by calling `Host.capabilities()` from `fortis.host` exactly once, directly in its own body (section 11.6; the capability types and `Host.capabilities()` are part of the core runtime inventory, section 15). Only the runtime calls the entry `main`, once: Fortis code never refers to it (`E-EFF-010`). If a `try main` fails, the runtime prints exactly one report of the failure to standard error and exits with status 1. That report, like every record written by `report`, is a structured failure record (code, payload, receipt) rendered as text on a terminal and as one JSON line otherwise (Delivery Programme 7.4). There is no `or die` operator.
+**Parameters, supplied by type.** The runtime supplies each parameter of the entry `main` by its type, so the parameters say what the program needs and nothing else (X-345). A parameter is `name: T` with no mode, default or `...`, in any order and under any name, where `T` is either `List[String]` (the prelude's), which receives the command-line arguments, or one of the ten capability types of 11.6, imported from `fortis.host`, which receives that capability. Each type appears at most once, and a `main` that needs nothing takes no parameters. A parameter of any other type is rejected (`E-NAM-005`), as is a second parameter of a type already taken (`E-NAM-006`). `main` owns its capability parameters, as it owns a value it created: it lends them to the functions it calls, and it may move one, for example into a `Shared` (`Shared.create(move console)`, 7.8). The command-line arguments are lent to `main`, as before.
+
+```fortis
+// accept
+import fortis.host { Console, FileSystem, Path }
+try func main(console: Console, files: FileSystem) Void {
+  let path = Path.parse("greeting.txt") or fail
+  files.writeAll(path, "hello from main") or fail
+  console.print(files.readText(path) or fail)
+}
+```
+
+The v0.0.1 form, `export func main(args: List[String]) Void` with `Host.capabilities()` called in the body, stays accepted: `args` is one parameter of that list, and a `main` that takes no capability parameter may still create its capabilities with one direct call of `Host.capabilities()` (11.6). A `main` that takes a capability parameter has had its capabilities created by the runtime, so it may not call `Host.capabilities()` (`E-EFF-010`). The formatter rewrites the v0.0.1 form to this one wherever the rewrite keeps the program's meaning: the capabilities the body reaches through `caps.console` and its siblings, or through a `Capabilities(...)` destructuring, become parameters named after their fields or bindings, `args` is dropped when nothing reads it, and the `export` is dropped.
+
+The **entry `main`** is that function: the `main` of the manifest's entry module, or of a single-file program. It obtains I/O authority through its capability parameters, or by calling `Host.capabilities()` from `fortis.host` exactly once, directly in its own body (section 11.6; the capability types and `Host.capabilities()` are part of the core runtime inventory, section 15). Only the root program's entry `main` receives capabilities (X-271): a function named `main` anywhere else is an ordinary function, and every other function receives a capability as an ordinary parameter. Only the runtime calls the entry `main`, once: Fortis code never refers to it (`E-EFF-010`). If a `try main` fails, the runtime prints exactly one report of the failure to standard error and exits with status 1. That report, like every record written by `report`, is a structured failure record (code, payload, receipt) rendered as text on a terminal and as one JSON line otherwise (Delivery Programme 7.4). There is no `or die` operator.
 
 | Rule | Statement | Acceptance evidence |
 |---|---|---|
@@ -415,7 +429,7 @@ The **entry `main`** is that function: the `main` of the manifest's entry module
 | LANG-04-03 | Only modules listed in the exporting package's `exports:` MAY be imported across packages. | Cross-package negative tests. |
 | LANG-04-04 | Different versions of one package, and different modules, MUST have distinct nominal types. | Diamond-dependency corpus; same-name types of two modules. |
 | LANG-04-05 | Shadowing a visible binding MUST be rejected. | Nested block corpus. |
-| LANG-04-06 | The entry point MUST be the exported `main` of the manifest's entry module with a signature from 4.6 (the four forms, each optionally `recovers`). | Missing/wrong entry fixtures; a `recovers` entry. |
+| LANG-04-06 | The entry point MUST be the `main` of the manifest's entry module, exported or not, with a head from 4.6 (the four forms, each optionally `recovers`); each of its parameters MUST be `List[String]` or a capability type, each type at most once (`E-NAM-005`, `E-NAM-006`), and the runtime MUST supply each by its type. | Missing/wrong entry fixtures; a `recovers` entry; capability-parameter fixtures (unknown, duplicate, moved into `Shared`) executed on every backend. |
 
 ## 5. Statements and expressions
 
@@ -423,7 +437,7 @@ The **entry `main`** is that function: the `main` of the manifest's entry module
 
 A block is `{` statements `}`. A block introduces a scope. Leaving a block by any route (falling off the end, `return`, `fail`, `break`, `continue`, `give`) first ends every loan whose holding binding was declared in the block (section 7.3), then runs the block's registered `defer`s in reverse order of registration, then drops the block's owned locals in reverse order of initialisation.
 
-`let name = expression` declares an immutable binding; `let mut name = expression` declares a mutable one. `let Pattern = move place` destructures a class, tuple or record (section 9.8) into new bindings. The binding is visible from the next statement to the end of the enclosing block. A `let` without an initialiser is not permitted. The type is inferred from the initialiser; `let name: Type = expression` states it explicitly and is required when the initialiser is a literal that should take a refined or wider type.
+`let name = expression` declares an immutable binding; `let mut name = expression` declares a mutable one. `let Pattern = move place` destructures a class, tuple or record (section 9.8) into new bindings, so its pattern matches every value of the place's type: a pattern that can fail to match, a variant, a literal, `null`, `present(…)`, `success(…)`, `failure(…)` or `is …`, at any depth, is `E-MAT-004`, and `match` handles the other cases (D-243). The binding is visible from the next statement to the end of the enclosing block. A `let` without an initialiser is not permitted. The type is inferred from the initialiser; `let name: Type = expression` states it explicitly and is required when the initialiser is a literal that should take a refined or wider type.
 
 An inner `{ … }` block is itself a statement; its only purpose is to end loans and drop locals early (section 7.3).
 
@@ -513,6 +527,23 @@ A collection names its concrete cursor type as the second parameter (`List[T] im
 
 An expression used as a statement must have type `Void`, `Never`, or be explicitly discarded: `discard expression`; an unused non-`Void` value without `discard` is `E-TYP-140`. Discarding an `Outcome`, a `Future`, a `Task` or any other linear value (section 6.12) is an error (`E-OBL-001`). `discard` exists so that an unused non-linear result is visibly intentional. The single exception is a never-polled future with a non-linear environment (12.3).
 
+A function whose result most callers do not need says so once, on its declaration, with the core aspect `@ignorable` (11.8; X-345): a call of it used directly as a statement (`found.note(line, problem, detail)`, with or without a marker on its receiver) may drop a non-linear result without `discard`. Writing `discard` there stays accepted. Every other unused result still needs `discard`, and a linear result can never be dropped: `@ignorable` on a function whose result is linear (a `try` or `async` function, or a linear success type) is rejected (`E-TYP-150`), and a call whose instantiated result is linear is `E-OBL-001` as before.
+
+```fortis
+// accept
+@ignorable
+func remember(seen: editable Set[Int], n: Int) Bool {
+  return editable seen.add(n)
+}
+
+func collect() Int {
+  let mut seen: Set[Int] = Set.default()
+  remember(editable seen, 3)
+  discard remember(editable seen, 3)
+  return 1
+}
+```
+
 ### 5.6 Operators and precedence
 
 All binary operators are left-associative except where stated. Higher rows bind tighter.
@@ -532,7 +563,7 @@ All binary operators are left-associative except where stated. Higher rows bind 
 | 12 | `&&` | left | short-circuit |
 | 13 | `\|\|` | left | short-circuit |
 | 14 | `a ?? b` | right | optional coalescing; `b` evaluated only when `a` is `null` |
-| 15 | `a or fail`, `a or recover b`, `a catch e { … }` | right | outcome handling; `b` and the catch body are evaluated only on failure |
+| 15 | `a or fail`, `a or recover b`, `a catch e { … }` | right | outcome handling; `b` and the catch body are evaluated only on failure; an `Int` arithmetic `a` is a checked region (6.4) |
 | 16 | `a..b` `a..<b` | none | ranges; only in `for` headers and refinement types |
 
 Outcome operators (level 15), `??` (level 14) and the Boolean short-circuit operators (levels 12–13) may not be mixed in one expression without parentheses: `a || b ?? c` and `a ?? b || c` parse and are rejected on the parse tree (`E-SYN-004`); `f() or fail ?? 0` is not a sentence of the grammar at all, because `or fail` ends the expression, and is the generic parse error (`E-SYN-000`). `await f() or fail` parses as `(await f()) or fail`. `copy await f()` is a parse error: markers take a place, and `await f()` is not a place; write `let v = await f()` first.
@@ -559,19 +590,19 @@ Temporaries created in step 1 are dropped at the end of the full statement, in r
 
 ### 5.8 Calls, named arguments and defaults
 
-Arguments may be positional or named (`name: value`). Positional arguments come first and bind in declaration order; named arguments follow in any order. Each parameter is bound once. A positional argument after a named one, a name that is not a parameter, a parameter bound twice and an argument beyond the parameter list are `E-TYP-130`; a parameter without a default that no argument binds is `E-TYP-050`, the code that also reports a constructor call missing a field. Parameter names are part of a function's public signature: renaming an exported parameter is a breaking change. A parameter may declare a default: `func page(size: Int<1..100> = 20)`. A default is a pure, non-allocating constant expression re-evaluated at each call that omits the argument. User functions have no variadic parameters; a function that takes many values takes a `ListView[T]` and the caller passes `List.of(…)` or an existing collection. The `Type.of(…)` constructors in the `fortis` package are the one variadic form, implemented as compiler intrinsics that accept any number of arguments of the element type.
+Arguments may be positional or named (`name: value`). Positional arguments come first and bind in declaration order; named arguments follow in any order. Each parameter is bound once. A **pun** writes a named argument whose value is the local of the label's name once: `wanted` stands for `wanted: wanted` (X-345). A bare local name is a pun where a positional argument cannot stand: after a named argument or another pun, and anywhere in a class's generated constructor, whose arguments are all named (9.2). Before the first named argument of any other call a bare name is positional, as before, and binds the parameter in its position. A pun is matched by its label as the written form is, so a name that is no parameter or field, or one bound twice, is `E-TYP-130`; it passes the place unmarked, so where the parameter or field takes ownership of an ownership-bearing local the marker is written and the argument is not a pun (`name: move name`). The formatter writes the pun wherever it means the same. A positional argument after a named one, a name that is not a parameter, a parameter bound twice and an argument beyond the parameter list are `E-TYP-130`; a parameter without a default that no argument binds is `E-TYP-050`, the code that also reports a constructor call missing a field. Parameter names are part of a function's public signature: renaming an exported parameter is a breaking change. A parameter may declare a default: `func page(size: Int<1..100> = 20)`. A default is a pure, non-allocating constant expression re-evaluated at each call that omits the argument. User functions have no variadic parameters; a function that takes many values takes a `ListView[T]` and the caller passes `List.of(…)` or an existing collection. The `Type.of(…)` constructors in the `fortis` package are the one variadic form, implemented as compiler intrinsics that accept any number of arguments of the element type.
 
 | Rule | Statement | Acceptance evidence |
 |---|---|---|
-| LANG-05-01 | `let` MUST declare; `=` MUST only assign to a visible mutable target. | Declaration/assignment corpus. |
+| LANG-05-01 | `let` MUST declare, and a `let` pattern MUST match every value of its type (`E-MAT-004`); `=` MUST only assign to a visible mutable target. | Declaration/assignment corpus; refutable-`let` corpus. |
 | LANG-05-02 | Every block exit MUST end the block's loans, run defers LIFO, then drop locals in reverse initialisation order. | Exit-order execute tests for each exit kind. |
 | LANG-05-03 | `if`, `while` conditions MUST be `Bool`. | Negative corpus. |
 | LANG-05-04 | A ranged `for` MUST refine its index as in 5.3; the index MUST be immutable. | Refinement execute tests. |
 | LANG-05-05 | Non-`Void` functions MUST end every path in `return`, `fail` or `Never`. (old SYN-001 part) | Missing-return corpus. |
 | LANG-05-06 | Precedence and associativity MUST follow 5.6; mixing the listed operator families without parentheses MUST be a parse error. | Precedence corpus. |
 | LANG-05-07 | Evaluation MUST follow 5.7 and be identical on both backends. (old SYN-004) | Side-effect order differential tests. |
-| LANG-05-08 | Discarding a linear value MUST be rejected; discarding any other non-`Void` value MUST require `discard`. | Discard corpus. |
-| LANG-05-09 | Named arguments MUST follow positionals, bind each parameter once, and be part of the exported signature. | Signature-diff tests. |
+| LANG-05-08 | Discarding a linear value MUST be rejected; discarding any other non-`Void` value MUST require `discard`, except the result of a call statement of a function declared `@ignorable` (5.5). | Discard corpus; `@ignorable` fixtures. |
+| LANG-05-09 | Named arguments MUST follow positionals, bind each parameter once, and be part of the exported signature; a pun MUST bind the parameter or field of its name, exactly where 5.8 allows one (X-345). | Signature-diff tests; pun corpus. |
 
 ## 6. Types
 
@@ -617,7 +648,7 @@ A refinement is a **structural subtype** of its base and of any refinement whose
 
 **Facts and the interval domain.** The checker tracks, for every integer-typed place in a function, an interval `[lo, hi]` within the bounds of the base type. The rules are:
 
-- A literal has the exact interval of its value. A parameter or field has the interval of its declared type. A call result has the interval of the callee's declared return type, except that the success value of a checked integer intrinsic (`Int.add(a, b)` and the other members of the checked family, 6.4) has the interval of the operation on its operands clipped to the type's range, because the call fails instead of overflowing (X-93).
+- A literal has the exact interval of its value. A parameter or field has the interval of its declared type. A call result has the interval of the callee's declared return type, except that the success value of a checked integer intrinsic (`Int.add(a, b)` and the other members of the checked family, 6.4) has the interval of the operation on its operands clipped to the type's range, because the call fails instead of overflowing (X-93); so has a checked operator (6.4, X-345).
 - `+`, `-`, `*` combine intervals by interval arithmetic; `/` and `%` require the divisor's interval to exclude zero and produce the interval of the quotient or remainder; `<<` requires the amount's interval to lie in `[0, width-1]`.
 - An `if`, `while` or `match` condition of the forms `p < c`, `p <= c`, `p > c`, `p >= c`, `p == c`, `p != c` where `p` is a tracked place and `c` is a literal, a `const` or another tracked place narrows `p` (and `c` when it is a place) in the true branch; `&&` narrows by both conjuncts; the `else` branch receives the negation of a single comparison, and so does the rest of the enclosing block when the true branch ends in `return`, `fail`, `break`, `continue` or a `Never` call (the same diverging-branch rule as null tests, 6.8), which is what lets a guard clause like `if value < low { return low }` narrow `value` afterwards. `||` and function calls do not narrow.
 - At a join of control-flow paths, the interval is the hull of the incoming intervals.
@@ -669,17 +700,23 @@ pure try func sumTo(n: Int<0..1000>) Int<0..500500> {
 
 ### 6.4 Integer arithmetic
 
-Integer operators `+ - * / % << >>` and unary `-` are **proof-required**: the operation is accepted only when the interval rules of 6.3 show that overflow, division by zero, out-of-range shift and `MIN / -1` cannot occur. Otherwise the operation is rejected with `E-REF-002` naming the operand intervals and the checked alternative. The result type of a proof-required operation is the base type refined to the computed interval.
+Integer operators `+ - * / % << >>` and unary `-` are **proof-required**: the operation is accepted only when the interval rules of 6.3 show that overflow, division by zero, out-of-range shift and `MIN / -1` cannot occur. Otherwise the operation is rejected with `E-REF-002` naming the operand intervals and the checked alternative, or, where there is none, asking for a refined type or a test that proves it. The result type of a proof-required operation is the base type refined to the computed interval.
 
-Every integer type has three families of named operations in `fortis.prelude`:
+`fortis.prelude` declares three families of named operations on `Int`:
 
-| Family | Example | Result |
-|---|---|---|
-| Checked | `Int.add(a, b)`, `Int.sub`, `Int.mul`, `Int.div`, `Int.rem`, `Int.shiftLeft` | `Outcome[Int]`; fails with `numeric.overflow`, `numeric.divide_by_zero` or `numeric.shift_range` |
-| Wrapping | `Int.wrappingAdd(a, b)`, … | total, two's complement wrap |
-| Saturating | `Int.saturatingAdd(a, b)`, … | total, clamps to the type bounds |
+| Family | Example | Result | Declared on |
+|---|---|---|---|
+| Checked | `Int.add(a, b)`, `Int.sub`, `Int.mul`, `Int.div`, `Int.rem`, `Int.shiftLeft` | `Outcome[Int]`; fails with `numeric.overflow`, `numeric.divide_by_zero` or `numeric.shift_range` | `Int` only, in this release |
+| Wrapping | `Int.wrappingAdd(a, b)`, … | total, two's complement wrap | `Int` only, in this release |
+| Saturating | `Int.saturatingAdd(a, b)`, … | total, clamps to the type bounds | `Int` only, in this release |
+
+The sized integer types (`Int8`, `Int16`, `Int32`, `UInt8`, `UInt16`, `UInt32`, `UInt64`) have none of the three families yet; theirs are planned with the complete standard library (v0.4, section 15). Until then an unproved operator on a sized type is made safe by a refined type or a test (X-345).
 
 Division truncates toward zero; `%` takes the sign of the dividend; `>>` on signed types is arithmetic, on unsigned types logical. Compound assignment `a += b` is sugar for `a = a + b` and follows the same proof rule. Integer behaviour never depends on the build mode.
+
+**Checked operators** (X-345). The left operand of an outcome operator (`or fail`, `or recover`, `catch`; 10.2) that is integer arithmetic is a **checked region**: the operators `+ - * / % << >>` and unary `-` reachable from it through those operators and parentheses, and not through a call's arguments, an index, a field access, a lambda or any other operator. In a checked region an operator on `Int` that the interval rules cannot prove safe is not rejected: it is the **checked operation**, `Int.add`, `Int.sub`, `Int.mul`, `Int.div`, `Int.rem` or `Int.shiftLeft` (unary `-x` is `Int.sub(0, x)`), and fails exactly as that function fails, with `numeric.overflow`, `numeric.divide_by_zero` or `numeric.shift_range` and the same payload, on every backend. Its success value has the interval of the operation clipped to `Int`'s range, as the function's does (6.3); an operator the rules prove safe stays a plain value. A region with a checked operation is an `Outcome[Int]`, and the outcome operator handles it by the rules of 10.2, as it handles a call: `or fail` needs a `try` function (`E-ERR-001`), and `or recover` or a `catch` that recovers adds `recovers`. Operands are evaluated left to right as everywhere (5.7), and the first checked operation that fails ends the region with its failure: `a * b + c or fail` fails at the multiplication and does not add. One handler covers the whole arithmetic because the outcome operators bind loosest (5.6), so `a * b + c or fail` is `(a * b + c) or fail`. In a `test` or `property` body, integer arithmetic outside such an operand is a checked region too, with `or fail` implied (14).
+
+A region whose operators are all proved safe cannot fail, and handling it is `E-TYP-040`, as handling any value that is not an outcome is. An unproved operator outside a region stays `E-REF-002`, and its record names the checked form: in a binding (`let s = a + b`; write `let s = a + b or fail`), under a comparison (`a + b == c or fail`, whose region would be a `Bool`; write `(a + b or fail) == c`), in a call's argument (`f(a + b) or fail` handles the call; write `f(a + b or fail) or fail`), in a compound assignment (`x += 1`; write `x = x + 1 or fail`), and on the integer types other than `Int`, which have no checked family. An operand that is itself an outcome is not taken into a region (`a + f() or fail` is `E-TYP-040`; handle `f()` first), and `>>` has no checked operation, so an unproved `>>` is `E-REF-002` in a region too. The named functions stay: `Int.add(a, b) or fail` means what `a + b or fail` means where the operator is unproved, and the formatter writes the operator form where the two are equivalent.
 
 ### 6.5 Floating point and Decimal
 
@@ -701,7 +738,7 @@ Indexing a string by integer is not provided. Byte length (`view.byteCount()`, O
 
 `Map` and `Set` use a deterministic hash function fixed per compiler release and iterate in first-insertion order (replacing a value keeps its key's position). Their iteration order is therefore deterministic for one build, identical on both backends, and may be used inside `pure` functions; code that needs an order independent of insertion uses `OrderedMap` or sorts.
 
-Indexing `list[i]` is proof-required: `i` must have a lower bound of at least 0 from its type or a test, and an upper bound below the length, which the checker knows for `Array[T, N]`, for `List` values refined by `<length: …>`, and from a `i < list.count()` comparison that is still valid (6.3); an index the rules do not prove is rejected with `E-REF-002`, like an unproved operator (6.4; X-152). Otherwise use `list.get(i)` returning `T?` (by read loan) or `list.at(i)` returning `Outcome[T]`. The named operations of `List[T]` are `List.default()`, `List.of(...items: T)` (variadic, 6.2), `count()`, `push(editable self, item: owned T)`, `pop(editable self) T?`, `get`, `at`, `set(editable self, index: Int, value: owned T) Outcome[Void]` (failing past the end), `isEmpty()`, `first() (alias T from self)?`, `reversed()`, `concat`, `countWhere`, `map`, `filter`, `iterate()`, `consumeEach(owned self, visit: fn mut(owned T) Void)` (10.7); `Array[T, N]` has `Array.filled(value)`, `count()` (= `N`), indexing and `set`; `Map[K, V]` has `Map.default()`, `get(key) (alias V from self)?`, `set(editable self, key: owned K, value: owned V)`, `count()`, `iterate()`.
+Indexing `list[i]` is proof-required: `i` must have a lower bound of at least 0 from its type or a test, and an upper bound below the length, which the checker knows for `Array[T, N]`, for `List` values refined by `<length: …>`, and from a `i < list.count()` comparison that is still valid (6.3); an index the rules do not prove is rejected with `E-REF-002`, like an unproved operator (6.4; X-152). Otherwise use `list.get(i)` returning `T?` (by read loan) or `list.at(i)` returning `Outcome[T]`. The named operations of `List[T]` are `List.default()`, `List.of(...items: T)` (variadic, 6.2), `count()`, `push(editable self, item: owned T)`, `pop(editable self) T?`, `get`, `at`, `set(editable self, index: Int, value: owned T) Outcome[Void]` (failing past the end), `isEmpty()`, `first() (alias T from self)?`, `reversed()`, `concat`, `countWhere`, `map`, `filter`, `iterate()`, `consumeEach(owned self, visit: fn mut(owned T) Void)` (10.7); `Array[T, N]` has `Array.filled(value)`, `count()` (= `N`), indexing and `set`; `Map[K, V]` has `Map.default()`, `get(key) (alias V from self)?`, `set(editable self, key: owned K, value: owned V)`, `count()`, `iterate()`. `get` only reads its key, so on a `Map[String, V]` the key is a `StringView` (X-345): `counts.get(word)` takes a view or a `String` alike, with no `copy` to make a key that is thrown away, and a view hashes and compares equal to the `String` with the same text. `set` still takes an owned key, so the allocation shows where it is real.
 
 Eager transformation methods (`map`, `filter`, `countWhere`) take a `pure fn` callback and allocate a new collection where they return one (`filter`, `reversed` and `concat` copy elements and so require `T implements Copyable`); a lambda literal whose inferred summary is pure qualifies (11.3), and side-effecting traversal is a `for` loop or `iterate()`. No collection operation performs hidden I/O. Complexity: `count`, `get`, `at`, `set`, `pop`, `first` and `isEmpty` are O(1); `push` is amortised O(1); `List.of`, `reversed`, `concat`, `countWhere`, `map` and `filter` are O(n) plus the callback's cost per element; a cursor step is O(1); `Map.get`, `Map.set`, `Set.add` and `Set.contains` are expected O(1) (`set` and `add` amortised); `fortis.collections.sorted` is O(n log n).
 
@@ -749,7 +786,7 @@ The built-in interfaces in `fortis.prelude` are:
 
 There are no user-defined operators and no operator overloading: `Money + Money` is written `Money.add(a, b)`. The operators `== != < <= > >=` dispatch to the built-in interfaces only.
 
-`derive` on a class or enum generates an implementation of `Equatable`, `Hashable`, `Comparable`, `Displayable`, `Encodable`, `Decodable` or `Codec` field-wise, and is accepted only when every field (or payload) implements the interface (`From[S]` and `Default` have their own rules; a derivation whose rule is not met is `E-TYP-090`); `derive Default` builds the value from each field's declared initialiser, falling back to the field type's `Default` only for fields without one, so a class whose fields all have initialisers derives `Default` regardless of their types. `Bool` (`false`), the unrefined integers (`0`), `Float` (`0.0`), `Duration` (`0s`), `String`, `Bytes`, `List`, `Map`, `Set` (empty) and `T?` (`null`) implement `Default`; a refined type does only when its refinement admits the representation's default; `Encodable` and `Decodable` additionally require every field to be exported, so a class with private state writes `encode`/`decode` by hand or stays off the wire. A class that declares a method an interface would derive cannot also derive that interface (`E-MIX-001`). `Comparable` derivation orders by declaration order of fields and variants.
+`derive` on a class or enum generates an implementation of `Equatable`, `Hashable`, `Comparable`, `Displayable`, `Encodable`, `Decodable` or `Codec` field-wise, and is accepted only when every field (or payload) implements the interface (`From[S]` and `Default` have their own rules; a derivation whose rule is not met is `E-TYP-090`); `derive Default` builds the value from each field's declared initialiser, falling back to the field type's `Default` only for fields without one, so a class whose fields all have initialisers derives `Default` regardless of their types. On a class it generates `Name.default()`, the interface's associated function, which takes no arguments: a class whose fields all start at a default is created without a hand-written constructor, and the header says so (X-345); a field that starts otherwise is written with its initialiser. A field with neither an initialiser nor a type that has `Default` (a class that does not derive or implement it, a capability, a refinement that excludes 0 or empty, an `Array`, a `FixedList`, a `FixedMap`, an `OrderedMap`, or a type parameter, which a class has no `where` clause to require a default of) makes the derivation `E-TYP-090`, and so does `derive Default` on an enum, where nothing chooses the variant: an enum that has a default implements `Default` itself (D-242). A newtype's default is its representation's, so the rule looks through newtypes, at any depth; the containers are the prelude's, known by their declaration, so a class a program names `Array` is judged by what it declares. A default that contains itself has no end: a field without an initialiser whose type unfolds, through newtypes and classes that derive `Default`, back to a class or newtype whose default is being built (`type Wrap = Inner` with `class Inner derive Default { w: Wrap }`, two classes that hold each other, a class that holds itself) makes the derivation `E-TYP-090`, naming the cycle (D-335, D-336); an optional field (`null`), a collection (empty), an initialiser or a class that implements `Default` itself ends it. `OrderedMap`, `FixedList` and `FixedMap` have no default until every backend builds an empty one, and until then a field of one without an initialiser is `E-TYP-090` (X-345). `Bool` (`false`), the unrefined integers (`0`), `Float` (`0.0`), `Duration` (`0s`), `String`, `Bytes`, `List`, `Map`, `Set` (empty) and `T?` (`null`) implement `Default`; a refined type does only when its refinement admits the representation's default; a class or enum that implements `Default` gives its own `default()`; `Encodable` and `Decodable` additionally require every field to be exported, so a class with private state writes `encode`/`decode` by hand or stays off the wire. A class that declares a method an interface would derive cannot also derive that interface (`E-MIX-001`). `Comparable` derivation orders by declaration order of fields and variants.
 
 Every type has one generic method, `func to[T](self) T where T implements From[Self]`, usable wherever the target type is already known (an argument, a return, a field initialiser, an annotated `let`): `Found(customer: customer.to())`. Where it is not known, write `CustomerResponse.from(customer)`.
 
@@ -780,7 +817,7 @@ A **linear** value must be consumed exactly once on every path. The linear types
 | LANG-06-01 | Nominal identity MUST survive calls, storage, serialization and FFI. (old TYP-001) | Wrong-id compile-fail and decoder tests. |
 | LANG-06-02 | Refinement subtyping MUST be structural as in 6.3; the interval domain MUST be implemented exactly as listed, with no additional inference. (old TYP-004) | Accept/reject interval corpus; definitional-interpreter agreement. |
 | LANG-06-03 | Untrusted values MUST pass `validate` before holding a refined or nominal type. (old TYP-002) | Boundary corpus. |
-| LANG-06-04 | Integer, `Decimal` and listed float operations MUST agree bit-exactly across VM and native. (old TYP-003) | Differential numeric corpus. |
+| LANG-06-04 | Integer, `Decimal` and listed float operations MUST agree bit-exactly across VM and native; a checked operator MUST fail as its checked function fails, at the same operation, on every backend (X-345). (old TYP-003) | Differential numeric corpus; checked-operator corpus. |
 | LANG-06-05 | Float operators MUST be total and strict IEEE; float refinements MUST be rejected. | Float corpus. |
 | LANG-06-06 | `Map`/`Set` iteration MUST be deterministic per build. | Repeated-run tests. |
 | LANG-06-07 | The trivial and copyable sets MUST be exactly those of 6.11. | Marker-required negative corpus per type. |
@@ -820,7 +857,7 @@ A **loan** is a read-only (`alias`) or exclusive (`editable`) reference to a pla
 - A loan created by `let r = alias p` or `let r = editable p` is held by `r` and lasts until the end of the block that declares `r`.
 - A loan activated for a synchronous call's argument or receiver ends when the call returns, unless the result carries it (5.7). A loan taken by a comparison, an interpolation or a `capture` ends with the statement; one taken by a `for` header lasts for the whole loop.
 - A loan activated for an argument of an `async` call is **held by the future** the call returns, exactly like a `from` result: it lasts until that future completes or is discarded, which is what lets a launched task keep using a borrowed `net` after the launch statement has ended (12.3, 12.5).
-- A loan returned from a call with a `from` clause is held by whatever binding receives the result and lasts as that binding's loan.
+- A loan returned from a call with a `from` clause is held by whatever binding receives the result and lasts as that binding's loan. So is a loan the result holds inside an optional, a tuple or a record (`xs.get(0)` is `(alias T from self)?`), whether the binding receives it by `let`, by assignment (then until the end of the assigned binding's block), by `move` of another binding that holds it, inside a tuple or record literal, or through a `??` whose present side lends; a loan of a trivial value is that value and holds nothing (D-348). The kept loan has the mode the result declares, so `editable cursor.next()` leaves a read loan of what the cursor lends, and the cursor may be advanced while the item lives.
 - A loan captured by a closure lasts as long as the closure binding.
 
 There is no non-lexical lifetime shortening. To end a loan early, close the block: `{ let r = alias p … }`.
@@ -829,7 +866,7 @@ There is no non-lexical lifetime shortening. To end a loan early, close the bloc
 
 - A read child of a read parent is a read loan; a read child of an exclusive parent is a read loan that **freezes** the parent (the parent may be read but not written or exclusively re-loaned) until the child ends.
 - An exclusive child requires an exclusive parent and **suspends** the parent (no access through the parent at all) until the child ends. A child held by a binding ends with that binding's block; a child created for a synchronous call ends when the call returns unless the result carries it (5.7); a child taken for an `async` call is carried by its future.
-- A parent cannot be moved, reassigned or dropped while any child is live; a loan-holding binding cannot be reassigned at all.
+- A parent cannot be moved, reassigned or dropped while any child is live; a loan-holding binding cannot be reassigned at all. That is a binding this paragraph names, one that holds a loan whole and is a path to the owner: a parameter, `let r = alias p`, `let r = editable p`, or a binding that receives a `from` result that is itself a loan. A `let mut` binding that receives a loan inside an optional, a tuple or a record (`let mut t = xs.get(0)`) is not a path to the owner, and may be reassigned: the new value's loans replace the old ones at the assignment, and the old value is not destroyed (7.9). After `t = xs.get(1)` the list is lent to `t` until the end of `t`'s block; after `t = null`, `t` lends nothing.
 - At a control-flow join, a loan is live if it is live on any incoming path.
 
 ```fortis
@@ -886,12 +923,12 @@ Which positions need a marker and which take an implicit read loan:
 
 | Position | Rule for an ownership-bearing place |
 |---|---|
-| `let x = p`, `x = p`, field initialiser `name: p`, `return p` | marker required: `copy`, `alias` (loan) or `move` |
+| `let x = p`, `x = p`, field initialiser `name: p`, `return p` | marker required: `copy`, `alias` (loan) or `move`; `return x` of a local `let` binding is a move without one (below) |
 | argument to a plain parameter; receiver of a `self` method | implicit read loan; no marker |
 | argument or receiver that the result borrows `from` | `alias p` (or `editable p`) required: the loan outlives the statement |
-| receiver of an `editable self` method | `editable p.method(…)` required |
+| receiver of an `editable self` method | `editable p.method(…)`; the marker may be left out on a root that shows it changes (below) |
 | receiver of an `owned self` method | `move p.method(…)` required (or a fresh value) |
-| call of a `fn mut` / `fn once` closure binding | `editable f(…)` / `move f(…)` required |
+| call of a `fn mut` / `fn once` closure binding | `editable f(…)` / `move f(…)` required; the `editable` may be left out as for a receiver (below) |
 | argument to an `editable` parameter | `editable p` required |
 | argument to an `owned` parameter | `move p` or `copy p` required |
 | closure capture list | marker required (section 8.3) |
@@ -915,6 +952,32 @@ let other = user
 let again = alias independent
 ```
 
+**What the declaration already shows** (X-345). A marker is written where it tells the reader something the line does not. Two markers say what a declaration the reader can see already says, and may be left out; the checker then checks the unmarked form exactly as the marked one, with the same loans, moves, discarded facts and codes:
+
+- **Receivers and `fn mut` calls.** The receiver of an `editable self` method, and a `fn mut` closure being called, need no `editable` wherever `editable` could be written (the table above): on a place rooted in a `let mut` binding, an `editable` parameter, an `editable` or `move` capture, a binding that holds an exclusive loan (`let r = editable p`, or an `editable … from` result) or, inside a method, its own `editable self`. `readings.push(40)` on `let mut readings` is `editable readings.push(40)`, and `self.order.push(w)` in an `editable self` method is `editable self.order.push(w)`. This holds whatever the receiver's type: a trivial value takes no marker, but its `editable self` call still takes the exclusive loan, so it conflicts with a live read loan (`E-OWN-010`) as the marked call does (D-303). On any other root the call is rejected, marked or not (`E-OWN-001`): a `let` binding, a read parameter, capture or loan, and the `self` of a read method.
+- **Returning a local.** `return x`, where `x` is a local `let` or `let mut` binding of the function (or of the lambda whose body it is), moves `x` as `return move x` does: nothing in the function can use `x` afterwards. A local still loaned or already moved is rejected with the codes the marked form gives (`E-OWN-011`, `E-OWN-020`; `E-DEF-002` when a `defer` names it). Returning anything else keeps the table's rule: a parameter (an `owned` one included), a field, a capture, a pattern or `for` binding, any other expression.
+
+```fortis
+// accept
+export class Tally {
+  order: List[String]
+  export func add(editable self, word: StringView) {
+    self.order.push(String.from(word))       // the method's own editable self
+  }
+}
+func fill(t: editable Tally) {
+  t.add("a")                                 // an editable parameter
+}
+func build() Tally {
+  let mut t = Tally(order: List.default())
+  t.add("b")                                 // a let mut binding
+  fill(editable t)                           // an argument keeps its marker
+  return t                                   // a local: the return moves it
+}
+```
+
+The written marker stays accepted in both positions, and `fortis fmt` removes it. Everything else in the table is unchanged, because each marker says something the line would not otherwise show: `copy` and `alias` in bindings and field initialisers, the markers of a capture list (8.3), `editable` and `move` on arguments, and `move` everywhere but the return of a local.
+
 ### 7.6 Parameters, receivers and returns
 
 | Parameter form | Caller passes | Callee holds |
@@ -924,7 +987,7 @@ let again = alias independent
 | `x: owned T` | `move p`, `copy p`, or a fresh value | ownership |
 | `x: T` (trivial) | the value | a copy |
 
-Parameters are never reassignable. `editable` grants permission to mutate the referent through the parameter, not to rebind the parameter. Methods declare their receiver as `self` (read loan), `editable self` (exclusive loan) or `owned self` (consumes). The call site mirrors the mode exactly as for arguments: `invoice.render()`, `editable invoice.issue(now)`, `move invoice.archive()`. A marker before a receiver applies to the receiver place, so `editable a.b.issue()` loans `a.b` exclusively.
+Parameters are never reassignable. `editable` grants permission to mutate the referent through the parameter, not to rebind the parameter. Methods declare their receiver as `self` (read loan), `editable self` (exclusive loan) or `owned self` (consumes). The call site mirrors the mode exactly as for arguments: `invoice.render()`, `editable invoice.issue(now)`, `move invoice.archive()`, except that the `editable` may be left out where the receiver's declaration already shows it may change (7.5, X-345): `invoice.issue(now)` on `let mut invoice`. A marker before a receiver applies to the receiver place, so `editable a.b.issue()` loans `a.b` exclusively.
 
 A function that returns a loan names its origin with `from`:
 
@@ -936,7 +999,7 @@ export pure func displayName(user: User) StringView from user {
 }
 ```
 
-`from` names exactly one parameter, which must be a plain or `editable` parameter (never `owned`), and the caller's argument for it must be a place, not a temporary, written with a marker that follows the **mode of that parameter or receiver**: `alias p` for a read parameter, `editable p` for an exclusive one, even when an exclusive receiver returns only a read loan (`editable cursor.next()` yields `(alias T from self)?`). The marker shows at the call site that a loan is being kept: `let name = displayName(alias user)`, `let mut cursor = alias list.iterate()`, `let item = editable cursor.next()`. This applies whether the result *is* a loan (a loan type or a view) or *carries* one (an owned `[lifetime r]` value, 7.7). The kept loan has the result's declared mode, not the marker's: `editable cursor.next()` leaves `cursor` exclusively loaned only until the call returns, and `item` holds a read loan drawn from the cursor's stored loan. The caller's loan on that argument is then held by the binding that receives the result instead of ending at the statement. The mode of the returned loan is written in the signature: `StringView from user` is a read loan; `editable Cell from c` is an exclusive loan, permitted only when `c` is itself `editable`, and it suspends the caller's `c` as a child loan (7.3) for as long as the result binding lives. A function needing loans from two parameters in its result is rejected (`E-OWN-050`); return an owned value or split the function. A loan of a local or temporary cannot be returned (`E-OWN-051`).
+`from` names exactly one parameter, which must be a plain or `editable` parameter (never `owned`), and the caller's argument for it must be a place, not a temporary, written with a marker that follows the **mode of that parameter or receiver**: `alias p` for a read parameter, `editable p` for an exclusive one, even when an exclusive receiver returns only a read loan (`editable cursor.next()` yields `(alias T from self)?`). The marker shows at the call site that a loan is being kept: `let name = displayName(alias user)`, `let mut cursor = alias list.iterate()`, `let item = editable cursor.next()`. This applies whether the result *is* a loan (a loan type or a view) or *carries* one (an owned `[lifetime r]` value, 7.7). The kept loan has the result's declared mode, not the marker's: `editable cursor.next()` leaves `cursor` exclusively loaned only until the call returns, and `item` holds a read loan drawn from the cursor's stored loan. The caller's loan on that argument is then held by the binding that receives the result instead of ending at the statement. The mode of the returned loan is written in the signature: `StringView from user` is a read loan; `editable Cell from c` is an exclusive loan, permitted only when `c` is itself `editable`, and it suspends the caller's `c` as a child loan (7.3) for as long as the result binding lives. A function needing loans from two parameters in its result is rejected (`E-OWN-050`); return an owned value or split the function. A loan of a local or temporary cannot be returned (`E-OWN-051`). Nor can a value of the function's own where the result is declared `from` a parameter: it would be held by the caller as a loan of what ends with the call, and is `E-OWN-051` too (D-373). A `from` result is a loan, so the expression that produces it, by `return`, by an expression body or by a `give` into it, must lend: a place read through a loan (a parameter, `self`, a binding that holds a loan, a field or element path through one), `alias p`, a call whose result is declared a loan, a `??` both of whose sides lend, an `if` or `match` every one of whose results lends, an `or recover` or `catch` whose value side and every `recover` lend (`lookup(alias xs, want) or recover xs.get(0)`; `or fail`, and a handler that fails or returns, produce nothing), `present` of one, parentheses around one, and, where the result is a view, a string literal without interpolation, which is a view of static storage (`StringView from xs => "plain"`; 6.6). Anything else is a value of the function's own: `return move d`, a copy, a fresh value, an interpolated string (`"x${…}"` allocates a fresh `String`; 6.6), a literal where a `String` loan is declared (it converts by allocating), a tuple or record literal (`return (xs.get(0) ?? move d, 1)`, whatever its parts), a constructor, a lambda, a call whose result is owned, an arithmetic or string result, and a `??`, `if`, `match`, `or recover` or `catch` any of whose results is one of these (`return xs.get(0) ?? move d`, `null => move d`, `or recover move d`, `recover move d`), at any depth (D-377, D-381, D-385, D-386). A trivial value holds nothing and is exempt. The same holds for a closure's `from` result. Bind the loan and return an owned value from a function whose result is owned, `let v = xs.get(0)` then `return copy v ?? move d`, or lend on every path.
 
 ```fortis
 // accept
@@ -951,7 +1014,9 @@ func bump(cell: editable Cell) Void {
 }
 ```
 
-Returning an existing owned local uses `return move local`; returning a field of a loaned object uses `return copy obj.field` or a `from` signature; returning a fresh expression needs no marker.
+Returning an existing owned local is `return local`, which moves it (7.5, X-345; `return move local` is the same); returning an `owned` parameter uses `return move param`; returning a field of a loaned object uses `return copy obj.field` or a `from` signature; returning a fresh expression needs no marker.
+
+**A loan is not an owned value.** A loan stays a loan wherever it goes (X-95): a call's result that lends (`xs.get(0)` is `(alias T from self)?`, `m.get(k)` likewise), a binding that holds one (`let v = xs.get(0)`, narrowed by a null test or not), and an `a ?? b` whose result can be one: `a` lends, `b` lends (a nested lent `??`, at any depth), or either is a place read through a loan (a read or `editable` parameter, a binding that holds a loan, `self` in a method that borrows it). Where an owned value is expected (the `return` or expression body of a function whose result is not a loan, a binding or assignment of an owned type, an `owned` argument, a field initialiser, a variant's payload, a `recover` value), a loan of a trivial value is that value; a loan of any other value is made owned only by `copy`, and without it the position is `E-OWN-001` for a copyable value and `E-OWN-002` for one that is not Copyable, which has no owned copy at all (6.11; D-341). `copy v` of a binding that holds a loan copies the value it lends and has the owned type: `T?`, or `T` where a null test narrowed `v`. A call's result is bound first, `let v = xs.get(0)` then `return copy v`, or matched, `present(w) => copy w`; a place is copied where it is read, `return copy s ?? fallback`; a value that cannot be copied stays lent (a read parameter, a `from` result) or is taken out of its owner (`pop`, `move`).
 
 ### 7.7 Loan-carrying values; no stored loans
 
@@ -995,9 +1060,12 @@ A value is destroyed at exactly one of these events:
 | `break` / `continue` / `return` / `fail` | each exited block in turn, innermost first, using the block-exit order |
 | failed construction (a `fail` inside an associated constructor function) | already-initialised locals in reverse order; the partially built object does not exist |
 | class value destroyed | the class's own `cleanup` method if declared (section 12.2), then fields in declaration order |
+| tuple or record value destroyed | its elements in index order, a record's fields in written order, except the loans it holds |
 | closure value destroyed | the captures it owns, its `copy`, `move` and bare ones (8.3), in capture-list order, except those its body moved out; its `alias` and `editable` captures are loans, which end |
 | a call that consumes a closure (`move f(…)`, 8.2; the work a task runs) | the closure, when the call returns, after the call's own locals and owned parameters; an `async` closure's call hands it to the future, which destroys it when the body has run or when the future itself is destroyed |
 | `Mutex[T]` destroyed | its value (12.7) |
+
+Only an owner destroys (D-338). A binding that holds a loan is a path to the owner (7.3), and its end destroys nothing: the loan ends. That holds for a binding written `alias p` or `editable p`, one that receives a result declared `from` a parameter or the receiver (`xs.get(0)`, `m.get(k)`, a cursor's `next()`, `xs.first()`), a `??` whose present side is such a loan, a pattern binding of a borrowed `match` and the binding of a `for` over a borrowed collection, and for a plain or `editable` parameter and a closure's `alias` or `editable` capture. A field or element reached through a loan is lent too. A tuple or a record that holds a loan beside values of its own (`(xs.get(0), make())`) owns only those: its end, and the end of a binding of the loan taken out of it by a pattern, destroys nothing it borrows (D-349). Which of its parts are loans is decided as for a binding, by what each part was given: where a part's type is a loan, a `??` whose fallback was taken, an `if` that gave a value of its own or a binding moved in that owns one gives the tuple or record that value, and it is destroyed with the other parts (D-366). A closure's `move` capture is decided the same way: a binding moved in that holds a loan gives the closure that loan (D-374), and one that owns its value gives it that value, which the closure destroys with the captures it owns, when the consuming call ends or in index order inside a tuple the body moved it into (D-378). Assigning to a `let mut` binding that holds a loan replaces the loan and destroys nothing; the binding then holds what it is given, a loan or a value of its own (D-350). So a class value's `cleanup` runs exactly once, when its last owner destroys it, and never when a loan, an alias or a view of it ends. A value moved out takes the obligation with it: its new owner runs the `cleanup`, once. A loan-carrying value (7.7) is owned by its binding, so dropping a cursor or a guard ends that value, never the elements it lends.
 
 Destruction of a linear value is never generated: the obligation rules make it unreachable.
 
@@ -1007,7 +1075,7 @@ The ownership rules are chosen so that every accepted program has a documented l
 
 | Rule | Statement | Acceptance evidence |
 |---|---|---|
-| LANG-07-01 | Assigning, returning or capturing an existing ownership-bearing place MUST carry `copy`, `alias` or `move`; `owned` and `editable` arguments MUST carry `move`/`copy` or `editable`. (old OWN-001) | Marker corpus per position in 7.5. |
+| LANG-07-01 | Assigning, returning or capturing an existing ownership-bearing place MUST carry `copy`, `alias` or `move`, except that returning a local `let` binding moves it; `owned` and `editable` arguments MUST carry `move`/`copy` or `editable`; an unmarked `editable self` receiver or `fn mut` call MUST be checked exactly as the marked one, taking the same exclusive loan whatever the receiver's type, and rejected where the marker could not be written (X-345, D-303). (old OWN-001) | Marker corpus per position in 7.5. |
 | LANG-07-02 | Parameter bindings MUST never be reassignable. (old OWN-002) | Negative tests. |
 | LANG-07-03 | The checker MUST NOT insert clones, reference counts or hidden shared ownership to repair a rejected program. (old OWN-003) | Generated-IR audit. |
 | LANG-07-04 | Use after move, conflicting loans, owner use while loaned and escaping loans MUST be rejected statically, including through closures, `defer`, `await` and `scope`. (old OWN-004) | Adversarial corpus; definitional-interpreter agreement. |
@@ -1024,11 +1092,11 @@ The ownership rules are chosen so that every accepted program has a documented l
 ```fortis
 // illustrative
 [@aspect(args) …]
-[export] [Contract …] [pure] [noalloc] [async] [try] [recovers] func name[TypeParams](params) ReturnType [editable|from …] [where …] { body }
-[export] [Contract …] [pure] [noalloc] [async] [try] [recovers] func name(params) ReturnType => expression
+[export] [Contract …] [pure] [noalloc] [async] [try] [recovers] func name[TypeParams](params) [ReturnType [editable|from …]] [where …] { body }
+[export] [Contract …] [pure] [noalloc] [async] [try] [recovers] func name(params) [ReturnType] => expression
 ```
 
-Modifiers appear in exactly this order; any other order is a canonicalisation error that the formatter fixes. Named contracts (section 11.5) are modifiers and stand in the modifier position, before the single-word modifiers; aspects (section 11.8) are applied on the lines above the head. `recovers` states that the function discharges a failure without reporting it (10.4); like `try`, it must be written on an exported function whose summary has the effect, so a signature diff shows who swallowed a failure. Every parameter has a type. The success return type follows `)` immediately; `Void` must be written. `try` states that the function may fail (its actual return type is `Outcome[ReturnType]`); `async` that it may suspend (callers receive `Future[ReturnType]` or `Future[Outcome[ReturnType]]`). `pure` and `noalloc` are checked claims (section 11). A named contract written in the modifier position expands to its modifiers and capability requirements.
+Modifiers appear in exactly this order; any other order is a canonicalisation error that the formatter fixes. Named contracts (section 11.5) are modifiers and stand in the modifier position, before the single-word modifiers; aspects (section 11.8) are applied on the lines above the head. `recovers` states that the function discharges a failure without reporting it (10.4); like `try`, it must be written on an exported function whose summary has the effect, so a signature diff shows who swallowed a failure. Every parameter has a type. The success return type follows `)` immediately. A `Void` return type may be left out (X-345): a head that ends at `)`, or at its `where` clause, returns `Void`, exactly as the head with `Void` written, which stays accepted and which `fortis fmt` rewrites. This holds for every function and method head: free and associated functions, methods, expression bodies (`func log(e: Entry) => console.print(e.word)`), interface members, mixin members and requirements, `implement` blocks and `cleanup` (9.4). A function type is a type, written whole, so it keeps its result: `fn(Int) Void` (8.4). A record result is still written after `)`: in `func bounds(n: Int) { low: Int, high: Int } { … }` the first braces are the result type and the second the body. `try` states that the function may fail (its actual return type is `Outcome[ReturnType]`); `async` that it may suspend (callers receive `Future[ReturnType]` or `Future[Outcome[ReturnType]]`). `pure` and `noalloc` are checked claims (section 11). A named contract written in the modifier position expands to its modifiers and capability requirements.
 
 Expression-bodied functions (`=>`) have exactly one expression as their body. Block-bodied functions follow the exit rules of 5.4.
 
@@ -1040,18 +1108,19 @@ Named functions are not values; to pass one, write a lambda that calls it, or us
 // illustrative
 [pure] [noalloc] [async] [try] [recovers] fn[captures](params) ReturnType { body }
 fn(params) ReturnType => expression               // no captures: no brackets
+fn(params) => expression                          // an expression body may leave out its return type
 fn mut[captures](params) ReturnType { body }
 fn once[captures](params) ReturnType { body }
 ```
 
-The bracket group after `fn`, `fn mut` or `fn once` is the **capture list**; it is written only when it is non-empty. A lambda takes the same modifiers as a named function, in the same order, and must write `async`, `try` and `recovers` when its body has those effects; `pure` and `noalloc` may be written to assert them and are otherwise inferred and printed back by the formatter. Lambdas are not generic. Parameter types may be omitted only when the lambda is passed directly to a parameter of a known function type, in which case they are taken from it; the return type is always written.
+The bracket group after `fn`, `fn mut` or `fn once` is the **capture list**; it is written only when it is non-empty. A lambda takes the same modifiers as a named function, in the same order, and must write `async`, `try` and `recovers` when its body has those effects; `pure` and `noalloc` may be written to assert them and are otherwise inferred; the formatter prints no inferred one back and keeps one the author wrote, because the function type the lambda is passed to states what it must be and the checker enforces it there (X-345). Lambdas are not generic. Parameter types may be omitted only when the lambda is passed directly to a parameter of a known function type, in which case they are taken from it. A block body writes its return type. An expression body (`=>`) may leave it out (X-345): the return type is then the result type of the function type the lambda is passed to or bound to (a parameter, an annotated `let`, a field), when that type names one, and the body is checked against it as against a written type; otherwise, where that result is a type parameter the call has not fixed or there is no expected function type, the return type is the body's type, widened as an unannotated `let` widens its initialiser (5.1): a computed integer interval or a literal's value gives the base type (`fn(x) => x + 1` over `Int<0..9>` returns `Int`).
 
 The kind states how the closure may be invoked:
 
 | Kind | Captures may be | Callable | Lowers to |
 |---|---|---|---|
 | `fn` | `copy`, `alias`, `move` (used read-only) | any number of times | `Fn` |
-| `fn mut` | as `fn`, plus `editable` and `move` captures that are mutated | any number of times; the binding holding it must be `let mut` and a call is written `editable bump()`, taking an exclusive loan of it | `FnMut` |
+| `fn mut` | as `fn`, plus `editable` and `move` captures that are mutated | any number of times; the binding holding it must be `let mut` and a call is written `bump()` or `editable bump()` (7.5, X-345), taking an exclusive loan of it | `FnMut` |
 | `fn once` | as `fn mut`, plus `move` captures that are moved out of in the body | exactly once; the call is written `move finish()` and consumes the closure | `FnOnce` |
 
 A lambda whose body needs a stronger kind than declared is rejected (`E-FUN-010`), naming the capture and use. Declaring a stronger kind than needed is permitted but the formatter reports it at the strict lint level. A `move` capture does not by itself make a closure `fn once`; what matters is whether the body moves the captured value out.
@@ -1098,7 +1167,7 @@ The backend represents each lambda as a concrete environment type; generic calle
 
 | Rule | Statement | Acceptance evidence |
 |---|---|---|
-| LANG-08-01 | Every function MUST state parameter types and the success return type; modifiers MUST follow the order in 8.1. (old SYN-001) | Grammar corpus. |
+| LANG-08-01 | Every function MUST state parameter types and the success return type, which a function or method head MAY leave out when it is `Void` and a lambda as 8.2 allows (inferred parameter types; an expression body's inferred return type) (X-345); modifiers MUST follow the order in 8.1. (old SYN-001) | Grammar corpus; inferred-result fixtures. |
 | LANG-08-02 | Every lambda MUST list its captures (no brackets when it has none) and declare its kind; a body needing a stronger kind MUST be rejected. (old FUN-001, FUN-002) | Capture/kind corpus. |
 | LANG-08-03 | Names not in the capture list MUST be inaccessible in the body. | Negative corpus. |
 | LANG-08-04 | Callable assignability MUST follow 8.4; the backend MUST NOT box closures unless `dynamic fn` is written. (old CMP-004 part) | Codegen inspection. |
@@ -1114,7 +1183,7 @@ The backend represents each lambda as a concrete environment type; generic calle
   [export] field: Type = constantDefault
   [export] … func method([editable | owned] self, params) Ret { … }
   [export] … func associated(params) Ret { … }
-  cleanup(editable self) Void { … }
+  cleanup(editable self) [Void] { … }
 }
 ```
 
@@ -1122,7 +1191,7 @@ A class is a nominal product type with fields and methods. There is no inheritan
 
 ### 9.2 Construction
 
-Every class has a **generated constructor** `Name(field: value, …)` taking every field as a named argument (fields with defaults may be omitted). It is callable only where every field is visible. Field arguments that are existing ownership-bearing places need a marker exactly as in 7.5; the constructor takes ownership of every argument. All fields are initialised by the constructor; there is no partially constructed object visible to source.
+Every class has a **generated constructor** `Name(field: value, …)` taking every field as a named argument (fields with defaults may be omitted); a field may be given by a pun, `Item(sku, wanted)` for `Item(sku: sku, wanted: wanted)` (5.8, X-345). A class that derives `Default` also has `Name.default()`, which takes no arguments (6.10, X-345). It is callable only where every field is visible. Field arguments that are existing ownership-bearing places need a marker exactly as in 7.5; the constructor takes ownership of every argument. All fields are initialised by the constructor; there is no partially constructed object visible to source.
 
 A constructor call may take a **spread**, `...copy p` or `...move p`, where `p` is a place of a class or record type whose fields are visible at the call. It fills every field of the target that the source has with the same name and the same type (or a type with `From` of it), and nothing else; remaining fields are given explicitly after it, and a field given both ways is an error. A target field with no source counterpart, no explicit value and no default is `E-TYP-050`; defaults are applied last, after the spread and the explicit fields. The two forms differ in what happens to the source:
 
@@ -1141,11 +1210,11 @@ A class whose construction must validate or may fail provides an **associated fu
 
 ### 9.3 Methods
 
-A class may also declare associated constants (`const columns = …`), referenced as `Name.columns`. A method is a function declared inside a class whose first parameter is `self`. The receiver forms are `self` (read loan), `editable self` (exclusive loan) and `owned self` (consumes the value); the mode word precedes `self` just as it precedes a parameter type. Inside a method, fields are accessed as `self.field`. A method is invoked as `value.method(args)` for a read receiver, `editable place.method(args)` for an exclusive receiver and `move place.method(args)` for a consuming receiver (7.5); a reviewer therefore sees at the call whether the receiver can change. A method declared `pure` may write through `editable self` (that write is its footprint, section 11.3) but may not perform I/O, read nondeterministic sources, suspend, block or write to anything else.
+A class may also declare associated constants (`const columns = …`), referenced as `Name.columns`. A method is a function declared inside a class whose first parameter is `self`. The receiver forms are `self` (read loan), `editable self` (exclusive loan) and `owned self` (consumes the value); the mode word precedes `self` just as it precedes a parameter type. Inside a method, fields are accessed as `self.field`. A method is invoked as `value.method(args)` for a read receiver, `editable place.method(args)` for an exclusive receiver and `move place.method(args)` for a consuming receiver (7.5); the `editable` may be left out wherever it could be written: a place rooted in a `let mut` binding, an `editable` parameter, an `editable` or `move` capture, an exclusive loan or the method's own `editable self` (7.5, X-345). A reviewer therefore sees at the call, or in the declaration of the place it names, whether the receiver can change. A method declared `pure` may write through `editable self` (that write is its footprint, section 11.3) but may not perform I/O, read nondeterministic sources, suspend, block or write to anything else.
 
 ### 9.4 Cleanup
 
-A class may declare `cleanup(editable self) Void`, run when a value is destroyed (7.9), before its fields are dropped. `cleanup` cannot be `try` or `async`, cannot be called directly (`E-TYP-040`), and its effects are part of the effect summary of every function that may drop the type. A failing finalisation (`flush`, `commit`) must be an explicit method the caller invokes; `cleanup` can only release.
+A class may declare `cleanup(editable self)` (with `Void` written or left out, 8.1), run when a value is destroyed (7.9), before its fields are dropped. `cleanup` cannot be `try` or `async`, cannot be called directly (`E-TYP-040`), and its effects are part of the effect summary of every function that may drop the type. A failing finalisation (`flush`, `commit`) must be an explicit method the caller invokes; `cleanup` can only release.
 
 ### 9.5 Interfaces
 
@@ -1195,7 +1264,7 @@ export enum InvoiceStatus derive Equatable {
 }
 ```
 
-Variants are UpperCamel, optionally with named payload fields. A variant is constructed as `InvoiceStatus.Draft` or `InvoiceStatus.Issued(at: now)`. The prefix is omitted inside a `match` over the enum type, and may be omitted in any position whose expected type is already that enum: a `return` in a function returning it, an argument to a parameter of that type, a field initialiser, an annotated `let`. `return Found(customer: move customer)` in a function returning `GetCustomerResponse` is therefore complete. Enums are closed: every `match` must cover every variant. Enums may have methods and implement interfaces. Enum values are trivial when every payload is trivial. A variant name used where a function type is expected denotes its constructor, with the payload fields as positional parameters (`fallback: Unavailable` passes `fn(PublicProblem) GetCustomerResponse`).
+Variants are UpperCamel, optionally with named payload fields. A variant is constructed as `InvoiceStatus.Draft` or `InvoiceStatus.Issued(at: now)`. The prefix is omitted inside a `match` over the enum type, and may be omitted in any position whose expected type is already that enum: a `return` in a function returning it, an argument to a parameter of that type, a field or payload initialiser, an annotated `let`, and the right operand of a comparison (`==`, `!=`, `<`, …) whose left operand has that enum type or is that enum optional (X-345). `return Found(customer: move customer)` in a function returning `GetCustomerResponse` is therefore complete, and so is `if severity == Error`. A bare name that also reaches a declaration in scope (a class, an error kind, another type) is ambiguous in such a position, and is `E-TYP-040` asking for the qualified form, so a name never silently changes meaning (X-345); a pattern has no qualified form, and there the scrutinee's variants are read first, as before. Where nothing expects the enum (an unannotated `let`, a generic argument no expected type fixes, a binding of another type, the left operand of a comparison) a bare variant would have no type, and is `E-TYP-040` asking for the qualified form (D-304). The formatter drops the prefix where the bare form means the same. Enums are closed: every `match` must cover every variant. Enums may have methods and implement interfaces. Enum values are trivial when every payload is trivial. A variant name used where a function type is expected denotes its constructor, with the payload fields as positional parameters (`fallback: Unavailable` passes `fn(PublicProblem) GetCustomerResponse`).
 
 Code generated from an external schema (the HTTP kit) produces a *transport* enum with an explicit `Unknown` variant and a fallible conversion to the closed domain enum; closed source enums are never silently extended.
 
@@ -1206,6 +1275,7 @@ Code generated from an external schema (the HTTP kit) produces a *transport* enu
 match scrutinee {
   Pattern [when guard] => expression
   Pattern [when guard] => { … give value }
+  Pattern | Pattern … => expression            // alternatives: no bindings, no guard
 }
 ```
 
@@ -1225,7 +1295,7 @@ match scrutinee {
 | `{ field: p, … }` | anonymous record |
 | `otherwise` | catch-all; permitted only when the scrutinee type is open (integers, strings, `Failure`), not for closed enums or optionals. A top-level `_` or bare binding pattern is likewise rejected as the last arm of a match over a closed enum (`E-MAT-002`), so adding a variant always surfaces every match that must handle it |
 
-Patterns nest. Or-patterns, range patterns and binding-with-subpattern (`x @ p`) are not in v1. A `when` guard is a `Bool` expression over the bindings; a guarded arm does not count toward exhaustiveness. Missing variants of a closed enum are reported individually (`E-MAT-001`).
+Patterns nest. An arm may list **alternatives**, `A | B | C => value`, which matches when any alternative does, tried left to right (X-345). `|` separates whole patterns of an arm, never parts of a payload or of another pattern. The form is narrow, so the arm body sees the same bindings, none, whichever alternative matched: an alternative binds no names (no bare name, no named or positional payload binding, no `as`), an alternative is not `otherwise`, and an arm with alternatives takes no `when` guard; each is `E-MAT-003`. Exhaustiveness counts each alternative as covering its case, as an arm of its own would: a variant of a closed enum that no alternative names is still reported (`E-MAT-001`), and a `_` alternative makes the arm a catch-all (`E-MAT-002` over a closed enum). There is no unreachable-arm check: as an arm repeating an earlier unguarded arm's case is accepted and never runs, so is an alternative that repeats a case. Range patterns and binding-with-subpattern (`x @ p`) are not in v1. A `when` guard is a `Bool` expression over the bindings; a guarded arm does not count toward exhaustiveness. Missing variants of a closed enum are reported individually (`E-MAT-001`).
 
 A consuming destructure of a class is the way to take a linear field out of a linear class: `let Pending(result: r) = move p` or `match move p { Pending(result: r) => … }`; the whole value is consumed, every field is bound, and non-linear fields may be discarded with `_`. There is no partial move.
 
@@ -1237,7 +1307,7 @@ Ownership: `match p` takes a read loan of the place for the match, and payload b
 | LANG-09-02 | The generated constructor MUST be callable only where every field is visible; private fields MUST be settable only inside the module. | Visibility corpus. |
 | LANG-09-03 | Implementations MUST NOT strengthen preconditions or weaken guarantees; coherence MUST hold. | Substitution corpus. |
 | LANG-09-04 | Mixins MUST require methods only and MUST NOT add state; conflicts MUST be rejected. | Mixin corpus. |
-| LANG-09-05 | `match` on a closed type MUST be exhaustive without `otherwise`, with each missing variant named. (old ERR-006) | Pattern corpus. |
+| LANG-09-05 | `match` on a closed type MUST be exhaustive without `otherwise`, with each missing variant named; the alternatives of an or-pattern MUST each count as covering their case, MUST bind no names and MUST NOT be `otherwise`, and an arm with alternatives MUST NOT take a guard (X-345). (old ERR-006) | Pattern corpus; or-pattern corpus. |
 | LANG-09-06 | Pattern binding ownership MUST follow 9.8. | Owning/borrowing match corpus. |
 
 ## 10. Outcomes and failures
@@ -1292,7 +1362,7 @@ export error CurrencyMismatch {
 }
 ```
 
-An `error` declaration defines a failure kind: a constructor `CurrencyMismatch(expected: …, found: …)` producing a `Failure`, a pattern `is CurrencyMismatch(…)`, and a display template. The `message` string is a template, not an interpolated expression: `${name}` in it may name only payload fields, and is rendered when the failure is displayed. Codes are unique per package and stable across versions. The payload fields are trivial or `String`/`Bytes` with a declared length bound, so that failures are bounded and serialisable without secrets.
+An `error` declaration defines a failure kind: a constructor `CurrencyMismatch(expected: …, found: …)` producing a `Failure`, a pattern `is CurrencyMismatch(…)`, and a display template. The `message` string is a template, not an interpolated expression: `${name}` in it may name only payload fields (any other name is `E-NAM-001`), and is rendered when the failure is displayed. The template is kept as written between its quotes, and rendering replaces each `${name}` with that payload field's text, as a record's `payload` shows it, on every backend (D-340). Codes are unique per package and stable across versions. The payload fields are trivial or `String`/`Bytes` with a declared length bound, so that failures are bounded and serialisable without secrets.
 
 ### 10.4 `catch` and `recover`
 
@@ -1466,13 +1536,13 @@ A contract is a named conjunction of modifiers, forbidden effects (`forbids reco
 
 ### 11.6 Capabilities
 
-An `io` effect requires an **authority value** in the signature: a nominal, non-copyable, non-serialisable value that implements the marker interface `Authority` (9.5), passed as a parameter. Authorities come in two closed sets. **Capabilities** (`FileSystem`, `Network`, `Clock`, `Random`, `Environment`, `Process`, `Supervisor`, `Console`, `SecretAccess`, `RawSql`) are process-wide and are created only by `Host.capabilities()`. **Per-activation authorities** are minted by an adapter from a capability for one unit of work and handed to it as a parameter: a server adapter mints `RequestContext`, `Identity`, `Db` and `Tx` per request from `Network` and the database connection, a job adapter mints `TaskContext` per run, a mail adapter mints `Mail` from `Network` and configuration. Both sets are listed in section 15; a kit adds a per-activation authority by declaring a type that implements `Authority` and naming the capability it is minted from. Capabilities are created by exactly one function, `Host.capabilities()` in `fortis.host`, which is called once, directly in the entry `main`'s own body (4.6): not inside a loop (its condition included), a lambda or an aspect's hook, which could run it again, and never taken as a function value. A function named `main` in any other module or package is an ordinary function, and Fortis code never refers to the entry `main`, which only the runtime calls. A backend that is nevertheless asked for a second creation stops the run with the runtime-invariant defect (10.8): the checker's guarantee is broken. Capabilities are attenuated by methods (`fs.subtree(path)`) and passed explicitly. A `Shared[A]` of an authority `A` carries `A`'s authority: a parameter of that type satisfies the rule below exactly as an `A` parameter does, which is how several owners hold one capability (`let console = Shared.create(move c)`, then `console.retain()` per owner), since no field stores a loan (7.7, X-137). A per-activation authority is created only by its adapter's minting function, which itself requires the capability it derives from, so every authority traces back to `main`. The capability types are defined by the core (section 15) and re-exported by `fortis.host`; the Runtime host kit adds attenuation helpers and adapters. `report` is the single `io` operation exempt from this rule (section 10.6). A function with the `io` effect therefore names, in its signature, the authority it uses. A method's receiver is one of its parameters: a method may also use an authority that its receiver's class holds in a field whose type is that authority or a `Shared` of it, which is how an owner holding a `Shared[Console]` prints from its methods and its `cleanup` (X-137). A field of any other type names none (a `Capabilities` record names none, as a `Capabilities` parameter names none), and an associated function names its authority by a parameter, like any function. The static rule is only that the capability type must be in scope by type; which directory or host it reaches is determined by the value and enforced by the runtime adapter. Reading a clock is `nondet` and requires `Clock`; a `pure` function receives time as an ordinary parameter.
+An `io` effect requires an **authority value** in the signature: a nominal, non-copyable, non-serialisable value that implements the marker interface `Authority` (9.5), passed as a parameter. Authorities come in two closed sets. **Capabilities** (`FileSystem`, `Network`, `Clock`, `Random`, `Environment`, `Process`, `Supervisor`, `Console`, `SecretAccess`, `RawSql`) are process-wide and are created only for the entry `main`: by the runtime, for its capability parameters (4.6), or by its one call of `Host.capabilities()`. **Per-activation authorities** are minted by an adapter from a capability for one unit of work and handed to it as a parameter: a server adapter mints `RequestContext`, `Identity`, `Db` and `Tx` per request from `Network` and the database connection, a job adapter mints `TaskContext` per run, a mail adapter mints `Mail` from `Network` and configuration. Both sets are listed in section 15; a kit adds a per-activation authority by declaring a type that implements `Authority` and naming the capability it is minted from. The runtime creates the capabilities once, before the entry `main` runs, and passes the ones `main` declares as parameters (4.6). A `main` that declares no capability parameter may create them itself with `Host.capabilities()` in `fortis.host`, which is called once, directly in the entry `main`'s own body: not inside a loop (its condition included), a lambda or an aspect's hook, which could run it again, and never taken as a function value. A `main` that declares a capability parameter may not call it, since its capabilities already exist. A function named `main` in any other module or package is an ordinary function, and Fortis code never refers to the entry `main`, which only the runtime calls. A backend that is nevertheless asked for a second creation stops the run with the runtime-invariant defect (10.8): the checker's guarantee is broken. Capabilities are attenuated by methods (`fs.subtree(path)`) and passed explicitly. A `Shared[A]` of an authority `A` carries `A`'s authority: a parameter of that type satisfies the rule below exactly as an `A` parameter does, which is how several owners hold one capability (`let console = Shared.create(move c)`, then `console.retain()` per owner), since no field stores a loan (7.7, X-137). A per-activation authority is created only by its adapter's minting function, which itself requires the capability it derives from, so every authority traces back to `main`. The capability types are defined by the core (section 15) and re-exported by `fortis.host`; the Runtime host kit adds attenuation helpers and adapters. `report` (section 10.6) and the `log` statements (section 13) are the `io` operations exempt from this rule: they write only to the diagnostic plane (11.7). A function with the `io` effect therefore names, in its signature, the authority it uses. A method's receiver is one of its parameters: a method may also use an authority that its receiver's class holds in a field whose type is that authority or a `Shared` of it, which is how an owner holding a `Shared[Console]` prints from its methods and its `cleanup` (X-137). A field of any other type names none (a `Capabilities` record names none, as a `Capabilities` parameter names none), and an associated function names its authority by a parameter, like any function. The static rule is only that the capability type must be in scope by type; which directory or host it reaches is determined by the value and enforced by the runtime adapter. Reading a clock is `nondet` and requires `Clock`; a `pure` function receives time as an ordinary parameter.
 
-A function other than the entry `main` whose summary reaches `io` through a capability without taking an `Authority` value, any use of `Host.capabilities` other than that one direct call (a call elsewhere, a second call, a call inside a loop, lambda or hook, the function taken as a value), and any reference to the entry `main` are rejected (`E-EFF-010`). Capabilities, effects and **target feature sets** are three different things: a target feature set (`core`, `alloc`, `host`, `async`, `web`, `browser`) decides which standard modules exist for a compilation target; an effect is a fact about a function; a capability is a run-time authority value.
+A function other than the entry `main` whose summary reaches `io` through a capability without taking an `Authority` value, any use of `Host.capabilities` other than that one direct call (a call elsewhere, a second call, a call inside a loop, lambda or hook, a call in a `main` that takes a capability parameter, the function taken as a value), and any reference to the entry `main` are rejected (`E-EFF-010`). Capabilities, effects and **target feature sets** are three different things: a target feature set (`core`, `alloc`, `host`, `async`, `web`, `browser`) decides which standard modules exist for a compilation target; an effect is a fact about a function; a capability is a run-time authority value.
 
 ### 11.7 Observation plane
 
-Instrumentation that the compiler generates for `capture`, `record` and completion events observes a `pure` function without changing its effect summary: capture expressions are themselves pure and infallible, and the emitted records go to a diagnostic plane that cannot feed values back into the program. Two equivalences are distinguished: **application equivalence** (same results and same application effects) and **trace equivalence** (also the same required observation records). Optimisation must preserve application equivalence always and trace equivalence for records declared required in an observation schema; non-required instrumentation may be elided or merged.
+Instrumentation that the compiler generates for `capture`, `record` and completion events observes a `pure` function without changing its effect summary: capture expressions are themselves pure and infallible, and the emitted records go to a diagnostic plane that cannot feed values back into the program. The diagnostic plane is also where `report` (10.6) and the `log` statements (13) write: its records go to the task reporter (15), never to the program's standard output, and nothing written there can be read back by the program. Two equivalences are distinguished: **application equivalence** (same results and same application effects) and **trace equivalence** (also the same required observation records). Optimisation must preserve application equivalence always and trace equivalence for records declared required in an observation schema; non-required instrumentation may be elided or merged.
 
 ### 11.8 Aspects
 
@@ -1522,7 +1592,7 @@ export aspect get[R](path: StringView, ...rest) = http[R](method: GET, path: pat
 
 A specialisation `aspect name[R](params, ...rest) = other[R](fixed: value, ...rest)` declares one aspect as another with some arguments fixed; `...rest` forwards every remaining named argument unchanged. There is no `around` hook and no access to the body: an aspect can never change what a line inside the function means, and cannot re-run the body (a retry is a library function taking a `fn once`, not an aspect).
 
-**Application.** `@name(args)` on the lines directly above a function head (after any documentation comment, before `export`). Arguments are compile-time constant expressions: literals, record and variant-map literals of them, enum values, `fn` literals without captures, and names of declarations such as observation schemas, functions or enum variants (a variant name used where a function type is expected denotes its constructor, 9.7). The first declared parameter may be passed positionally; all others are named. An application whose arguments do not match the declaration, an unknown aspect, an unmet or ambiguous `needs`, or `...rest` outside an aspect's parameter list is rejected (`E-TYP-150`).
+**Application.** `@name(args)`, or `@name` alone for an aspect whose parameters all have defaults or that has none, on the lines directly above a function head (after any documentation comment, before `export`). Arguments are compile-time constant expressions: literals, record and variant-map literals of them, enum values, `fn` literals without captures, and names of declarations such as observation schemas, functions or enum variants (a variant name used where a function type is expected denotes its constructor, 9.7). The first declared parameter may be passed positionally; all others are named. An application whose arguments do not match the declaration, an unknown aspect, an unmet or ambiguous `needs`, or `...rest` outside an aspect's parameter list is rejected (`E-TYP-150`).
 
 **Elaboration.** `@a(args) @b(args) func f(params) R { body }` elaborates, before ownership and effect checking, to:
 
@@ -1532,7 +1602,7 @@ A specialisation `aspect name[R](params, ...rest) = other[R](fixed: value, ...re
 
 The elaborated outer function is checked as a whole: a `before` that fails with a linear `owned` parameter still unconsumed is `E-OBL-001` like any other path (a non-linear owned parameter is simply dropped on that path); a hook that moves a `needs` parameter the target holds by loan, allocates under `noalloc`, reports under `pure`, or calls `Host.capabilities()` is rejected by the ordinary rules. A `before` may `fail` on a non-`try` target only when an `on failure` of the same or an outer aspect maps every failure to a value; otherwise the target must be `try`. Cancellation unwinds through hooks like any blocks. For observation purposes, "success" and "failure" describe the completion of the outer function, so a mapped failure is a success exit, and the frame is shared by hooks and body. The hooks' effects join the function's summary. There is no aspect at run time.
 
-**Core aspects.** The core declares one aspect, `observe(schema: Schema)`, which attaches an observation schema (section 13) to a function. Everything else is a library.
+**Core aspects.** The core declares two aspects. `observe(schema: Schema)` attaches an observation schema (section 13) to a function. `ignorable()`, applied as `@ignorable`, lets callers drop the function's non-linear result without `discard` (5.5; X-345); it has no hooks, only metadata the checker reads, and an application of it to a function whose result is linear is rejected (`E-TYP-150`). Everything else is a library.
 
 | Rule | Statement | Acceptance evidence |
 |---|---|---|
@@ -1544,7 +1614,7 @@ The elaborated outer function is checked as a whole: a `before` that fails with 
 | LANG-11-04 | Trusted summaries MUST be labelled `trusted`, never `proved`, and only the packages of the published compatibility set MAY declare `trusted`. (old EFF-005) | Foreign-boundary reports; a program's `trusted` declarations rejected. |
 | LANG-11-05 | `async`, `try` and `recovers` MUST be written wherever the summary has them; across a module boundary only written `pure`/`noalloc` claims MAY be relied on; weakening an exported function's written modifiers MUST be a reported API change. | Semantic-diff corpus. |
 | LANG-11-06 | Contracts MUST be conjunctions of 11.5 elements; configuration MUST NOT introduce predicates absent from source. (old EFF-006, CFG-003 part) | Contract-origin fixtures. |
-| LANG-11-07 | `io` effects other than `report` MUST require an `Authority` value in the signature, except in the entry `main` (4.6), which creates the capabilities with one direct call of `Host.capabilities()` outside every loop, lambda and hook, and in an adapter's minting function, which requires the capability it derives from; every other use of `Host.capabilities`, and every reference to the entry `main`, MUST be rejected. | Missing-authority corpus; capability-creation corpus (loops, conditions, lambdas, hooks, function values, other modules and packages, references to the entry `main`); a second creation is the runtime-invariant defect on every backend. |
+| LANG-11-07 | `io` effects other than `report` and `log` MUST require an `Authority` value in the signature, except in the entry `main` (4.6), which receives the capabilities as parameters or creates them with one direct call of `Host.capabilities()` outside every loop, lambda and hook, and in an adapter's minting function, which requires the capability it derives from; every other use of `Host.capabilities` (including one in a `main` that takes a capability parameter), and every reference to the entry `main`, MUST be rejected. | Missing-authority corpus; capability-creation corpus (loops, conditions, lambdas, hooks, function values, other modules and packages, references to the entry `main`, a `main` with capability parameters); a second creation is the runtime-invariant defect on every backend. |
 | LANG-11-08 | Contracts MUST be applied in the modifier position and MUST NOT take arguments; `@` MUST apply aspects only. | Grammar corpus. |
 | LANG-11-09 | Aspects MUST have only the parts of 11.8, MUST elaborate as in 11.8 before checking (hooks in application order, failure handlers innermost first), and the elaborated function MUST pass every ordinary check. | Aspect corpus incl. unconsumed-owned-parameter, moved-needs, noalloc, pure and capability negatives; elaborated-source golden tests. |
 
@@ -1561,7 +1631,7 @@ defer {
 
 `defer` registers a block to run when the enclosing block exits by any route. Only the block form exists; there is no call form. Deferred blocks run in reverse order of registration, before the block's locals are dropped. A deferred block:
 
-- is checked as if its body were written at every exit point of the block, after the loans held by the block's own bindings have ended and before the block's locals are dropped. The places it names must therefore be initialised at every exit: moving one of them out between the `defer` and the exit is an error (`E-DEF-002`). Between registration and exit the rest of the block may use those places freely. Loans held by bindings of *enclosing* blocks still apply at the exit and conflict as usual. Because the block's own loans have ended by then, a deferred block may not use a binding of its block that holds a loan (a view, or a loan returned `from` a parameter): `E-OWN-052`.
+- is checked as if its body were written at every exit point of the block, after the loans held by the block's own bindings have ended and before the block's locals are dropped. The places it names, inside an interpolation hole as anywhere else (3.6), must therefore be initialised at every exit: moving one of them out between the `defer` and the exit is an error (`E-DEF-002`). Between registration and exit the rest of the block may use those places freely. Loans held by bindings of *enclosing* blocks still apply at the exit and conflict as usual. Because the block's own loans have ended by then, a deferred block may not use a binding of its block that holds a loan (a view, or a loan returned `from` a parameter): `E-OWN-052`.
 - may not contain `return`, `fail`, `give`, `break`, `continue` or `await` (`E-DEF-001`); it cannot alter the enclosing function's outcome.
 - consumes every failure it produces itself, with `or recover`, `catch … recover` or `report`; `or fail` is unavailable because there is no outcome to propagate to. A failure reported from a deferred block reaches the task reporter like any other report, labelled as raised during cleanup. Recovering a cleanup failure silently is permitted and adds `recovers` to the function's summary.
 - contributes its effects to the enclosing function's summary.
@@ -1585,7 +1655,7 @@ try func copyFile(fs: FileSystem, source: Path, target: Path) Void {
 
 ### 12.2 Destruction order
 
-Section 7.9 defines when values are destroyed. In summary, at a block exit: deferred blocks in reverse registration order; then owned locals in reverse initialisation order; for each class value, its `cleanup` method, then its fields in declaration order. The order is the same on both backends and under every exit kind, including cancellation observed at an `await`.
+Section 7.9 defines when values are destroyed. In summary, at a block exit: deferred blocks in reverse registration order; then owned locals in reverse initialisation order; for each class value, its `cleanup` method, then its fields in declaration order. The order is the same on both backends and under every exit kind, including cancellation observed at an `await`. A local that holds a loan is not an owned local: its end runs no `cleanup`, which runs once per value, when the value's owner destroys it (7.9, D-338).
 
 ### 12.3 Async functions and futures
 
@@ -1597,7 +1667,7 @@ An `async func f(…) T` call produces a `Future[T]` (or `Future[Outcome[T]]` wh
 
 Cancellation is a signal delivered to a task. It is observed only at a **cancellation point**: `await` on the cooperative executor, and `await` or an explicit `checkpoint()` call on the parallel and blocking pools. Cancellation is not a failure: it cannot be caught, recovered or matched. When a task observes it, the current function unwinds through every block to the task boundary, running deferred blocks on the way (12.2), and the task completes as cancelled. A future is never destroyed while suspended: a cancelled task resumes at its cancellation point, unwinds and finishes. Synchronous code runs to completion. A `Duration` deadline attached to a scope delivers the same signal when it expires.
 
-Because unwinding runs no user code other than `defer` blocks and `Abandonable.abandon`, a linear value live at a cancellation point would have no consumer. The rule is therefore: **no linear value may be live across a cancellation point** (`E-OBL-005`) unless its type implements `Abandonable`: `interface Abandonable { func abandon(owned self) Void }`, whose `abandon` must be synchronous, non-failing and non-suspending. The order at each block during an unwind is the block-exit order of 5.1 with one addition: first the block's loans end and the tasks launched on a `scope` declared in the block are cancelled and joined (12.5), which also ends the loans those tasks carried; then the deferred blocks run; then `abandon` is invoked on every other live `Abandonable` local in reverse initialisation order; then the locals are dropped. Unwinding means leaving the function by cancellation **or by `fail`**, so an `Abandonable` local is also the one linear value that may be live at an `or fail`: the failure path abandons it, while a normal exit still has to consume it explicitly (`E-OBL-001` on falling off the end). Unwinding a statement first ends every loan that statement activated (the loan the suspended call holds on `tx`, for example), so `abandon` always runs on a local with no active loan, exactly as a block exit ends loans before dropping locals (5.1). `Task` implements it (its `abandon` is what the owning scope invokes when it cancels and joins, so a task handle is never abandoned after the block's `defer`s), and a library handle such as a database transaction implements it by marking itself abandoned for its pool to roll back, which is exactly the "failure rolls back, success must commit" rule a transaction wants. So `let b = tasks.launch(…)` or `let tx = db.transaction()` may be live while an `await` suspends, but an `Outcome`, a `Failure` or a `Future` may not. Consume such a value before the `await`, pass it into the awaited call, or restructure. The futures and tasks the function is awaiting are not "live across" their own `await`: an awaited child future is cancelled with its parent and the parent waits for its unwind to complete.
+Because unwinding runs no user code other than `defer` blocks and `Abandonable.abandon`, a linear value live at a cancellation point would have no consumer. The rule is therefore: **no linear value may be live across a cancellation point** (`E-OBL-005`) unless its type implements `Abandonable`: `interface Abandonable { func abandon(owned self) Void }`, whose `abandon` must be synchronous, non-failing and non-suspending. The order at each block during an unwind is the block-exit order of 5.1 with one addition: first the block's loans end and the tasks launched on a `scope` declared in the block are cancelled and joined (12.5), which also ends the loans those tasks carried; then the deferred blocks run; then `abandon` is invoked on every other live `Abandonable` local that owns its value, in reverse initialisation order (a local that holds a loan of one is not abandoned: its owner is, once; D-338); then the locals are dropped. Unwinding means leaving the function by cancellation **or by `fail`**, so an `Abandonable` local is also the one linear value that may be live at an `or fail`: the failure path abandons it, while a normal exit still has to consume it explicitly (`E-OBL-001` on falling off the end). Unwinding a statement first ends every loan that statement activated (the loan the suspended call holds on `tx`, for example), so `abandon` always runs on a local with no active loan, exactly as a block exit ends loans before dropping locals (5.1). `Task` implements it (its `abandon` is what the owning scope invokes when it cancels and joins, so a task handle is never abandoned after the block's `defer`s), and a library handle such as a database transaction implements it by marking itself abandoned for its pool to roll back, which is exactly the "failure rolls back, success must commit" rule a transaction wants. So `let b = tasks.launch(…)` or `let tx = db.transaction()` may be live while an `await` suspends, but an `Outcome`, a `Failure` or a `Future` may not. Consume such a value before the `await`, pass it into the awaited call, or restructure. The futures and tasks the function is awaiting are not "live across" their own `await`: an awaited child future is cancelled with its parent and the parent waits for its unwind to complete.
 
 ### 12.5 Structured scopes and `launch`
 
@@ -1713,11 +1783,26 @@ The checker treats the frame as a set of definitely-assigned variables over the 
 
 `record Name(field: value, …)` emits an event of the named schema immediately, as many times as it executes; it has the same purity requirement for its arguments. A frame carries its schema and version, the observed function, the captured fields, the fields cut to their bound, and the activation's outcome class (`success`, `failure`, `cancelled`, `defect`), which the compiler generates and source cannot forge. An activation that is cancelled before it starts produces a frame marked `not_started` without any captured fields. The core frame carries no timing: an activation's start, end and duration are the Telemetry kit's to define (X-252).
 
+**Logs.** `log.info(message)`, `log.warn(message)` and `log.error(message)` are observation statements: each execution writes one `log` record, carrying its level, its message and the function that wrote it, to the diagnostic plane (11.7). Logging is a platform-native concern (X-147), so it needs no capability and no configuration in the program (X-345): the task reporter (15) writes the record to standard error, rendered as text on a terminal (`warn: could not take 9 nuts`) and as one JSON line otherwise, where the platform's log collection picks it up. A log record never mixes into the program's standard output, which is its own product (`console.print`), and every backend writes the same records in the same order. `message` is a `StringView`, so a literal, an interpolated literal or a `String` may be passed; it is evaluated like any argument before the record is written. A log statement has the `io` effect, like `report`, so a `pure` function cannot log; with `report`, it is the `io` that needs no authority (11.6).
+
+```fortis
+// accept
+import fortis.host { Console }
+func main(console: Console) Void {
+  log.info("starting")
+  console.print("the result")
+  log.warn("finished with a warning")
+}
+```
+
+`log` is not a keyword. The statement is `log.` followed by `info`, `warn` or `error` and one argument, written as a statement where `log` names no binding or declaration in scope, so a program that already names something `log` keeps it. `log` used any other way is an ordinary name, unresolved unless the program declares it (`E-NAM-001`, which also names the three levels). A failure is recorded with `report e` alone; `log` is for what is not a failure (a fallback taken, progress, a summary), so a handled failure is reported, not logged as well.
+
 | Rule | Statement | Acceptance evidence |
 |---|---|---|
 | LANG-13-01 | `capture` MUST snapshot at the statement, copying the value; expressions MUST be pure and infallible. (old OBS-001) | Mutation-after-capture tests. |
 | LANG-13-02 | Required fields MUST be definitely assigned on every applicable exit exactly once; loops and double assignment MUST be rejected. (old OBS-002) | Branch/failure/cancellation corpus. |
 | LANG-13-03 | Frame contents MUST be bounded by the schema; truncation or omission MUST be recorded. (old OBS-006) | Oversize corpus. |
+| LANG-13-04 | Each execution of `log.info`, `log.warn` or `log.error` MUST write exactly one `log` record to the diagnostic plane, never to standard output, the same on every backend; it MUST need no `Authority` and MUST have the `io` effect. | Log execute fixtures on every backend; a `pure` function that logs is rejected. |
 
 ## 14. Test declarations
 
@@ -1746,12 +1831,43 @@ property "reversing twice is identity" forall (items: List[Int<0..100>]) {
 }
 ```
 
-A `test` body is a block whose implicit function is `try` (`or fail` is available and a failure fails the test). `cases { … } as name { … }` binds each row explicitly to `name`. The row record type is inferred from how the body uses the fields (bidirectionally, as for any literal), and every row literal is then checked against it at compile time, so `quantity: 1` in a row passed to an `Int<1..10000>` parameter is checked exactly like the literal `1` would be. `expect condition` is a statement that records a typed actual/expected pair and fails the test when `condition` is false; `expect` of a non-`Bool` is an error. Expecting a failure consumes its obligation inside the test. Test declarations are compiled only in test builds and may import test-only modules.
+A `test` body is a block whose implicit function is `try` (`or fail` is available and a failure fails the test). A test can only react to a failure it did not expect by failing, so in `test` and `property` bodies `or fail` is implied (X-345): a call of a fallible function there has its success type, and its failure fails the test with the failure's record, exactly as `or fail` would. `expect (f() or fail) == v` is written `expect f() == v`, and `let x = f()` binds the success value. The rule covers every call in the body whose callee is fallible (`try`), except a call that is the left operand of `or` or `catch` or the scrutinee of a `match`, which consume the outcome themselves, so expecting a failure stays as explicit as before; it does not reach into a lambda written in the body, whose body is its own function. A `let` that binds such a call keeps the outcome, as before, when the body later consumes that binding as an outcome (`let o = f()`, then `o catch`, `o or …` or `match o`) or when the binding is annotated `Outcome[…]`. Integer arithmetic in the body is a checked region in the same way (6.4): an `Int` operator the checker cannot prove safe is the checked operation, and its failure fails the test, so `expect (a * b or fail) == c` is written `expect a * b == c`; arithmetic that is the left operand of `or` or `catch` keeps its own region. Writing `or fail` stays accepted. Outside tests nothing changes: an unconsumed outcome is still `E-OBL-001` or `E-TYP-040`.
+
+```fortis
+// accept
+export error Negative {
+  code: "demo.negative"
+}
+
+try func half(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n / 2
+}
+
+test "half of an even number" {
+  expect half(10) == 5
+  let quarter = half(half(8))
+  expect quarter == 2
+}
+
+test "a negative number fails" {
+  let r = half(-2) catch e {
+    expect e.code == "demo.negative"
+    recover 0
+  }
+  expect r == 0
+}
+```
+
+`cases { … } as name { … }` binds each row explicitly to `name`. The row record type is inferred from how the body uses the fields (bidirectionally, as for any literal), and every row literal is then checked against it at compile time, so `quantity: 1` in a row passed to an `Int<1..10000>` parameter is checked exactly like the literal `1` would be. `expect condition` is a statement that records a typed actual/expected pair and fails the test when `condition` is false; `expect` of a non-`Bool` is an error. Expecting a failure consumes its obligation inside the test. Test declarations are compiled only in test builds and may import test-only modules.
 
 | Rule | Statement | Acceptance evidence |
 |---|---|---|
 | LANG-14-01 | Table rows MUST be bound explicitly with `as`; no implicit names enter scope. | Grammar corpus. |
 | LANG-14-02 | `expect` MUST take a `Bool` and MUST record typed evidence. | Runner golden tests. |
+| LANG-14-03 | In `test` and `property` bodies, a call of a fallible function that is not the left operand of `or` or `catch` or a `match` scrutinee, nor bound by a `let` that the body consumes as an outcome or annotates `Outcome[…]`, MUST behave as that call followed by `or fail`, and integer arithmetic there outside such an operand MUST be a checked region followed by `or fail` (6.4); outside them nothing changes. | Test fixtures with implied `or fail` on calls and on arithmetic, passing and failing, on every backend; the same call outside a test, and arithmetic in a test's lambda, rejected. |
 
 ## 15. Core runtime inventory
 
@@ -1760,10 +1876,10 @@ The core is not only a compiler: a conforming implementation ships the runtime p
 | Component | Provided by the core | Kits add |
 |---|---|---|
 | Executor | one cooperative executor per process running the root task and every `scope`; the parallel and blocking pools; cancellation signalling and deadlines | the Tokio-backed adapter, I/O readiness, timers, channels (Runtime host) |
-| Task reporter | the diagnostic-plane sink for `report`, cleanup reports and `not_started` records, and the holder of completed `capture` frames; by default it writes reports and each frame's schema identity, outcome class and duration to standard error, and **never a captured field value**: field values leave the process only through the Telemetry kit's pipeline, after redaction (Platform 6.1, 6.3), and without that kit they are retained in memory for the debugger and REPL and then discarded; the toolchain's development plan `permit-all` (`FORTIS_TELEMETRY=permit-all`, which the conformance runners set) permits every field unchanged on the record stream, an explicit choice like any plan | exporters, archive, projections (Telemetry) |
-| Authorities | the marker interface `Authority`; the capabilities `FileSystem`, `Network`, `Clock`, `Random`, `Environment`, `Process`, `Supervisor`, `Console`, `SecretAccess`, `RawSql`, and `Host.capabilities()` in `fortis.host`; the rule for per-activation authorities (`RequestContext`, `Identity`, `Db`, `Tx`, `TaskContext`, `Mail`, minted by the owning kit's adapter) | the adapters that mint per-activation authorities, attenuation helpers, sandbox integration |
+| Task reporter | the diagnostic-plane sink for `report`, `log` records (13), cleanup reports and `not_started` records, and the holder of completed `capture` frames; by default it writes reports and each frame's schema identity, outcome class and duration to standard error, and **never a captured field value**: field values leave the process only through the Telemetry kit's pipeline, after redaction (Platform 6.1, 6.3), and without that kit they are retained in memory for the debugger and REPL and then discarded; the toolchain's development plan `permit-all` (`FORTIS_TELEMETRY=permit-all`, which the conformance runners set) permits every field unchanged on the record stream, an explicit choice like any plan | exporters, archive, projections (Telemetry) |
+| Authorities | the marker interface `Authority`; the capabilities `FileSystem`, `Network`, `Clock`, `Random`, `Environment`, `Process`, `Supervisor`, `Console`, `SecretAccess`, `RawSql`, created once per run for the entry `main`'s parameters or by `Host.capabilities()` in `fortis.host`; the rule for per-activation authorities (`RequestContext`, `Identity`, `Db`, `Tx`, `TaskContext`, `Mail`, minted by the owning kit's adapter) | the adapters that mint per-activation authorities, attenuation helpers, sandbox integration |
 | Observation schemas | the `observation` head (section 13) | schema registry and pipelines (Telemetry) |
-| Entry | `main` in its four forms (4.6), one report and exit status 1 on failure | the `application` head and lifecycle (Runtime host) |
+| Entry | `main` in its four forms (4.6), its parameters supplied by type, one report and exit status 1 on failure | the `application` head and lifecycle (Runtime host) |
 | Standard modules | `fortis.prelude`, `fortis.text`, `fortis.collections`, `fortis.numeric`, `fortis.time`, `fortis.money` (`Decimal` plus a run-time `Currency`; `Money.of`, `Money.zero`, `Money.add`, `Money.subtract`, `Money.multiply(money, factor: Int)`, `Money.divide(money, divisor: Int<1..>)`, `Money.greaterThan`, the arithmetic fallible on currency mismatch), `fortis.time` (`Duration.days/hours/minutes/seconds/milliseconds`, `Duration.add(a, b)`, `Duration.sub(a, b)` and `Duration.multiply(d, factor)` fallible on overflow of the signed 64-bit nanosecond count, `d.nanoseconds()`, comparison operators on `Duration`, a `Duration` displaying as its count in the largest unit that divides it exactly (`150s`, `1h`, `250ms`, `0s`), `Timestamp.epoch()`, `Timestamp.add(t, d)` fallible on overflow, `Timestamp.after(a, b)`, `Timestamp.before(a, b)`), `fortis.host` (which also defines `Path`, built from text by `try func parse(text: String) Path`, and gives each capability its core operations: `FileSystem` `readText`, `writeAll`, `readAll`, `open`, `create`, `subtree` and the `File` it opens; `Network.resolve`; `Clock.now`, `frozen`, `sleep`, `elapsedSince`; `Random.below(bound: Int<1..>)` and `seeded`; `Environment.get`; `Process.run`; `Console.print`; `RawSql.execute`; kits add the rest. The operations that wait on the outside block the calling thread and have the `block` effect (11.1): `FileSystem`'s `readText`, `writeAll`, `readAll`, `open` and `create`, `File`'s `readAll` and `writeAll`, `Network.resolve`, `Process.run` and `RawSql.execute`, so `async` code reaches them through `launchBlocking`) | everything else under `fortis.*` |
 | Secrets | `Secret[T]` (no codec, no capture, fingerprint display: `${secret}` shows a per-process keyed hash, never the value) and `reveal(secret, cap: SecretAccess)` in `fortis.host`, because the core `Environment.get` returns `Secret[String]?` | `declassify`, `Sanitiser`, authentication adapters (Security) |
 
@@ -1816,7 +1932,8 @@ Contextual words that are not reserved: `launch`, `launchParallel`, `launchBlock
 |---|---|
 | Declaration vs assignment | `let` / `let mut` declare; `=` assigns only. |
 | Semicolons | Parse error. |
-| `Void` functions | May fall off the end; non-`Void` functions need `return`/`fail` on every path. |
+| `Void` functions | May fall off the end; non-`Void` functions need `return`/`fail` on every path. A head may leave out `Void` (X-345). |
+| Markers the declaration shows | An `editable self` receiver or `fn mut` call needs no `editable` wherever the marker could be written, and is checked as the marked call; `return` of a local `let` binding needs no `move` (X-345). |
 | Type of `fail` | `Never`. |
 | Match-arm value | `give`. |
 | Catch binding | Explicit: `catch e { … }`. |
@@ -1838,7 +1955,8 @@ Contextual words that are not reserved: `launch`, `launchParallel`, `launchBlock
 | Two-phase borrows | Yes: reserve at argument evaluation, activate at call entry. |
 | Two-origin loans | Rejected. |
 | Operator overloading | None; `Type.add` etc. |
-| Or-patterns, range patterns | Not in v1. |
+| Or-patterns | Yes, narrow (X-345): `A \| B => v`, whole patterns of an arm, no bindings, no guard (9.8). |
+| Range patterns | Not in v1. |
 | `nostate` | Removed; lint only. |
 | `or die` | Removed; `try main`. |
 | `yield` | Replaced by `give`. |

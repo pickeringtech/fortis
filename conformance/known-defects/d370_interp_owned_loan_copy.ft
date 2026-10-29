@@ -1,0 +1,37 @@
+// D-370: on the interpreter, an unmarked copy of a binding or a tuple element whose type is a loan but whose value
+// is its owner's own (`let a = t` after `let t = empty.get(0) ?? move d`, or `let a = pair.0`) becomes a second
+// owner: the value's cleanup runs when the copy's block ends, before its owner's end, and the trace announces that
+// drop (`a fallback|drop fallback|mid|b second|drop second|end`). The VM and native code run each cleanup once, when
+// its owner ends (`a fallback|mid|b second|end|drop second|drop fallback`). The copy is a loan, as its type says.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  let d = make(console, "fallback")
+  let t = empty.get(0) ?? move d
+  {
+    let a = t
+    console.print("a ${a.label}")
+  }
+  console.print("mid")
+  let e = make(console, "second")
+  let pair = (empty.get(0) ?? move e, 1)
+  {
+    let b = pair.0
+    console.print("b ${b.label}")
+  }
+  console.print("end")
+}

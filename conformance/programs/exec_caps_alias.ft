@@ -5,7 +5,7 @@
 // itself: the entry `main` creates the capabilities through it, and its operations are checked and run.
 import fortis.host
 
-export try func main(args: List[String]) Void {
+try func main() {
   let caps = host.Host.capabilities()
   let p = host.Path.parse("notes.txt") or fail
   caps.console.print("through the alias")

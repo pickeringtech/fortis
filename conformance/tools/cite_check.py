@@ -9,7 +9,9 @@
   `Programme 7.4` name a heading of that document; a comma or `and` list continues one citation
   (`LR 7.3, 7.5 and 7.6`); a Markdown link into a specification document names an anchor that exists;
 - every rule ID (`LANG-07-05`, `PROG-TST-08`, `PLAT-03-01`), diagnostic code (`E-OWN-011`), register row
-  (`X-137`) and defect (`D-30`) resolves to the specification, the register or `docs/delivery/defects.json`;
+  (`X-137`) and defect (`D-30`) resolves to the specification, the decision register or the defect register;
+  the Delivery Programme and the two registers are maintainers' planning files (planning.py), so in a checkout
+  without them those citations and IDs are not resolved, and the check says so;
 - a paragraph, list item or table row that names a diagnostic code or a `LANG-` rule cites a section, in itself
   or in the heading it sits under, and every code it names occurs in one of the sections it cites (so a page
   cannot attach a code to a rule the cited section does not state), and every `LANG-` rule it names belongs to
@@ -35,12 +37,15 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+sys.path.insert(0, HERE)
+import planning  # noqa: E402
+
 SPECS = {
     "LR": "docs/Fortis_Language_Reference.md",
     "Platform": "docs/Fortis_Platform_Specification.md",
-    "Programme": "docs/Fortis_Delivery_Programme.md",
+    "Programme": planning.PROGRAMME,
 }
-REGISTER = "docs/Fortis_Specification_Review.md"
+REGISTER = planning.REGISTER
 CODE = re.compile(r"\b[EW]-[A-Z]{2,4}-\d{3}\b")
 # the IDs the release check counts (DW-11), exactly as it matches them
 RELEASE_ID = re.compile(r"\b(?:LANG-\d\d-\d\d|PROG-[A-Z]{3}-\d\d|PLAT-\d\d-\d\d|[EW]-[A-Z]{2,4}-\d{3})\b")
@@ -49,6 +54,8 @@ XROW = re.compile(r"\bX-\d{2,3}\b")
 DEF = re.compile(r"\bD-\d{1,3}\b")
 SECNUM = r"(?:\d{1,2}(?:\.\d{1,2})?|[A-E](?:\.\d)?)"
 CITE = re.compile(rf"\b(LR|Platform|Programme)\s+({SECNUM}(?:(?:,\s*|\s+and\s+){SECNUM}(?![\w-]))*)(?![\w.-]*\w)")
+
+SITE = "https://fortis.picktech.co.uk"  # the documentation set, published (website/); the one outside address it may link to
 
 
 # The sections that state each LANG rule. The Language Reference collects a section's rules in a table at its end,
@@ -79,8 +86,8 @@ RULE_SECTIONS = {
     "LANG-11-09": ["11.8"],
     "LANG-12-01": ["12.1"], "LANG-12-02": ["12.1"], "LANG-12-03": ["12.3", "12.4"], "LANG-12-04": ["12.5"],
     "LANG-12-05": ["12.5", "12.7", "7.7"], "LANG-12-06": ["12.7", "12.3"],
-    "LANG-13-01": ["13"], "LANG-13-02": ["13"], "LANG-13-03": ["13"],
-    "LANG-14-01": ["14"], "LANG-14-02": ["14"],
+    "LANG-13-01": ["13"], "LANG-13-02": ["13"], "LANG-13-03": ["13"], "LANG-13-04": ["13"],
+    "LANG-14-01": ["14"], "LANG-14-02": ["14"], "LANG-14-03": ["14"],
 }
 
 
@@ -133,17 +140,33 @@ def anchors(path):
     return {github_anchor(l.lstrip("#").strip()) for l in text.split("\n") if re.match(r"^#{1,6}\s", l)}
 
 
-def known_ids():
-    ids = {"LANG": set(), "PROG": set(), "PLAT": set(), "codes": set(), "X": set(), "D": set()}
+def present_specs(tool="cite"):
+    """SPECS without the documents this checkout does not have (the Delivery Programme is a planning file); a
+    citation of a missing document is then not resolved, and `tool` says so once."""
+    out = {}
     for name, path in SPECS.items():
+        if name == "Programme" and not planning.optional(path, tool, "resolving `Programme n.n` citations and PROG- rule IDs"):
+            continue
+        out[name] = path
+    return out
+
+
+def known_ids():
+    """The IDs each family resolves to; None for a family whose planning file this checkout does not have."""
+    ids = {"LANG": set(), "PROG": set(), "PLAT": set(), "codes": set(), "X": set(), "D": set()}
+    specs = present_specs()
+    if "Programme" not in specs:
+        ids["PROG"] = None
+    for name, path in specs.items():
         text = open(os.path.join(ROOT, path), encoding="utf-8").read()
         for m in re.finditer(r"^\|\s*((?:LANG|PROG|PLAT)-[A-Z0-9]+-\d+)\s*\|", text, re.M):
-            ids[m.group(1).split("-")[0]].add(m.group(1))
+            if ids[m.group(1).split("-")[0]] is not None:
+                ids[m.group(1).split("-")[0]].add(m.group(1))
         ids["codes"] |= set(CODE.findall(text))
-    reg = open(os.path.join(ROOT, REGISTER), encoding="utf-8").read()
-    ids["X"] = set(re.findall(r"^\|\s*(X-\d+)\s*\|", reg, re.M))
-    defects = json.load(open(os.path.join(ROOT, "docs", "delivery", "defects.json"), encoding="utf-8"))["defects"]
-    ids["D"] = {d["id"] for d in defects}
+    reg = planning.optional(REGISTER, "cite", "resolving register rows (X-nn)")
+    ids["X"] = set(re.findall(r"^\|\s*(X-\d+)\s*\|", open(reg, encoding="utf-8").read(), re.M)) if reg else None
+    defects = planning.optional(planning.DEFECTS, "cite", "resolving defect IDs (D-nn)")
+    ids["D"] = {d["id"] for d in json.load(open(defects, encoding="utf-8"))["defects"]} if defects else None
     return ids
 
 
@@ -258,8 +281,9 @@ def link_targets(text):
 def main(argv):
     verbose = "-v" in argv
     ids = known_ids()
-    sections = {doc: spec_sections(path) for doc, path in SPECS.items()}
-    spec_anchor = {path: anchors(path) for path in SPECS.values()}
+    specs = present_specs()
+    sections = {doc: spec_sections(path) for doc, path in specs.items()}
+    spec_anchor = {path: anchors(path) for path in specs.values()}
     problems, cited = [], {"human": {}, "agent": {}, "other": {}}
     covers = {"human": {}, "agent": {}}
     pages = doc_pages()
@@ -298,23 +322,28 @@ def main(argv):
                 heading = body
             sec_cites += len(citations(body))
             for doc, sid in citations(body):
+                if doc not in sections:
+                    continue            # a document this checkout does not have (said once, above)
                 if sid not in sections[doc]:
                     problems.append((page, line, f"`{doc} {sid}` names no section of {SPECS[doc]}"))
                 else:
                     cited[mode].setdefault((doc, sid), []).append(f"{page}:{line}")
             for r in RULE.findall(body):
-                if r not in ids[r.split("-")[0]]:
+                if ids[r.split("-")[0]] is not None and r not in ids[r.split("-")[0]]:
                     problems.append((page, line, f"rule {r} is not in the specification"))
             for c in CODE.findall(body):
                 if c not in ids["codes"]:
                     problems.append((page, line, f"diagnostic code {c} is named nowhere in the specification"))
             for x in XROW.findall(body):
-                if x not in ids["X"]:
+                if ids["X"] is not None and x not in ids["X"]:
                     problems.append((page, line, f"register row {x} does not exist"))
             for d in DEF.findall(body):
-                if d not in ids["D"]:
-                    problems.append((page, line, f"defect {d} is not in docs/delivery/defects.json"))
+                if ids["D"] is not None and d not in ids["D"]:
+                    problems.append((page, line, f"defect {d} is not in the defect register"))
             for target in link_targets(body):
+                # The published website is these same documents rendered, so a link to it is not an outside dependency.
+                if target.rstrip("/") == SITE:
+                    continue
                 if target.startswith(("http://", "https://", "mailto:")):
                     problems.append((page, line, f"an external link ({target}): the documentation set links only inside the repository"))
                     continue
@@ -333,9 +362,10 @@ def main(argv):
                 if not cites:
                     problems.append((page, line, f"names {', '.join(sorted(set(named_codes + named_rules)))} without citing a section: {body[:100]}"))
                     continue
-                texts = [sections[d][s][1] for d, s in cites if s in sections[d]]
+                texts = [sections[d][s][1] for d, s in cites if d in sections and s in sections[d]]
+                unseen = any(d not in sections for d, _ in cites)    # a cited document this checkout does not have
                 for c in sorted(set(named_codes)):
-                    if not any(c in t for t in texts):
+                    if not unseen and not any(c in t for t in texts):
                         problems.append((page, line, f"{c} occurs in none of the cited sections ({', '.join(f'{d} {s}' for d, s in cites)}): {body[:100]}"))
                 for r in sorted(set(named_rules)):
                     allowed = RULE_SECTIONS.get(r)
@@ -413,7 +443,7 @@ def main(argv):
                 first_seen.setdefault(i, (f, n))
     for i in sorted(release_ids):
         known = ids[i.split("-")[0]] if i.startswith(("LANG-", "PROG-", "PLAT-")) else ids["codes"]
-        if i not in known:
+        if known is not None and i not in known:
             problems.append((*first_seen[i], f"{i} resolves to nothing in the specification"))
     print(f"\n{len(pages)} pages, {n_cites} citations; {len(top)} sections and {len(subs)} subsections of the Language Reference; "
           f"{len(problems)} citation problems, {len(missing)} coverage gaps, {len(pending)} pending on stubs")

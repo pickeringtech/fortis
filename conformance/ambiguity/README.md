@@ -16,3 +16,4 @@ listed in `conformance/generated/lookahead.md` and Language Reference 3.2 (X-94)
 | S6 fn type vs lambda | `fn(Int) Int` as a type vs `fn(x: Int) Int => …` as a value | position decides: types appear only after `:` / `)` / `[`, lambdas only in expression position; P2 greedy body |
 | S7 type-rooted primaries | `Name(args)` constructor, `Name.member(args)`, `Enum.Variant`, `Int<0..9>.validate(x)` | P2 greedy option: the optional member and call are taken when present |
 | S8 range vs expression in `for` | `for i in a..<b` vs `for x in xs` vs `for x in move xs` | P3 ordered: `move place`, then range, then expression |
+| S9 a head without a result | `func f() {`: the `{` opens a record result type or the body (X-345: `Void` may be left out) | P3 ordered: a return type first, so `) { low: Int } {` keeps its record result; a `{` that is not a record type is the body |

@@ -1,6 +1,6 @@
 // accept
 // covers: LANG-13-02
-async func pause() Void {
+async func pause() {
 }
 observation Trace {
   tier: Int                          required: all

@@ -1,0 +1,27 @@
+// reject: E-TYP-090 (at the marked lines)
+// covers: LANG-06-07
+// D-242, 6.10: `derive Default` needs a default for every field without an initialiser, and is rejected where none
+// exists. A field of a type parameter has none, since a class takes no `where` clause that could require one, and a
+// class holding such a class at a refined type is rejected with it. `Array[T, N]` has none. An enum has no fields
+// to build a default from and nothing that chooses its variant. Both checkers accepted each of these, and then no
+// backend could build the value.
+class Box[T] derive Default {                // reject: E-TYP-090 — `value: T` has no initialiser and T no default
+  value: T
+}
+
+class Hold derive Default {
+  box: Box[Int<1..10>]
+}
+
+class Grid derive Default {                  // reject: E-TYP-090 — an Array has no default
+  cells: Array[Int, 2]
+}
+
+class Strip derive Default {                 // reject: E-TYP-090 — nor an Array of a refined type
+  cells: Array[Int<1..10>, 3]
+}
+
+enum Color derive Default {                  // reject: E-TYP-090 — nothing chooses the variant
+  Red
+  Blue
+}

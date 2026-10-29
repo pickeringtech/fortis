@@ -1,0 +1,8 @@
+// reject: E-REF-002 (at the marked line)
+// covers: LANG-14-03
+// A lambda written in a test body is its own function: its arithmetic is not the test's checked region, so an
+// operator the checker cannot prove safe is still rejected there (14, 6.4; X-345).
+test "a lambda keeps its own rules" {
+  let twice = fn(n: Int) Int => n * 2              // reject: E-REF-002 — unproved outside a region
+  expect twice(4) == 8
+}

@@ -4,15 +4,15 @@
 // An early exit from a nested block (5.1, 7.9, 12.1, 12.2): the inner block exits first and its live locals
 // are destroyed (cleanup 2), then the outer block's deferred block runs and its live local is destroyed
 // (cleanup 1). D-181: native ran the outer `defer` before the inner block's locals were destroyed.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 export class Res {
   export id: Int
   export console: Shared[Console]
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
-func run(console: Shared[Console], deep: Bool) Void {
+func run(console: Shared[Console], deep: Bool) {
   let a = Res(id: 1, console: console.retain())
   defer { console.print("defer outer") }
   if deep {
@@ -22,9 +22,7 @@ func run(console: Shared[Console], deep: Bool) Void {
   }
   console.print("flat")
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console, true)
   console.print("done")

@@ -3,7 +3,7 @@
 // covers: LANG-11-05, LANG-11-06
 // `try` and `recovers` are written where the summary has them; a contract is a conjunction of claims applied in
 // the modifier position (11.3, 11.5).
-import fortis.host { Host }
+import fortis.host { Console }
 
 export contract Lean {
   pure
@@ -25,9 +25,8 @@ recovers func safeHalve(n: Int) Int {
   return v
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${safeHalve(16)}")
-  caps.console.print("fallback ${safeHalve(-1)}")
-  caps.console.print("ok")
+recovers func main(console: Console) {
+  console.print("${safeHalve(16)}")
+  console.print("fallback ${safeHalve(-1)}")
+  console.print("ok")
 }

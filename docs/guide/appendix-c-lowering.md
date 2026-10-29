@@ -85,7 +85,7 @@ class Order {
   export lines: List[Int]
 }
 
-export func main(args: List[String]) Void {
+func main() {
   let order = Order(id: 7, lines: List.of(1, 2, 3))
   let lines = move order.lines        // reject: E-OWN-040
 }
@@ -96,18 +96,17 @@ Consuming the whole value with a destructuring `let` takes every field at once, 
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Order {
   export id: Int
   export lines: List[Int]
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let order = Order(id: 7, lines: List.of(1, 2, 3))
   let Order(id: id, lines: lines) = move order
-  caps.console.print("order ${id} has ${lines.count()} lines")
+  console.print("order ${id} has ${lines.count()} lines")
 }
 ```
 
@@ -128,7 +127,7 @@ class Line {                          // reject: E-OWN-053
   export text: StringView
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -136,17 +135,16 @@ The class owns its text instead (LR 7.7):
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Line {
   export number: Int
   export text: String
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let line = Line(number: 1, text: "first line")
-  caps.console.print("${line.number}: ${line.text}")
+  console.print("${line.number}: ${line.text}")
 }
 ```
 
@@ -161,7 +159,7 @@ holds, so the combination has no lowering: `E-OWN-090` (LR 7.8, LR C.2):
 
 ```fortis
 // reject: E-OWN-090
-export func main(args: List[String]) Void {
+func main() {
   let mut count = 0
   let bump = fn mut[editable count]() Void {
     count = Int.saturatingAdd(count, 1)
@@ -176,10 +174,9 @@ LR 12.7):
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let counter = Shared.create(AtomicInt.create(0))
   let handle = counter.retain()
   let bump = fn[move handle]() Void {
@@ -187,7 +184,7 @@ export func main(args: List[String]) Void {
   }
   bump()
   bump()
-  caps.console.print("count ${counter.load()}")
+  console.print("count ${counter.load()}")
 }
 ```
 
@@ -202,7 +199,7 @@ carries must be `Shareable`; a future that borrows is `E-ASY-003` (LR 12.5, LR 1
 
 ```fortis
 // reject: E-ASY-003
-import fortis.host { Host }
+import fortis.host { Console }
 
 async func total(items: ListView[Int]) Int {
   let mut sum = 0
@@ -212,13 +209,12 @@ async func total(items: ListView[Int]) Int {
   return sum
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async func main(console: Console) {
   let numbers = List.of(1, 2, 3)
   scope tasks {
     let t = tasks.launchParallel(total(numbers))   // reject: E-ASY-003
     let sum = await t
-    caps.console.print("${sum}")
+    console.print("${sum}")
   }
 }
 ```
@@ -227,7 +223,7 @@ Pass the task owned data instead (LR 12.5, LR C.2):
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 async func total(items: owned List[Int]) Int {
   let mut sum = 0
@@ -237,13 +233,12 @@ async func total(items: owned List[Int]) Int {
   return sum
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async func main(console: Console) {
   let numbers = List.of(1, 2, 3)
   scope tasks {
     let t = tasks.launchParallel(total(move numbers))
     let sum = await t
-    caps.console.print("${sum}")
+    console.print("${sum}")
   }
 }
 ```
@@ -268,23 +263,22 @@ So arithmetic on proved integers is `noalloc`, and pushing onto a list is not (L
 
 ```fortis
 // reject: E-EFF-001
-pure noalloc func grow(items: editable List[Int]) Void {
-  editable items.push(1)              // reject: E-EFF-001
+pure noalloc func grow(items: editable List[Int]) {
+  items.push(1)                       // reject: E-EFF-001
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure noalloc func square(n: Int<-1000..1000>) Int => n * n
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${square(12)}")
+func main(console: Console) {
+  console.print("${square(12)}")
 }
 ```
 

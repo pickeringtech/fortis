@@ -111,6 +111,9 @@ pub struct Builder<'t, 'a> {
     pub errors: Vec<BuildError>,
     /// the value under construction is moved into its consumer, so it is not itself a statement temporary (7.9)
     pub consuming: bool,
+    /// the classes and newtypes whose derived defaults are being built, as ((module, name), name): one met again is a
+    /// cycle, which the checkers reject (E-TYP-090; D-335, D-336), so the build stops with an error, not a stack overflow
+    pub defaulting: Vec<((String, String), String)>,
 }
 
 pub fn line_of(n: N) -> u32 {
@@ -125,7 +128,7 @@ impl<'t, 'a> Builder<'t, 'a> {
     pub fn new(ty: &'t mut Typer<'a>, module: &str, lib: &'t LibIndex) -> Builder<'t, 'a> {
         let types = ty.node_types.take().unwrap_or_default();
         let ir_module = lib.qualify.module(module, &ty.dc.package);
-        Builder { ty, types, module: module.to_string(), ir_module, lib, prog: Program::default(), fbs: vec![], consts: HashSet::new(), errors: vec![], consuming: false }
+        Builder { ty, types, module: module.to_string(), ir_module, lib, prog: Program::default(), fbs: vec![], consts: HashSet::new(), errors: vec![], consuming: false, defaulting: vec![] }
     }
 
     /// The type the checker gave a node in its final pass.
@@ -515,7 +518,8 @@ impl<'t, 'a> Builder<'t, 'a> {
     /// A function, method or associated function with a body; with applied aspects (other than `@observe`), the
     /// woven function and its parts (aspect.rs).
     pub fn function(&mut self, sig: &Sig<'a>, label: &str, self_t: Option<Type>, aspects: Vec<N<'a>>) -> BResult<()> {
-        let woven = aspects.iter().any(|a| a.direct_tokens().get(1).map_or(false, |t| t.text != "observe"));
+        // the core aspects `@observe` and `@ignorable` have no hooks (11.8): `ignorable` is the checker's alone (5.5)
+        let woven = aspects.iter().any(|a| a.direct_tokens().get(1).map_or(false, |t| !self.core_aspect(&t.text)));
         if woven && sig.body.is_some() {
             return self.woven_function(sig, label, self_t, aspects);
         }
@@ -593,11 +597,18 @@ impl<'t, 'a> Builder<'t, 'a> {
         out
     }
 
+    /// `@observe` and `@ignorable` name the prelude's metadata aspects, which have no hooks, unless the module's table
+    /// resolves the name to another aspect (one it declares or imports), which is woven like any other: an aspect is
+    /// resolved by identity, not by its spelling (11.8; D-314).
+    pub fn core_aspect(&self, aname: &str) -> bool {
+        (aname == "observe" || aname == "ignorable") && self.ty.dc.table.get(aname).map_or(true, |d| d.module == "fortis.prelude")
+    }
+
     /// `@observe(Schema)` among a function's aspects names its observation schema (13).
     fn observe_schema(&self, aspects: &[N<'a>]) -> Option<String> {
         for a in aspects {
             let ts = a.direct_tokens();
-            if ts.get(1).map_or(false, |t| t.text == "observe") {
+            if ts.get(1).map_or(false, |t| t.text == "observe" && self.core_aspect("observe")) {
                 if let Some(al) = a.find("argList") {
                     let schema = al.tokens().into_iter().find(|t| t.kind == Kind::Upper).map(|t| t.text.clone())?;
                     return Some(self.ty.dc.table.get(&schema).map(|d| self.tname(&d.name, &d.type_identity())).unwrap_or(schema));

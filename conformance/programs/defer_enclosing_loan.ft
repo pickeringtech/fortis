@@ -4,7 +4,7 @@
 // deferred write conflicts with it; the inner block's own loans have ended by then (12.1, 5.1).
 export class Buffer {
   export used: Int
-  export func clear(editable self) Void {
+  export func clear(editable self) {
     self.used = 0
   }
   export func peek(self) alias Buffer from self => alias self

@@ -1,0 +1,30 @@
+// execute: built repo|built repo|2 resolves
+// SP-08 lazy edge, representation 3: the provider owns what the factory needs and `resolve()` constructs. It runs,
+// but every resolve constructs a new instance, so it is not Platform 3.4's one instance per scope; caching it
+// would need the provider to write through the read loan every holder has, which only a Mutex the source never
+// wrote could allow.
+import fortis.host { Console }
+
+export class Repo {
+  size: Int = 1
+}
+
+export class ProviderOfRepo {
+  console: Shared[Console]
+  export func resolve(self) Repo {
+    self.console.print("built repo")
+    return Repo()
+  }
+}
+
+export class Service {
+  repo: ProviderOfRepo
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let s = Service(repo: ProviderOfRepo(console: console.retain()))
+  let a = s.repo.resolve()
+  let b = s.repo.resolve()
+  console.print("2 resolves")
+}

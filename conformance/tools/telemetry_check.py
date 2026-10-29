@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SP-09-telemetry's harness: the measures of spikes/SP-09-telemetry/design.md section 6 (P1-P4, D1-D4, C1, U1,
+"""SP-09-telemetry's harness: the measures of SP-09-telemetry's design, section 6 (P1-P4, D1-D4, C1, U1,
 E1, V1, A1, B1, L1, S1), over the workload conformance/telemetry/orders.ft (and its version-1 build) on the
 interpreter, the VM and native, and the plans in conformance/telemetry/plans.
 

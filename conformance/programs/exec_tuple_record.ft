@@ -1,15 +1,14 @@
 // execute: 2 3|north 9
 // requires: runtime
 // covers: LANG-06-01
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func pair() (Int, Int) => (2, 3)
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let p = pair()
   let (a, b) = move p                      // destructuring consumes a place (LR 5.1)
-  caps.console.print("${a} ${b}")
+  console.print("${a} ${b}")
   let point = { heading: "north", distance: 9 }
-  caps.console.print("${point.heading} ${point.distance}")
+  console.print("${point.heading} ${point.distance}")
 }

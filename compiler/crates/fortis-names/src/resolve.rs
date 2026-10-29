@@ -48,20 +48,36 @@ fn nf(name: &str, cands: Vec<String>) -> Json {
 
 /// The first of 4.6's `List`, `String` and `Void` bound by a declaration or an import of `m`. The package resolver
 /// has no scope origins, so a module-level binding of the name is not the prelude type.
-fn entry_type_shadow(m: &crate::project::Module) -> Option<String> {
-    let decls = m.decls();
-    let imports = m.imports();
-    for n in ["List", "String", "Void"] {
-        let declared = decls.iter().any(|d| d.name.as_deref() == Some(n));
-        let imported = imports.iter().any(|imp| match &imp.members {
-            Some(ms) => ms.iter().any(|mm| mm == n),
-            None => imp.alias.as_deref().or_else(|| imp.path.last().map(|s| s.as_str())) == Some(n),
-        });
-        if declared || imported {
-            return Some(n.to_string());
+fn entry_type_shadow(m: &crate::project::Module, which: &[&str]) -> Option<String> {
+    which.iter().find(|n| !matches!(entry_origin(m, n).as_deref(), None | Some("prelude"))).map(|n| n.to_string())
+}
+
+/// Where the module's name `n` comes from (reading::param_findings): "module", an import path, "alias:<path>",
+/// "prelude" for 4.6's prelude types, or None.
+fn entry_origin(m: &crate::project::Module, n: &str) -> Option<String> {
+    if m.decls().iter().any(|d| d.name.as_deref() == Some(n)) {
+        return Some("module".into());
+    }
+    for imp in m.imports() {
+        let path = imp.path.join(".");
+        match &imp.members {
+            None => {
+                if imp.alias.as_deref().or_else(|| imp.path.last().map(|s| s.as_str())) == Some(n) {
+                    return Some(format!("alias:{path}"));
+                }
+            }
+            Some(ms) => {
+                if ms.iter().any(|mm| mm == n) {
+                    return Some(path);
+                }
+            }
         }
     }
-    None
+    if ["List", "String", "Void"].contains(&n) {
+        Some("prelude".into())
+    } else {
+        None
+    }
 }
 
 impl PackageSet {
@@ -286,35 +302,43 @@ impl PackageSet {
         let res = {
             let pkg = self.root();
             match pkg.modules.get(&entry) {
-                None => Err((format!("entry module {entry} does not exist"), dir.join("project.yaml"), 1, 1, nf(&entry, pkg.modules.keys().cloned().collect()))),
+                None => Err(vec![("E-NAM-001", format!("entry module {entry} does not exist"), dir.join("project.yaml"), 1, 1, nf(&entry, pkg.modules.keys().cloned().collect()))]),
                 Some(m) => {
                     let decls = m.decls();
                     let mains: Vec<_> = decls.iter().filter(|d| d.kind == "func" && d.name.as_deref() == Some("main")).collect();
-                    if mains.is_empty() || !mains[0].exported {
-                        Err((format!("entry module {entry} exports no main"), m.file.clone(), 1, 1, nf("main", decls.iter().filter_map(|d| d.name.clone()).collect())))
+                    if mains.is_empty() {
+                        // the entry module's function main is the entry, exported or not (4.6, X-345)
+                        Err(vec![("E-NAM-001", format!("entry module {entry} declares no main"), m.file.clone(), 1, 1, nf("main", decls.iter().filter_map(|d| d.name.clone()).collect()))])
                     } else {
                         let head = mains[0].node.find("funcHead").unwrap();
                         let words = head.find("modifiers").map(|m| m.tokens().iter().map(|t| t.text.clone()).collect::<Vec<_>>().join(" ")).unwrap_or_default();
                         let sig = head.find("funcSignature").unwrap();
-                        let text = sig.tokens().iter().map(|t| t.text.clone()).collect::<Vec<_>>().join(" ");
-                        let form = "export [async] [try] [recovers] func main(args: List[String]) Void";
+                        let ret = sig.find("returnType").map(|r| r.tokens().iter().map(|t| t.text.clone()).collect::<Vec<_>>().join(" ")).unwrap_or_default();
+                        let form = crate::reading::ENTRY_FORM;
                         let tok = mains[0].token.unwrap();
-                        if MAIN_FORMS.contains(&words.as_str()) && text == "( args : List [ String ] ) Void" {
-                            // the token text can match while `List`, `String` or `Void` names a declaration or import
-                            // of this module. 4.6's forms use the prelude types (D-51.2)
-                            match entry_type_shadow(m) {
-                                Some(n) => Err((format!("main's `{n}` is not the prelude {n}, so the signature is not one of the forms of 4.6"), m.file.clone(), tok.line, tok.col, nf("main", vec![form.into()]))),
-                                None => Ok(()),
-                            }
+                        if !MAIN_FORMS.contains(&words.as_str()) || !(ret == "Void" || ret.is_empty()) || sig.find("typeParams").is_some() || sig.find("whereClause").is_some() {
+                            let text = sig.tokens().iter().map(|t| t.text.clone()).collect::<Vec<_>>().join(" ");
+                            Err(vec![("E-NAM-001", format!("main has signature `{words} func main{text}`, not one of the forms of 4.6"), m.file.clone(), tok.line, tok.col, nf("main", vec![form.into()]))])
+                        } else if entry_type_shadow(m, &["Void"]).is_some() {
+                            // the token text can match while `Void` names a declaration or import of this module.
+                            // 4.6's forms use the prelude types (D-51.2)
+                            Err(vec![("E-NAM-001", "main's `Void` is not the prelude Void, so the signature is not one of the forms of 4.6".to_string(), m.file.clone(), tok.line, tok.col, nf("main", vec![form.into()]))])
                         } else {
-                            Err((format!("main has signature `{words} func main{text}`, not one of the forms of 4.6"), m.file.clone(), tok.line, tok.col, nf("main", vec![form.into()])))
+                            let found = crate::reading::param_findings(sig, &|n: &str| entry_origin(m, n));
+                            if found.is_empty() {
+                                Ok(())
+                            } else {
+                                Err(found.into_iter().map(|(code, msg, t, fields)| (code, msg, m.file.clone(), t.line, t.col, fields)).collect())
+                            }
                         }
                     }
                 }
             }
         };
-        if let Err((msg, file, line, col, fields)) = res {
-            self.record("E-NAM-001", msg, "LANG-04-06", &file, line, col, fields);
+        if let Err(found) = res {
+            for (code, msg, file, line, col, fields) in found {
+                self.record(code, msg, "LANG-04-06", &file, line, col, fields);
+            }
         }
     }
 

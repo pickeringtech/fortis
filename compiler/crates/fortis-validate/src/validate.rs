@@ -972,6 +972,11 @@ fn effects(ctx: &mut Ctx, f: &Function, body: &Block) {
                         direct_io.get_or_insert(e.line);
                     }
                 }
+                if name.starts_with("log.") {
+                    // a log statement writes to the diagnostic plane: `io`, with no authority, like `report` (13)
+                    found.insert("io");
+                    lines.entry("io").or_insert(e.line);
+                }
                 if NONDET.contains(&name.as_str()) {
                     found.insert("nondet");
                     lines.entry("nondet").or_insert(e.line);

@@ -1,0 +1,9 @@
+// reject: E-NAM-005 (at the marked line)
+// covers: LANG-04-06
+// A parameter of the entry `main` is written `name: T`: `main` already owns its capabilities, so a mode says nothing
+// the runtime could supply differently (4.6, X-345).
+import fortis.host { Console }
+
+func main(console: editable Console) {        // reject: E-NAM-005 — a mode on main's parameter
+  console.print("x")
+}

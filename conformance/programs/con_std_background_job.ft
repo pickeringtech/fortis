@@ -6,5 +6,5 @@ contract BackgroundJob {
   requires capability TaskContext
   forbids recovers
 }
-BackgroundJob func run(ctx: TaskContext, n: Int) Void {
+BackgroundJob func run(ctx: TaskContext, n: Int) {
 }

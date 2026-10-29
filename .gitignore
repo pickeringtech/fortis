@@ -1,7 +1,26 @@
-# build output at the repository root only (a `build` directory elsewhere is source: fortis-mir/src/build)
+# Build output. `build` is anchored to the root on purpose: a `build` directory elsewhere is source
+# (conformance/build holds fixtures, compiler/crates/fortis-mir/src/build holds code).
 /build/
-compiler/target/
+# Cargo's build directories, wherever a crate is built (compiler/target, the experimental runtime's target, a
+# fixture's native/target); their `incremental/` caches are inside them. A bare `incremental/` pattern is not used:
+# benchmarks/incremental is source.
+target/
+# the built website (website/publish.sh publishes it to the orphan branch `website`)
+website/dist/
 __pycache__/
 *.pyc
+*.pyo
+*.rlib
+*.rmeta
 # fuzz corpora `fortis test --fuzz` keeps beside a program (X-131)
 .fortis/
+# agents' git worktrees
+.claude/worktrees/
+# a spike's run logs, written while it runs; the ones its decision record keeps as evidence are added with
+# `git add -f` when the spike closes
+spikes/*/run-*.log
+spikes/*/workload.log
+# SP-12b's preregistration (its README's commands) commits these three as the run's evidence
+!spikes/SP-12b/workload.log
+!spikes/SP-12b/run-50k.log
+!spikes/SP-12b/run-500k.log

@@ -2,16 +2,15 @@
 // requires: runtime
 // covers: LANG-06-04
 // 15: Timestamp.epoch, Timestamp.add and the ordering functions; a Timestamp displays as RFC 3339 in UTC.
-import fortis.host { Host }
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+import fortis.host { Console }
+try func main(console: Console) {
   let start = Timestamp.epoch()
   let later = Timestamp.add(start, Duration.seconds(90)) or fail
-  caps.console.print("${start}")
-  caps.console.print("${later}")
-  caps.console.print("${Timestamp.after(later, start)}")
-  caps.console.print("${Timestamp.before(later, start)}")
-  caps.console.print("${Timestamp.after(start, start)}")
-  caps.console.print("${later > start}")
-  caps.console.print("${start == Timestamp.epoch()}")
+  console.print("${start}")
+  console.print("${later}")
+  console.print("${Timestamp.after(later, start)}")
+  console.print("${Timestamp.before(later, start)}")
+  console.print("${Timestamp.after(start, start)}")
+  console.print("${later > start}")
+  console.print("${start == Timestamp.epoch()}")
 }

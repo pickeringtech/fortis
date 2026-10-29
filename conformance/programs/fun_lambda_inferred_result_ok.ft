@@ -1,0 +1,16 @@
+// accept
+// covers: LANG-08-01
+// 8.2 (X-345): an expression-bodied lambda may leave out its return type. The function type it is passed to or bound
+// to decides it when that type names one; otherwise the body's type does, widened as an unannotated `let` widens.
+func apply(f: fn(Int) Int, x: Int) Int => f(x)
+
+func scored(f: fn(Int) Int<0..100>, x: Int) Int<0..100> => f(x)
+
+func shapes(xs: List[Int], limit: Int<0..9>) Int {
+  let double: fn(Int) Int = fn(x) => Int.wrappingMul(x, 2)       // the annotation's result: Int
+  let next = fn(x: Int<0..9>) => x + 1                          // the body's interval widens: returns Int
+  let half = scored(fn(x) => 50, 3)                            // the parameter's result: Int<0..100>
+  let labels = xs.map(fn(x) => "item ${x}")                    // a type parameter: the body's type, String
+  let big = xs.countWhere(fn[limit](x) => x > limit)           // Bool, and pure, as countWhere requires
+  return Int.wrappingAdd(apply(double, next(limit)), Int.wrappingAdd(half, Int.wrappingAdd(labels.count(), big)))
+}

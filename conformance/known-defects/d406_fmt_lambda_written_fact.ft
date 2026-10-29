@@ -1,0 +1,12 @@
+// D-406: `fortis fmt` keeps a `pure` the author wrote on a lambda (`pure fn(x) Int => ...`), although the function
+// type it is passed to, `pure fn(Int) Int`, already states it; LR 8.2 says the formatter prints no inferred `pure` or
+// `noalloc` on a lambda and keeps one the author wrote. The formatter leaves this module as it is; every backend
+// prints `5`.
+import fortis.host { Console }
+
+pure func apply(f: pure fn(Int) Int, n: Int) Int => f(n)
+
+func main(console: Console) {
+  let g = apply(pure fn(x) Int => Int.wrappingAdd(x, 1), 4)
+  console.print("${g}")
+}

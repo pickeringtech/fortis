@@ -2,7 +2,7 @@
 // requires: runtime
 // covers: LANG-11-07
 // Environment.get returns Secret[String]?; revealing needs SecretAccess (15).
-import fortis.host { Host, Environment, SecretAccess, reveal }
+import fortis.host { Environment, SecretAccess, reveal, Console }
 func describe(env: Environment, access: SecretAccess, name: StringView) StringView from static {
   return match env.get(name) {
     present(s) => if reveal(s, access).scalarCount() > 0 {
@@ -13,15 +13,14 @@ func describe(env: Environment, access: SecretAccess, name: StringView) StringVi
     null => "absent"
   }
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let home = caps.environment.get("PATH")
+func main(environment: Environment, console: Console, secretAccess: SecretAccess) {
+  let home = environment.get("PATH")
   let found = match home {
     present(s) => "present"
     null => "absent"
   }
-  caps.console.print(found)
-  caps.console.print(describe(caps.environment, caps.secretAccess, "PATH"))
-  caps.console.print(describe(caps.environment, caps.secretAccess, "FORTIS_SURELY_UNSET_VARIABLE"))
-  caps.console.print(describe(caps.environment, caps.secretAccess, ""))
+  console.print(found)
+  console.print(describe(environment, secretAccess, "PATH"))
+  console.print(describe(environment, secretAccess, "FORTIS_SURELY_UNSET_VARIABLE"))
+  console.print(describe(environment, secretAccess, ""))
 }

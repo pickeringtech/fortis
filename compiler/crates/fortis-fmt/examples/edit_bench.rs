@@ -1,4 +1,4 @@
-//! PROG-NFR-01 (DEL-43; benchmarks/PREREGISTRATION-DEL-43.md): warm parse and format of a 1k-line module, timed
+//! PROG-NFR-01 (DEL-43, as preregistered): warm parse and format of a 1k-line module, timed
 //! per edit over a 1,000-edit session.
 //!
 //! `cargo run --release -p fortis-fmt --example edit_bench -- FILE [--passes 5] [--edits 1000]` prints one JSON line.

@@ -1,0 +1,58 @@
+// execute: 4 passed, 1 failed
+// tests: run
+// requires: runtime
+// covers: LANG-14-03
+// D-319: a test body's implied `or fail` belongs to the calls the checker records, and to nothing else. An outcome
+// the body keeps (`let o: Outcome[Int] = bad()`) is a value: moved into a recovery helper, moved to another binding,
+// or caught later, it is passed on as it is, and the test goes on; the interpreter, the VM and native agree. A
+// failing call the body does not consume still fails the test.
+export error Bad {
+  code: "demo.bad"
+}
+
+try func bad() Int {
+  fail Bad()
+}
+
+try func good() Int {
+  return 5
+}
+
+recovers func handle(o: owned Outcome[Int]) Int {
+  return move o or recover 7
+}
+
+func pass(o: owned Outcome[Int]) Outcome[Int] {
+  return move o
+}
+
+test "a kept outcome passed to a recovery helper" {
+  let o: Outcome[Int] = bad()
+  expect handle(move o) == 7
+}
+
+test "a kept outcome moved on, then recovered" {
+  let o: Outcome[Int] = bad()
+  let p = move o
+  expect handle(move p) == 7
+}
+
+test "a kept outcome passed through a function that returns it" {
+  let o: Outcome[Int] = bad()
+  let back = pass(move o)
+  let v = move back catch e {
+    expect e.code == "demo.bad"
+    report e
+    recover 3
+  }
+  expect v == 3
+}
+
+test "a kept success is a success" {
+  let o: Outcome[Int] = good()
+  expect handle(move o) == 5
+}
+
+test "a failing call the body does not consume fails the test" {
+  expect bad() == 0
+}

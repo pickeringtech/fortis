@@ -1,6 +1,6 @@
 // execute: no arguments
 // requires: runtime
-// D-142 (docs/delivery/defects.json): the interpreter and the VM resolve an alias-qualified type in an expression by its
+// D-142: the interpreter and the VM resolve an alias-qualified type in an expression by its
 // bare name, so `platform.Host.capabilities()` runs this program's own `Host.capabilities` (the interpreter fails
 // `no method print`, the VM `field console of a Int`); both checkers type it as `fortis.host`'s `Host` and accept it.
 import fortis.host as platform

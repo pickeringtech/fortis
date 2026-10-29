@@ -2,15 +2,14 @@
 // requires: runtime
 // covers: LANG-06-04
 // The mismatch carries both currencies in its payload and is matched by its error.
-import fortis.host { Host }
+import fortis.host { Console }
 import fortis.money { Money, Currency, CurrencyMismatch }
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  match Money.add(Money.of(Currency.GBP, 1d), Money.of(Currency.EUR, 2d)) {
-    success(m) => caps.console.print("${m.amount}")
+recovers func main(console: Console) {
+  match Money.add(Money.of(GBP, 1d), Money.of(EUR, 2d)) {
+    success(m) => console.print("${m.amount}")
     failure(f) => {
       match move f {
-        is CurrencyMismatch(left: l, right: r) => caps.console.print("cannot add ${l} to ${r}")
+        is CurrencyMismatch(left: l, right: r) => console.print("cannot add ${l} to ${r}")
         otherwise(other) => {
           report other
         }

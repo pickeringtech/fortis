@@ -1,0 +1,49 @@
+// execute: head 3 0|chain 5 -1|pair 9 7
+// requires: runtime
+// covers: LANG-09-06
+// D-158, 9.8: a class pattern nests inside another pattern under `match move`: inside `present(…)`, where its
+// bindings were reported as shadowing themselves, and inside a variant's payload, where its fields were looked up in
+// the variant. Each pattern names its own fields only, and a class that contains itself is destructured the same way.
+import fortis.host { Console }
+
+export class Node {
+  export value: Int
+  export next: Node?
+}
+
+export enum Shape {
+  Leaf
+  Chain(node: Node)
+}
+
+export class Pair {
+  export left: Node
+  export right: Int
+}
+
+func headOf(n: owned Node?) Int {
+  return match move n {
+    present(Node(value: b, next: _)) => b
+    null => 0
+  }
+}
+
+func chainOf(s: owned Shape) Int {
+  return match move s {
+    Chain(node: Node(value: w, next: _)) => w
+    Leaf => -1
+  }
+}
+
+func pairOf(p: owned Pair) String {
+  let Pair(left: Node(value: v, next: _), right: r) = move p
+  return "${v} ${r}"
+}
+
+func main(console: Console) {
+  let one: Node? = Node(value: 3, next: null)
+  let none: Node? = null
+  console.print("head ${headOf(move one)} ${headOf(move none)}")
+  console.print("chain ${chainOf(Shape.Chain(node: Node(value: 5, next: null)))} ${chainOf(Shape.Leaf)}")
+  console.print("pair ${pairOf(Pair(left: Node(value: 9, next: null), right: 7))}")
+}

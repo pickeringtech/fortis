@@ -1,0 +1,52 @@
+// reject: E-OWN-010 (at the marked lines)
+// covers: LANG-07-04, LANG-07-05
+// D-303: an unmarked receiver held through a binding that holds an exclusive loan, or of a trivial type, takes the
+// exclusive loan `editable r.m(…)` takes. While a read loan is live, the call is the conflict the marked form is.
+// (Before the fix, both checkers accepted the unmarked calls below without taking any loan.)
+export class Tally {
+  export order: List[String]
+  export func add(editable self, word: StringView) {
+    self.order.push(String.from(word))
+  }
+}
+
+export trivial class Point {
+  export x: Int
+  export func shift(editable self) {
+    self.x = Int.saturatingAdd(self.x, 1)
+  }
+}
+
+export class Cell {
+  export value: Int
+  export func bump(editable self) {
+    self.value = Int.saturatingAdd(self.value, 1)
+  }
+}
+
+func project(c: editable Cell) editable Cell from c {
+  return editable c
+}
+
+func loanBinding() Int {
+  let mut t = Tally(order: List.default())
+  let r = editable t
+  let seen = alias r.order
+  r.add("x")                                         // reject: E-OWN-010: `seen` reads what `r` would change
+  editable r.add("y")                                // reject: E-OWN-010: the marked form, the same conflict
+  return 0
+}
+
+func trivialValue() Int {
+  let mut p = Point(x: 0)
+  let q = alias p
+  p.shift()                                          // reject: E-OWN-010: `q` reads p
+  return q.x
+}
+
+func fromResult(cell: editable Cell) Int {
+  let result = project(editable cell)
+  let seen = alias result.value
+  result.bump()                                      // reject: E-OWN-010: `seen` reads what `result` would change
+  return 0
+}

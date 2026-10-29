@@ -50,17 +50,29 @@ def block_network_and_subprocesses():
 
 
 def head_commit() -> str:
-    """The short HEAD commit read from .git, without a subprocess."""
+    """The short HEAD commit read from .git, without a subprocess; empty outside a git checkout. In a linked
+    worktree, .git is a file naming the worktree's own git directory, whose `commondir` holds the shared refs."""
     git = os.path.join(ROOT, ".git")
+    if not os.path.exists(git):
+        return ""
+    if os.path.isfile(git):
+        line = open(git, encoding="utf-8").read().strip()
+        if line.startswith("gitdir: "):
+            git = os.path.normpath(os.path.join(ROOT, line[len("gitdir: "):]))
+    common = git
+    if os.path.exists(os.path.join(git, "commondir")):
+        common = os.path.normpath(os.path.join(git, open(os.path.join(git, "commondir"), encoding="utf-8").read().strip()))
     head = open(os.path.join(git, "HEAD"), encoding="utf-8").read().strip()
     if head.startswith("ref: "):
-        ref = os.path.join(git, head[5:])
-        if os.path.exists(ref):
-            return open(ref, encoding="utf-8").read().strip()[:7]
-        packed = os.path.join(git, "packed-refs")
-        for ln in open(packed, encoding="utf-8"):
+        for base in (git, common):
+            ref = os.path.join(base, head[5:])
+            if os.path.exists(ref):
+                return open(ref, encoding="utf-8").read().strip()[:7]
+        packed = os.path.join(common, "packed-refs")
+        for ln in open(packed, encoding="utf-8") if os.path.exists(packed) else []:
             if ln.strip().endswith(head[5:]):
                 return ln.split()[0][:7]
+        return ""
     return head[:7]
 
 
@@ -196,8 +208,13 @@ def fixtures():
 
 
 def cited_evidence() -> set:
-    """Files a closed spike cites by hash in spikes/registry.json: frozen once the spike closes."""
-    reg = json.load(open(os.path.join(ROOT, "spikes", "registry.json"), encoding="utf-8"))
+    """Files a closed spike cites by hash in the spike registry: frozen once the spike closes. The registry is a
+    maintainers' planning file; without it no report is known to be frozen."""
+    import planning
+    path = planning.optional(planning.SPIKE_REGISTRY, "differential", "refusing to overwrite a report a closed spike cites")
+    if not path:
+        return set()
+    reg = json.load(open(path, encoding="utf-8"))
     return {os.path.normpath(os.path.join(ROOT, e["path"])) for s in reg.values() if s.get("status") == "closed" for e in s.get("evidence", [])}
 
 
@@ -235,7 +252,7 @@ def run(left_name: str, right_name: str, out_path: str, verbose=True) -> dict:
         },
         "execution_attestation": {
             "command": f"python3 -I conformance/tools/differential.py --left {left_name} --right {right_name}",
-            "python": platform.python_version(), "platform": PLATFORM, "cwd": ROOT,
+            "python": platform.python_version(), "platform": PLATFORM, "cwd": ".",   # the repository root, written relative
             "started": started, "finished": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "network_blocked": True, "subprocesses_blocked": True,
         },

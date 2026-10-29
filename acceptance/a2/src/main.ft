@@ -1,11 +1,11 @@
 // The word-tally command-line tool (Programme 14, application A2): the core only.
 //
-// `async try func main` runs on the core executor. The FileSystem and Environment authorities come from
-// Host.capabilities(). One `launchBlocking` task reads every file the manifest names (reading may block, so it runs
-// on the blocking pool); one cooperative task per file counts its words. A synchronous `defer` reports that the
-// tally finished on every exit. A manifest entry that does not exist is a structured failure: the read's
-// `fs.not_found` travels to main, which fails, and the runtime reports it once at the entry boundary.
-import fortis.host { Host, Capabilities, FileSystem, Environment, SecretAccess, Path, reveal }
+// `async try func main` runs on the core executor. The FileSystem and Environment authorities are parameters of
+// `main`, which the runtime supplies. One `launchBlocking` task reads every file the manifest names (reading may
+// block, so it runs on the blocking pool); one cooperative task per file counts its words. A synchronous `defer`
+// reports that the tally finished on every exit. A manifest entry that does not exist is a structured failure: the
+// read's `fs.not_found` travels to main, which fails, and the runtime reports it once at the entry boundary.
+import fortis.host { FileSystem, Environment, SecretAccess, Path, reveal, Console }
 import fortis.text { Text }
 import acme.tally.count { Tally, count }
 
@@ -39,8 +39,8 @@ try func readAll(fs: FileSystem) Inputs {
   let manifest = fs.readText(Path.parse("manifest.txt") or fail) or fail
   for name in Text.words(manifest) {
     let text = fs.readText(Path.parse(copy name) or fail) or fail
-    editable names.push(copy name)
-    editable texts.push(move text)
+    names.push(copy name)
+    texts.push(move text)
   }
   return Inputs(names: move names, texts: move texts)
 }
@@ -55,16 +55,14 @@ async try func tally(fs: owned FileSystem, minimum: Int) List[Tally] {
     for name in inputs.names {
       let text = inputs.texts.get(i) ?? ""
       let t = tasks.launch(count(copy name, copy text, minimum))
-      editable tallies.push(await t)
+      tallies.push(await t)
       i = Int.wrappingAdd(i, 1)
     }
-    return move tallies
+    return tallies
   }
 }
 
-export async try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(fileSystem: fs, environment: env, secretAccess: access, console: console, network: net, clock: clock, random: rnd, process: proc, supervisor: sup, rawSql: sql) = move caps
+async try func main(fs: FileSystem, env: Environment, access: SecretAccess, console: Console) {
   defer {
     console.print("tally finished")
   }

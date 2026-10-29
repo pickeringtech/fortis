@@ -6,13 +6,13 @@ export class Buffer {
   export items: List[Int]
 }
 
-func update(buffer: editable Buffer, n: Int) Void {
+func update(buffer: editable Buffer, n: Int) {
   editable buffer.items.push(n)
 }
 
 func consume(buffer: owned Buffer) Int => buffer.items.count()
 
-func run() Void {
+func run() {
   let mut buffer = Buffer(items: List.default())
   update(editable buffer, consume(move buffer))   // reject: E-OWN-012 — moves a place the first argument reserved
 }

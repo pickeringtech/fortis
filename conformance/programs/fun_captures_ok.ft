@@ -5,7 +5,7 @@ import fortis.text
 export class Box {
   export label: String
 }
-func keep(b: owned Box) Void {
+func keep(b: owned Box) {
 }
 func run(prefix: String, threshold: Int, box: owned Box, other: owned Box) Int {
   let greet = fn[alias prefix](name: StringView) Int => Int.saturatingAdd(prefix.scalarCount(), name.scalarCount())
@@ -16,13 +16,13 @@ func run(prefix: String, threshold: Int, box: owned Box, other: owned Box) Int {
   let mut bump = fn mut[editable counter]() Void {
     counter = Int.saturatingAdd(counter, 1)
   }
-  editable bump()
+  bump()
   let mut tally = 0
   let mut acc = fn mut[move tally](n: Int) Int {
     tally = Int.saturatingAdd(tally, n)
     return tally
   }
-  let t = editable acc(2)
+  let t = acc(2)
   let finish = fn once[move other]() Void {
     keep(move other)
   }

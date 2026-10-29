@@ -3,7 +3,7 @@
 // requires: runtime
 // covers: LANG-12-04
 // 12.5: `join` runs both futures to completion even when one fails; the failure is part of the returned tuple.
-import fortis.host { Host, Console }
+import fortis.host { Console }
 export error Bad {
   code: "demo.bad"
 }
@@ -15,7 +15,7 @@ async func right(console: Console) Int {
   console.print("right")
   return 2
 }
-async recovers func run(console: Console) Void {
+async recovers func run(console: Console) {
   let pair = await join(left(console), right(console))
   let (a, b) = move pair
   let text = match move a {
@@ -30,7 +30,6 @@ async recovers func run(console: Console) Void {
   }
   console.print("${text}, right ${b}")
 }
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  await run(caps.console)
+async recovers func main(console: Console) {
+  await run(console)
 }

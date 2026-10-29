@@ -166,7 +166,7 @@ A keyword is allowed as a method or associated-function name and after `.`:
 // accept
 class Celsius {
   export degrees: Int
-  export pure func from(degrees: Int) Celsius => Celsius(degrees: degrees)
+  export pure func from(degrees: Int) Celsius => Celsius(degrees)
 }
 
 test "from" {
@@ -211,7 +211,7 @@ try func label(n: Int) String {
 }
 
 test "label" {
-  expect (label(2) or fail) == "value 2"
+  expect label(2) == "value 2"
 }
 ```
 
@@ -225,7 +225,7 @@ try func label(n: Int) String {
 }
 
 test "label" {
-  expect (label(2) or fail) == "value 2"
+  expect label(2) == "value 2"
 }
 ```
 

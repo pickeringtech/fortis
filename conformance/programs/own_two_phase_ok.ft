@@ -1,11 +1,11 @@
 // accept
 // covers: LANG-07-04
 // 5.7: the read loan taken for buffer.count() ends in step 1, before the editable loan activates in step 2.
-func update(buffer: editable List[Int], n: Int) Void {
-  editable buffer.push(n)
+func update(buffer: editable List[Int], n: Int) {
+  buffer.push(n)
 }
 
-func run(buffer: editable List[Int]) Void {
+func run(buffer: editable List[Int]) {
   update(editable buffer, buffer.count())
-  editable buffer.push(buffer.count())
+  buffer.push(buffer.count())
 }

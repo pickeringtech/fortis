@@ -1,0 +1,16 @@
+// The v0.0.1 entry: `export`, an unused `args`, and the capabilities reached as `caps.field` (4.6; X-345, R4, R8).
+import fortis.host { Host, Path, FileSystem }
+
+try func copyText(files: FileSystem, source: Path, target: Path) Void {
+  let text = files.readText(source) or fail
+  files.writeAll(target, text) or fail
+}
+
+export try func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let source = Path.parse("source.txt") or fail
+  let target = Path.parse("copy.txt") or fail
+  caps.fileSystem.writeAll(source, "copied by Fortis") or fail
+  copyText(caps.fileSystem, source, target) or fail
+  caps.console.print(caps.fileSystem.readText(target) or fail)
+}

@@ -7,7 +7,7 @@ func tick(console: Console, label: StringView, v: Int) Int {
   console.print(label)
   return v
 }
-export func main(args: List[String]) Void {
+func main() {
   let caps = Host.capabilities()
   let text = "${tick(caps.console, "first", 1)}-${tick(caps.console, "second", 2)}"
   caps.console.print(text)

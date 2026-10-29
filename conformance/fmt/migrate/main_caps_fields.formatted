@@ -1,0 +1,15 @@
+// The v0.0.1 entry: `export`, an unused `args`, and the capabilities reached as `caps.field` (4.6; X-345, R4, R8).
+import fortis.host { Path, FileSystem, Console }
+
+try func copyText(files: FileSystem, source: Path, target: Path) {
+  let text = files.readText(source) or fail
+  files.writeAll(target, text) or fail
+}
+
+try func main(fileSystem: FileSystem, console: Console) {
+  let source = Path.parse("source.txt") or fail
+  let target = Path.parse("copy.txt") or fail
+  fileSystem.writeAll(source, "copied by Fortis") or fail
+  copyText(fileSystem, source, target) or fail
+  console.print(fileSystem.readText(target) or fail)
+}

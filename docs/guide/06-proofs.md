@@ -26,32 +26,31 @@ use instead (LR 6.4). Here `a` and `b` can be any `Int`, so their sum can overfl
 // reject: E-REF-002
 pure func total(a: Int, b: Int) Int => a + b      // reject: E-REF-002
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
 ```output
-example.ft:2:42: error E-REF-002 [LANG-06-02] (Refinement unproved, unproved): `+` may overflow Int: operands [-9223372036854775808, 9223372036854775807] and [-9223372036854775808, 9223372036854775807] give [-18446744073709551616, 18446744073709551614]; use Int.add
+example.ft:2:42: error E-REF-002 [LANG-06-02] (Refinement unproved, unproved): `+` may overflow Int: operands [-9223372036854775808, 9223372036854775807] and [-9223372036854775808, 9223372036854775807] give [-18446744073709551616, 18446744073709551614]; use Int.add, or write the operator as the checked operation: `a + b or fail` (or `or recover`, `catch`)
     proved_interval: "[-18446744073709551616, 18446744073709551614]"
     required_range: "[-9223372036854775808, 9223372036854775807]"
     widening_point: ""
 ```
 
 The status `unproved` matters: the checker does not claim the program is wrong, only that it could not prove it
-right (Programme 7.1). A record whose status is `violated` is different: the checker proved the rule broken, as
+right. A record whose status is `violated` is different: the checker proved the rule broken, as
 for a literal outside the target's range or a change to a length-refined collection, and the program must change.
 For an unproved operator there are two ways forward. Tell the checker the ranges you mean, with refined types, and
 the operator is proved:
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func total(a: Int<0..1000000>, b: Int<0..1000000>) Int => a + b
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${total(400000, 250000)}")
+func main(console: Console) {
+  console.print("${total(400000, 250000)}")
 }
 ```
 
@@ -59,24 +58,24 @@ export func main(args: List[String]) Void {
 650000
 ```
 
-Or, when the values really can be anything, use the checked operation the record names. `Int.add(a, b)` needs no
-proof: it returns an outcome that fails with `numeric.overflow` instead of overflowing (LR 6.4):
+Or, when the values really can be anything, handle the overflow. An operator the checker cannot prove, written as
+the left operand of `or fail`, `or recover` or `catch`, is the checked operation: it needs no proof, and it fails
+with `numeric.overflow` instead of overflowing (LR 6.4):
 
 ```fortis
 // accept (exit status 1)
-import fortis.host { Host }
+import fortis.host { Console }
 
 try func total(a: Int, b: Int) Int {
-  let sum = Int.add(a, b) or fail
+  let sum = a + b or fail
   return sum
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let small = total(1, 2) or fail
-  caps.console.print("${small}")
+  console.print("${small}")
   let huge = total(9223372036854775807, 1) or fail
-  caps.console.print("${huge}")
+  console.print("${huge}")
 }
 ```
 
@@ -84,9 +83,17 @@ export try func main(args: List[String]) Void {
 3
 ```
 
-The second call fails, so `main` ends with one failure record on standard error and exit status 1. The wrapping
-(`Int.wrappingAdd`) and saturating (`Int.saturatingAdd`) families are the other choices, for code that wants
-two's-complement wrapping or clamping on purpose (LR 6.4). Integer behaviour never depends on the build mode:
+The second call fails, so `main` ends with one failure record on standard error and exit status 1.
+
+Where arithmetic on `Int` is the left operand of `or fail`, `or recover` or `catch`, every operator in it that the
+checker cannot prove is checked, and one handler covers the whole expression: `value = value * 10 + digit or fail`
+fails at whichever operation overflows first (LR 6.4). The checked operations are also named functions, `Int.add`,
+`Int.sub`, `Int.mul`, `Int.div`, `Int.rem` and `Int.shiftLeft`, each returning an outcome; older code calls them,
+`Int.add(a, b) or fail`, and `fortis fmt` rewrites such a call into the operator. Without a handler an unproved
+operator is still `E-REF-002`, and so is one inside a call's argument or under a comparison, where the handler
+would not cover it. An operator the checker proves stays a plain value, and `or fail` on arithmetic that cannot
+fail is an error. The wrapping (`Int.wrappingAdd`) and saturating (`Int.saturatingAdd`) families are the other
+choices, for code that wants two's-complement wrapping or clamping on purpose (LR 6.4). Integer behaviour never depends on the build mode:
 there is no "overflow check in debug only" (LR 6.4).
 
 The result of a proved operation has a range too: the base type refined to the computed interval (LR 6.4). That is
@@ -99,28 +106,27 @@ For every integer place in a function, the checker tracks an interval, a lowest 
 - a **literal** has exactly its value;
 - a **parameter** or a **field** has the range of its declared type: `Int<1..12>` is [1, 12], plain `Int` is the
   whole 64-bit range;
-- a **call's result** has the range of the callee's declared return type, with one exception: the success value
-  of a checked operation such as `Int.add(a, b)` has the range of the operation on its operands, because the call
-  fails instead of overflowing (LR 6.3, X-93);
+- a **call's result** has the range of the callee's declared return type (LR 6.3);
+- the success value of a **checked operation**, `n + 1 or fail` (or `Int.add(n, 1) or fail`), has the range of the
+  operation on its operands, because the operation fails instead of overflowing (LR 6.3, LR 6.4, X-93);
 - `+`, `-` and `*` combine ranges by interval arithmetic, and `/` and `%` give the range of the quotient or
   remainder (LR 6.3).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func percent(part: Int<0..100>, whole: Int<1..100>) Int<0..10000> => part * 100 / whole
 
-try func combined(a: Int<0..50>, b: Int<0..50>) Int<0..100> {
-  let sum = Int.add(a, b) or fail     // the success value is in [0, 100]
-  return sum
+try func following(n: Int<0..>) Int<1..> {
+  let next = n + 1 or fail     // the success value is at least 1
+  return next
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${percent(3, 4)}%")
-  let both = combined(30, 40) or fail
-  caps.console.print("${both}")
+try func main(console: Console) {
+  console.print("${percent(3, 4)}%")
+  let later = following(69) or fail
+  console.print("${later}")
 }
 ```
 
@@ -130,8 +136,8 @@ export try func main(args: List[String]) Void {
 ```
 
 `part * 100` is in [0, 10000] and `whole` is at least 1, so the division is safe and its quotient is in [0, 10000],
-which fits the return type. `Int.add` on two values in [0, 50] succeeds only with a value in [0, 100], so `sum`
-can be returned as `Int<0..100>` with no further check (LR 6.3).
+which fits the return type. `n + 1` could overflow when `n` is the largest `Int`, so it is checked; when it
+succeeds its value is at least 1, so `next` can be returned as `Int<1..>` with no further check (LR 6.3).
 
 ## Narrowing: what a condition tells the checker
 
@@ -144,7 +150,7 @@ well, which is what makes a guard clause work (LR 6.3):
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func clamp(value: Int, low: Int<0..100>, high: Int<0..100>) Int<0..100> {
   if value < low {
@@ -156,9 +162,8 @@ pure func clamp(value: Int, low: Int<0..100>, high: Int<0..100>) Int<0..100> {
   return value              // here value is in [low, high], so within [0, 100]
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${clamp(-5, 0, 10)} ${clamp(7, 0, 10)} ${clamp(99, 0, 10)}")
+func main(console: Console) {
+  console.print("${clamp(-5, 0, 10)} ${clamp(7, 0, 10)} ${clamp(99, 0, 10)}")
 }
 ```
 
@@ -182,7 +187,7 @@ says so: declare it with a refinement, `let mut i: Int<0..1000> = 0` (LR 6.3, LR
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func countdown(start: Int<0..100>) Int {
   let mut n: Int<0..100> = start
@@ -196,9 +201,8 @@ pure func countdown(start: Int<0..100>) Int {
   return steps
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${countdown(42)}")
+func main(console: Console) {
+  console.print("${countdown(42)}")
 }
 ```
 
@@ -222,7 +226,7 @@ pure func sumTo(n: Int<0..1000>) Int<0..500500> {
   return total
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -231,20 +235,19 @@ The repair accumulates into a plain `Int` with the checked operation, and conver
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure try func sumTo(n: Int<0..1000>) Int<0..500500> {
   let mut total: Int = 0
   for i in 0..n {
-    total = Int.add(total, i) or fail
+    total = total + i or fail
   }
   return Int<0..500500>.validate(total) or fail
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let s = sumTo(1000) or fail
-  caps.console.print("${s}")
+  console.print("${s}")
 }
 ```
 
@@ -255,8 +258,9 @@ export try func main(args: List[String]) Void {
 ## What makes the checker forget
 
 A fact about a place is discarded when something else may have changed it: when the place, a prefix of it or a
-field of it is passed as an `editable` argument or receiver, is loaned exclusively, or is reachable from an
-`editable` capture of a closure that is called (LR 6.3). The place then has the range of its declared type again.
+field of it is passed as an `editable` argument, is the receiver of an `editable self` method (written with or
+without the marker), is loaned exclusively, or is reachable from an `editable` capture of a closure that is called
+(LR 6.3, LR 7.5). The place then has the range of its declared type again.
 Assigning to the place replaces its facts with the range of the new value. Inside a loop, a place invalidated
 anywhere in the body is widened at the top, like an assigned place (LR 6.3).
 
@@ -266,18 +270,18 @@ class Counter {
   export n: Int<0..10>
 }
 
-func reset(c: editable Counter) Void {
+func reset(c: editable Counter) {
   c.n = 0
 }
 
-pure func bump(c: editable Counter) Void {
+pure func bump(c: editable Counter) {
   if c.n < 10 {
     reset(editable c)
     c.n = c.n + 1                 // reject: E-REF-001
   }
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -300,7 +304,7 @@ separate `i >= 0` test. `i <= p.count()` is not enough, because `i` may equal th
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func positives(xs: List[Int]) Int {
   let mut found: Int<0..1000000> = 0
@@ -319,10 +323,9 @@ pure func itemOr(xs: List[Int], i: Int, fallback: Int) Int {
   return fallback
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let xs = List.of(3, -1, 4, -1, 5)
-  caps.console.print("${positives(xs)} positive; xs[2] = ${itemOr(xs, 2, 0)}; xs[9] = ${itemOr(xs, 9, 0)}")
+  console.print("${positives(xs)} positive; xs[2] = ${itemOr(xs, 2, 0)}; xs[9] = ${itemOr(xs, 9, 0)}")
 }
 ```
 
@@ -337,7 +340,7 @@ operations that need no proof (LR 6.7):
 // reject: E-REF-002
 pure func item(xs: List[Int], i: Int) Int => xs[i]          // reject: E-REF-002
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -345,7 +348,7 @@ export func main(args: List[String]) Void {
 fails with `collection.index`; neither needs a proof (LR 6.7).
 
 A collection refined by its length is a property of the value, so such a place cannot be loaned `editable` or
-changed: that is `E-REF-003` (LR 6.3). Change an unrefined collection, then `validate` it into the refined type.
+changed, by `items.push(1)` any more than by `editable items.push(1)`: that is `E-REF-003` (LR 6.3, LR 7.5). Change an unrefined collection, then `validate` it into the refined type.
 
 ## The remainder
 
@@ -355,13 +358,12 @@ For `a % d`, where `d`'s range excludes zero and `m` is the largest absolute val
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func lastDigit(n: Int<0..>) Int<0..9> => n % 10
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${lastDigit(1234)}")
+func main(console: Console) {
+  console.print("${lastDigit(1234)}")
 }
 ```
 

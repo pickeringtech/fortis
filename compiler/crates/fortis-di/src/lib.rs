@@ -1,4 +1,4 @@
-//! fortis-di: the Dependency injection kit's validator and elaboration (Platform 3; spikes/SP-08).
+//! fortis-di: the Dependency injection kit's validator and elaboration (Platform 3; spike SP-08).
 //!
 //! `inject`, `provide` and `context` become ordinary declarations before the core checker runs: an `inject` slot
 //! becomes a field (so the class's generated constructor takes it, and tests construct the consumer by hand), and a

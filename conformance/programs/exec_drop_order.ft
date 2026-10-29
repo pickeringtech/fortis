@@ -1,26 +1,24 @@
 // execute: made 1|made 2|cleanup 2|cleanup 1|done
 // requires: runtime
 // covers: LANG-07-07
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
 
-func scopeIt(console: Shared[Console]) Void {
+func scopeIt(console: Shared[Console]) {
   let first = Handle(id: 1, console: console.retain())
   console.print("made 1")
   let second = Handle(id: 2, console: console.retain())
   console.print("made 2")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   scopeIt(console)
   console.print("done")

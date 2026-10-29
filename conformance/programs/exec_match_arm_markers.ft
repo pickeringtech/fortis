@@ -3,7 +3,7 @@
 // covers: LANG-07-01, LANG-08-02
 // The marked positions of own_match_arm_marker.ft with their markers, and the state closure of
 // fun_copy_capture_assigned.ft captured with `move` (D-159, D-155): one output on every backend.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class User {
   export name: String
@@ -58,26 +58,25 @@ func eitherBlock(b: Bool) String {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let u = User(name: String.from("ada"), age: 36)
-  caps.console.print(pickName(u, true))
-  caps.console.print(nameOf(present(u)))
-  caps.console.print(takeLabel(Slot.Size(count: 3)))
-  caps.console.print(takeLabel(Slot.Full(label: String.from("z"))))
+  console.print(pickName(u, true))
+  console.print(nameOf(present(u)))
+  console.print(takeLabel(Size(count: 3)))
+  console.print(takeLabel(Full(label: String.from("z"))))
   let mut total = 0
   let mut bump = pure noalloc fn mut[move total]() Int {
     total = Int.saturatingAdd(total, 1)
     return total
   }
-  caps.console.print("${editable bump()}")
+  console.print("${editable bump()}")
   let base = 10
   let twice = pure noalloc fn[copy base]() Int {
     return Int.saturatingAdd(base, base)
   }
-  caps.console.print("${twice()}")
-  caps.console.print(either(true))
-  caps.console.print(either(false))
-  caps.console.print(eitherBlock(true))
-  caps.console.print(eitherBlock(false))
+  console.print("${twice()}")
+  console.print(either(true))
+  console.print(either(false))
+  console.print(eitherBlock(true))
+  console.print(eitherBlock(false))
 }

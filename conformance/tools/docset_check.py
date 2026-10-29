@@ -1,7 +1,7 @@
 """DEL-49 criterion 2: every example of the documentation set runs as a fixture through the real toolchain
 (PROG-TST-08 over the documentation, PROG-AGT-07).
 
-  python3 -I conformance/tools/docset_check.py [--json] [--release] [--page PATH] [-j N] [-v]
+  python3 -I conformance/tools/docset_check.py [--json] [--release] [--page PATH] [--backends B,...] [--shard I/N] [-j N] [-v]
 
 The documentation set is `README.md` and every Markdown file under `docs/guide` (human mode) and `docs/agent`
 (agent mode). Each fenced block is judged by its language and its first line:
@@ -30,8 +30,10 @@ The documentation set is `README.md` and every Markdown file under `docs/guide` 
 
 Every check is attributed to the tool it judges: `checker` (the two static checkers), `interpreter`, `vm`,
 `native`, or `docs` (the page itself). A failing fixture is KNOWN when every one of its failing checks is of a
-tool that an open release-blocking defect of `docs/delivery/defects.json` names for it
-(`"results": {"fixtures": ["docset:PAGE#N"], "backends": [tools]}`); a `docs` failure is never KNOWN. A KNOWN
+tool that an open release-blocking defect of the defect register names for it
+(`"results": {"fixtures": ["docset:PAGE#N"], "backends": [tools]}`); a `docs` failure is never KNOWN. The defect
+register is a maintainers' planning file: where it is present, the open defects this check reads are written to
+`conformance/known-defects/docset.json`, and a checkout without the register reads that copy instead. A KNOWN
 result is not a pass: the run exits 0 with KNOWN results (the merge gate), and with `--release` (DEL-49 criterion
 2 at the release check) it exits 1, as it does for every other failure.
 
@@ -52,10 +54,18 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+sys.path.insert(0, HERE)
+import planning  # noqa: E402
+
+# the open release-blocking defects that name documentation examples, as this check reads them from the defect
+# register: written when the register is present, read when it is not
+KNOWN_COPY = os.path.join(ROOT, "conformance", "known-defects", "docset.json")
 FORTISC = os.path.join(ROOT, "compiler", "target", "release", "fortisc")
 FORTIS = os.path.join(ROOT, "bin", "fortis")
 WORK = os.path.join(ROOT, "build", "docset")
 BACKENDS = ("interpreter", "vm", "native")
+# the backends this run judges (`--backends`, the gate's quick tier); a release run judges all three
+RUN_BACKENDS = BACKENDS
 CODE = r"E-[A-Z]{2,3}-\d{3}"
 TIMEOUT = 900
 
@@ -438,13 +448,10 @@ def run_tests(backend, target, stem):
         code, out, err = run([FORTISC, "test", "--format", "json", target])
     recs, bad = records(out)
     summaries = [r for r in recs if r.get("kind") == "test-summary"]
-    if backend == "interpreter":
-        # the interpreter writes its summary on stdout and every result on stderr, which is read as strictly (other
-        # records, such as observations and reported failures, may stand beside the results)
-        rest, ebad = records(err)
-        results, bad = [r for r in rest if r.get("kind") == "test-result"], bad + ebad
-    else:
-        results = [r for r in recs if r.get("kind") == "test-result"]
+    # both runners write the summary on stdout and every result on stderr, which is read as strictly (other
+    # records, such as observations and reported failures, may stand beside the results)
+    rest, ebad = records(err)
+    results, bad = [r for r in rest if r.get("kind") == "test-result"], bad + ebad
     failed = [r for r in results if r.get("status") != "pass"]
     s = summaries[0] if len(summaries) == 1 else {}
     ok = (code == 0 and not bad and len(summaries) == 1 and recs[-1] is s and not failed
@@ -531,7 +538,7 @@ def judge(fx):
             if kind != "output":
                 checks.append(("docs", "a program's shown output is an `output` block", False, kind))
             want = text + "\n" if text else ""
-        for b in BACKENDS:
+        for b in RUN_BACKENDS:
             status, out, err = run_backend(b, target, is_pkg, stem)
             row["backends"][b] = {"exit": status, "stdout": out[-2000:]}
             checks.append((b, f"exits with status {fx['exit']}", status == fx["exit"], f"exit {status}: {tail(err, 300)}", f"exit {status}: {err}"))
@@ -540,7 +547,7 @@ def judge(fx):
             else:
                 checks.append((b, "prints nothing (a program that prints shows its output)", out == "", f"printed {tail(out, 200)!r} with no output block", f"printed {rooted(out)!r} with no output block"))
     if tests:
-        for b in BACKENDS:
+        for b in RUN_BACKENDS:
             ok, detail, observed = run_tests(b, target, stem)
             row["backends"].setdefault(b, {})["tests"] = detail
             checks.append((b, "every test passes", ok, detail, observed))
@@ -559,19 +566,46 @@ def finish(row, checks):
     return row
 
 
+def open_docset_defects():
+    """The open release-blocking defects that list documentation fixtures, each as {id, backends, fixtures,
+    docset}, in the register's order: from the defect register when it is present, and then also written to
+    KNOWN_COPY so that the copy follows the register; otherwise from KNOWN_COPY."""
+    path = os.path.join(ROOT, planning.DEFECTS)
+    copy_rel = os.path.relpath(KNOWN_COPY, ROOT)
+    if not os.path.exists(path):
+        if not os.path.exists(KNOWN_COPY):
+            planning.skipped("docset", f"matching failures against the open defects (and {copy_rel} is missing too)", planning.DEFECTS)
+            return []
+        print(f"docset: {planning.DEFECTS} is a maintainers' planning file and is not in this checkout; failures are "
+              f"matched against its copy of the open defects, {copy_rel}", file=sys.stderr, flush=True)
+        return json.load(open(KNOWN_COPY, encoding="utf-8"))["defects"]
+    entries = []
+    for d in json.load(open(path, encoding="utf-8"))["defects"]:
+        if d.get("release_blocking") and d.get("status") != "fixed":
+            rs = d.get("results", {})
+            fixtures = [f for f in rs.get("fixtures", []) if f.startswith("docset:")]
+            if fixtures:
+                entries.append({"id": d["id"], "backends": sorted(set(rs.get("backends", []))), "fixtures": fixtures,
+                                "docset": {f[len("docset:"):]: rs.get("docset", {}).get(f[len("docset:"):]) for f in fixtures}})
+    copy = json.dumps({"about": "Written by conformance/tools/docset_check.py from the defect register: the open "
+                                "release-blocking defects that name documentation examples, with what each records of the "
+                                "example's failure. A checkout without the register matches failures against this copy. "
+                                "Do not edit it by hand.",
+                       "defects": entries}, indent=1, ensure_ascii=False) + "\n"
+    if not os.path.exists(KNOWN_COPY) or open(KNOWN_COPY, encoding="utf-8").read() != copy:
+        with open(KNOWN_COPY, "w", encoding="utf-8") as out:
+            out.write(copy)
+    return entries
+
+
 def known_defects():
     """{fixture id: [(defect, tools, recorded)]} from the open release-blocking defects that list documentation
     fixtures; `recorded` is the defect's `results.docset[id]`: the example's source hash and its failing checks."""
-    path = os.path.join(ROOT, "docs", "delivery", "defects.json")
-    defects = json.load(open(path, encoding="utf-8"))["defects"]
     known = {}
-    for d in defects:
-        if d.get("release_blocking") and d.get("status") != "fixed":
-            rs = d.get("results", {})
-            for f in rs.get("fixtures", []):
-                if f.startswith("docset:"):
-                    fid = f[len("docset:"):]
-                    known.setdefault(fid, []).append((d["id"], set(rs.get("backends", [])), rs.get("docset", {}).get(fid)))
+    for d in open_docset_defects():
+        for f in d["fixtures"]:
+            fid = f[len("docset:"):]
+            known.setdefault(fid, []).append((d["id"], set(d["backends"]), d["docset"].get(fid)))
     return known
 
 
@@ -770,11 +804,35 @@ def classify(row, known):
         return "FAIL", f"the defect records no source, failing checks and details for it; record {{\"source\": \"{row.get('source')}\", \"failing\": {signature(row)}, \"details\": \"{details(row)}\"}}"
     if recorded.get("source") != row.get("source"):
         return "FAIL", f"the example changed since the defect recorded it (source {row.get('source')}, recorded {recorded.get('source')})"
-    if sorted(recorded.get("failing", [])) != signature(row):
+    # a run that leaves a backend out (`--backends`) holds the record's checks of the backends it ran; the digest of
+    # the details covers every failing check, so it is compared only when the record names no backend left out
+    skipped = set(BACKENDS) - set(RUN_BACKENDS)
+    want = sorted(s for s in recorded.get("failing", []) if s.split(":", 1)[0] not in skipped)
+    if want != signature(row):
         return "FAIL", f"the failing checks differ from the defect's record: now {signature(row)}"
-    if recorded.get("details") != details(row):
+    partial = any(s.split(":", 1)[0] in skipped for s in recorded.get("failing", []))
+    if not partial and recorded.get("details") != details(row):
         return "FAIL", f"the failure observed differs from the defect's record (details {details(row)}, recorded {recorded.get('details')})"
     return "KNOWN", ", ".join(d for d, _, _ in entries)
+
+
+def page_of(fid):
+    return fid.split("#")[0].split(":")[0]
+
+
+def shard_pages(fixtures, spec):
+    """The pages of shard I of N: pages in decreasing number of fixtures, each to the shard with the fewest so far
+    (ties to the lower shard), so the same pages always land in the same shard."""
+    i, n = (int(x) for x in spec.split("/"))
+    count = {}
+    for fx in fixtures:
+        count[page_of(fx["id"])] = count.get(page_of(fx["id"]), 0) + 1
+    load, owner = [0] * n, {}
+    for page in sorted(count, key=lambda p: (-count[p], p)):
+        k = min(range(n), key=lambda s: (load[s], s))
+        owner[page] = k + 1
+        load[k] += count[page]
+    return {p for p, k in owner.items() if k == i}
 
 
 def main(argv):
@@ -785,7 +843,26 @@ def main(argv):
     ap.add_argument("-j", type=int, default=max(1, (os.cpu_count() or 2) // 2))
     ap.add_argument("-v", action="store_true")
     ap.add_argument("--release", action="store_true")
+    ap.add_argument("--shard", help="I/N: judge the I-th of N groups of pages, balanced by their number of examples (CI runs the groups at once)")
+    ap.add_argument("--backends", help="the backends to run, comma-separated (default: all three); the gate's quick tier runs interpreter,vm")
     a = ap.parse_args(argv)
+    if a.shard and (a.release or not re.fullmatch(r"[1-9]\d*/[1-9]\d*", a.shard) or int(a.shard.split("/")[0]) > int(a.shard.split("/")[1])):
+        print("docset check: --shard takes I/N with 1 <= I <= N, and a release run judges every page in one run")
+        return 2
+    global RUN_BACKENDS
+    if a.backends:
+        chosen = tuple(b for b in BACKENDS if b in a.backends.split(","))
+        unknown = sorted(set(a.backends.split(",")) - set(BACKENDS))
+        if unknown or not chosen:
+            print(f"docset check: --backends takes some of {', '.join(BACKENDS)}; not {unknown or a.backends}")
+            return 2
+        if a.release and chosen != BACKENDS:
+            print("docset check: --release judges every backend; it takes no --backends")
+            return 2
+        RUN_BACKENDS = chosen
+        if chosen != BACKENDS:
+            print(f"docset check: backends {', '.join(chosen)} only; {', '.join(b for b in BACKENDS if b not in chosen)} not run "
+                  f"(a known failure is matched on its source and the checks of these backends)", flush=True)
     if not os.path.exists(FORTISC):
         print("docset check: build the production tools first (cargo build --release in compiler/)")
         return 3
@@ -815,7 +892,8 @@ def main(argv):
     os.makedirs(os.path.join(WORK, "bin"), exist_ok=True)
     warm = os.path.join(WORK, "warm.ft")
     open(warm, "w").write("// accept\nexport func main(args: List[String]) Void {\n}\n")
-    run([FORTISC, "build", "--format", "json", "--out", os.path.join(WORK, "bin", "warm"), warm])
+    if "native" in RUN_BACKENDS:
+        run([FORTISC, "build", "--format", "json", "--out", os.path.join(WORK, "bin", "warm"), warm])
     # every destination is distinct (two fixtures writing one file would judge one source twice under two ids)
     seen = {}
     for fx in fixtures:
@@ -827,13 +905,18 @@ def main(argv):
     # every file is written before any fixture is judged: a page's packages depend on one another
     for fx in fixtures:
         fx["target"] = write_package(fx) if "package" in fx else write_single(fx)
+    if a.shard:
+        mine = shard_pages(fixtures, a.shard)
+        fixtures = [fx for fx in fixtures if page_of(fx["id"]) in mine]
+        problems = [p for p in problems if page_of(p["id"]) in mine]
+        print(f"docset check: shard {a.shard}: {len(mine)} pages, {len(fixtures)} fixtures", flush=True)
     with concurrent.futures.ThreadPoolExecutor(max_workers=a.j) as pool:
         rows = list(pool.map(judge, fixtures))
     known = known_defects()
     for r in rows:
         r["status"], why = classify(r, known)
         if not r["ok"]:
-            # what a defect records to make this result KNOWN (docs/delivery/defects.json, results.docset)
+            # what a defect records to make this result KNOWN (the defect register's results.docset)
             r["record"] = {"source": r.get("source"), "failing": signature(r), "details": details(r)}
         if r["status"] == "KNOWN":
             r["defect"] = why
@@ -860,7 +943,7 @@ def main(argv):
     # pages: `examples` and `negatives` count fortis blocks (a package's modules one by one), `per_backend` the
     # positive blocks whose example ran clean on that backend (checked, ran, printed what is shown, tests passed),
     # and `failed` every result that is not a pass, KNOWN ones included
-    if not a.page:
+    if not a.page and not a.shard:
         nblocks = {fx["id"]: (len(fx["blocks"]) if "package" in fx else 1) for fx in fixtures}
         examples = sum(nblocks.get(r["id"], 1) for r in rows if r["verdict"] in ("accept", "reject"))
         negatives = sum(nblocks.get(r["id"], 1) for r in rows if r["verdict"] == "reject")

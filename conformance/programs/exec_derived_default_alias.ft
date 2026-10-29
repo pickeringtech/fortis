@@ -1,0 +1,74 @@
+// execute: meters 0 0 0|label [] null []|wrapped 0 2|array 0|maybe array true|pair 1 2 Blue
+// requires: runtime
+// covers: LANG-06-07
+// D-242, 6.9, 6.10: `derive Default` builds a field without an initialiser from its type's default on every
+// backend: a newtype's is its representation's, at any depth (an `Int`, a newtype of it, a refinement that admits
+// 0, text, an optional, a list, a class that derives Default); a class of the program named `Array` is itself; a
+// class or an enum that implements Default itself gives its `default()`. Both checkers accepted the newtypes and
+// the classes that implement Default, and then no backend built them; both rejected the class named `Array`.
+import fortis.host { Console }
+
+type Meters = Int
+type Distance = Meters
+type Small = Int<0..10>
+type Label = String
+type Maybe = Int?
+type Names = List[String]
+
+class Inner derive Default {
+  v: Int
+  w: Int = 2
+}
+
+type Wrapped = Inner
+
+class Array derive Default {
+  value: Int
+}
+
+type MaybeArray = Array?
+
+enum Color implements Default {
+  Red
+  Blue
+
+  export pure func default() Color => Blue
+}
+
+class Pair implements Default {
+  a: Int
+  b: Int
+
+  export pure func default() Pair => Pair(a: 1, b: 2)
+}
+
+class Hold derive Default {
+  meters: Meters
+  distance: Distance
+  small: Small
+  label: Label
+  maybe: Maybe
+  names: Names
+  wrapped: Wrapped
+  item: Array
+  maybeArray: MaybeArray
+  pair: Pair
+  color: Color
+}
+
+func named(c: Color) String {
+  return match c {
+    Red => "Red"
+    Blue => "Blue"
+  }
+}
+
+func main(console: Console) {
+  let h = Hold.default()
+  console.print("meters ${h.meters} ${h.distance} ${h.small}")
+  console.print("label [${h.label}] ${h.maybe} ${h.names}")
+  console.print("wrapped ${h.wrapped.v} ${h.wrapped.w}")
+  console.print("array ${h.item.value}")
+  console.print("maybe array ${h.maybeArray == null}")
+  console.print("pair ${h.pair.a} ${h.pair.b} ${named(h.color)}")
+}

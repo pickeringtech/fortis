@@ -3,7 +3,7 @@
 // A callee's footprint is instantiated at the call: fresh storage imports nothing, a capture imports mutate.
 export class Cell {
   export value: Int
-  export pure func set(editable self, value: Int) Void {
+  export pure func set(editable self, value: Int) {
     self.value = value
   }
 }

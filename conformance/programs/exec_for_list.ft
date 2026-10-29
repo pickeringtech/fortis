@@ -1,13 +1,12 @@
 // execute: 3|6|9|count 3
 // requires: runtime
 // covers: LANG-05-04
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let items = List.of(1, 2, 3)
   for x in items {
-    caps.console.print("${Int.wrappingMul(x, 3)}")
+    console.print("${Int.wrappingMul(x, 3)}")
   }
-  caps.console.print("count ${items.count()}")
+  console.print("count ${items.count()}")
 }

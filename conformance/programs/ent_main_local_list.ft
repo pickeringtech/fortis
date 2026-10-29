@@ -4,4 +4,4 @@
 // still not one of the forms (D-51.2).
 export class List[T] {}
 
-export func main(args: List[String]) Void {}   // reject: E-NAM-001 — main's List is not the prelude List
+export func main(args: List[String]) {}   // reject: E-NAM-001 — main's List is not the prelude List

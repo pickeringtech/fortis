@@ -93,7 +93,13 @@ impl<'t, 'a> Builder<'t, 'a> {
                         let ret = self.fbs.last().unwrap().ret.clone();
                         let v = match e {
                             Some(e) => {
-                                let v = self.expr_moved(e)?;
+                                let mut v = self.expr_moved(e)?;
+                                // `return x` of a local `let` binding moves it, as `return move x` does (X-345)
+                                if self.ty.implicit_moves.contains(&e.id()) {
+                                    if let ExprKind::Place(p, Use::Read) = v.kind {
+                                        v.kind = ExprKind::Place(p, Use::Move);
+                                    }
+                                }
                                 Some(self.coerce(v, &ret))
                             }
                             None => None,
@@ -162,6 +168,19 @@ impl<'t, 'a> Builder<'t, 'a> {
             }
             "exprStmt" => {
                 let e = n.kids()[0].node().unwrap();
+                if let Some((_, level, al)) = fortis_names::reading::log_call(n) {
+                    if self.resolve("log", line_of(n)).is_none() && self.ty.dc.table.get("log").is_none() {
+                        // a log statement (13, LANG-13-04): one `log` record on the diagnostic plane, as an intrinsic
+                        let mut args = Vec::new();
+                        for a in al.map(|al| al.child_nodes("arg")).unwrap_or_default() {
+                            if let Some(x) = a.child_node("expr") {
+                                args.push(Arg { param: "message".into(), mode: Mode::Read, value: self.expr(x)? });
+                            }
+                        }
+                        let call = Expr::new(ExprKind::Call { callee: Callee::Intrinsic(format!("log.{}", level.text)), args }, void(), line_of(n));
+                        return one(StmtKind::Expr(call));
+                    }
+                }
                 if let Some(m) = Self::bare(e, "matchExpr") {
                     let (scrutinee, arms) = self.match_parts(m, false)?;
                     return one(StmtKind::Match { scrutinee, arms });

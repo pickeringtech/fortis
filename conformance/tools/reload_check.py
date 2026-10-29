@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SP-07's harness (spikes/SP-07/design.md 11 and 12): run development sessions over the reload workload and check
+"""SP-07's harness (SP-07's design, sections 11 and 12): run development sessions over the reload workload and check
 them against the oracle (reload_oracle.py) and the normative assertions.
 
     python3 conformance/tools/reload_check.py --json OUT [--seed N] [--soak RELOADS] [--fortisc PATH]

@@ -1,0 +1,54 @@
+// execute: narrowed item|optional item|shown item|matched item|after narrowed|picked item|shown item|after picked|end|drop item
+// reports: log:level=info,message=drop item,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-338, 7.9, 12.2: an optional loan (`(alias T from xs)?`) owns nothing, wherever it goes: a binding narrowed by
+// `!= null`, read with `?.`, matched, lent again with `alias`, passed to an optional read parameter, or returned by a
+// function whose result is declared `from` a parameter. The element's cleanup runs once, when the list's owner ends.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func pick(xs: List[Token]) (alias Token from xs)? => xs.get(0)
+
+func show(console: Shared[Console], t: Token?) {
+  console.print("shown ${t?.label ?? "none"}")
+}
+
+func narrowed(console: Shared[Console], xs: List[Token]) {
+  let t = xs.get(0)
+  if t != null {
+    let n = alias t
+    console.print("narrowed ${n.label}")
+  }
+  console.print("optional ${t?.label ?? "none"}")
+  show(console, t)
+  match t {
+    present(x) => { console.print("matched ${x.label}") }
+    null => { console.print("none") }
+  }
+  console.print("after narrowed")
+}
+
+func picked(console: Shared[Console], xs: List[Token]) {
+  let t = pick(alias xs)
+  console.print("picked ${t?.label ?? "none"}")
+  show(console, pick(alias xs))
+  console.print("after picked")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut toks: List[Token] = List.default()
+  toks.push(Token(label: String.from("item"), console: console.retain()))
+  narrowed(console, toks)
+  picked(console, toks)
+  console.print("end")
+}

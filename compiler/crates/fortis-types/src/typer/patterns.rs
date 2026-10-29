@@ -27,6 +27,7 @@ impl<'a> Typer<'a> {
         let kids = node.kids();
         let moving = kids.iter().any(|k| k.text_is("move"));
         let scrut = kids.iter().filter_map(|k| k.node()).find(|k| k.name() == "expr" || k.name() == "place");
+        self.mark_consumed(scrut); // a `match` consumes its outcome itself (14)
         let mut st = strip(&self.infer(scrut, env, None)).clone();
         if is_strlit(&st) {
             st = string_view();
@@ -61,7 +62,8 @@ impl<'a> Typer<'a> {
             // the live arm does not carry the residual's half: an inner join would report it early or drop it
             self.own = own_residual.copy();
             let e = env_new(Some(env));
-            let pat = arm.find("pattern").unwrap();
+            let pats = Self::arm_patterns(*arm);
+            let pat = pats[0];
             let akids = arm.kids();
             let has_when = akids.iter().any(|k| k.text_is("when"));
             let guard = if has_when {
@@ -73,13 +75,24 @@ impl<'a> Typer<'a> {
             // recorded under that name before this pattern and its guard establish their own facts. `outer` is what the
             // name meant on entry; residual and exit states put it back, so a later arm or the code after the match
             // does not inherit this binding's guard (a field path of the name included).
-            let bound = self.names_in(pat);
+            let bound: Vec<String> = pats.iter().flat_map(|p| self.names_in(*p)).collect();
             let outer = self.facts.split_off_names(&bound);
-            let (cov, is_catch) = self.pattern(pat, &st, &e, moving);
+            if pats.len() > 1 {
+                let when_tok = akids.iter().filter_map(|k| k.tok()).find(|t| t.text == "when").cloned();
+                self.check_alternatives(&pats, when_tok);
+            }
+            let mut cov: BTreeSet<String> = BTreeSet::new();
+            let mut is_catch = false;
+            for p in &pats {
+                let (c, k) = self.pattern(*p, &st, &e, moving);
+                cov.extend(c);
+                is_catch = is_catch || k;
+            }
+            let irrefutable = pats.iter().any(|p| self.irrefutable(*p));
             let mut arm_holders = Vec::new();
             let mut arm_obligations = Vec::new();
             if owning {
-                for b in self.names_in(pat) {
+                for b in bound.clone() {
                     if let Some(bb) = env_local(&e, &b) {
                         if self.is_linear(&bb.ty) {
                             let d = self.depth + 1;
@@ -88,14 +101,16 @@ impl<'a> Typer<'a> {
                         }
                     }
                 }
-                let pt = pat.direct_tokens();
-                if pt.first().map_or(false, |t| t.text == "is") && !pt.iter().any(|t| t.text == "as") && st.is_named("Failure") {
-                    self.discharges.push((pt[0].line, "is-arm without as".into()));
-                    self.eff.add("recovers", "proved", Some(pt[0]));
+                for p in &pats {
+                    let pt = p.direct_tokens();
+                    if pt.first().map_or(false, |t| t.text == "is") && !pt.iter().any(|t| t.text == "as") && st.is_named("Failure") {
+                        self.discharges.push((pt[0].line, "is-arm without as".into()));
+                        self.eff.add("recovers", "proved", Some(pt[0]));
+                    }
                 }
             }
             if let (Some(sp), false) = (&sp, moving) {
-                for b in self.names_in(pat) {
+                for b in bound.clone() {
                     if env_local(&e, &b).is_some() {
                         env_update(&e, &b, |x| x.kind = "pattern-loan".into());
                         let d = self.depth + 1;
@@ -116,12 +131,12 @@ impl<'a> Typer<'a> {
                         r.fields.insert("primary_span".into(), Json::str("when"));
                     }
                 }
-                residual = if is_catch || self.irrefutable(pat) { false_f } else { residual.join(&false_f) };
+                residual = if is_catch || irrefutable { false_f } else { residual.join(&false_f) };
                 // own_outside_arm and the own_residual update read self.own, not self.facts. condition_states has
                 // typed the guard, so self.own is the post-guard state master snapshotted before the arm body. Take
                 // that before the body, and before self.facts becomes the true state the body sees.
                 let guarded = self.own_outside_arm(&arm_holders, &arm_obligations);
-                own_residual = if is_catch || self.irrefutable(pat) {
+                own_residual = if is_catch || irrefutable {
                     let mut kept = guarded;
                     Self::retain_half(&own_residual, &mut kept); // replacing the residual must keep a half already found
                     kept
@@ -339,7 +354,44 @@ impl<'a> Typer<'a> {
     }
 
     pub fn irrefutable_present(&self, arms: &[N<'a>]) -> bool {
-        arms.iter().any(|arm| self.irrefutable(arm.find("pattern").unwrap()) && !arm.kids().iter().any(|k| k.text_is("when")))
+        arms.iter().any(|arm| Self::arm_patterns(*arm).iter().any(|p| self.irrefutable(*p)) && !arm.kids().iter().any(|k| k.text_is("when")))
+    }
+
+    /// An arm's patterns: one, or the alternatives of an or-pattern `A | B` (9.8, X-345).
+    pub fn arm_patterns(arm: N<'a>) -> Vec<N<'a>> {
+        arm.child_nodes("pattern")
+    }
+
+    /// The alternatives of an or-pattern bind no names and are not `otherwise`, and the arm takes no guard (9.8, X-345):
+    /// the arm body sees the same bindings, none, whichever alternative matched, and nothing runs twice.
+    fn check_alternatives(&mut self, pats: &[N<'a>], when_tok: Option<Token>) {
+        let set = pats.iter().map(|q| q.tokens().iter().map(|t| t.text.as_str()).collect::<String>()).collect::<Vec<_>>().join(" | ");
+        if let Some(wt) = when_tok {
+            self.rec("E-MAT-003", "an or-pattern arm takes no `when` guard: match the guarded cases in arms of their own".into(), "LANG-09-05", &wt, Json::obj([("missing_variants", Json::Arr(vec![])), ("arm_set", Json::str(&set))]));
+        }
+        for p in pats {
+            let ts = p.direct_tokens();
+            if ts.first().map_or(false, |t| t.text == "otherwise") {
+                let t0 = ts[0].clone();
+                self.rec("E-MAT-003", "`otherwise` cannot be an alternative of an or-pattern: write it as its own last arm".into(), "LANG-09-05", &t0, Json::obj([("missing_variants", Json::Arr(vec![])), ("arm_set", Json::str("otherwise"))]));
+                continue;
+            }
+            let mut seen: Vec<String> = Vec::new();
+            for b in self.names_in(*p) {
+                if seen.contains(&b) {
+                    continue;
+                }
+                seen.push(b.clone());
+                let bt = p.tokens().into_iter().find(|t| t.text == b).cloned().unwrap_or_else(|| ftok(*p).clone());
+                self.rec(
+                    "E-MAT-003",
+                    format!("an alternative of an or-pattern binds `{b}`: alternatives bind no names; match the cases apart, or use `_`"),
+                    "LANG-09-05",
+                    &bt,
+                    Json::obj([("missing_variants", Json::Arr(vec![])), ("arm_set", Json::str(&set))]),
+                );
+            }
+        }
     }
 
     pub fn irrefutable(&self, pat: N<'a>) -> bool {
@@ -593,6 +645,64 @@ impl<'a> Typer<'a> {
         (BTreeSet::new(), false)
     }
 
+    /// The first part of a `let` pattern that can fail to match a value of `st`, or none (5.1; D-243). A `let`
+    /// destructures a class, tuple or record, so a variant, a literal, `null`, `present(…)`, `success(…)`,
+    /// `failure(…)` or `is …` pattern is refutable at any depth; `_` and a name always match. A pattern the typer has
+    /// already rejected against its type is left to that record.
+    pub fn let_refutable(&self, pat: N<'a>, st: &Type) -> Option<N<'a>> {
+        let ts = pat.direct_tokens();
+        let subs = pat.child_nodes("pattern");
+        if ts.is_empty() {
+            return match pat.kid(0) {
+                Some(C::N(k0)) if k0.name() == "literal" => Some(pat),
+                _ => None,
+            };
+        }
+        let head = ts[0];
+        if head.text == "_" || head.text == "otherwise" || (ts.len() == 1 && head.kind == Kind::Lower) {
+            return None;
+        }
+        if head.text == "(" {
+            let items: Vec<Type> = match st {
+                Type::Tuple(items) => items.clone(),
+                _ => vec![unknown(""); subs.len()],
+            };
+            return subs.iter().zip(items.iter()).find_map(|(p, t)| self.let_refutable(*p, t));
+        }
+        if head.text == "{" {
+            let fields: Vec<(String, Type)> = match st {
+                Type::Record(fs) => fs.iter().map(|(k, t)| (k.clone(), t.clone())).collect(),
+                _ => vec![],
+            };
+            let keys: Vec<&Token> = ts.iter().filter(|t| t.kind == Kind::Lower).copied().collect();
+            return keys.iter().zip(subs.iter()).find_map(|(k, p)| {
+                let ft = fields.iter().find(|(n, _)| *n == k.text).map(|(_, t)| t.clone()).unwrap_or_else(|| unknown(""));
+                self.let_refutable(*p, &ft)
+            });
+        }
+        if head.kind == Kind::Upper {
+            let d = self.decl_of(st)?;
+            if d.kind == "enum" {
+                return Some(pat);
+            }
+            if d.kind != "class" || d.name != head.text {
+                return None;
+            }
+            let mm = self.recv_subst(st, &d);
+            let pfs = pat.find("patternFields").map(|n| n.child_nodes("patternField")).unwrap_or_default();
+            for pf in pfs {
+                let pts = pf.direct_tokens();
+                let Some(sub) = pf.find("pattern") else { continue };
+                let named = if pts.len() > 1 && pts[0].kind == Kind::Lower && pts[1].text == ":" { d.fields.iter().find(|(k, _)| **k == pts[0].text).map(|(_, v)| self.subst(&v.0, &mm)) } else { None };
+                if let Some(r) = self.let_refutable(sub, &named.unwrap_or_else(|| unknown(""))) {
+                    return Some(r);
+                }
+            }
+            return None;
+        }
+        Some(pat)
+    }
+
     /// The pattern of each field of a variant or class pattern.
     pub fn field_patterns(&self, pat: N<'a>) -> Vec<N<'a>> {
         match pat.find("patternFields") {
@@ -606,7 +716,7 @@ impl<'a> Typer<'a> {
     pub fn pattern_fields(&mut self, pat: N<'a>, fields: &[(String, Type)], env: &Env, moving: bool, tok: &Token, label: &str, require_all: bool) -> Vec<(BTreeSet<String>, bool)> {
         let mut covs: Vec<(BTreeSet<String>, bool)> = vec![];
         let pfs = match pat.find("patternFields") {
-            Some(pf) => pf.find_all("patternField"),
+            Some(pf) => pf.child_nodes("patternField"), // its own, not a nested pattern's
             None => vec![],
         };
         let names_: Vec<String> = fields.iter().map(|(k, _)| k.clone()).collect();

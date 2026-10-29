@@ -11,5 +11,5 @@ export class Account {
   export trusted pure func isGuest(self) Bool
 }
 export trusted try func loadAccount(id: CustomerId) Account
-export trusted func save(account: Account) Void
+export trusted func save(account: Account)
 export trusted pure func isAdult(age: Int) Bool

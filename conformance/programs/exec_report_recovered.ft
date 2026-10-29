@@ -3,7 +3,7 @@
 // requires: runtime
 // covers: LANG-10-06
 // Reported then recovered: exactly one record, and the program exits 0.
-import fortis.host { Host }
+import fortis.host { Console }
 export error Odd {
   code: "demo.odd"
 }
@@ -13,11 +13,10 @@ try func check(n: Int) Int {
   }
   return n
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let v = check(5) catch e {
     report e
     recover 0
   }
-  caps.console.print("recovered ${v}")
+  console.print("recovered ${v}")
 }

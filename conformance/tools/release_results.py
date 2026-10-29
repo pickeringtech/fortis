@@ -229,9 +229,12 @@ def main(argv):
         for r in pool.map(lambda kv: one(kv[0], kv[1], commit), sorted(fixtures.items())):
             rows.extend(r)
     rows.sort(key=lambda r: (r["id"], r["backend"]))
-    # a failure a release-blocking defect of docs/delivery/defects.json reproduces is listed against it (the release
-    # stays blocked: such a result is not PASS); any other failure fails this run
-    defects = json.load(open(os.path.join(ROOT, "docs", "delivery", "defects.json"), encoding="utf-8"))["defects"]
+    # a failure a release-blocking defect of the defect register reproduces is listed against it (the release
+    # stays blocked: such a result is not PASS); any other failure fails this run. The register is a maintainers'
+    # planning file: without it no failure is KNOWN, so every failure fails the run.
+    import planning
+    defects_path = planning.optional(planning.DEFECTS, "release-results", "listing failures against the open defects (every failure fails)")
+    defects = json.load(open(defects_path, encoding="utf-8"))["defects"] if defects_path else []
     known = {d["id"]: d for d in defects if d.get("release_blocking") and d["status"] != "fixed"}
     # a defect names the results it reproduces: `"results": {"fixtures": [ids], "backends": [names]}`
     for r in rows:

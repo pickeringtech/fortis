@@ -1,0 +1,41 @@
+// execute: made a|drop spare|after make|kept a|in lambda|drop c|got b|drop b|n 3|drop a
+// requires: runtime
+// covers: LANG-07-07, LANG-07-01
+// X-345 (R16): `return x` of a local moves it on every backend: the caller owns the value and destroys it, once,
+// at its own block exit; the callee's other locals are destroyed at the callee's exit (7.9). A trivial local is
+// read as before.
+import fortis.host { Console }
+export class Res {
+  console: Shared[Console]
+  label: String
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+func make(console: Shared[Console]) Res {
+  let r = Res(console: console.retain(), label: "a")
+  let spare = Res(console: console.retain(), label: "spare")
+  console.print("made ${r.label}")
+  return r
+}
+func count() Int {
+  let n = 3
+  return n
+}
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let kept = make(console)
+  console.print("after make")
+  console.print("kept ${kept.label}")
+  let build = fn[alias console]() Res {
+    let b = Res(console: console.retain(), label: "b")
+    let c = Res(console: console.retain(), label: "c")
+    console.print("in lambda")
+    return b
+  }
+  {
+    let got = build()
+    console.print("got ${got.label}")
+  }
+  console.print("n ${count()}")
+}

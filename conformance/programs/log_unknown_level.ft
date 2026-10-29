@@ -1,0 +1,6 @@
+// reject: E-NAM-001 (at the marked line)
+// covers: LANG-13-04
+// The log levels are `info`, `warn` and `error` (13, X-345).
+func main() {
+  log.debug("detail")                              // reject: E-NAM-001 — no level `debug`
+}

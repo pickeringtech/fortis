@@ -2,13 +2,13 @@
 // covers: LANG-12-01
 export class Handle {
   export open: Bool
-  export func close(editable self) Void {
+  export func close(editable self) {
     self.open = false
   }
 }
-func take(h: owned Handle) Void {
+func take(h: owned Handle) {
 }
-func run() Void {
+func run() {
   let mut input = Handle(open: true)
   defer { editable input.close() }
   take(move input)                         // reject: E-DEF-002 — the defer names input, which must be initialised at exit

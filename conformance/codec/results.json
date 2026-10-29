@@ -16,10 +16,10 @@
   }
  },
  "determinism": {
-  "runs": 100,
+  "runs": 300,
   "distinct_outputs": 1,
   "digests": {
-   "5f89cbf8b7be8ce8e59b9dd93ffb2e8d684de385b637348a0eb99dd7d62b45e8": 100
+   "5f89cbf8b7be8ce8e59b9dd93ffb2e8d684de385b637348a0eb99dd7d62b45e8": 300
   },
   "control_distinct_orders_of_a_hash_set": 10
  },

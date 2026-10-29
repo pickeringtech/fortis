@@ -2,7 +2,7 @@
 // covers: PLAT-03-02, PLAT-03-07
 // A child context (Staging) inherits its parent's bindings and inputs, and its nearest binding wins; a test or a
 // staging deployment is a different context value, so nothing it binds is visible to the parent's instances.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Audit {
   prefix: String
@@ -30,11 +30,10 @@ context Staging {
   parent Production
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let live = Production.application("live-key")
   let staging = Staging.application("staging-key")
-  caps.console.print(live.billing().bill(5))
-  caps.console.print(staging.billing().bill(5))
-  caps.console.print(staging.billing().keys.value)
+  console.print(live.billing().bill(5))
+  console.print(staging.billing().bill(5))
+  console.print(staging.billing().keys.value)
 }

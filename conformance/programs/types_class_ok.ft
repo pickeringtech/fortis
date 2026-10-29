@@ -6,7 +6,7 @@ export class Counter {
   const step = 1
   export pure func create() Counter => Counter(count: 0)
   export pure func current(self) Int => self.count
-  export func bump(editable self) Void {
+  export func bump(editable self) {
     self.count = self.count + Counter.step
   }
 }

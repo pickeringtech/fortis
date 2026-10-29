@@ -1,13 +1,12 @@
 // LANG-04-04, LANG-06-01 (D-35): a and b import each other; b declares the newtype `Small` and a's `take` names it
 // across the cycle, so `take`'s parameter is b's `Small` here and in b. A typed value of b's `Small` passes to it from
 // b (`twice`) and from here (`again`). The entry order into the cycle is varied by cycle.newtype.pq and .qp.
-import fortis.host { Host }
+import fortis.host { Console }
 import cycle.newtype.a { ayOf, take }
 import cycle.newtype.b { Bee, Small, twice }
 
 func again(s: Small) Small => take(twice(s))
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${again(Small(7))} ${ayOf(Bee(n: 3)).n}")
+func main(console: Console) {
+  console.print("${again(Small(7))} ${ayOf(Bee(n: 3)).n}")
 }

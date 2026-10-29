@@ -4,20 +4,18 @@
 // 7.9 and 12.5: awaiting a task moves its result to the awaiting frame, so dropping a list result destroys each
 // element. (Defect D-29: the VM copied the result and left it in the task record, so the dropped list had a second
 // reference and its elements' cleanups never ran.)
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 export class Res {
   console: Shared[Console]
   label: String
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("drop ${self.label}")
   }
 }
 async func make(console: owned Shared[Console]) List[Res] {
   return List.of(Res(console: console.retain(), label: "a"), Res(console: console.retain(), label: "b"))
 }
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+async func main(out: Console) {
   let console = Shared.create(move out)
   scope tasks {
     let t = tasks.launch(make(console.retain()))

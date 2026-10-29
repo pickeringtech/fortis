@@ -1,0 +1,149 @@
+// execute: cap c-fb|drop c-fb|after cap|owned k-fb k-side|drop k-fb|drop k-side|after owned|one a-fb|two a-fb|one a-fb|two a-fb|read a-side|drop a-side|drop a-fb|after twice|outer o-fb|drop o-fb|inner o-side|drop o-side|after outer|kept n-side|drop n-side|drop n-fb|after never|made m-fb m-side|drop m-fb|drop m-side|after made|passed p-fb|drop p-fb|consumed|lent q-fb|lent|end passed|drop q-fb|after passed|end
+// reports: log:level=info,message=drop c-fb,function=cleanup Token|log:level=info,message=drop k-fb,function=cleanup Token|log:level=info,message=drop k-side,function=cleanup Token|log:level=info,message=drop a-side,function=cleanup Token|log:level=info,message=drop a-fb,function=cleanup Token|log:level=info,message=drop o-fb,function=cleanup Token|log:level=info,message=drop o-side,function=cleanup Token|log:level=info,message=drop n-side,function=cleanup Token|log:level=info,message=drop n-fb,function=cleanup Token|log:level=info,message=drop m-fb,function=cleanup Token|log:level=info,message=drop m-side,function=cleanup Token|log:level=info,message=drop p-fb,function=cleanup Token|log:level=info,message=drop q-fb,function=cleanup Token
+// execute-trace: loans-end|drop Token|loans-end|drop Token|loans-end|drop Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-378, 7.9, 8.3: a closure that captures by `move t` a binding that owns its value (a `??` whose fallback was
+// moved or made) owns that value. The consuming call's end destroys it, before the caller's next statement; a tuple
+// the body moved it into destroys it in index order; a `fn` closure reads it as often as it likes and destroys it
+// with the block that holds the closure, in reverse declaration order, called or not; a closure stored in an outer
+// block's binding, passed to an `owned fn once` parameter or lent to a `fn` parameter does the same. Native code
+// kept the fallback in the enclosing function and destroyed it when that function's block ended, after the call
+// returned and after the tuple's other elements (D-378). A capture of a binding that holds a loan stays a loan and
+// destroys nothing (exec_closure_move_loan.ft).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func capOnly(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "c-fb")
+  let t = empty.get(0) ?? move d
+  {
+    let f = fn once[move t, alias console]() Void {
+      console.print("cap ${t.label}")
+    }
+    move f()
+  }
+  console.print("after cap")
+}
+
+func capTuple(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "k-fb")
+  let t = empty.get(0) ?? move d
+  {
+    let f = fn once[move t, alias console]() Void {
+      let p = (move t, make(console, "k-side"))
+      console.print("owned ${p.0.label} ${p.1.label}")
+    }
+    move f()
+  }
+  console.print("after owned")
+}
+
+func readTwice(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "a-fb")
+  let t = empty.get(0) ?? move d
+  {
+    let f = fn[move t, alias console]() Void {
+      console.print("one ${t.label}")
+      console.print("two ${t.label}")
+    }
+    f()
+    f()
+    let s = make(console, "a-side")
+    console.print("read ${s.label}")
+  }
+  console.print("after twice")
+}
+
+func outerBinding(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "o-fb")
+  let t = empty.get(0) ?? move d
+  let f = fn once[move t, alias console]() Void {
+    console.print("outer ${t.label}")
+  }
+  {
+    let s = make(console, "o-side")
+    move f()
+    console.print("inner ${s.label}")
+  }
+  console.print("after outer")
+}
+
+func neverCalled(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "n-fb")
+  {
+    let t = empty.get(0) ?? move d
+    let f = fn[move t, alias console]() Void {
+      console.print("never ${t.label}")
+    }
+    let s = make(console, "n-side")
+    console.print("kept ${s.label}")
+  }
+  console.print("after never")
+}
+
+func madeFallback(console: Shared[Console], empty: List[Token]) {
+  let t = empty.get(0) ?? make(console, "m-fb")
+  {
+    let f = fn once[move t, alias console]() Void {
+      let p = (move t, make(console, "m-side"))
+      console.print("made ${p.0.label} ${p.1.label}")
+    }
+    move f()
+  }
+  console.print("after made")
+}
+
+func consume(console: Shared[Console], f: owned fn once() Void) {
+  move f()
+  console.print("consumed")
+}
+
+func lend(console: Shared[Console], f: fn() Void) {
+  f()
+  console.print("lent")
+}
+
+func passed(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "p-fb")
+  let t = empty.get(0) ?? move d
+  let e = make(console, "q-fb")
+  let u = empty.get(0) ?? move e
+  {
+    let f = fn once[move t, alias console]() Void {
+      console.print("passed ${t.label}")
+    }
+    consume(console, move f)
+    let g = fn[move u, alias console]() Void {
+      console.print("lent ${u.label}")
+    }
+    lend(console, g)
+    console.print("end passed")
+  }
+  console.print("after passed")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  capOnly(console, empty)
+  capTuple(console, empty)
+  readTwice(console, empty)
+  outerBinding(console, empty)
+  neverCalled(console, empty)
+  madeFallback(console, empty)
+  passed(console, empty)
+  console.print("end")
+}

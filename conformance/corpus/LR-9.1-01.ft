@@ -4,5 +4,5 @@
   [export] field: Type = constantDefault
   [export] … func method([editable | owned] self, params) Ret { … }
   [export] … func associated(params) Ret { … }
-  cleanup(editable self) Void { … }
+  cleanup(editable self) [Void] { … }
 }

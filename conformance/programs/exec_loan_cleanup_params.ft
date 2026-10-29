@@ -1,0 +1,57 @@
+// execute: read own|edit own|token own|lambda own|after calls|from bagged|peek bagged|end|drop bagged|drop own
+// reports: log:level=info,message=drop bagged,function=cleanup Token|log:level=info,message=drop own,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-338, 7.6, 12.2: a plain or `editable` parameter holds a loan for the call, and a result declared `from` a
+// parameter or the receiver is a loan the caller's binding holds. Neither owns anything: a read parameter, an
+// `editable` one, a method's `self`, a lambda's parameter, `firstOf(alias h)` and `bag.peek()` run no cleanup when
+// they end. Each value's cleanup runs once, when its owner ends.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+  func describe(self) String => "token ${self.label}"
+}
+
+class Bag {
+  tok: Token
+  func peek(self) Token from self => alias self.tok
+}
+
+func firstOf(b: Bag) Token from b => alias b.tok
+
+func read(console: Shared[Console], t: Token) {
+  console.print("read ${t.label}")
+}
+
+func edit(console: Shared[Console], t: editable Token) {
+  console.print("edit ${t.label}")
+}
+
+func lent(console: Shared[Console], b: Bag) {
+  let t = firstOf(alias b)
+  console.print("from ${t.label}")
+  let p = b.peek()
+  console.print("peek ${p.label}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut own = Token(label: String.from("own"), console: console.retain())
+  read(console, own)
+  edit(console, editable own)
+  console.print(own.describe())
+  let f = fn[alias console](t: Token) Void {
+    console.print("lambda ${t.label}")
+  }
+  f(own)
+  console.print("after calls")
+  let b = Bag(tok: Token(label: String.from("bagged"), console: console.retain()))
+  lent(console, b)
+  console.print("end")
+}

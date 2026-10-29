@@ -1,0 +1,7 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-06
+// Only `get` reads its key through a view (6.7; X-345): `set` keeps an owned `String` key, so the allocation shows
+// where it is real.
+func put(counts: editable Map[String, Int], word: StringView) {
+  editable counts.set(word, 1)                     // reject: E-TYP-040 — set takes an owned String
+}

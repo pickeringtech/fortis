@@ -4,19 +4,18 @@
 // covers: LANG-12-04
 // 12.5/12.6: `detach` transfers the join obligation to a Supervisor, which observes TaskCompletion; the detached
 // task runs when the main task yields, here at program end.
-import fortis.host { Host, Console, Supervisor }
+import fortis.host { Console, Supervisor }
 async func work(console: Console) Int {
   console.print("detached work")
   return 1
 }
-async func run(console: Console, supervisor: Supervisor) Void {
+async func run(console: Console, supervisor: Supervisor) {
   scope tasks {
     let t = tasks.launch(work(console))
     tasks.detach(move t, supervisor)
   }
 }
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  await run(caps.console, caps.supervisor)
-  caps.console.print("done")
+async func main(console: Console, supervisor: Supervisor) {
+  await run(console, supervisor)
+  console.print("done")
 }

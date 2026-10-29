@@ -1,17 +1,16 @@
 // execute: -3|-1|1|-9223372036854775808|9223372036854775807|-9223372036854775808
 // requires: runtime
 // covers: LANG-06-04
-import fortis.host { Host }
+import fortis.host { Console }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let r1 = Int.div(7, -2) or fail
-  caps.console.print("${r1}")
+  console.print("${r1}")
   let r2 = Int.rem(-7, 2) or fail
-  caps.console.print("${r2}")
+  console.print("${r2}")
   let r3 = Int.rem(7, -2) or fail
-  caps.console.print("${r3}")
-  caps.console.print("${Int.wrappingAdd(9223372036854775807, 1)}")
-  caps.console.print("${Int.saturatingAdd(9223372036854775807, 1)}")
-  caps.console.print("${Int.saturatingSub(-9223372036854775807, 2)}")
+  console.print("${r3}")
+  console.print("${Int.wrappingAdd(9223372036854775807, 1)}")
+  console.print("${Int.saturatingAdd(9223372036854775807, 1)}")
+  console.print("${Int.saturatingSub(-9223372036854775807, 2)}")
 }

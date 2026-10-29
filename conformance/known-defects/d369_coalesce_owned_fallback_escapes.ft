@@ -1,0 +1,32 @@
+// D-369: a binding of a `??` whose fallback it owns is typed as a loan of the `??`'s left side (`let t =
+// empty.get(0) ?? move d` is `alias Token from empty`), so both checkers accept a copy of it that outlives it:
+// `keep = present(t)`, with `keep` declared in an outer block. The interpreter and the VM print `drop fallback`
+// when `t`'s block ends and then `keep fallback`, reading a value whose cleanup has run; native code does not build
+// (rustc E0597). The binding owns the fallback, so a loan taken from it must end with it.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  let d = make(console, "fallback")
+  let mut keep = xs.get(0)
+  {
+    let t = empty.get(0) ?? move d
+    keep = present(t)
+  }
+  console.print("keep ${keep?.label ?? "none"}")
+}

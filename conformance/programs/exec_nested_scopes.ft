@@ -2,18 +2,17 @@
 // requires: runtime
 // covers: LANG-04-05
 // Shadowing is rejected, so a name means one binding in a nested block; disjoint blocks may reuse a name (4.5).
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let outer = 1
-  caps.console.print("${outer}")
+  console.print("${outer}")
   if outer == 1 {
     let inner = 2
-    caps.console.print("${inner}")
+    console.print("${inner}")
   }
   if outer == 1 {
     let inner = 3
-    caps.console.print("${inner}")
+    console.print("${inner}")
   }
 }

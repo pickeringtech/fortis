@@ -1,0 +1,19 @@
+// The key copy of a lookup on the prelude's `Map[String, V]` goes; the same spelling on a class's own `get` stays,
+// whatever that `get` takes: the checker resolves the receiver, not the method's name (6.7; X-345, R11; D-329).
+// fmt_check runs `main` before and after the migration, and both print the same.
+import fortis.host { Console }
+
+class Index {
+  export seen: Int
+  export func get(self, key: String) Int => Int.wrappingAdd(self.seen, key.scalarCount())
+}
+
+func main(console: Console) {
+  let mut counts: Map[String, Int] = Map.default()
+  let key = String.from("apples")
+  editable counts.set(copy key, 3)
+  let index = Index(seen: 1)
+  let n = counts.get(copy key) ?? 0
+  let m = index.get(copy key)
+  console.print("${n} ${m} ${key}")
+}

@@ -1,0 +1,48 @@
+// execute: present item|after present|drop unused|lent item|shown item|after lent|lent spare|shown spare|after lent|end|drop spare|drop item
+// reports: log:level=info,message=drop unused,function=cleanup Token|log:level=info,message=drop spare,function=cleanup Token|log:level=info,message=drop item,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-06-08
+// D-338, 6.8, 7.9, 12.2: a `??` whose left side is a loan gives that loan when it is present. Bound or passed on,
+// it owns nothing, so the element's cleanup runs once, when the list's owner ends; the interpreter and the VM ran
+// it again on the present arm. A fallback that is not taken is not moved: `d` stays its owner and drops at its own
+// block's end. A fallback place lent (`?? alias d`) is a loan too.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func show(console: Shared[Console], t: Token) {
+  console.print("shown ${t.label}")
+}
+
+func taken(console: Shared[Console], xs: List[Token]) {
+  let d = Token(label: String.from("unused"), console: console.retain())
+  let t = xs.get(0) ?? move d
+  console.print("present ${t.label}")
+  console.print("after present")
+}
+
+func lent(console: Shared[Console], xs: List[Token], spare: Token) {
+  let t = xs.get(0) ?? alias spare
+  console.print("lent ${t.label}")
+  show(console, xs.get(0) ?? alias spare)
+  console.print("after lent")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut toks: List[Token] = List.default()
+  toks.push(Token(label: String.from("item"), console: console.retain()))
+  let empty: List[Token] = List.default()
+  let spare = Token(label: String.from("spare"), console: console.retain())
+  taken(console, toks)
+  lent(console, toks, spare)
+  lent(console, empty, spare)
+  console.print("end")
+}

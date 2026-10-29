@@ -2,7 +2,7 @@
 // covers: LANG-07-05
 export class Counter {
   export count: Int
-  export func bump(editable self) Void {
+  export func bump(editable self) {
     self.count = Int.wrappingAdd(self.count, 1)
   }
 }
@@ -12,7 +12,7 @@ func run() Int {
     let seen = alias c
     discard seen.count
   }
-  editable c.bump()
+  c.bump()
   {
     let held = editable c
     held.count = 5

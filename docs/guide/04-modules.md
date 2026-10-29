@@ -62,7 +62,7 @@ load can never change what a program does. A statement at the top level is there
 
 ```fortis
 // reject: E-SYN-000
-export func main(args: List[String]) Void {
+func main() {
 }
 
 let counter = 0                 // reject: E-SYN-000
@@ -114,15 +114,14 @@ export pure func total(lines: List[Line]) Int {
 ```fortis
 // accept
 // file: guide.shop/src/app.ft
-import fortis.host { Host }
+import fortis.host { Console }
 import guide.shop.orders { Line, total }
 import guide.shop.pricing.tax as tax
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let lines = List.of(Line(item: "tea", pennies: 250), Line(item: "cake", pennies: 300))
-  caps.console.print("total ${total(lines)} pennies")
-  caps.console.print("one cake ${tax.withTax(300)}")
+  console.print("total ${total(lines)} pennies")
+  console.print("one cake ${tax.withTax(300)}")
 }
 ```
 
@@ -160,7 +159,7 @@ An import after a declaration is a syntax error (LR 4.3):
 // reject: E-SYN-000
 import fortis.host { Host }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 
 import fortis.text                // reject: E-SYN-000
@@ -214,12 +213,11 @@ dependencies:
 ```fortis
 // accept
 // file: guide.convert/src/main.ft
-import fortis.host { Host }
+import fortis.host { Console }
 import guide.units { metres }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("100 feet is ${metres(100)} metres")
+func main(console: Console) {
+  console.print("100 feet is ${metres(100)} metres")
 }
 ```
 
@@ -284,12 +282,11 @@ dependencies:
 ```fortis
 // reject: E-NAM-004
 // file: guide.till/src/main.ft
-import fortis.host { Host }
+import fortis.host { Console }
 import guide.menu.dishes
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(dishes.discountCode())        // reject: E-NAM-004
+func main(console: Console) {
+  console.print(dishes.discountCode())        // reject: E-NAM-004
 }
 ```
 
@@ -304,7 +301,7 @@ class Hidden {
 
 export pure func make() Hidden => Hidden(n: 1)    // reject: E-TYP-030
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -393,7 +390,7 @@ dependencies:
 import guide.geo.flat
 import guide.geo.screen
 
-export func main(args: List[String]) Void {
+func main() {
   let onPaper = flat.Point(x: 1, y: 2)
   discard screen.column(onPaper)        // reject: E-TYP-040
 }
@@ -404,40 +401,65 @@ program: each version's functions and types run where they are named (LR 4.1, LR
 
 ## The entry point
 
-An application names its entry module in the manifest (`entry: app`), and that module exports a function called
-`main` with one of four signatures (LR 4.6):
+An application names its entry module in the manifest (`entry: app`), and that module declares a function called
+`main` with one of four heads (LR 4.6):
 
-| Signature | Use it when `main` |
+| Head | Use it when `main` |
 |---|---|
-| `export func main(args: List[String]) Void` | cannot fail and does not suspend |
-| `export try func main(args: List[String]) Void` | may fail |
-| `export async func main(args: List[String]) Void` | awaits asynchronous work |
-| `export async try func main(args: List[String]) Void` | both |
+| `func main(…)` | cannot fail and does not suspend |
+| `try func main(…)` | may fail |
+| `async func main(…)` | awaits asynchronous work |
+| `async try func main(…)` | both |
+
+`main` asks for what it needs as parameters, and the runtime supplies each one by its type: `List[String]` gets the
+command-line arguments, and each capability type of `fortis.host` (`Console`, `FileSystem`, `Clock` and the rest)
+gets that capability. Names and order are yours, each type appears once, and a `main` that needs nothing takes no
+parameters. `export` is implied on the entry `main` (LR 4.6):
+
+```fortis
+// accept
+import fortis.host { Console, FileSystem, Path }
+
+try func main(console: Console, files: FileSystem, args: List[String]) {
+  let path = Path.parse("note.txt") or fail
+  files.writeAll(path, "${args.count()} arguments") or fail
+  console.print(files.readText(path) or fail)
+}
+```
+
+```output
+0 arguments
+```
+
+A parameter of any other type is rejected (`E-NAM-005`), and so is a second parameter of a type already taken
+(`E-NAM-006`, LR 4.6). `main` owns the capabilities it receives: it lends them to the functions it calls, and it
+may move one, for example into a `Shared` that several owners hold (LR 4.6, LR 7.8). Older code writes
+`export func main(args: List[String]) Void` and creates its capabilities with `Host.capabilities()` in the body;
+that form is still accepted, and `fortis fmt` rewrites it to this one.
 
 Any of the four may also carry `recovers`, written like any function whose summary has that effect: a `main` that
-reaches a function that recovers a failure writes `export try recovers func main` (LR 4.6, LR 11.2). Today's
+reaches a function that recovers a failure writes `try recovers func main` (LR 4.6, LR 11.2). Today's
 checkers refuse `recovers` on the `main` of a package, though they accept it in a single file (D-52); until that is
 fixed, a package's `main` can report the failures it would recover instead.
 
-`main` gets I/O authority by calling `Host.capabilities()` from `fortis.host`, exactly once; no other function may
-call it, which is why every function that does I/O through a capability must be handed one; `report` is the one
-`io` operation that needs none (LR 4.6, LR 11.6, LR 10.6). A package whose
-entry module has no exported `main` with one of these signatures is rejected (LR 4.6); the LR names no
-code for that yet (X-152).
+`main` gets I/O authority through its capability parameters, and no other function receives capabilities from
+the runtime or creates them, which is why every function that does I/O through a capability must be handed one;
+`report` and the log statements are the `io` operations that need none (LR 4.6, LR 11.6, LR 10.6, LR 13). A
+package whose entry module has no `main` with one of these heads is rejected (LR 4.6); the LR names no code for
+that yet (X-152).
 
 If a `try main` fails, the runtime writes exactly one report of the failure to standard error and the process
 exits with status 1 (LR 4.6). Nothing else is needed, and there is no `or die`:
 
 ```fortis
 // accept (exit status 1)
-import fortis.host { Host, Path }
+import fortis.host { Path, Console, FileSystem }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("reading settings")
+try func main(console: Console, fileSystem: FileSystem) {
+  console.print("reading settings")
   let path = Path.parse("settings.txt") or fail
-  let text = caps.fileSystem.readText(path) or fail
-  caps.console.print(text)
+  let text = fileSystem.readText(path) or fail
+  console.print(text)
 }
 ```
 
@@ -447,24 +469,23 @@ reading settings
 
 The file does not exist, so `readText` fails with `fs.not_found`, `or fail` passes the failure to `main`'s caller,
 and the runtime reports it once: as text on a terminal, and as one JSON record on a pipe (LR 4.6). The report is a
-record like every other finding (Programme 7.4).
+record like every other finding.
 
 An `async main` runs on the core cooperative executor as the root task, and the process ends when it completes
 (LR 4.6):
 
 ```fortis
 // accept
-import fortis.host { Clock, Console, Host }
+import fortis.host { Clock, Console }
 
-async func greet(console: Console, clock: Clock) Void {
+async func greet(console: Console, clock: Clock) {
   await clock.sleep(10ms)
   console.print("after a short sleep")
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("starting")
-  await greet(caps.console, caps.clock)
+async func main(console: Console, clock: Clock) {
+  console.print("starting")
+  await greet(console, clock)
 }
 ```
 

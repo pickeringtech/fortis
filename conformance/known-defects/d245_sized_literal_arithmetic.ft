@@ -1,0 +1,9 @@
+// D-245: arithmetic on literals at a sized integer type does not build natively: the literals are emitted as 64-bit
+// integers (rustc E0308). The interpreter and the VM print `-2147483648 5`. A single literal, `-2147483648`, builds.
+import fortis.host { Console }
+
+func main(console: Console) {
+  let x: Int32 = -2147483647 - 1
+  let y: Int32 = 2 + 3
+  console.print("${x} ${y}")
+}

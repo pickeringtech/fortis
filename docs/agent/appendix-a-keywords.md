@@ -21,7 +21,7 @@
 | Observation | `capture` `record` `report` `observation` `required` `version` `encoding` | LR A |
 | Testing | `test` `cases` `property` `forall` `fuzz` `bench` `expect` | LR A |
 | Kit heads (reserved by the core) | `application` `context` `model` `component` `view` `explore`; prefixes `server` `client` `hybrid`; in head bodies `inject` `provide` `state` `action` `view` `resource` | LR A, LR 16 |
-| Contextual, not reserved | `launch` `launchParallel` `launchBlocking` `detach` `retain` `validate` `checkpoint` `join` `annotate` `cleanup` `capability` `lazy` | LR A |
+| Contextual, not reserved | `launch` `launchParallel` `launchBlocking` `detach` `retain` `validate` `checkpoint` `join` `annotate` `cleanup` `capability` `lazy`; `log` (the log statements `log.info`/`log.warn`/`log.error`, LR 13) | LR A |
 
 ## Diagnostics
 
@@ -77,7 +77,7 @@ test "span" {
 // accept
 class Span {
   export start: Int
-  export pure func from(start: Int) Span => Span(start: start)
+  export pure func from(start: Int) Span => Span(start)
   export pure func where(self, n: Int) Int => n
 }
 

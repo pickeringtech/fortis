@@ -1,7 +1,7 @@
 // reject: E-OBS-001 (at the marked line)
 // covers: LANG-13-02
 // 13: an await is a cancellation edge; a `required: all` field must be captured before it.
-async func pause() Void {
+async func pause() {
 }
 observation Trace {
   tier: Int                          required: all

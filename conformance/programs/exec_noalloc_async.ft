@@ -4,7 +4,7 @@
 // `noalloc` async functions (SP-04-async): futures awaited inline on the success and failure paths allocate in no
 // phase. A cooperative launch allocates under the v1 runtime host, which declares no inline task storage (C.3,
 // X-125), so `launched` is an ordinary async function; eff_noalloc_launch.ft is the rejected `noalloc` form.
-import fortis.host { Host }
+import fortis.host { Console }
 export error Overflow {
   code: "demo.overflow"
 }
@@ -26,16 +26,15 @@ async func launched(n: Int) Int {
     return await t
   }
 }
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async recovers func main(console: Console) {
   let s = await sum3(1, 2, 3)
-  caps.console.print("${s}")
+  console.print("${s}")
   let big = await bounded(99, 2) catch e {
-    caps.console.print("failed ${e.code}")
+    console.print("failed ${e.code}")
     recover 0
   }
   let ok = await bounded(4, 6) or recover big
-  caps.console.print("${ok}")
+  console.print("${ok}")
   let l = await launched(2)
-  caps.console.print("launched ${l}")
+  console.print("launched ${l}")
 }

@@ -1,0 +1,57 @@
+// reject: E-TYP-090 (at the marked lines)
+// covers: LANG-06-07
+// D-242, 6.9, 6.10: `derive Default` unfolds a newtype to its representation, at any depth, before it decides
+// whether a field without an initialiser has a default. The prelude's `Array`, `FixedList`, `FixedMap` and
+// `OrderedMap` have none that every backend builds, written directly or behind a newtype, and they are known by
+// their declaration: a class of the program named `Array` has a default only if it declares one. Both checkers
+// accepted the newtypes, `FixedList`, `FixedMap` and `OrderedMap`, and then no backend could build the value.
+type Cells = Array[Int, 2]
+type Deeper = Cells
+type Slots = FixedList[Int, 2]
+type Index = OrderedMap[String, Int]
+type Table = FixedMap[String, Int, 4]
+type Id = Int<1..>
+
+class Grid derive Default {                  // reject: E-TYP-090 — a newtype of an Array has no default
+  cells: Cells
+}
+
+class Nested derive Default {                // reject: E-TYP-090 — nor has a newtype of that newtype
+  cells: Deeper
+}
+
+class Queue derive Default {                 // reject: E-TYP-090 — a newtype of a FixedList
+  slots: Slots
+}
+
+class Ring derive Default {                  // reject: E-TYP-090 — a FixedList
+  slots: FixedList[Int, 2]
+}
+
+class Catalogue derive Default {             // reject: E-TYP-090 — a newtype of an OrderedMap
+  index: Index
+}
+
+class Ledger derive Default {                // reject: E-TYP-090 — an OrderedMap
+  index: OrderedMap[String, Int]
+}
+
+class Lookup derive Default {                // reject: E-TYP-090 — a newtype of a FixedMap
+  table: Table
+}
+
+class Cache derive Default {                 // reject: E-TYP-090 — a FixedMap
+  table: FixedMap[String, Int, 4]
+}
+
+class Account derive Default {               // reject: E-TYP-090 — a newtype of a refinement that excludes 0
+  id: Id
+}
+
+class Array {
+  value: Int
+}
+
+class Shelf derive Default {                 // reject: E-TYP-090 — the program's own `Array` declares no default
+  item: Array
+}

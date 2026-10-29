@@ -3,12 +3,12 @@
 // covers: LANG-11-01, LANG-11-02, LANG-11-04
 // Effects are summarised transitively; a function writing through its own `editable` parameter is still `pure`
 // (the write footprint); trusted library effects are labelled trusted (11.1 to 11.3).
-import fortis.host { Host, Console }
+import fortis.host { Console }
 
 pure func triple(n: Int) Int => Int.wrappingMul(n, 3)
 
-pure func addAll(total: editable List[Int], n: Int) Void {
-  editable total.push(n)
+pure func addAll(total: editable List[Int], n: Int) {
+  total.push(n)
 }
 
 pure func sum(xs: List[Int]) Int {
@@ -19,16 +19,15 @@ pure func sum(xs: List[Int]) Int {
   return t
 }
 
-func log(console: Console, n: Int) Void {
+func log(console: Console, n: Int) {
   console.print("logged ${n}")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut xs: List[Int] = List.default()
   addAll(editable xs, 4)
   addAll(editable xs, 6)
-  caps.console.print("${sum(xs)}")
-  caps.console.print("${triple(7)}")
-  log(caps.console, Int.wrappingAdd(xs.count(), 2))
+  console.print("${sum(xs)}")
+  console.print("${triple(7)}")
+  log(console, Int.wrappingAdd(xs.count(), 2))
 }

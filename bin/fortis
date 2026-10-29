@@ -12,7 +12,7 @@
                                   (`fortisc build`: validated typed IR lowered to safe Rust; OUT defaults to build/bin/NAME)
   fortis view [OPTIONS] PATH...   read Fortis source: files, directories, globs; --decls, --symbol NAME, --query Q,
                                   --queries, --json (the production tool; never writes)
-  fortis fmt [--check|--write] PATH...   the canonical layout (whitespace only; refuses rather than change a program)
+  fortis fmt [--check|--write] [--no-migrate] PATH...   the canonical layout, after the v0.0.2 migrations (X-345); refuses rather than change a program
   fortis skill install [--agent claude|codex|grok|all] [--scope project|user]
                                   install the fortis-code skill (skills/fortis-code) into agent CLIs
 
@@ -191,13 +191,24 @@ def package_interpreter(ps, entry_module):
     import parser
     from interpreter.eval import Interpreter
     from interpreter.link import link
+    from interpreter.records import shown_path
     rec = parser.load_grammar(os.path.join(ROOT, "reference", "grammar", "fortis.ebnf"))
     linked, entry = link(ps, rec, entry_module)
-    it = Interpreter("", entry.file, linked=(linked, entry))
+    it = Interpreter("", shown_path(entry.file, ps.root.dir), linked=(linked, entry))
     for other in linked.modules.values():
         if other is not entry:
-            it.load_module(other.tree, other.file, other.key)
+            it.load_module(other.tree, shown_path(other.file, ps.root.dir), other.key)
     return it
+
+
+def package_implied(ps, mname):
+    """The calls of module `mname`'s test bodies with an implied `or fail`, by name-token position, as the package
+    check recorded them (14; D-319); a run without that check (`--no-check`) checks the package for them here."""
+    from checker import check
+    key = os.path.relpath(ps.root.modules[mname].file, ROOT)
+    if key not in check.IMPLIED:
+        check.check_package_set(ps)
+    return check.IMPLIED.get(key, set())
 
 
 def package(cmd, d, args, as_json, no_check, fmt, ps=None):
@@ -236,12 +247,13 @@ def package(cmd, d, args, as_json, no_check, fmt, ps=None):
             passed = failed = 0
             for mname in mods:
                 it = package_interpreter(ps, mname)
+                it.implied = package_implied(ps, mname)
                 it.json_out = (fmt == "json") if fmt else not sys.stderr.isatty()
                 p_, f_ = it.run_tests()
                 passed, failed = passed + p_, failed + f_
                 if it.tests and not as_json:
                     print(f"{mname}: {p_} passed, {f_} failed")
-            print(json.dumps({"kind": "test-summary", "passed": passed, "failed": failed}) if as_json else f"{passed} passed, {failed} failed")
+            print(json.dumps({"kind": "test-summary", "passed": passed, "failed": failed, "rule": "PROG-TST-01"}, sort_keys=True) if as_json else f"{passed} passed, {failed} failed")
             return 1 if failed else 0
         if not ps.root.entry:
             sys.stderr.write(f"{d}: the manifest names no entry module\n")
@@ -412,12 +424,13 @@ def main(argv):
     from interpreter.eval import Interpreter
     from interpreter.values import FortisError
     from interpreter.executor import DefectSignal
+    from interpreter.records import shown_path
     try:
-        it = Interpreter(src, path)
+        it = Interpreter(src, shown_path(path))
         it.json_out = (fmt == "json") if fmt else not sys.stderr.isatty()
         if cmd == "test":
             passed, failed = it.run_tests()
-            print(json.dumps({"kind": "test-summary", "passed": passed, "failed": failed}) if as_json else f"{passed} passed, {failed} failed")
+            print(json.dumps({"kind": "test-summary", "passed": passed, "failed": failed, "rule": "PROG-TST-01"}, sort_keys=True) if as_json else f"{passed} passed, {failed} failed")
             return 1 if failed else 0
         it.stream = sys.stdout                       # console lines as printed, kept when the run ends in a defect
         code = it.run_main(rest[1:])

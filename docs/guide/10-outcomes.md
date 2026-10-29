@@ -3,7 +3,7 @@
 <!-- covers: LR 10 -->
 *Human mode. Agent mode: [Outcomes and failures, by rule](../agent/10-outcomes.md). Source of truth: LR 10.*
 
-> Preview: linear containers in generic code (LR 10.7) arrive in v0.1. The rest of this chapter (LR 10) is in v0.0.1.
+> Preview: linear containers (LR 10.7) arrive in v0.1. The rest of this chapter (LR 10) is in v0.0.1.
 
 Fortis has no exceptions. A function that can fail says so with `try`, and its caller receives an `Outcome`: a
 value that holds either the success value or a `Failure`. An outcome is **linear**: it must be dealt with exactly
@@ -22,7 +22,7 @@ value cannot be reached without consuming the outcome (LR 10.1).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error NotEven {
   code: "demo.not_even"
@@ -37,10 +37,9 @@ pure try func half(n: Int) Int {
   return n / 2
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let h = half(10) or fail
-  caps.console.print("half of 10 is ${h}")
+  console.print("half of 10 is ${h}")
 }
 ```
 
@@ -66,7 +65,7 @@ pure try func half(n: Int) Int {
 
 pure func double(n: Int) Int => Int.saturatingMul(n, 2)
 
-export func main(args: List[String]) Void {
+func main() {
   half(10)                            // reject: E-OBL-001
   let d = double(half(10))            // reject: E-TYP-040
 }
@@ -93,7 +92,7 @@ Because `or` binds loosest, the idiom is one decision per line: `let v = f() or 
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error NotEven {
   code: "demo.not_even"
@@ -119,11 +118,10 @@ recovers func describe(n: Int) String {
   }
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${halfOrZero(7)} ${halfOrZero(8)}")
-  caps.console.print(describe(6))
-  caps.console.print(describe(3))
+recovers func main(console: Console) {
+  console.print("${halfOrZero(7)} ${halfOrZero(8)}")
+  console.print(describe(6))
+  console.print(describe(3))
 }
 ```
 
@@ -158,7 +156,7 @@ pure try func half(n: Int) Int {
 
 pure func halfOrZero(n: Int) Int => half(n) or recover 0     // reject: E-EFF-001
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -197,7 +195,7 @@ A test or an adapter that needs to build an outcome by hand uses `Outcome.succes
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Missing {
   code: "store.missing"
@@ -211,11 +209,10 @@ pure func fake(key: Int) Outcome[Int] {
   return Outcome.success(key)
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+recovers func main(console: Console) {
   let a = fake(2) or recover -1
   let b = fake(9) or recover -1
-  caps.console.print("${a} ${b}")
+  console.print("${a} ${b}")
 }
 ```
 
@@ -232,7 +229,7 @@ is `Void`'s one value, written `recover Void` (LR 6.2, LR 10.4).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error NotANumber {
   code: "parse.not_a_number"
@@ -249,8 +246,8 @@ pure try func parseDigits(text: StringView) Int {
     if d == null {
       fail NotANumber(position: i)
     }
-    value = Int.mul(value, 10) or fail
-    value = Int.add(value, d) or fail
+    value = value * 10 or fail
+    value = value + d or fail
     i = Int.add(i, 1) or fail
   }
   return value
@@ -264,9 +261,8 @@ func parseOrZero(text: StringView) Int {
   return v
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${parseOrZero("2026")} ${parseOrZero("20x6")}")
+func main(console: Console) {
+  console.print("${parseOrZero("2026")} ${parseOrZero("20x6")}")
 }
 ```
 
@@ -301,7 +297,7 @@ recovers func careful(n: Int) Int {
   return v
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -320,7 +316,7 @@ failure with `as name` must consume `name` (LR 10.5).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error NotANumber {
   code: "parse.not_a_number"
@@ -352,8 +348,8 @@ pure try func parseDigits(text: StringView) Int {
     if d == null {
       fail NotANumber(position: i)
     }
-    value = Int.mul(value, 10) or fail
-    value = Int.add(value, d) or fail
+    value = value * 10 or fail
+    value = value + d or fail
     i = Int.add(i, 1) or fail
   }
   return value
@@ -377,12 +373,11 @@ recovers func explain(text: StringView) String {
   }
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(explain("42"))
-  caps.console.print(explain("4x2"))
-  caps.console.print(explain(""))
-  caps.console.print(explain("12345678901"))
+recovers func main(console: Console) {
+  console.print(explain("42"))
+  console.print(explain("4x2"))
+  console.print(explain(""))
+  console.print(explain("12345678901"))
 }
 ```
 
@@ -424,7 +419,7 @@ try func strict(n: Int) Int {
   return v
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -441,7 +436,7 @@ Two library functions help with context and with many failures (LR 10.6):
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Missing {
   code: "store.missing"
@@ -452,7 +447,7 @@ pure try func lookup(key: Int) Int {
   if key > 3 {
     fail Missing(key: key)
   }
-  return Int.mul(key, 10) or fail
+  return key * 10 or fail
 }
 
 pure try func lookupBoth(a: Int, b: Int) Int {
@@ -460,7 +455,7 @@ pure try func lookupBoth(a: Int, b: Int) Int {
     fail annotate(move e, "first key")
   }
   let y = lookup(b) or fail
-  return Int.add(x, y) or fail
+  return x + y or fail
 }
 
 func failures(keys: List[Int]) Failure {
@@ -470,24 +465,23 @@ func failures(keys: List[Int]) Failure {
       success(v) => {
       }
       failure(f) => {
-        editable errors.push(move f)
+        errors.push(move f)
       }
     }
   }
   return Failures.aggregate(move errors)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let total = lookupBoth(9, 1) catch e {
-    caps.console.print("failed with ${e.code}")
+    console.print("failed with ${e.code}")
     report e
     recover 0
   }
-  caps.console.print("total ${total}")
+  console.print("total ${total}")
   let all = failures(List.of(1, 7, 9))
   report all
-  caps.console.print("reported")
+  console.print("reported")
 }
 ```
 
@@ -507,7 +501,7 @@ exits with status 1 (LR 4.6). There is no `or die`: propagating to `main` is how
 
 ```fortis
 // accept (exit status 1)
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Missing {
   code: "store.missing"
@@ -521,12 +515,11 @@ pure try func lookup(key: Int) Int {
   return key
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let a = lookup(2) or fail
-  caps.console.print("found ${a}")
+  console.print("found ${a}")
   let b = lookup(8) or fail
-  caps.console.print("found ${b}")
+  console.print("found ${b}")
 }
 ```
 
@@ -543,7 +536,7 @@ failure: a `pure` function collects them, annotated with where they came from, i
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error NotADigit {
   code: "parse.not_a_digit"
@@ -565,22 +558,21 @@ pure func digits(inputs: List[String], sink: editable List[Failure]) List[Int] {
   for text in inputs {
     match digit(text) {
       success(d) => {
-        editable found.push(d)
+        found.push(d)
       }
       failure(f) => {
-        editable sink.push(annotate(move f, "input ${text}"))
+        sink.push(annotate(move f, "input ${text}"))
       }
     }
   }
-  return move found
+  return found
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut problems: List[Failure] = List.default()
   let inputs: List[String] = List.of("4", "x", "7", "")
   let found = digits(inputs, editable problems)
-  caps.console.print("${found.count()} digits, ${problems.count()} problems")
+  console.print("${found.count()} digits, ${problems.count()} problems")
   move problems.consumeEach(fn mut(f: owned Failure) Void {
     report f
   })
@@ -598,6 +590,8 @@ the code (`parse.not_a_digit`, and `text.index` for the empty input) and the not
 
 ## Linear containers
 
+> Preview: linear containers (LR 10.7) arrive in v0.1. The example below is checked and runs today; the rules it shows belong to v0.1.
+
 A collection of outcomes, such as `List[Outcome[T]]`, is linear too: every element must be consumed (LR 10.7).
 The library says in each signature what happens to linear elements: `push(move item)` transfers one in, `pop()`
 transfers one out as a `T?` that must itself be consumed, and `consumeEach(owned self, fn mut(owned T) Void)`
@@ -606,7 +600,7 @@ consumes the collection, calling the callback once per element, in order, with n
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Missing {
   code: "store.missing"
@@ -620,12 +614,11 @@ pure try func lookup(key: Int) Int {
   return key
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let mut results: List[Outcome[Int]] = List.default()
-  editable results.push(lookup(1))
-  editable results.push(lookup(8))
-  editable results.push(lookup(3))
+  results.push(lookup(1))
+  results.push(lookup(8))
+  results.push(lookup(3))
   let mut good = 0
   let mut bad = 0
   move results.consumeEach(fn mut[editable good, editable bad](r: owned Outcome[Int]) Void {
@@ -639,9 +632,9 @@ export try func main(args: List[String]) Void {
       }
     }
   })
-  caps.console.print("${good} good, ${bad} bad")
+  console.print("${good} good, ${bad} bad")
   let all = Outcome.collect(List.of(lookup(1), lookup(2), lookup(3))) or fail
-  caps.console.print("collected ${all.count()}")
+  console.print("collected ${all.count()}")
 }
 ```
 

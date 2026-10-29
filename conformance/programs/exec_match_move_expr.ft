@@ -5,16 +5,16 @@
 // 9.8, 7.9: an expression arm of `match move` destroys its named bindings, then fields matched by `_`, before the
 // match's result is used. A binding the arm gives back is not destroyed there: the discarded field dies at the
 // match, and the binding dies with the local that received it.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
@@ -26,7 +26,7 @@ export class Pair {
 
 func pair(console: Shared[Console]) Pair => Pair(first: Handle.make(1, alias console), second: Handle.make(2, alias console))
 
-func readId(console: Shared[Console]) Void {
+func readId(console: Shared[Console]) {
   let p = pair(alias console)
   let n = match move p {
     Pair(first: a, second: _) => a.id
@@ -35,7 +35,7 @@ func readId(console: Shared[Console]) Void {
   console.print("after")
 }
 
-func giveBack(console: Shared[Console]) Void {
+func giveBack(console: Shared[Console]) {
   let p = pair(alias console)
   let kept = match move p {
     Pair(first: a, second: _) => move a
@@ -44,14 +44,12 @@ func giveBack(console: Shared[Console]) Void {
   console.print("after")
 }
 
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   readId(alias console)
   giveBack(alias console)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
 }

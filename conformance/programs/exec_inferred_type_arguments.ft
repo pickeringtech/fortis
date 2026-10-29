@@ -4,7 +4,7 @@
 // A call's type arguments are fixed by its arguments or its expected type (6.10). `same` is called with a `String`: a
 // string literal is a `StringView from static`, a view, which is not Copyable (6.11), so `same("text")` breaks the bound
 // (D-171).
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func same[T](x: T) T where T implements Copyable => copy x
 
@@ -12,11 +12,10 @@ pure func firstOr[T](items: List[T], fallback: T) T where T implements Copyable 
   return items.get(0) ?? copy fallback
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${same(7)}")
+func main(console: Console) {
+  console.print("${same(7)}")
   let text: String = "text"
-  caps.console.print(same(text))
+  console.print(same(text))
   let empty: List[Int] = List.default()
-  caps.console.print("${firstOr(empty, 2)}")
+  console.print("${firstOr(empty, 2)}")
 }

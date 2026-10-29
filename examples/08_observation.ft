@@ -1,7 +1,7 @@
 // Observation: @observe attaches a schema; `capture` snapshots fields into the activation's frame,
 // which is emitted as a record at exit; `record` emits an event each time it runs.
 // Run: bin/fortis run examples/08_observation.ft   (records go to stderr; pipe stderr for JSON)
-import fortis.host { Host }
+import fortis.host { Console }
 
 observation OrderProcessing {
   version: 1
@@ -26,7 +26,6 @@ func process(prices: List[Int]) Int {
   return total
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("total ${process(List.of(5, 7, 11))}")
+func main(console: Console) {
+  console.print("total ${process(List.of(5, 7, 11))}")
 }

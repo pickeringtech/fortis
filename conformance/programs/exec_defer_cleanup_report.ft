@@ -3,14 +3,14 @@
 // requires: runtime
 // covers: LANG-12-02
 // A failure reported from a deferred block reaches the reporter labelled as raised during cleanup (12.1).
-import fortis.host { Host, Console }
+import fortis.host { Console }
 export error FlushFailed {
   code: "demo.flush"
 }
-try func flush() Void {
+try func flush() {
   fail FlushFailed()
 }
-func work(console: Console) Void {
+func work(console: Console) {
   defer {
     flush() catch e {
       report e
@@ -19,8 +19,7 @@ func work(console: Console) Void {
   }
   console.print("work")
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  work(caps.console)
-  caps.console.print("done")
+func main(console: Console) {
+  work(console)
+  console.print("done")
 }

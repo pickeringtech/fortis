@@ -1,0 +1,44 @@
+// reject: E-TYP-090 (at the marked lines)
+// covers: LANG-06-07
+// D-335, D-336, 6.10: a derived default that contains itself has no end. Both checkers keep the classes and
+// newtypes whose defaults are being built, and a field without an initialiser whose type unfolds back to one of
+// them is E-TYP-090, naming the cycle: through a newtype (`Inner -> Wrap -> Inner`), between two classes, a class
+// that holds itself, a chain of newtypes, and a class that reaches a cycle of others. Both checkers accepted each,
+// and every backend then overflowed its stack building the value.
+type Wrap = Inner
+
+class Inner derive Default {                 // reject: E-TYP-090 — Inner -> Wrap -> Inner
+  w: Wrap
+}
+
+class Left derive Default {                  // reject: E-TYP-090 — Left -> Right -> Left
+  right: Right
+}
+
+class Right derive Default {                 // reject: E-TYP-090 — Right -> Left -> Right
+  left: Left
+}
+
+class Node derive Default {                  // reject: E-TYP-090 — Node -> Node
+  next: Node
+}
+
+type Ring = Rim
+type Rim = Wheel
+
+class Wheel derive Default {                 // reject: E-TYP-090 — Wheel -> Ring -> Rim -> Wheel
+  spokes: Int
+  ring: Ring
+}
+
+class Top derive Default {                   // reject: E-TYP-090 — the cycle Mid -> Low -> Mid it reaches
+  mid: Mid
+}
+
+class Mid derive Default {                   // reject: E-TYP-090 — Mid -> Low -> Mid
+  low: Low
+}
+
+class Low derive Default {                   // reject: E-TYP-090 — Low -> Mid -> Low
+  mid: Mid
+}

@@ -3,16 +3,15 @@
 // covers: LANG-07-09, LANG-11-03
 // SP-02-async, supplementary to the preregistered workload: with `noalloc` callback types, a `noalloc` async callee
 // awaits an async callback twice and calls a `fn mut` callback between; the call adds no allocation (11.3).
-import fortis.host { Host }
+import fortis.host { Console }
 noalloc async func twice(step: noalloc async fn(Int) Int, note: editable noalloc fn mut() Void) Int {
   let a = await step(1)
-  editable note()
+  note()
   let b = await step(2)
-  editable note()
+  note()
   return Int.wrappingAdd(a, b)
 }
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async func main(console: Console) {
   let mut count = 0
   let mut total = 0
   let base = 10
@@ -24,6 +23,6 @@ export async func main(args: List[String]) Void {
       return Int.wrappingAdd(n, base)
     }, editable note)
   }
-  caps.console.print("total ${total}")
-  caps.console.print("counted ${count}")
+  console.print("total ${total}")
+  console.print("counted ${count}")
 }

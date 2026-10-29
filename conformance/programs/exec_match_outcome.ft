@@ -1,7 +1,7 @@
 // execute: ok 4|failed demo.odd
 // requires: runtime
 // covers: LANG-10-01
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Odd {
   code: "demo.odd"
@@ -26,8 +26,7 @@ func show(n: Int) String {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(show(8))
-  caps.console.print(show(7))
+func main(console: Console) {
+  console.print(show(8))
+  console.print(show(7))
 }

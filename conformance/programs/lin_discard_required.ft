@@ -1,7 +1,7 @@
 // reject: E-TYP-140 (at the marked lines)
 // covers: LANG-05-08
 try func half(n: Int) Int => n
-recovers func run(items: List[Int], n: Int) Void {
+recovers func run(items: List[Int], n: Int) {
   items.count()                            // reject: E-TYP-140 — an unused non-Void value needs discard
   half(n) or recover 0                     // reject: E-TYP-140
 }

@@ -2,7 +2,7 @@
 import fortis.host { Host }
 import bad.main.imported.again
 
-export func main(args: List[String]) Void {
+export func main(args: List[String]) {
   let caps = Host.capabilities()
   caps.console.print("run")
   again.twice(copy args)

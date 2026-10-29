@@ -1,0 +1,70 @@
+// execute: error error warning note|small big none|2 3|picked
+// requires: runtime
+// covers: LANG-09-05
+// 9.8 (X-345): an or-pattern `A | B => v` matches when any alternative does, tried left to right. Alternatives bind
+// no names; they may be variants (with payloads matched by `_` or literals), literals, `null` and `present(_)`.
+import fortis.host { Console }
+
+enum Problem {
+  MalformedDate
+  InvalidDate
+  Unbalanced(by: Int)
+  DateOutOfOrder
+  Unused
+}
+
+enum Severity {
+  Error
+  Warning
+  Note
+}
+
+func severityOf(p: Problem) Severity {
+  return match p {
+    MalformedDate | InvalidDate | Unbalanced(by: _) => Error
+    DateOutOfOrder => Warning
+    Unused => Note
+  }
+}
+
+func word(s: Severity) String {
+  return match s {
+    Error => "error"
+    Warning => "warning"
+    Note => "note"
+  }
+}
+
+func size(n: Int?) String {
+  return match n {
+    present(0) | present(1) | present(2) => "small"
+    present(_) => "big"
+    null => "none"
+  }
+}
+
+func count(xs: List[Problem]) Int {
+  let mut n = 0
+  for x in xs {
+    match x {
+      MalformedDate | InvalidDate => {
+        n = Int.wrappingAdd(n, 1)
+      }
+      Unbalanced(by: 0) | DateOutOfOrder | Unbalanced(by: _) | Unused => {}
+    }
+  }
+  return n
+}
+
+func main(console: Console) {
+  console.print("${word(severityOf(MalformedDate))} ${word(severityOf(Unbalanced(by: 3)))} ${word(severityOf(DateOutOfOrder))} ${word(severityOf(Unused))}")
+  console.print("${size(1)} ${size(7)} ${size(null)}")
+  let xs: List[Problem] = List.of(InvalidDate, Unused, MalformedDate)
+  let ys: List[Problem] = List.of(InvalidDate, MalformedDate, InvalidDate)
+  console.print("${count(xs)} ${count(ys)}")
+  match 4 {
+    1 | 2 | 3 => console.print("skipped")
+    4 | 5 => console.print("picked")
+    otherwise => console.print("other")
+  }
+}

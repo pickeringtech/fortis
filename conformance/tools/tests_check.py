@@ -27,6 +27,11 @@ standalone; and a symlink to a module's file resolves to it and runs as the pack
 an observation declared by `numbers`, so the plan step resolves that schema in the declaring module.
 `conformance/testing/acme.obsstr` is the neighbour that must still be refused (an imported alias of String).
 `conformance/testing/acme.dotname` holds a module file whose name begins with `..`.
+
+`conformance/testing/logs.ft` logs from a test body, a lambda and a cleanup, and from a failing test, and reports a
+failure from a test: the interpreter, `fortisc test` and native `--tests` write the same log and failure records, in
+order, each before its test's result and naming the function that wrote or raised it (`fortisc test` once dropped
+the logs, and then the reports; D-323 named them on the interpreter).
 """
 import json
 import os
@@ -49,11 +54,13 @@ MODES = "conformance/testing/modes.ft"
 PKG = "conformance/testing/acme.modtest"
 OBS = "conformance/testing/acme.obsstr"
 DOT = "conformance/testing/acme.dotname"
+LOGS = "conformance/testing/logs.ft"
 
 
 def test(*args, cwd=ROOT):
+    """`fortisc test`, as `fortis test` writes: every record on standard error, then the summary on standard output."""
     r = subprocess.run([FORTISC, "test", "--format", "json"] + list(args), capture_output=True, text=True, cwd=cwd, timeout=1800)
-    recs = [json.loads(l) for l in r.stdout.splitlines() if l.startswith("{")]
+    recs = [json.loads(l) for l in r.stderr.splitlines() + r.stdout.splitlines() if l.startswith("{")]
     return r.returncode, recs
 
 
@@ -247,6 +254,33 @@ def main(argv):
            d1 == 0 and statuses(d1res) == one and summary(d1sum) == (1, 0)
            and d2 == 0 and statuses(d2recs) == one and summary(d2recs) == (1, 0),
            (d1, statuses(d1res), d2, statuses(d2recs)))
+    # 6. a test's records: every runner writes its log records (13) and the failures it reports (`report e`, 10.6),
+    #    in order, before the test's result, each naming the function that wrote or raised it (the test, a lambda, a
+    #    cleanup, the failing function); `fortisc test` once wrote no logs, and then no reports. A report is the
+    #    interpreter's whole record on every runner.
+    def logged(recs):
+        def row(r):
+            if r["kind"] == "log":
+                return (r["kind"], r["level"], r["message"], r["function"])
+            if r["kind"] == "runtime-failure":
+                return (r["kind"], r["code"], r["reported_by"], r["origin"]["function"])
+            return (r["kind"], r["test"], r["status"])
+        return [row(r) for r in recs if r.get("kind") in ("log", "runtime-failure", "test-result")]
+    _, _, ilog = fortis_test(LOGS)
+    _, vlog = test(LOGS)
+    _, lobs, nlog = native_tests(LOGS)
+    body, fails, reported = 'test "logs from the body, a lambda and a cleanup"', 'test "a failing test still logs"', 'test "a reported failure is a record"'
+    want = [("log", "info", "in the body", body), ("log", "info", "crate dropped", "cleanup Crate"), ("log", "warn", "in a lambda", "lambda@13:11"),
+            ("test-result", "logs from the body, a lambda and a cleanup", "pass"),
+            ("log", "error", "before overflow", fails), ("test-result", "a failing test still logs", "fail"),
+            ("log", "info", "before the report", reported), ("runtime-failure", "demo.late", "report", "late"),
+            ("log", "info", "after the report", reported), ("test-result", "a reported failure is a record", "pass")]
+    def reports(recs):
+        return [r for r in recs if r.get("kind") == "runtime-failure"]
+    expect("a test's records, its logs from its body, a lambda and a cleanup and the failure it reports, are written by all three runners, in order, before its result",
+           logged(ilog) == want and logged(vlog) == want and logged(nlog) == want and lobs == ["2 passed, 1 failed"]
+           and len(reports(ilog)) == 1 and reports(vlog) == reports(ilog) and reports(nlog) == reports(ilog),
+           (logged(ilog), logged(vlog), logged(nlog), lobs, reports(ilog), reports(vlog), reports(nlog)))
     if "--json" in argv:
         os.makedirs(os.path.join(ROOT, "build"), exist_ok=True)
         json.dump({"rules": ["PROG-TST-01", "PROG-TST-02"], "checks": rows, "records": recs}, open(os.path.join(ROOT, "build", "tests.json"), "w"), indent=1)

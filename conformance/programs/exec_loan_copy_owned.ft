@@ -1,0 +1,84 @@
+// execute: ret 50 1|narrowed 51 1 none|match 52 1|let 1 1|arg 99 1|field 1 1|push 1 1|coalesce 55 1 7|text t
+// requires: runtime
+// covers: LANG-07-01
+// D-341, 7.5, 7.6: `copy v` of a binding that holds a loan (`let v = xs.get(0)`, narrowed by a null test or not)
+// makes an owned copy of the value it lends, as `copy w` of a `match` binding does; a change to the copy leaves
+// the list alone. Returned, bound, passed `owned`, stored in a field, pushed, and as the left side of `??`. The
+// checkers rejected the narrowed `copy v` (E-OWN-002) and accepted the unmarked forms, which the interpreter and
+// the VM ran as aliases of the element: `ret 50 50`.
+import fortis.host { Console }
+
+class Item {
+  name: String
+  count: Int
+}
+
+class Holder {
+  item: Item?
+}
+
+func first(xs: List[Item]) Item? {
+  let v = xs.get(0)
+  return copy v
+}
+
+func firstNarrowed(xs: List[Item]) Item {
+  let v = xs.get(0)
+  if v == null {
+    return Item(name: String.from("none"), count: 0)
+  }
+  return copy v
+}
+
+func firstText(xs: List[String]) String? {
+  let v = xs.get(0)
+  return copy v
+}
+
+func firstMatch(xs: List[Item]) Item? {
+  return match xs.get(0) {
+    present(v) => copy v
+    null => null
+  }
+}
+
+func take(it: owned Item?) Int {
+  let mut c = move it ?? Item(name: String.from("z"), count: 0)
+  c.count = 99
+  return c.count
+}
+
+func orOwned(xs: List[Item], d: owned Item) Item {
+  let v = xs.get(0)
+  return copy v ?? move d
+}
+
+func main(console: Console) {
+  let mut xs: List[Item] = List.default()
+  xs.push(Item(name: String.from("a"), count: 1))
+  let none: List[Item] = List.default()
+  let mut ts: List[String] = List.default()
+  ts.push(String.from("t"))
+  let mut r = first(xs) ?? Item(name: String.from("n"), count: 0)
+  r.count = 50
+  console.print("ret ${r.count} ${xs.get(0)?.count ?? 0}")
+  let mut n = firstNarrowed(xs)
+  n.count = 51
+  console.print("narrowed ${n.count} ${xs.get(0)?.count ?? 0} ${firstNarrowed(none).name}")
+  let mut m = firstMatch(xs) ?? Item(name: String.from("n"), count: 0)
+  m.count = 52
+  console.print("match ${m.count} ${xs.get(0)?.count ?? 0}")
+  let v = xs.get(0)
+  let mut l: Item? = copy v
+  console.print("let ${l?.count ?? 0} ${xs.get(0)?.count ?? 0}")
+  console.print("arg ${take(copy v)} ${xs.get(0)?.count ?? 0}")
+  let h = Holder(item: copy v)
+  console.print("field ${h.item?.count ?? 0} ${xs.get(0)?.count ?? 0}")
+  let mut ys: List[Item?] = List.default()
+  ys.push(copy v)
+  console.print("push ${ys.count()} ${xs.get(0)?.count ?? 0}")
+  let mut o = orOwned(xs, Item(name: String.from("d"), count: 7))
+  o.count = 55
+  console.print("coalesce ${o.count} ${xs.get(0)?.count ?? 0} ${orOwned(none, Item(name: String.from("d"), count: 7)).count}")
+  console.print("text ${firstText(ts) ?? "none"}")
+}

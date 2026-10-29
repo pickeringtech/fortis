@@ -1,19 +1,18 @@
 // execute: 4611686018427387904|numeric.shift_range|-4|4
 // requires: runtime
 // covers: LANG-06-04
-import fortis.host { Host }
+import fortis.host { Console }
 
-export try recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try recovers func main(console: Console) {
   let r1 = Int.shiftLeft(1, 62) or fail
-  caps.console.print("${r1}")
+  console.print("${r1}")
   let bad = Int.shiftLeft(1, 64) catch e {
-    caps.console.print(e.code)
+    console.print(e.code)
     recover 0
   }
   discard bad
   let negative = -8
-  caps.console.print("${negative >> 1}")
+  console.print("${negative >> 1}")
   let positive = 8
-  caps.console.print("${positive >> 1}")
+  console.print("${positive >> 1}")
 }

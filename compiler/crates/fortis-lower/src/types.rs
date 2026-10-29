@@ -176,7 +176,7 @@ pub fn rust_ty(t: &Type, prog: &Program) -> String {
         "AtomicInt" => "rt::AtomicInt".into(),
         "AtomicBool" => "rt::AtomicBool".into(),
         "Builder" => "rt::text::Builder".into(),
-        "ListCursor" => format!("rt::collections::Cursor<{}>", arg(0)),
+        "ListCursor" => format!("rt::collections::Cursor<'_, {}>", arg(0)),
         "Capabilities" => "rt::host::Capabilities".into(),
         "Console" | "Clock" | "Random" | "Network" | "Process" | "Environment" | "Supervisor" | "SecretAccess" | "RawSql" | "FileSystem" | "Path" | "File" => format!("rt::host::{n}"),
         "Secret" => format!("rt::host::Secret<{}>", arg(0)),

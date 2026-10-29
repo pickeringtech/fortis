@@ -1,19 +1,18 @@
 // execute: 1|2|1
 // requires: runtime
 // covers: LANG-07-01, LANG-07-03
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Box {
   export value: Int
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let original = Box(value: 1)
   let mut copied = copy original
   copied.value = 2
-  caps.console.print("${original.value}")
-  caps.console.print("${copied.value}")
+  console.print("${original.value}")
+  console.print("${copied.value}")
   let moved = move copied
-  caps.console.print("${Int.wrappingSub(moved.value, 1)}")
+  console.print("${Int.wrappingSub(moved.value, 1)}")
 }

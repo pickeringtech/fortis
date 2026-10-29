@@ -1,0 +1,4 @@
+// accept
+// covers: LANG-08-01
+// A module already in canonical form, with no old form for `fortis fmt` to rewrite (X-345): `fmt --check` passes it.
+func one() Int => 1

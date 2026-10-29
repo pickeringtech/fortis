@@ -1,0 +1,44 @@
+// D-344: native code's executor trace has no `drop` event for an owned optional local (`let p = xs.pop()`) or for a
+// temporary a `??` fallback made; the interpreter and the VM trace each, and all three trace a fallback a `??` moved
+// into its result (`absent() ?? move d`). `cleanup` runs once on all three, so the output and the log records agree;
+// only the trace differs.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  cleanup(editable self) {
+    log.info("drop ${self.label}")
+  }
+}
+
+func make(label: StringView) Token {
+  return Token(label: String.from(label))
+}
+
+func popped(console: Console) {
+  let mut xs: List[Token] = List.default()
+  xs.push(make("a"))
+  let p = xs.pop()
+  console.print("popped ${p?.label ?? "none"}")
+}
+
+func absent() Token? {
+  return null
+}
+
+func moved(console: Console) {
+  let d = make("d")
+  let v = absent() ?? move d
+  console.print("moved ${v.label}")
+}
+
+func made(console: Console, xs: List[Token]) {
+  console.print("made ${(xs.get(0) ?? make("t")).label}")
+}
+
+func main(console: Console) {
+  popped(console)
+  moved(console)
+  let none: List[Token] = List.default()
+  made(console, none)
+}

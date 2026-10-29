@@ -1,0 +1,67 @@
+// execute: pick spare|pick x0|drop x0|drop spare2|drop spare|number 4|note n1|end
+// reports: log:level=info,message=note n1,function=cleanup Note
+// requires: runtime
+// covers: LANG-07-06
+// D-373, 7.6: the neighbours of the rejected shapes still check and run alike on every backend: a `??` whose sides
+// are both loans of the result's one origin (`self.items.get(0) ?? alias self.spare`), bound by the caller with
+// `alias`, a `??` of a trivial type, and a copyable fallback copied from a function whose result is owned.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+class Note {
+  label: String
+  cleanup(editable self) {
+    log.info("note ${self.label}")
+  }
+}
+
+class Bag {
+  items: List[Token]
+  spare: Token
+
+  func pick(self) alias Token from self {
+    return self.items.get(0) ?? alias self.spare
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func number(xs: List[Int], d: Int) Int {
+  return xs.get(0) ?? d
+}
+
+func note(xs: List[Note], d: owned Note) Note {
+  let v = xs.get(0)
+  return copy v ?? move d
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "x0"))
+  {
+    let bag = Bag(items: List.default(), spare: make(console, "spare"))
+    let p = alias bag.pick()
+    console.print("pick ${p.label}")
+    let full = Bag(items: move xs, spare: make(console, "spare2"))
+    let q = alias full.pick()
+    console.print("pick ${q.label}")
+  }
+  let ints: List[Int] = List.of(4)
+  console.print("number ${number(ints, 9)}")
+  let notes: List[Note] = List.default()
+  {
+    let n = note(notes, Note(label: String.from("n1")))
+    console.print("note ${n.label}")
+  }
+  console.print("end")
+}

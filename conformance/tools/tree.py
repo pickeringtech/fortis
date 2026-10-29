@@ -43,6 +43,66 @@ def find(node, rule: str):
     return None
 
 
+def lambda_body(node):
+    """A lambda's body: its `funcBody`, or, for an expression body written without a return type (LR 8.2, X-345), the
+    same shape built from its `=>` and expression, so every reader of a body reads both forms alike."""
+    fb = child(node, "funcBody")
+    if fb is not None:
+        return fb
+    kids = children(node)
+    arrow = next((i for i, k in enumerate(kids) if isinstance(k, Token) and k.text == "=>"), None)
+    return ("funcBody", kids[arrow:]) if arrow is not None else None
+
+
+def pun_name(arg) -> Optional[Token]:
+    """The name of an argument written as a bare local name (`wanted`), which a call reads as `wanted: wanted` where a
+    positional argument cannot stand: after a named argument, and in a class's generated constructor (LR 5.8, X-345)."""
+    ks = children(arg)
+    if len(ks) != 1 or name(ks[0]) not in ("expr", "constExpr"):
+        return None
+    ts = tokens(ks[0])
+    return ts[0] if len(ts) == 1 and ts[0].kind == "LOWER" else None
+
+
+ARITH_RULES = ("additiveExpr", "multiplicativeExpr", "shiftExpr")
+WRAPPERS = ("expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr",
+            "shiftExpr", "additiveExpr", "multiplicativeExpr", "unaryExpr", "postfixExpr")
+
+
+def region_operators(node) -> set:
+    """The operators of a checked region (6.4, X-345): the integer arithmetic an outcome operator's left operand is made
+    of, through `+ - * / % << >>`, unary `-` and parentheses, and nothing else (not into a call's arguments, an index, a
+    lambda or another operator). Empty when the left operand is not arithmetic. Positions are (line, column)."""
+    out: set = set()
+
+    def walk(n, top: bool) -> bool:
+        if isinstance(n, Token):
+            return False
+        nm = name(n)
+        kids = children(n)
+        if nm in ARITH_RULES and len(kids) > 1:
+            for i, k in enumerate(kids):
+                if isinstance(k, Token):
+                    out.add((k.line, k.col))
+                else:
+                    walk(k, False)
+            return True
+        if nm == "unaryExpr" and len(kids) == 2 and isinstance(kids[0], Token) and kids[0].text == "-":
+            out.add((kids[0].line, kids[0].col))
+            walk(kids[1], False)
+            return True
+        if nm == "primaryExpr" and len(kids) == 3 and isinstance(kids[0], Token) and kids[0].text == "(":
+            return walk(kids[1], False)
+        if nm == "postfixExpr" and len(kids) == 1:
+            return walk(kids[0], top)
+        if nm in WRAPPERS and len(kids) == 1:
+            return walk(kids[0], top)
+        return False
+
+    walk(node, True)
+    return out
+
+
 def tokens(node) -> List[Token]:
     if isinstance(node, Token):
         return [node]

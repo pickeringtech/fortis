@@ -42,22 +42,22 @@ export class AccountName derive Equatable {
   // letter, separated by single colons, the first naming an account class.
   export pure try func parse(text: StringView) AccountName {
     if text.scalarCount() == 0 {
-      fail BadAccountName(problem: AccountProblem.Empty, position: 0)
+      fail BadAccountName(problem: Empty, position: 0)
     }
     let pieces = splitOn(text, Scalar.of(":")) or fail
     if pieces.count() > maxDepth {
-      fail BadAccountName(problem: AccountProblem.TooDeep, position: 0)
+      fail BadAccountName(problem: TooDeep, position: 0)
     }
     let mut position = 0
     for piece in pieces {
       checkSegment(piece, position) or fail
-      position = Int.add(position, piece.scalarCount()) or fail
-      position = Int.add(position, 1) or fail
+      position = position + piece.scalarCount() or fail
+      position = position + 1 or fail
     }
     let first = pieces.at(0) or fail
     let found = classNamed(first)
     if found == null {
-      fail BadAccountName(problem: AccountProblem.UnknownClass, position: 0)
+      fail BadAccountName(problem: UnknownClass, position: 0)
     }
     return AccountName(full: String.from(text), parts: move pieces, accountClass: found)
   }
@@ -88,13 +88,13 @@ export class AccountName derive Equatable {
     let mut first = true
     for part in self.parts {
       if !first {
-        editable path.append(":")
+        path.append(":")
       }
-      editable path.append(part)
-      editable out.push(path.finish())
+      path.append(part)
+      out.push(path.finish())
       first = false
     }
-    return move out
+    return out
   }
 
   // The name of the account directly above this one, or null for a top-level account.
@@ -167,17 +167,14 @@ export pure func classRank(kind: AccountClass) Int<0..4> {
 // True for the classes whose balances are normally debits (positive).
 export pure func isDebitNormal(kind: AccountClass) Bool {
   return match kind {
-    Assets => true
-    Expenses => true
-    Liabilities => false
-    Equity => false
-    Income => false
+    Assets | Expenses => true
+    Liabilities | Equity | Income => false
   }
 }
 
 // True for the classes reported on the income statement.
 export pure func isIncomeStatementClass(kind: AccountClass) Bool {
-  return kind == AccountClass.Income || kind == AccountClass.Expenses
+  return kind == Income || kind == Expenses
 }
 
 // True for the scalars allowed inside a segment after its first letter.
@@ -200,17 +197,17 @@ pure try func isSegmentScalar(s: Scalar, first: Bool) Bool {
 }
 
 // Checks one segment; `offset` is where it starts in the whole name, for the failure's position.
-pure try func checkSegment(segment: StringView, offset: Int) Void {
+pure try func checkSegment(segment: StringView, offset: Int) {
   let n = segment.scalarCount()
   if n == 0 {
-    fail BadAccountName(problem: AccountProblem.EmptySegment, position: offset)
+    fail BadAccountName(problem: EmptySegment, position: offset)
   }
   for i in 0..<n {
     let s = segment.scalarAt(i) or fail
     let allowed = isSegmentScalar(s, i == 0) or fail
     if !allowed {
-      let at = Int.add(offset, i) or fail
-      fail BadAccountName(problem: AccountProblem.BadCharacter, position: at)
+      let at = offset + i or fail
+      fail BadAccountName(problem: BadCharacter, position: at)
     }
   }
 }
@@ -255,7 +252,7 @@ test "valid account names" cases {
   "digits":       { text: "liabilities:card-2", depth: 2, leaf: "card-2" }
   "underscore":   { text: "income:side_job", depth: 2, leaf: "side_job" }
 } as row {
-  let name = AccountName.parse(row.text) or fail
+  let name = AccountName.parse(row.text)
   expect name.text() == row.text
   expect name.depth() == row.depth
   expect name.leaf() == row.leaf
@@ -288,7 +285,7 @@ test "malformed account names" cases {
   "unknown class":  { text: "stuff:cash", problem: AccountProblem.UnknownClass, position: 0 }
   "too deep":       { text: "assets:a:b:c:d:e:f:g:h", problem: AccountProblem.TooDeep, position: 0 }
 } as row {
-  let refusal = refusalOf(row.text) or fail
+  let refusal = refusalOf(row.text)
   expect refusal != null
   if refusal != null {
     expect refusal.problem == row.problem
@@ -297,26 +294,26 @@ test "malformed account names" cases {
 }
 
 test "classes of accounts" {
-  let cash = AccountName.parse("assets:cash") or fail
-  expect cash.kind() == AccountClass.Assets
+  let cash = AccountName.parse("assets:cash")
+  expect cash.kind() == Assets
   expect isDebitNormal(cash.kind())
-  let salary = AccountName.parse("income:salary") or fail
+  let salary = AccountName.parse("income:salary")
   expect !isDebitNormal(salary.kind())
   expect isIncomeStatementClass(salary.kind())
   expect !isIncomeStatementClass(cash.kind())
-  expect classLabel(AccountClass.Equity) == "Equity"
-  expect classRank(AccountClass.Assets) < classRank(AccountClass.Expenses)
+  expect classLabel(Equity) == "Equity"
+  expect classRank(Assets) < classRank(Expenses)
 }
 
 test "lineage and parents" {
-  let name = AccountName.parse("assets:bank:current") or fail
+  let name = AccountName.parse("assets:bank:current")
   let lineage = name.lineage()
   expect lineage.count() == 3
-  expect (lineage.at(0) or fail) == "assets"
-  expect (lineage.at(1) or fail) == "assets:bank"
-  expect (lineage.at(2) or fail) == "assets:bank:current"
+  expect lineage.at(0) == "assets"
+  expect lineage.at(1) == "assets:bank"
+  expect lineage.at(2) == "assets:bank:current"
   expect name.parentText() == "assets:bank"
-  let top = AccountName.parse("assets") or fail
+  let top = AccountName.parse("assets")
   expect top.parentText() == null
   expect name.isWithin("assets:bank")
   expect name.isWithin("assets:bank:current")
@@ -327,36 +324,36 @@ test "report order of accounts" {
   let texts: List[String] = List.of("expenses:food", "assets:cash", "income:salary", "assets:bank", "equity:opening", "liabilities:card")
   let mut names: List[AccountName] = List.default()
   for text in texts {
-    editable names.push(AccountName.parse(text) or fail)
+    names.push(AccountName.parse(text))
   }
   let ordered = sortedAccountNames(names).map(pure fn(n: AccountName) String => n.text())
-  expect (ordered.at(0) or fail) == "assets:bank"
-  expect (ordered.at(1) or fail) == "assets:cash"
-  expect (ordered.at(2) or fail) == "liabilities:card"
-  expect (ordered.at(3) or fail) == "equity:opening"
-  expect (ordered.at(4) or fail) == "income:salary"
-  expect (ordered.at(5) or fail) == "expenses:food"
+  expect ordered.at(0) == "assets:bank"
+  expect ordered.at(1) == "assets:cash"
+  expect ordered.at(2) == "liabilities:card"
+  expect ordered.at(3) == "equity:opening"
+  expect ordered.at(4) == "income:salary"
+  expect ordered.at(5) == "expenses:food"
 }
 
 test "a subtree stays together" {
   let texts: List[String] = List.of("assets:bank-x", "assets:bank:current", "assets:bank", "assets")
   let mut names: List[AccountName] = List.default()
   for text in texts {
-    editable names.push(AccountName.parse(text) or fail)
+    names.push(AccountName.parse(text))
   }
   let ordered = sortedAccountNames(names).map(pure fn(n: AccountName) String => n.text())
-  expect (ordered.at(0) or fail) == "assets"
-  expect (ordered.at(1) or fail) == "assets:bank"
-  expect (ordered.at(2) or fail) == "assets:bank:current"
-  expect (ordered.at(3) or fail) == "assets:bank-x"
+  expect ordered.at(0) == "assets"
+  expect ordered.at(1) == "assets:bank"
+  expect ordered.at(2) == "assets:bank:current"
+  expect ordered.at(3) == "assets:bank-x"
 }
 
 test "sorting parsed names" {
   let mut names: List[AccountName] = List.default()
-  editable names.push(AccountName.parse("expenses:rent") or fail)
-  editable names.push(AccountName.parse("assets:cash") or fail)
+  names.push(AccountName.parse("expenses:rent"))
+  names.push(AccountName.parse("assets:cash"))
   let ordered = sortedAccountNames(names)
-  expect (ordered.at(0) or fail).text() == "assets:cash"
+  expect ordered.at(0).text() == "assets:cash"
 }
 
 property "a parent always precedes its child" forall (depth: Int<1..6>) {
@@ -366,8 +363,8 @@ property "a parent always precedes its child" forall (depth: Int<1..6>) {
     text = "${text}:level${i}"
     i = i + 1
   }
-  let child = AccountName.parse("${text}:leaf") or fail
-  let parent = AccountName.parse(text) or fail
+  let child = AccountName.parse("${text}:leaf")
+  let parent = AccountName.parse(text)
   expect accountPrecedes(parent, child)
   expect !accountPrecedes(child, parent)
   expect child.parentText() == parent.text()

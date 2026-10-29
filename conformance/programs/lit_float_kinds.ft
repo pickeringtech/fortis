@@ -1,6 +1,6 @@
 // reject: E-TYP-040 (at the marked lines)
 // A float literal is a Float unless it carries the f32 suffix; a decimal literal is a Decimal (3.5).
-pure func kinds() Void {
+pure func kinds() {
   let a: Float32 = 1.5                     // reject: E-TYP-040
   let b: Float = 1.5f32                    // reject: E-TYP-040
   let c: Decimal = 1.5                     // reject: E-TYP-040

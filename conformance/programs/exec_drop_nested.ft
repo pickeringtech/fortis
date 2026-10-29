@@ -4,11 +4,11 @@
 // 7.9: a class value runs its own cleanup if it declares one, then destroys its fields, whether or not it declares
 // a cleanup; an enum value destroys its payload. (Defect D-16: the interpreter and the VM skipped the fields of a
 // class without a cleanup of its own.)
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 export class Inner {
   console: Shared[Console]
   label: String
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("drop ${self.label}")
   }
 }
@@ -19,14 +19,12 @@ export enum Slot {
   Empty
   Held(item: Inner)
 }
-func serve(console: Shared[Console]) Void {
+func serve(console: Shared[Console]) {
   let o = Outer(inner: Inner(console: console.retain(), label: "inner"))
   let s = Slot.Held(item: Inner(console: console.retain(), label: "payload"))
   console.print("served")
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   let kept = Outer(inner: Inner(console: console.retain(), label: "inner"))
   serve(console)

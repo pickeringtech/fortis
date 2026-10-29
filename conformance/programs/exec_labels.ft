@@ -1,10 +1,9 @@
 // execute: 1-1|1-2|2-1|done
 // requires: runtime
 // covers: LANG-05-04
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   outer: for i in 1..3 {
     for j in 1..3 {
       if j == 3 {
@@ -13,8 +12,8 @@ export func main(args: List[String]) Void {
       if i == 2 && j == 2 {
         break outer
       }
-      caps.console.print("${i}-${j}")
+      console.print("${i}-${j}")
     }
   }
-  caps.console.print("done")
+  console.print("done")
 }

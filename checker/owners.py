@@ -20,6 +20,8 @@ class Loan:
     holder: Optional[str]      # the binding that holds it, or None for a statement/call temporary
     depth: int                 # block depth at which a held loan ends; temporaries end with the statement
     line: int = 0
+    nested: bool = False       # kept by a result that holds it inside an optional, a tuple or a record (D-348)
+    via: Optional[str] = None  # the read path it was drawn through (a cursor, a read loan): its own uses keep it (7.6)
 
 
 def overlaps(a: str, b: str) -> bool:

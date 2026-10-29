@@ -1,4 +1,5 @@
-// Tests: table rows bound with `as`, plain tests as try bodies, properties drawn from types.
+// Tests: table rows bound with `as`, plain tests as try bodies (a failing call fails the test: `or fail` is
+// implied), properties drawn from types.
 // Run: bin/fortis test examples/09_tests.ft
 export error Negative {
   code: "demo.negative"
@@ -26,8 +27,8 @@ test "doubling" cases {
 }
 
 test "square roots" {
-  expect (root(16) or fail) == 4
-  expect (root(17) or fail) == 4
+  expect root(16) == 4
+  expect root(17) == 4
   let r = root(-1) catch e {
     expect e.code == "demo.negative"
     recover 0

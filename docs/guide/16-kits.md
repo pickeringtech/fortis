@@ -8,9 +8,9 @@ LR 16.*
 
 The core language has no HTTP server, no database layer, no web components and no dependency injection. Those
 come in **kits**: named, versioned bundles of packages that ship with Fortis, such as the HTTP kit, the Data kit
-and the Web UI kit (PROG-PRD-38). A kit is a library. It extends Fortis only through ordinary packages, aspects,
-declaration heads, embedding bindings and verifiers; it never changes what a core program means
-(PROG-PRD-38, PROG-FND-07). This chapter is about the two ways a kit's syntax reaches your module, aspects and
+and the Web UI kit. A kit is a library. It extends Fortis only through ordinary packages, aspects,
+declaration heads, embedding bindings and verifiers; it never changes what a core program means.
+This chapter is about the two ways a kit's syntax reaches your module, aspects and
 declaration heads, and about what the core reserves for them (LR 16).
 
 ## Aspects need no special syntax
@@ -22,7 +22,7 @@ own; your own packages can declare aspects in exactly the same way:
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 aspect logged(label: StringView) {
   needs console: Console
@@ -34,9 +34,8 @@ aspect logged(label: StringView) {
 @logged("work")
 func work(console: Console, n: Int) Int => n
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("result ${work(caps.console, 3)}")
+func main(console: Console) {
+  console.print("result ${work(console, 3)}")
 }
 ```
 
@@ -87,7 +86,7 @@ export class Page {
   export view: Int            // reject: E-SYN-002
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -97,7 +96,7 @@ function, a keyword is an ordinary name (LR 3.4). That is how a library can offe
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Page {
   export title: String
@@ -105,10 +104,9 @@ export class Page {
   export func model() Page => Page(title: "home")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let page = Page.model()
-  caps.console.print(page.view())
+  console.print(page.view())
 }
 ```
 
@@ -130,8 +128,7 @@ of the declaration around it, and the kit validates where it may appear. Templat
 kit's to define, and it never adds a token to the core (LR 16).
 
 The embedded-language blocks being designed in SP-23 generalise this: a template would become an `html` block
-with typed holes, one mechanism for every embedded language ([Embedded languages](embedded-languages.md),
-PROG-PRD-34).
+with typed holes, one mechanism for every embedded language ([Embedded languages](embedded-languages.md)).
 
 ## The four extension slots
 

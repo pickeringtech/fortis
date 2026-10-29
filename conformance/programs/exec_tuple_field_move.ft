@@ -5,45 +5,43 @@
 // 7.9: moving one element of a tuple temporary consumes that element. Its cleanup runs once, with the one `drop`
 // of the owned receiver, and the sibling is destroyed at the end of the statement with no second trace. Two such
 // moves in one statement destroy the later tuple's sibling first.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  export func consume(owned self) Void {
+  export func consume(owned self) {
     self.console.print("consume ${self.id}")
   }
   export func take(owned self) Int {
     self.console.print("take ${self.id}")
     return self.id
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
 
-func one(console: Shared[Console]) Void {
+func one(console: Shared[Console]) {
   (Handle.make(1, alias console), Handle.make(2, alias console)).0.consume()
   console.print("after")
 }
 
-func two(console: Shared[Console]) Void {
+func two(console: Shared[Console]) {
   console.print("${(Handle.make(1, alias console), Handle.make(2, alias console)).0.take()} ${(Handle.make(3, alias console), Handle.make(4, alias console)).0.take()}")
   console.print("after")
 }
 
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   one(alias console)
   two(alias console)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
 }

@@ -1,0 +1,59 @@
+// execute: given f1|drop f1|drop s1|after given|temporary s2|drop f2|drop s2|after temporary|body|defer f3 s3|drop f3|drop s3|after defer|end|drop item
+// reports: log:level=info,message=drop f1,function=cleanup Token|log:level=info,message=drop s1,function=cleanup Token|log:level=info,message=drop f2,function=cleanup Token|log:level=info,message=drop s2,function=cleanup Token|log:level=info,message=drop f3,function=cleanup Token|log:level=info,message=drop s3,function=cleanup Token|log:level=info,message=drop item,function=cleanup Token
+// execute-trace: loans-end|defer
+// requires: runtime
+// covers: LANG-07-07, LANG-12-01
+// D-366, D-367, 7.9, 12.2: a tuple whose element holds the value a `??` fallback gave owns that value as a
+// statement's temporary, as the value an `if` gives, and under a `defer`: it is destroyed with the tuple's other
+// elements, in element order, after the deferred block that reads it. The VM never ran that cleanup; native code ran
+// it after the tuple's other elements, and did not build the temporary or the `if` (rustc E0716).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func given(console: Shared[Console], empty: List[Token], xs: List[Token], c: Bool) {
+  let d = make(console, "f1")
+  {
+    let pair = if c { give (empty.get(0) ?? move d, make(console, "s1")) } else { give (xs.get(0) ?? make(console, "z"), make(console, "s1b")) }
+    console.print("given ${pair.0.label}")
+  }
+  console.print("after given")
+}
+
+func temporary(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "f2")
+  console.print("temporary ${(empty.get(0) ?? move d, make(console, "s2")).1.label}")
+  console.print("after temporary")
+}
+
+func deferred(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "f3")
+  {
+    let pair = (empty.get(0) ?? move d, make(console, "s3"))
+    defer { console.print("defer ${pair.0.label} ${pair.1.label}") }
+    console.print("body")
+  }
+  console.print("after defer")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  given(console, empty, xs, true)
+  temporary(console, empty)
+  deferred(console, empty)
+  console.print("end")
+}

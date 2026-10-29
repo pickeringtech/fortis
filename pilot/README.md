@@ -5,7 +5,7 @@ the delivery plan (PROG-AGT-08). The application is in `ledger/`, the friction l
 `repro/` a minimised program for each toolchain defect a small program shows (20 of them; the one for entry 49
 was added after the pilot, at the documentation review). The other tool findings are shown by the commands their
 friction entries give (messages, records, test output and command lines: entries 1, 14, 25, 41, 46, 50), by the
-library's declarations (3, 24, 31), or only by the whole application (11); `docs/delivery/defects.json` names
+library's declarations (3, 24, 31), or only by the whole application (11); the defect register names
 each case's reproduction.
 
 ## What it does

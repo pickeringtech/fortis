@@ -1,0 +1,31 @@
+// D-387: a generic function whose result is an optional loan of its type parameter, `func first[T](xs: List[T])
+// (alias T from xs)? => xs.get(0)`, instantiated at a class (`Token`), passes both checkers and runs on the
+// interpreter and the VM (`gen x0|gen 7|end|drop x0`), but does not build natively (rustc E0277: `Token: Clone` is
+// not satisfied, in the generated `main`); v0.0.1's native code refused it too. The same result through a function
+// that is not generic builds (D-353 records the optional loan of text, which does not). Pre-existing since v0.0.1.
+// Found by the v0.0.2-rc.9 re-check (Kimi K3 on OpenCode, and GLM 5.3).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func first[T](xs: List[T]) (alias T from xs)? => xs.get(0)
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "x0"))
+  console.print("gen ${first(alias xs)?.label ?? "none"}")
+  let ns: List[Int] = List.of(7)
+  console.print("gen ${first(alias ns) ?? 0}")
+  console.print("end")
+}

@@ -1,20 +1,19 @@
 // execute: numeric.divide_by_zero|numeric.overflow|0.30
 // requires: runtime
 // covers: LANG-06-04
-import fortis.host { Host }
+import fortis.host { Console }
 
-export try recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try recovers func main(console: Console) {
   let q = Decimal.div(1d, 0d) catch e {
-    caps.console.print(e.code)
+    console.print(e.code)
     recover 0d
   }
   discard q
   let big = Decimal.mul(79228162514264337593543950335d, 10d) catch e {
-    caps.console.print(e.code)
+    console.print(e.code)
     recover 0d
   }
   discard big
-  let r1 = Decimal.fromFloat(0.3, 2, RoundingMode.HalfEven) or fail
-  caps.console.print("${r1}")
+  let r1 = Decimal.fromFloat(0.3, 2, HalfEven) or fail
+  console.print("${r1}")
 }

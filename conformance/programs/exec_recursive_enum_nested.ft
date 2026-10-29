@@ -3,7 +3,7 @@
 // covers: LANG-09-05
 // Two layers of the same generic wrapper still reach the enum (D-55). The field is boxed, so the
 // enum has a size and a consuming match reads the inner value.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Hold[T] {
   export value: T
@@ -28,8 +28,7 @@ func depth(t: owned Tree) Int {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let t = Tree.Node(child: Hold(value: Hold(value: Tree.Leaf)))
-  caps.console.print("nested ${depth(move t)}")
+  console.print("nested ${depth(move t)}")
 }

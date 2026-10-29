@@ -1,0 +1,57 @@
+// backstop: or fallback|drop fallback|catch fallback|drop fallback|after
+// D-385: a function whose result is declared `from` a parameter recovers a value of its own (`lookup(alias xs, want)
+// or recover move d`, or `recover move d` in a `catch` handler); both checkers once accepted it (E-OWN-051 now). The
+// caller's binding held the recovered value as a loan, so its cleanup never ran on the VM. Whether a `from` result
+// is the callee's own is decided by the side the outcome expression took, as it is for a `??`, so the binding owns
+// what was recovered and destroys it with its block, once, even where a check is missed.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+error Missing {
+  code: "backstop.missing"
+}
+
+try func lookup(xs: List[Token], want: StringView) (alias Token from xs)? {
+  for x in alias xs {
+    if x.label == want {
+      return present(x)
+    }
+  }
+  fail Missing()
+}
+
+recovers func viaOr(xs: List[Token], d: owned Token, want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) or recover move d
+}
+
+recovers func viaCatch(xs: List[Token], d: owned Token, want: StringView) (alias Token from xs)? {
+  return lookup(alias xs, want) catch e {
+    report e
+    recover move d
+  }
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let xs: List[Token] = List.default()
+  {
+    let r = viaOr(alias xs, make(console, "fallback"), "nope")
+    console.print("or ${r?.label ?? "none"}")
+  }
+  {
+    let r = viaCatch(alias xs, make(console, "fallback"), "nope")
+    console.print("catch ${r?.label ?? "none"}")
+  }
+  console.print("after")
+}

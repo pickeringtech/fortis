@@ -1,0 +1,34 @@
+// D-365: LR 12.1 checks a deferred block as if it were written at the block's exit, after the loans held by the
+// block's own bindings have ended, so `xs.pop()` in the `defer` is valid. Both checkers reject it with E-OWN-010
+// (an exclusive loan of `xs` while `t` holds an alias loan of it): they walk the deferred body with the nested
+// loan of `t` (D-348) still active. A valid program rejected, from the D-348 rule new in v0.0.2. v0.0.1 accepted
+// it and ran the cleanup twice.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  {
+    let t = xs.get(0)
+    defer {
+      let v = xs.pop()
+      console.print("pop ${v?.label ?? "none"}")
+    }
+    console.print("body ${t?.label ?? "none"}")
+  }
+  console.print("end")
+}

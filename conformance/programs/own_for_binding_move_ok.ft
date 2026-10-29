@@ -2,7 +2,7 @@
 // covers: LANG-07-04
 // The `for` binding is fresh on every iteration, so moving it once per iteration is accepted.
 func take(s: owned String) Int => s.byteCount()
-export func main(args: List[String]) Void {
+func main() {
   let items = List.of(String.from("a"), String.from("bc"))
   let mut total = 0
   for s in move items {

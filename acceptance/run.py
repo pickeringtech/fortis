@@ -78,6 +78,21 @@ def class_of(code: str) -> str:
     return "?"
 
 
+def relative(value):
+    """`value` with this checkout's absolute path written relative to the repository root, and the temporary
+    directory written `<tmp>`, in every string: the log is committed, so it names no local directory (a temporary
+    directory under build/ stays `build/tmp/...`)."""
+    if isinstance(value, str):
+        value = value.replace(ROOT + os.sep, "").replace(ROOT, ".")
+        tmp = tempfile.gettempdir()
+        return value.replace(tmp + os.sep, "<tmp>/") if tmp not in ("/", "") else value
+    if isinstance(value, list):
+        return [relative(v) for v in value]
+    if isinstance(value, dict):
+        return {k: relative(v) for k, v in value.items()}
+    return value
+
+
 class Harness:
     def __init__(self, app: str):
         self.app = app
@@ -156,9 +171,10 @@ class Harness:
         want = self.spec["runtime_inventory"]
         ok = inv is not None and all(inv.get(k) == v for k, v in want.items())
         self.check("no unrequested runtime work (inventory)", ok, {"observed": inv, "expected": want})
-        origins = sorted({os.path.relpath(r["origin"]["file"], ROOT) for r in recs if r.get("kind") == "runtime-failure"})
+        # a record names a package's module relative to the package's directory (D-302)
+        origins = sorted({r["origin"]["file"] for r in recs if r.get("kind") == "runtime-failure"})
         if self.spec.get("min_failure_origins", 2):
-            self.check("failure origins name the declaring module", all(o.startswith(f"acceptance/{self.app}/src/") for o in origins) and len(origins) >= self.spec.get("min_failure_origins", 2), {"origins": origins})
+            self.check("failure origins name the declaring module", all(o.startswith("src/") and os.path.isfile(os.path.join(self.dir, o)) for o in origins) and len(origins) >= self.spec.get("min_failure_origins", 2), {"origins": origins})
 
     # ---- every run on every backend (A2: Programme 14 asks both backends, DW-05) ----------------------------------
     def configs(self):
@@ -203,7 +219,7 @@ class Harness:
                 failures[r["code"]] = failures.get(r["code"], 0) + 1
         duration = self.steps[-1]["duration_ms"] / 1000
         # The start-time budget is a performance check, judged only when FORTIS_ACCEPTANCE_TIMING=1 (the v1.0 release
-        # check, on a quiet machine; docs/delivery/releases.md). Otherwise the duration is recorded but not judged.
+        # check, on a quiet machine). Otherwise the duration is recorded but not judged.
         timed = os.environ.get("FORTIS_ACCEPTANCE_TIMING") == "1"
         within = f", within {self.spec.get('start_within_s', 2)} s" if timed else ""
         self.check(f"{backend}: {label}: output, exit {want_exit} and failures {want_failures or 'none'} as expected{within}",
@@ -366,12 +382,13 @@ class Harness:
             "application": self.spec["application"], "title": self.spec["title"], "programme": self.spec["programme"],
             "chunk": self.spec["chunk"], "backend": self.spec["backend"],
             "evidence_integrity": {"algorithm": "sha256", "inputs": inputs, "toolchain": toolchain, "outputs": self.outputs, "digest": digest},
-            "execution_attestation": {"commit": commit, "worktree_clean": not dirty, "host": platform.node(), "platform": platform.platform(),
+            # no host name: the log is committed, and the attestation needs the platform, not the machine's name
+            "execution_attestation": {"commit": commit, "worktree_clean": not dirty, "platform": platform.platform(),
                                       "python": platform.python_version(), "harness": "python3 -I acceptance/run.py " + self.app, "steps": self.steps},
             "semantic_correctness": {"passed": not failed, "checks": self.checks, "failed": failed},
         }
         out = os.path.join(self.dir, "run-log.json")
-        json.dump(log, open(out, "w", encoding="utf-8"), indent=1)
+        json.dump(relative(log), open(out, "w", encoding="utf-8"), indent=1)
         print(f"\n{len(self.checks)} checks, {len(failed)} failed; {len(self.steps)} commands; run log {os.path.relpath(out, ROOT)} (digest {digest[:16]})")
         return 1 if failed else 0
 

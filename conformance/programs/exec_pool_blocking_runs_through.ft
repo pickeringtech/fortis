@@ -3,7 +3,7 @@
 // requires: runtime
 // covers: LANG-12-03
 // 12.4: without a checkpoint() a blocking callback never observes cancellation: it runs to completion and is joined.
-import fortis.host { Host }
+import fortis.host { Console }
 export error Bad {
   code: "demo.bad"
 }
@@ -25,8 +25,7 @@ async try func run() Int {
     return Int.wrappingAdd(x, await w)
   }
 }
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async recovers func main(console: Console) {
   let r = await run() or recover -1
-  caps.console.print("recovered ${r}")
+  console.print("recovered ${r}")
 }

@@ -174,7 +174,7 @@ export class List[T] {
   // intrinsic: the number of elements; O(1)
   export trusted pure func count(self) Int
   // intrinsic: appends item; amortised O(1) (capacity doubles), worst case O(n) for the growth step
-  export trusted func push(editable self, item: owned T) Void
+  export trusted func push(editable self, item: owned T)
   // intrinsic: removes and returns the last element, null when empty; O(1)
   export trusted func pop(editable self) T?
   // intrinsic: a read loan of the element at index, null outside [0, count); O(1)
@@ -182,7 +182,7 @@ export class List[T] {
   // intrinsic: the element at index; fails `collection.index` outside [0, count); O(1)
   export trusted pure try func at(self, index: Int) T
   // intrinsic: replaces the element at index, dropping the old value; fails `collection.index`; O(1)
-  export trusted try func set(editable self, index: Int, value: owned T) Void
+  export trusted try func set(editable self, index: Int, value: owned T)
   export pure func isEmpty(self) Bool => self.count() == 0
   export pure func first(self) (alias T from self)? => self.get(0)
   export pure func reversed(self) List[T] where T implements Copyable {
@@ -284,7 +284,7 @@ export class List[T] {
   export trusted pure func iterate(self) ListCursor[T] from self
   // consumes the list (10.7): no early exit, so no element is left unvisited; an empty list makes no calls
   // intrinsic: calls visit once per element in order, transferring each element out; O(n) plus the callback per element
-  export trusted func consumeEach(owned self, visit: fn mut(owned T) Void) Void
+  export trusted func consumeEach(owned self, visit: fn mut(owned T) Void)
 }
 export class ListCursor[T] implements Iterator[T] {
   // intrinsic: a read loan of the next element, null at the end; O(1)
@@ -318,15 +318,15 @@ export class Array[T, N] {
   // intrinsic: N; O(1)
   export trusted pure func count(self) Int
   // intrinsic: replaces the element at index; O(1)
-  export trusted func set(editable self, index: Int, value: owned T) Void
+  export trusted func set(editable self, index: Int, value: owned T)
 }
 export class Map[K, V] {
   // intrinsic: an empty map; O(1)
   export trusted pure func default() Map[K, V]
-  // intrinsic: a read loan of the value for key, null when absent; expected O(1) under the release's fixed hash function
+  // intrinsic: a read loan of the value for key, null when absent (on a Map[String, V] the key is a StringView, which hashes and compares as the String with its text: LR 6.7, X-345); expected O(1) under the release's fixed hash function
   export trusted pure func get(self, key: K) (alias V from self)?
   // intrinsic: inserts or replaces the value for key, dropping a replaced value; amortised expected O(1)
-  export trusted func set(editable self, key: owned K, value: owned V) Void
+  export trusted func set(editable self, key: owned K, value: owned V)
   // intrinsic: the number of keys; O(1)
   export trusted pure func count(self) Int
 }
@@ -350,7 +350,7 @@ export class Must {
   // intrinsic: a zero-sized linear witness; O(1), no allocation
   export trusted pure func create() Must
   // intrinsic: consumes the witness; O(1)
-  export trusted pure func discharge(m: owned Must) Void
+  export trusted pure func discharge(m: owned Must)
 }
 export class Outcome[T] {
   // intrinsic: an outcome holding value; O(1)
@@ -375,7 +375,7 @@ export trusted pure func annotate(f: owned Failure, note: StringView) Failure
 export class Future[T] {}
 export class Task[T] implements Abandonable {
   // intrinsic: cancels the task and waits for it to finish (12.4); its result is consumed by the scope
-  export trusted func abandon(owned self) Void
+  export trusted func abandon(owned self)
 }
 export class Cancellation {}
 export class TaskDefect {}
@@ -410,7 +410,7 @@ export class MutexGuard[T] {
   // intrinsic: a copy of the protected value, read through the exclusive guard (12.7); allocates when the value owns heap storage
   export trusted pure func get(self) T where T implements Copyable
   // intrinsic: replaces the protected value with value and drops the old one; a write to storage shared between tasks (`mutate`, 11.1)
-  export trusted func set(self, value: owned T) Void
+  export trusted func set(self, value: owned T)
   // intrinsic: replaces the protected value with value and returns the old one, which the caller now owns; a write to storage shared between tasks (`mutate`, 11.1)
   export trusted func replace(self, value: owned T) T
 }
@@ -420,7 +420,7 @@ export class AtomicInt {
   // intrinsic: the current value (seqcst); O(1)
   export trusted pure func load(self) Int
   // intrinsic: replaces the value (seqcst); O(1)
-  export trusted func store(self, value: Int) Void
+  export trusted func store(self, value: Int)
   // intrinsic: adds delta with wrapping and returns the previous value (seqcst); O(1)
   export trusted func fetchAdd(self, delta: Int) Int
 }
@@ -430,7 +430,7 @@ export class AtomicBool {
   // intrinsic: the current value (seqcst); O(1)
   export trusted pure func load(self) Bool
   // intrinsic: replaces the value (seqcst); O(1)
-  export trusted func store(self, value: Bool) Void
+  export trusted func store(self, value: Bool)
 }
 export class Scope {
   // intrinsic: a task running work on the cooperative executor of this scope (12.5); O(1)
@@ -440,12 +440,12 @@ export class Scope {
   // intrinsic: a task running work on the bounded blocking pool (12.5); O(1)
   export trusted func launchBlocking[T](self, work: owned fn once() T) Task[T]
   // intrinsic: removes task from the scope and hands its join obligation to supervisor (12.5); O(1)
-  export trusted func detach[T](self, task: owned Task[T], supervisor: Supervisor) Void
+  export trusted func detach[T](self, task: owned Task[T], supervisor: Supervisor)
 }
 // intrinsic: runs both futures to completion inside the parent and returns both results (12.5)
 export trusted async func join[A, B](a: owned Future[A], b: owned Future[B]) (A, B)
 // intrinsic: a cancellation point for parallel and blocking tasks (12.4); no effect in cooperative tasks
-export trusted func checkpoint() Void
+export trusted func checkpoint()
 // Fault injection for the conformance corpus (10.8): a defect of the named class terminates the task at once.
 // Not a language feature: the reference toolchain's one hook for the defect taxonomy tests.
 // intrinsic: terminates the task with a defect of the named class (10.8); the conformance corpus's only fault-injection hook
@@ -454,6 +454,10 @@ export trusted func injectDefect(kind: StringView) Never
 // ---- observation (13): the core aspect that attaches a schema to a function ----
 export class ObservationSchema {}
 export aspect observe(schema: ObservationSchema) {
+  metadata
+}
+// the core aspect `@ignorable` (5.5, 11.8; X-345): callers may drop the function's non-linear result without `discard`
+export aspect ignorable() {
   metadata
 }
 
@@ -470,13 +474,13 @@ export interface Equatable {
   pure func equals(self, other: Self) Bool
 }
 export interface Hashable requires Equatable {
-  pure func hash(self, into: editable Hasher) Void
+  pure func hash(self, into: editable Hasher)
 }
 export interface Comparable requires Equatable {
   pure func compare(self, other: Self) Ordering
 }
 export interface Displayable {
-  pure func display(self, into: editable Builder) Void
+  pure func display(self, into: editable Builder)
 }
 export interface Iterable[T, I] where I implements Iterator[T] {
   pure func iterate(self) I from self
@@ -493,13 +497,13 @@ export interface Consumer[T] {
 export interface Copyable {}
 export interface Shareable {}
 export interface Abandonable {
-  func abandon(owned self) Void
+  func abandon(owned self)
 }
 export interface Default {
   pure func default() Self
 }
 export interface Encodable {
-  pure func encode(self, into: editable Encoder) Void
+  pure func encode(self, into: editable Encoder)
 }
 export interface Decodable {
   try func decode(source: editable Decoder) Self
@@ -513,11 +517,11 @@ export class Builder {
   // intrinsic: an empty builder; O(1)
   export trusted pure func create() Builder
   // intrinsic: appends the view; amortised O(len)
-  export trusted func append(editable self, text: StringView) Void
+  export trusted func append(editable self, text: StringView)
   // intrinsic: appends the view and a line feed; amortised O(len)
-  export trusted func appendLine(editable self, text: StringView) Void
+  export trusted func appendLine(editable self, text: StringView)
   // intrinsic: appends one scalar; amortised O(1)
-  export trusted func appendScalar(editable self, s: Scalar) Void
+  export trusted func appendScalar(editable self, s: Scalar)
   // intrinsic: the accumulated text as an owned String; O(total length)
   export trusted pure func finish(self) String
 }

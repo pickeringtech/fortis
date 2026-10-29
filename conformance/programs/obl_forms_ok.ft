@@ -6,7 +6,7 @@ export error Odd {
 }
 try func half(n: Int) Int => n
 func takeOutcome(o: owned Outcome[Int]) Int => 0
-func takeFailure(f: owned Failure) Void {
+func takeFailure(f: owned Failure) {
 }
 try recovers func forms(n: Int) Int {
   let a = half(n) or fail

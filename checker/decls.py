@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.join(ROOT, "conformance", "tools"))
 import diagnostics  # noqa: E402
 import lexer  # noqa: E402
 import names  # noqa: E402
+from reading import CAPABILITY_TYPES  # noqa: E402
 import tree  # noqa: E402
 from lexer import Token  # noqa: E402
 from tree import children, name, direct_tokens, find, find_all, tokens  # noqa: E402
@@ -82,6 +83,7 @@ class Sig:
     body: object = None
     type_params: Tuple[str, ...] = ()
     where: Tuple[Tuple[str, "Named"], ...] = ()     # method-level `where T implements I` bounds (6.10)
+    ignorable: Optional[Token] = None               # the `@ignorable` application on the declaration, if any (5.5, X-345)
 
     def show(self) -> str:
         recv = (self.receiver + ", ") if self.receiver else ""
@@ -148,6 +150,14 @@ class Table:
 
     def get(self, n: str) -> Optional[Decl]:
         return self.decls.get(n)
+
+
+def ignorable_use(member) -> Optional[Token]:
+    """The name token of an `@ignorable` application among a class member's aspect uses (5.5, 11.8; X-345)."""
+    for u in children(member):
+        if name(u) == "aspectUse" and direct_tokens(u)[1].text == "ignorable":
+            return direct_tokens(u)[1]
+    return None
 
 
 class DeclChecker:
@@ -262,6 +272,10 @@ class DeclChecker:
         for a in local_aspects.values():
             if a.aspect.get("base") is not None:
                 a.aspect["base_decl"] = local_aspects.get(a.aspect["base"][0])
+        # `@ignorable` is the core aspect only where the name resolves to the prelude's: a module that declares or
+        # imports an aspect `ignorable` applies its own, which exempts no result (5.5, 11.8; D-314)
+        core_ignorable = module == "fortis.prelude" or ("ignorable" not in local_aspects and not any(
+            ".".join(imp["path"]) != "fortis.prelude" and "ignorable" in (imp["members"] or []) for imp in tree.imports(mtree)))
         for d in tree.declarations(mtree):
             if d["kind"] in ("head", "test", "property", "implement"):
                 if d["kind"] == "implement" and not library:
@@ -276,6 +290,9 @@ class DeclChecker:
                 self.rec("E-TYP-070", f"`{key}` is declared twice in this module", "LANG-09-01", d["token"], {"expected_type": "one declaration", "actual_type": "two", "primary_span": key})
                 continue
             decl = local_aspects[d["name"]] if d["kind"] == "aspect" else self.load_decl(d, module, package)
+            if not core_ignorable:
+                for sig in ([decl.sig] if decl.sig is not None else []) + list(decl.methods.values()):
+                    sig.ignorable = None
             if library and key in self.table.decls and self.table.decls[key].module != module and not alias:
                 pass   # an import may re-introduce a prelude name (e.g. Timestamp from fortis.time): same nominal type
             self.table.decls[key] = decl
@@ -393,6 +410,7 @@ class DeclChecker:
                 head = find(m, "methodHead")
                 if head is not None:
                     sig = self.signature(head, exp, find(m, "funcBody"))
+                    sig.ignorable = ignorable_use(m)
                     if sig.name in decl.methods or sig.name in decl.fields:
                         self.rec("E-TYP-070", f"member `{sig.name}` of {nm} is declared twice", "LANG-09-01", tokens(head)[0], {"expected_type": "one member", "actual_type": "two", "primary_span": sig.name})
                     decl.methods[sig.name] = sig
@@ -444,6 +462,11 @@ class DeclChecker:
                 decl.payload = dict(self.field_list(fl))
         elif kind == "func":
             decl.sig = self.signature(find(node, "funcHead"), d["exported"], find(node, "funcBody"))
+            decl.sig.ignorable = next((direct_tokens(u)[1] for u in d.get("aspects", []) if direct_tokens(u)[1].text == "ignorable"), None)
+            if nm == "main" and self.entry_module is not None and module == self.entry_module:
+                # the entry `main` owns the capabilities the runtime supplies to its parameters (4.6, X-345, Q7)
+                decl.sig.params = [(pn, pt, "owned" if pm == "" and isinstance(pt, Named) and pt.name in CAPABILITY_TYPES else pm)
+                                   for pn, pt, pm in decl.sig.params]
         elif kind == "const":
             t = find(node, "type")
             decl.alias = self.type_of(t) if t is not None else Unknown("inferred const")
@@ -521,7 +544,8 @@ class DeclChecker:
                 variadic = ts[0].text == "..."
                 nm = next(t for t in ts if t.kind == "LOWER")
                 params.append((nm.text, self.type_of(find(pt, "type")), ("..." + mode) if variadic else mode))
-        ret = self.type_of(find(find(sig, "returnType"), "type"))
+        rt = find(sig, "returnType")
+        ret = self.type_of(find(rt, "type")) if rt is not None or sig is None else VOID   # no return type: Void (8.1, X-345)
         self.type_params = saved
         wc = find(sig, "whereClause")
         where = tuple(self.where_of(wc)) if wc is not None else ()
@@ -982,6 +1006,65 @@ class DeclChecker:
         return False
 
     # ---- implementation lookups --------------------------------------------------
+    # the prelude's containers whose default no backend builds yet (6.10; D-242, X-345)
+    NO_DEFAULT_CONTAINERS = ("Array", "FixedList", "FixedMap", "OrderedMap")
+
+    def derivable_default(self, t: Type, seen=(), home: Optional[Table] = None) -> bool:
+        """Whether `derive Default` can build a field of this type that has no initialiser (6.10; D-242): a type with a
+        default that every backend builds. A type parameter has none, since a class has no `where` clause to require
+        one; nor have the prelude's `Array`, `FixedList`, `FixedMap` and `OrderedMap`, known by their declaration
+        and not their spelling, so a user's class named `Array` is judged as itself. A newtype is unfolded to its
+        representation, at any depth. Elsewhere `implements` keeps treating a type parameter as implementing every
+        interface."""
+        if isinstance(t, TypeParam):
+            return False
+        if isinstance(t, Refined):
+            if not ((t.lo is None or t.lo <= 0) and (t.hi is None or t.hi >= 0)):
+                return False
+            return self.derivable_default(t.base, seen, home)
+        if isinstance(t, Named):
+            d = self.resolve_type(t, home)
+            if d is not None and d.kind != "unknown":
+                key = self._fact_key(t, d)
+                if key in seen:
+                    return False
+                prelude = d.module == "fortis.prelude" and not d.type_identity
+                if prelude and d.name in self.NO_DEFAULT_CONTAINERS:
+                    return False
+                if d.kind == "type":
+                    return d.alias is not None and self.derivable_default(d.alias, seen + (key,), self._next_home(d, home))
+                if not prelude and (t.name in COPYABLE_CONTAINERS or t.name in BUILTIN_IMPLEMENTS):
+                    # a declaration spelled as a built-in type is judged by what it declares (a user's `class Array`)
+                    return (any(i.name == "Default" for i in d.implements) or any(n == "Default" for n, _ in d.derives)
+                            or self._block_implements(t, "Default"))
+        return self._implements(t, "Default", (), home)
+
+    def default_cycle(self, t: Type, path: Tuple[Tuple[Tuple[str, str], str], ...], home: Optional[Table] = None) -> Optional[List[str]]:
+        """The declarations a derived default would build again before it finished (6.10; D-335, D-336), or None. `path`
+        holds the classes and newtypes whose defaults are being built, each as ((module, name), name): a newtype is
+        unfolded to its representation and a class that derives Default to its fields without an initialiser. Reaching
+        one already on the path is the cycle, named from that declaration back to itself. `T?` defaults to null, and a
+        class that implements Default gives its own `default()`, so either ends the walk."""
+        if isinstance(t, Refined):
+            return self.default_cycle(t.base, path, home)
+        if not isinstance(t, Named):
+            return None
+        d = self.resolve_type(t, home)
+        if d is None or d.kind == "unknown" or (d.module == "fortis.prelude" and not d.type_identity):
+            return None
+        key = (d.module, d.name)
+        keys = [k for k, _ in path]
+        if key in keys:
+            return [n for _, n in path[keys.index(key):]] + [d.name]
+        nxt, here = self._next_home(d, home), path + ((key, d.name),)
+        if d.kind == "type":
+            return self.default_cycle(d.alias, here, nxt) if d.alias is not None else None
+        if d.kind == "class" and any(n == "Default" for n, _ in d.derives):
+            for ft, _, has_default in d.fields.values():
+                if not has_default and (cycle := self.default_cycle(ft, here, nxt)) is not None:
+                    return cycle
+        return None
+
     def implements(self, t: Type, iface: str, seen=()) -> bool:
         """Does type t implement interface iface (declared, derived, built-in, bundle or structural)?"""
         return self._implements(t, iface, seen, None)
@@ -1008,7 +1091,11 @@ class DeclChecker:
     def _implements(self, t: Type, iface: str, seen, home: Optional[Table]) -> bool:
         if iface == "Copyable": return self._copyable(t, (), home)
         if iface == "Shareable": return self._shareable(t, (), home)
-        if isinstance(t, Refined): return self._implements(t.base, iface, seen, home)
+        if isinstance(t, Refined):
+            # a refined type has its representation's default only when its refinement admits it (6.10): 0, or empty
+            if iface == "Default" and not ((t.lo is None or t.lo <= 0) and (t.hi is None or t.hi >= 0)):
+                return False
+            return self._implements(t.base, iface, seen, home)
         if isinstance(t, OptionalT):
             if iface == "Default": return True      # `T?` defaults to null (6.10)
             if iface in ("Encodable", "Decodable") and isinstance(t.inner, OptionalT): return False   # `T??`: present(null) has no canonical form (6.10)
@@ -1296,8 +1383,19 @@ class DeclChecker:
                     self.check_derive_from(d, args[0], tok)
                 continue
             if iface == "Default":
+                if d.kind == "enum":
+                    # an enum has no fields to build its default from, and no variant is declared the default (6.10; D-242)
+                    self.rec("E-TYP-090", f"derive Default: enum {d.name} has no default to derive, since nothing chooses its variant; implement Default and return the variant", "LANG-06-07", tok,
+                             {"expected_type": "a class whose fields have defaults", "actual_type": "an enum", "primary_span": d.name})
+                    continue
                 for fname, (ft, _, has_default) in d.fields.items():
-                    if not has_default and not self.implements(ft, "Default"):
+                    cycle = None if has_default else self.default_cycle(ft, (((d.module, d.name), d.name),))
+                    if cycle is not None:
+                        # a default that holds itself has no end: no backend could build it (6.10; D-335, D-336)
+                        chain = " -> ".join(cycle)
+                        self.rec("E-TYP-090", f"derive Default: field `{fname}: {ft.show()}` builds the default of {cycle[0]} again before it is finished ({chain}); give the field an initialiser or an optional type", "LANG-06-07", tok,
+                                 {"expected_type": "a default that does not contain itself", "actual_type": chain, "primary_span": fname})
+                    elif not has_default and not self.derivable_default(ft):
                         self.rec("E-TYP-090", f"derive Default: field `{fname}: {ft.show()}` has no initialiser and its type has no Default", "LANG-06-07", tok,
                                  {"expected_type": "an initialiser or a Default type", "actual_type": ft.show(), "primary_span": fname})
                 continue

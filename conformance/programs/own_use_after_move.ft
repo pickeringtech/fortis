@@ -4,7 +4,7 @@ export class Box {
   export label: String
 }
 
-func consume(box: owned Box) Void {
+func consume(box: owned Box) {
 }
 
 func flow(flag: Bool) Int {

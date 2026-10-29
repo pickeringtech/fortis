@@ -1,0 +1,16 @@
+// accept
+// covers: LANG-07-06, LANG-03-06
+// D-412: a literal whose only `${` is escaped has no interpolation, so it lends where a view `from` a parameter is
+// declared, once or several times over, where `"${a}"` is the function's own (own_from_text_bad.ft). Both checkers
+// agree, and the forms run on every backend (exec_from_text_escaped.ft). A byte string never interpolates, so `${`
+// in one is text and the checkers treat it as static whatever it holds; it is not here because native code does not
+// build a byte string as a `BytesView` result `from` a parameter or `from static` (D-390).
+import fortis.host { Console }
+
+func escaped(xs: List[Int]) StringView from xs => "a\${b}c"
+
+func escapedTwice(xs: List[Int]) StringView from xs => "\${a} and \${b}"
+
+func main(console: Console) {
+  console.print("loans")
+}

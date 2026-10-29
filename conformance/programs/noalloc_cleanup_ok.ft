@@ -3,7 +3,7 @@
 // noalloc covers the cleanup path too: a local whose cleanup allocates nothing may live in a noalloc function.
 export class Ticket {
   export id: Int
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.id = 0
   }
 }

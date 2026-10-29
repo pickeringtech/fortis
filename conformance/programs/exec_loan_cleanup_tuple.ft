@@ -1,0 +1,101 @@
+// execute: pair item|after pair|mixed item own|drop own|after mixed|nested 2|after nested|moved item|after moved|temp item|matched item m|drop m|after match|split item d|drop d|after split|captured item f|drop f|after closure|moved loan item|after moved loan|copied n|after copy|end|drop item
+// reports: log:level=info,message=drop own,function=cleanup Token|log:level=info,message=drop m,function=cleanup Token|log:level=info,message=drop d,function=cleanup Token|log:level=info,message=drop f,function=cleanup Token|log:level=info,message=note n,function=cleanup Note|log:level=info,message=drop item,function=cleanup Token
+// execute-trace: drop Token|loans-end|drop Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-349, D-351, 7.9, 12.2: a tuple that holds a loan (`(xs.get(0), 1)`) borrows that element and owns the rest. Its
+// end, a temporary's end, a move, a destructure, a closure that captured it and a copy destroy only what it owns, so
+// the borrowed element's cleanup runs once, when the list's owner ends; the interpreter ran it when the tuple ended
+// and again at the owner's end. An owned element beside the loan still drops with the tuple, a binding of the
+// borrowed element holds a loan, and so does a closure that a loan was moved into. The trace announces a drop only
+// where a cleanup runs: the VM announced one for the destructured loan (D-351).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+// a copyable class: a copy of a tuple holding a loan copies the loan, and makes no value to destroy
+class Note {
+  label: String
+  cleanup(editable self) {
+    log.info("note ${self.label}")
+  }
+}
+
+func copied(console: Shared[Console]) {
+  let mut notes: List[Note] = List.default()
+  notes.push(Note(label: String.from("n")))
+  {
+    let pair = (notes.get(0), 1)
+    let c = copy pair
+    console.print("copied ${c.0?.label ?? "none"}")
+  }
+  console.print("after copy")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  {
+    let pair = (xs.get(0), 1)
+    console.print("pair ${pair.0?.label ?? "none"}")
+  }
+  console.print("after pair")
+  {
+    let mixed = (xs.get(0), make(console, "own"))
+    console.print("mixed ${mixed.0?.label ?? "none"} ${mixed.1.label}")
+  }
+  console.print("after mixed")
+  {
+    let nested = ((xs.get(0), 1), 2)
+    console.print("nested ${nested.1}")
+  }
+  console.print("after nested")
+  {
+    let pair = (xs.get(0), 1)
+    let moved = move pair
+    console.print("moved ${moved.0?.label ?? "none"}")
+  }
+  console.print("after moved")
+  console.print("temp ${(xs.get(0), 1).0?.label ?? "none"}")
+  match (xs.get(0), make(console, "m")) {
+    (present(t), o) => { console.print("matched ${t.label} ${o.label}") }
+    otherwise => { console.print("none") }
+  }
+  console.print("after match")
+  {
+    let pair = (xs.get(0), make(console, "d"))
+    let (a, b) = move pair
+    console.print("split ${a?.label ?? "none"} ${b.label}")
+  }
+  console.print("after split")
+  {
+    let pair = (xs.get(0), make(console, "f"))
+    let f = fn[move pair, alias console]() Void {
+      console.print("captured ${pair.0?.label ?? "none"} ${pair.1.label}")
+    }
+    f()
+  }
+  console.print("after closure")
+  {
+    let t = xs.get(0)
+    let g = fn[move t, alias console]() Void {
+      console.print("moved loan ${t?.label ?? "none"}")
+    }
+    g()
+  }
+  console.print("after moved loan")
+  copied(console)
+  console.print("end")
+}

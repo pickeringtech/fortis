@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.join(ROOT, "conformance", "tools"))
 import lexer  # noqa: E402
 import parser as fparser  # noqa: E402
 import tree  # noqa: E402
+import reading  # noqa: E402
 from lexer import Token  # noqa: E402
 from tree import children, name, direct_tokens, find, find_all, tokens  # noqa: E402
 
@@ -22,16 +23,18 @@ from interpreter import records
 from interpreter import telemetry
 from interpreter.executor import OBSERVATION_BOUND, CancelSignal, DefectSignal, FutureVal, JoinVal, ScopeVal, Scheduler, SleepVal, TaskVal
 from interpreter.values import SharedBox, SharedVal, WeakVal
+from interpreter.values import render_message  # noqa: E402
+from interpreter.values import LentRecord, LentTuple, lent_parts, retuple  # noqa: E402
 from interpreter.values import (VOID, BuilderVal, Capability, ClassInfo, Closure, EnumInfo, EnumValue, ErrorInfo, Failure,  # noqa: E402
                                 FailureSignal, FortisError, Instance, ListVal, Report, Void, check_int, deep_copy, display)
 
 
 # ---------------------------------------------------------------- control flow
 class ReturnSignal(Exception):
-    def __init__(self, value): self.value = value
+    def __init__(self, value, lent=True): self.value, self.lent = value, lent   # lent: the value returned is a loan (D-373)
 
 class GiveSignal(Exception):
-    def __init__(self, value): self.value = value
+    def __init__(self, value, lent=False): self.value, self.lent = value, lent   # lent: the value given is a loan (D-338)
 
 class BreakSignal(Exception):
     def __init__(self, label): self.label = label
@@ -40,7 +43,11 @@ class ContinueSignal(Exception):
     def __init__(self, label): self.label = label
 
 class RecoverSignal(Exception):
-    def __init__(self, value): self.value = value
+    def __init__(self, value, lent=False): self.value, self.lent = value, lent
+
+class RegionFailure(Exception):
+    """A checked operator failed inside a checked region (6.4, X-345): the region's value is this failure."""
+    def __init__(self, failure): self.failure = failure
 
 class ExpectFailure(Exception):
     """A false `expect` inside a test (14): carries the typed actual/expected evidence."""
@@ -48,9 +55,14 @@ class ExpectFailure(Exception):
 
 
 class Cell:
-    __slots__ = ("value", "mutable", "moved")
-    def __init__(self, value, mutable):
+    __slots__ = ("value", "mutable", "moved", "returned", "owns")
+    def __init__(self, value, mutable, owns=True):
         self.value, self.mutable, self.moved = value, mutable, False
+        self.returned = False       # `return x` of a local: its value left with the return, so the block keeps it (X-345)
+        # whether the binding owns its value. A binding that holds a loan (`alias p`, `editable p`, a `get`, a `from`
+        # result, a read parameter, a borrowed pattern or loop binding) is a path to the owner: its end destroys
+        # nothing, so `cleanup` runs once, when the owner goes (7.2, 12.2; D-338)
+        self.owns = owns
 
 
 class Env:
@@ -58,11 +70,12 @@ class Env:
         self.parent = parent
         self.vars: Dict[str, Cell] = {}
         self.defers: List[Any] = []
+        self.frame = False              # a call's own environment (its parameters): the locals of the call are below it
         # the module whose code runs in this environment: its scope resolves module-level names (X-136)
         self.module: Optional[str] = parent.module if parent is not None else None
 
-    def declare(self, n: str, value, mutable=False):
-        self.vars[n] = Cell(value, mutable)
+    def declare(self, n: str, value, mutable=False, owns=True):
+        self.vars[n] = Cell(value, mutable, owns)
 
     def cell(self, n: str) -> Cell:
         e: Optional[Env] = self
@@ -100,6 +113,26 @@ TEMP_TYPES = (Instance, EnumValue, SharedVal, ListVal, intrinsics.MapVal, intrin
 # A tuple is immutable, so moving one element out of a temporary replaces that element with this sentinel.
 # `None` is a real Fortis value and must stay distinct. `destroy` ignores the sentinel (7.9).
 _MOVED = object()
+
+
+def trivial(v) -> bool:
+    """A trivial value (6.11): `return` of the local that holds it copies it and leaves the binding readable (7.5);
+    everything else is ownership-bearing, and the binding is moved. The numbers, `Bool`, `Void`, `null`, `Scalar`,
+    `Decimal`, `Duration` and `Timestamp`; a value of a class declared `trivial` (the opt-in of 6.11, as the
+    checkers' `is_trivial` reads it; D-411); an enum, a tuple or a record whose parts are all trivial."""
+    if isinstance(v, (bool, int, float, numeric.F32, numeric.Dec, numeric.Dur, intrinsics.TimestampVal, Void)) or v is None:
+        return True
+    if type(v).__name__ == "Scalar":
+        return True
+    if isinstance(v, Instance):
+        return v.cls.trivial
+    if isinstance(v, EnumValue):
+        return all(trivial(p) for p in v.payload.values())
+    if type(v) is tuple:
+        return all(trivial(x) for x in v)
+    if type(v) is dict:
+        return all(trivial(x) for x in v.values())
+    return False
 
 
 def library() -> Dict[str, dict]:
@@ -218,6 +251,10 @@ class Interpreter:
         """`linked`: the (Link, entry module) of a package program (interpreter/link.py); the entry module's tree is
         the linked one, whose colliding names carry their program keys."""
         self.file = file
+        self.src = src
+        self.implied: Optional[set] = None         # the checker's implied `or fail` calls in test bodies (14; D-319)
+        self.regions: List[set] = []               # the operators of the checked regions being evaluated (6.4, X-345)
+        self.region_cache: Dict[int, set] = {}     # id(left operand) -> its region's operators
         self.rec = fparser.load_grammar(os.path.join(ROOT, "reference", "grammar", "fortis.ebnf"))
         self.link, entry = linked if linked is not None else (None, None)
         self.module = entry.tree if entry is not None else self.rec.parse(lexer.lex(src), "module")
@@ -241,6 +278,7 @@ class Interpreter:
         self.imported: Dict[str, str] = {}         # name -> import path (kit names fail at use)
         self.interp_cache: Dict[str, Any] = {}
         self.aspects: Dict[str, dict] = {}         # aspect declarations (11.8)
+        self.aspect_homes: Dict[str, set] = {}     # aspect name -> the modules (program keys) that declare it
         self.func_aspects: Dict[str, list] = {}    # function name -> aspectUse nodes in application order
         self.observations: Dict[str, List[str]] = {}
         self.schema_versions: Dict[str, int] = {}
@@ -256,6 +294,9 @@ class Interpreter:
         self.load_declarations(self.lib["prelude"]["tree"], library=True, kinds=("enum",))   # Ordering.Less, `Less` (9.7)
         self.trace: List[str] = []                 # scheduler and unwind events (`// execute-trace:`)
         self.json_out = False
+        self.in_test_body = False                    # running a test or property body: `or fail` is implied (14, X-345)
+        self.returned_lent = True                    # whether the last call that ran returned a loan or its own value (D-373)
+        self.test_label: Optional[str] = None        # the running test's function name, as the VM names it (`test "title"`)
         self.load_declarations()
 
     # ---- declarations ---------------------------------------------------
@@ -318,6 +359,8 @@ class Interpreter:
                 self.classes[nm] = ClassInfo(nm, fields, exported, methods, node)
                 self.classes[nm].field_types = field_types
                 self.classes[nm].consts = consts
+                # the `trivial` modifier, read as the checkers read it (decls.py): a trivial class is copied by `return`
+                self.classes[nm].trivial = any(isinstance(c, Token) and c.text == "trivial" for c in children(node))
                 tp = next((c for c in children(node) if name(c) == "typeParams"), None)
                 self.classes[nm].type_params = [t.text for t in tokens(tp) if t.kind == "UPPER"] if tp is not None else []
                 impl = []
@@ -367,7 +410,8 @@ class Interpreter:
                 fl = find(node, "fieldList")
                 payload = [t.text for t in direct_tokens(fl) if t.kind == "LOWER"] if fl else []
                 msg = next((t.text for t in ts if t.kind == "STR" and t is not ts[[x.kind for x in ts].index("STR")]), None)
-                self.errors[nm] = ErrorInfo(nm, code[1:-1], payload, msg)
+                # the message template is kept as written between its quotes, like the code (10.3; D-340)
+                self.errors[nm] = ErrorInfo(nm, code[1:-1], payload, msg[1:-1] if msg is not None and len(msg) >= 2 else msg)
             elif kind == "func":
                 key = self.decl_key(nm)
                 self.funcs[key] = (find(node, "funcHead"), find(node, "funcBody"))
@@ -383,6 +427,7 @@ class Interpreter:
                 self.newtype_repr[nm] = next((c for c in children(node) if name(c) == "type"), None)
             elif kind == "aspect":
                 self.aspects[nm] = self.load_aspect(node)
+                self.aspect_homes.setdefault(nm, set()).add(self.loading_module)
             elif kind == "observation":
                 bounds = {}
                 for it in [c for c in children(node) if name(c) == "observationItem"]:
@@ -440,11 +485,51 @@ class Interpreter:
     @property
     def stack(self): return self.sched.current.stack
     @property
+    def writers(self): return self.sched.current.writers
+    @property
     def cleanup_depth(self): return self.sched.current.cleanup_depth
     @cleanup_depth.setter
     def cleanup_depth(self, v): self.sched.current.cleanup_depth = v
     @property
     def temps(self): return self.sched.current.temps
+
+    # ---- loans (7.3, 12.2; D-338) -------------------------------------------------------
+    # A loan and its owner are the same Python value, so the value cannot say which one a binding holds. The
+    # running statement records the values it produced as loans: a marker `alias p` or `editable p`, a read
+    # through a binding that holds a loan, a lending intrinsic (`get`, a cursor's `next`) and the result of a call
+    # whose declared result is a loan (`from`). A binding initialised with one holds a loan.
+    def lend(self, v):
+        if isinstance(v, TEMP_TYPES):
+            self.sched.current.lent[id(v)] = v
+        return v
+
+    def is_lent(self, v) -> bool:
+        return id(v) in self.sched.current.lent
+
+    def unlend(self, v):
+        self.sched.current.lent.pop(id(v), None)
+
+    def lent_scope(self):
+        """A statement's own record of loans; the caller restores the enclosing statement's when it ends."""
+        t = self.sched.current
+        saved, t.lent = t.lent, {}
+        return t, saved
+
+    def call_result(self, r, ret):
+        """A call's result. Declared `from` a parameter, it is a loan the caller's binding holds; a guard so declared
+        is a loan-carrying value its binding owns, and dropping it unlocks (7.7, 12.7). Any other result is a new
+        owned value, a temporary of the statement until something takes it (7.9; D-338). A `from` result that the
+        callee's `return` gave as a value of its own (a `??` whose fallback it moved or made, a moved local) is owned
+        too, by whatever receives it, so its cleanup runs even where a check was missed (D-373)."""
+        if self.returns_loan(ret) and not isinstance(r, intrinsics.GuardVal) and self.returned_lent:
+            return self.lend(r)
+        return self.fresh_add(r)
+
+    @staticmethod
+    def returns_loan(ret) -> bool:
+        """A declared result type that is a loan or carries one (`StringView from user`, `(alias T from self)?`,
+        `ListCursor[T] from self`): the caller's binding holds a loan, never the value (7.6, 7.7)."""
+        return ret is not None and any(t.text == "from" for t in tokens(ret))
 
     # ---- linked names (X-136) ---------------------------------------------------------
     def decl_key(self, nm: str) -> str:
@@ -539,7 +624,7 @@ class Interpreter:
         telemetry.mode()                             # the adapter opens its channel before any frame completes (SP-09 design 3.1.5)
         head, body = self.funcs["main"]
         try:
-            result = self.call(head, body, [(None, ListVal(list(args)))], None, self.func_aspects.get("main"))
+            result = self.call(head, body, self.entry_arguments(head, args), None, self.func_aspects.get("main"))
             if isinstance(result, FutureVal):
                 result = self.run_future(result)          # an async main runs as the main task (4.6)
         except FailureSignal as f:
@@ -559,6 +644,13 @@ class Interpreter:
             return 1
         self.flush_records()
         return 0
+
+    def entry_arguments(self, head, args: List[str]):
+        """The entry `main`'s arguments, each supplied by its parameter's type (4.6, X-345): the command-line arguments
+        for `List[String]`, and for a capability type that capability, all created once, before `main` runs (11.6)."""
+        kinds = reading.entry_param_kinds(find(head, "funcSignature"))
+        caps = intrinsics.host_capabilities(self, []) if any(k != reading.ARGS for _, k in kinds) else None
+        return [(None, ListVal(list(args)) if k == reading.ARGS else caps.fields[reading.CAPABILITY_FIELDS[k]]) for _, k in kinds]
 
     def defect_record(self, kind: str, task: str):
         self.emit({"kind": "defect", "class": kind, "task": task, "rule": "LANG-10-06"})
@@ -589,10 +681,14 @@ class Interpreter:
                 status, evidence = "pass", {}
                 try:
                     self.frames.append(None)
+                    self.in_test_body = True             # `or fail` is implied in the body (14, X-345)
+                    self.test_label = f'test "{t["title"]}"'
                     try:
                         self.run_block(t["block"], env)
                     finally:
                         self.frames.pop()
+                        self.in_test_body = False
+                        self.test_label = None
                 except ExpectFailure as x:
                     status, evidence = "fail", x.evidence
                 except FailureSignal as f:
@@ -674,12 +770,54 @@ class Interpreter:
             last = self.reports[-1]
             sys.stderr.write((json.dumps(last, sort_keys=True) if self.json_out else records.render(last)) + "\n")
 
+    def implied_calls(self) -> set:
+        """The calls of the module's test bodies that have an implied `or fail`, by the position of their name token:
+        the reference checker records them, and only them, as the IR builder reads the production checker's (14,
+        LANG-14-03; X-345, D-319). A call of a function that returns an Outcome it built, an `or`/`catch` operand, a
+        `match` scrutinee and a binding the body consumes as an outcome are not among them. A package's tests get
+        the positions from the package check (bin/fortis); a module on its own is checked here when nobody has."""
+        if self.implied is None:
+            if self.link is not None:
+                raise FortisError("the tests of a package module run with the package check's implied `or fail` positions")
+            from checker import check
+            import names
+            check.check_source(names.Library(self.rec), self.src, self.file)
+            self.implied = set(check.LAST_TYPER.implied_fails)
+        return self.implied
+
+    def implied_fail(self, v, tok):
+        """The call named at `tok` in a test body: with the implied `or fail` the checker recorded there, its failure
+        fails the test, as `or fail` would (14, LANG-14-03; X-345). Any other expression's value, an outcome bound
+        or passed on included, is what it is (D-319)."""
+        if tok is not None and isinstance(v, Failure) and (tok.line, tok.col) in self.implied_calls():
+            raise FailureSignal(v)
+        return v
+
+    def names_something(self, tok, env: Env) -> bool:
+        """Whether the name of `tok` resolves to a binding or declaration here (a `log` statement needs it not to, 13)."""
+        try:
+            self.literal(tok, env)
+            return True
+        except FortisError:
+            return False
+
+    def log_statement(self, level: str, al, env: Env):
+        """`log.info|warn|error(message)` (13, LANG-13-04): one `log` record on the diagnostic plane, never stdout."""
+        args = self.args(al, env) if al is not None else []
+        message = display(args[0][1]) if args else ""
+        where = self.stack[-1] if self.stack else (self.test_label or "main")       # a test body is named as the VM names it
+        if self.writers and self.writers[-1][1] == len(self.stack):
+            where = self.writers[-1][0]                  # a lambda or a cleanup, as the IR names it (`lambda@3:11`, `cleanup Box`; D-323)
+        self.emit({"kind": "log", "level": level, "message": message, "function": where, "rule": "LANG-13-04"})
+
     def emit_report(self, f: Failure, where: str):
         chain, c = [], f.cause
         while c is not None:
             chain.append(c.code)
             c = c.cause
-        self.emit({"kind": "runtime-failure", "code": f.code, "message": f.message or "", "payload": {k: display(v) for k, v in f.payload.items()},
+        shown = {k: display(v) for k, v in f.payload.items()}
+        # the message template rendered with the payload as the record shows it (10.3; D-340)
+        self.emit({"kind": "runtime-failure", "code": f.code, "message": render_message(f.message or "", shown), "payload": shown,
                    "origin": {"file": self.decl_file.get(f.origin or where, self.file), "function": f.origin or where}, "cause": chain, "annotations": list(f.annotations),
                    "reported_by": "cleanup" if self.cleanup_depth else where, "rule": "LANG-10-06"})
 
@@ -740,9 +878,17 @@ class Interpreter:
         env = self.bind(head, args, self_value)
         if self.is_async(head) and body is not None:
             return FutureVal(self.func_name(head), head, body, env, self.is_try(head))
-        if aspects:
-            return self.fresh_add(self.call_with_aspects(head, body, env, aspects))
-        return self.fresh_add(self.run_bound(head, body, env))
+        in_test, self.in_test_body = self.in_test_body, False      # a callee's body is not the test's (14)
+        try:
+            if aspects:
+                r = self.call_with_aspects(head, body, env, aspects)
+            else:
+                r = self.run_bound(head, body, env)
+        finally:
+            self.in_test_body = in_test
+        # a result declared `from` a parameter is a loan the caller's binding holds; any other is a new owned value,
+        # a temporary of the statement until something takes it (7.6, 7.9; D-338)
+        return self.call_result(r, self.return_type(head))
 
     def run_future(self, fut: FutureVal):
         """Run a future's body in the current task (inline at its first await, or as a launched task)."""
@@ -837,26 +983,28 @@ class Interpreter:
 
     def bind(self, head, args, self_value) -> Env:
         env = Env(self.globals)
+        env.frame = True
         env.module = self.head_module.get(id(head), env.module)
         params = [p for p in self.params_of(head) if not p[2]]
         owned = set(self.owned_params(head))
         if self_value is not None or any(p[2] for p in self.params_of(head)):
-            env.declare("self", self_value, mutable=True)
+            env.declare("self", self_value, mutable=True, owns="self" in owned)
             if "self" in owned:
                 self.release(self_value)               # an owned self: the callee becomes its owner (7.9)
         positional = [v for n, v in args if n is None]
         named = {n: v for n, v in args if n is not None}
         ptypes = self.param_type_nodes(head) if self.open_names() else {}
         for i, (pn, default, _) in enumerate(params):
+            # a plain or `editable` parameter holds a loan; an `owned` one owns its argument (7.6)
             if i < len(positional):
                 v = positional[i]
-                env.declare(pn, self.expected(v, ptypes.get(pn)), mutable=False)
+                env.declare(pn, self.expected(v, ptypes.get(pn)), mutable=False, owns=pn in owned)
             elif pn in named:
                 v = named.pop(pn)
-                env.declare(pn, self.expected(v, ptypes.get(pn)), mutable=False)
+                env.declare(pn, self.expected(v, ptypes.get(pn)), mutable=False, owns=pn in owned)
             elif default is not None:
                 v = self.eval(default, env)
-                env.declare(pn, v, mutable=False)
+                env.declare(pn, v, mutable=False, owns=pn in owned)
             else:
                 raise FortisError(f"missing argument `{pn}`")
             if pn in owned:
@@ -875,13 +1023,17 @@ class Interpreter:
         self.frames.append({} if schema else None)
         self.stack.append(fname)
         outcome = "success"
-        try:
+        lent = True                                      # whether the value returned is a loan; a `from` result that is
+        try:                                             # the function's own is owned by the binding that receives it (D-373)
             blk = find(body, "block") if name(children(body)[0]) == "block" else None
             if blk is not None:
                 self.run_block(blk, env)
                 return VOID
-            return self.expected(self.eval(find(body, "expr"), env), self.return_type(head))
+            v = self.eval(find(body, "expr"), env)
+            lent = self.is_lent(v)
+            return self.expected(v, self.return_type(head))
         except ReturnSignal as r:
+            lent = r.lent
             return self.expected(r.value, self.return_type(head))
         except FailureSignal as f:
             outcome = "failure"
@@ -901,8 +1053,7 @@ class Interpreter:
                 for pn in reversed(self.owned_params(head)):
                     cell = env.vars.get(pn)
                     if cell is not None and not cell.moved:
-                        if isinstance(cell.value, Instance) and cell.value.cls.cleanup is not None:
-                            self.trace.append(f"drop {cell.value.cls.name}")
+                        self.announce_drop(cell.value)
                         cell.moved = True
                         self.destroy(cell.value)
             self.stack.pop()
@@ -910,6 +1061,7 @@ class Interpreter:
             if schema:
                 truncated = frame.pop("__truncated", [])
                 self.observation(schema, fname, {k: display(v) for k, v in frame.items()}, outcome, truncated)
+            self.returned_lent = lent                    # last, so the destructors' own calls cannot overwrite it (D-373)
 
     def observation(self, schema: str, function: Optional[str], fields: Dict[str, str], outcome: Optional[str], truncated: List[str]):
         """A completed frame (`function` and `outcome` given) or an executed `record`: under a telemetry policy the
@@ -926,12 +1078,23 @@ class Interpreter:
     def schema_of(self, fname: str) -> Optional[str]:
         for use in self.func_aspects.get(fname, []):
             uts = direct_tokens(use)
-            if uts[1].text == "observe":
+            if uts[1].text == "observe" and self.core_aspect("observe"):
                 al = find(use, "argList")
                 return tokens(al)[0].text if al is not None else None
         return None
 
     # ---- aspects (11.8) ---------------------------------------------------------
+    def core_aspect(self, aname: str, head=None) -> bool:
+        """`@observe` and `@ignorable` name the prelude's metadata aspects unless the module that declares the function
+        (`head`) declares or imports an aspect of that name, which is then the one applied, hooks and all: the aspect
+        is resolved, not its spelling (D-314). A module on its own is the program's only module."""
+        if aname not in ("observe", "ignorable") or aname not in self.aspects:
+            return aname in ("observe", "ignorable")
+        module = self.head_module.get(id(head)) if head is not None else None
+        if self.link is None or module is None or module not in self.link.modules:
+            return False
+        return module not in self.aspect_homes.get(aname, set()) and aname not in self.link.modules[module].scope
+
     def resolve_aspect(self, aname: str, args: List[Tuple[Optional[str], Any]]):
         """Follow specialisations to the base aspect, binding arguments; `...rest` forwards the rest."""
         a = self.aspects.get(aname)
@@ -993,8 +1156,8 @@ class Interpreter:
         ptypes = self.param_types(head)
         for use in uses:
             uts = direct_tokens(use)
-            if uts[1].text == "observe":
-                continue
+            if self.core_aspect(uts[1].text, head):
+                continue                                 # core aspects with no hooks (11.8): `ignorable` is the checker's (5.5)
             al = find(use, "argList")
             a, bound = self.resolve_aspect(uts[1].text, self.args(al, self.globals) if al is not None else [])
             henv = Env(self.globals)
@@ -1030,8 +1193,10 @@ class Interpreter:
             if failure is not None:
                 break
         result = VOID
+        lent = True
         if failure is None:
             result, failed = failing(lambda: self.run_bound(head, body, env))
+            lent = self.returned_lent                      # the body's own answer, kept across the hooks' calls (D-373)
             if failed:
                 failure = result
         if failure is None:
@@ -1043,6 +1208,7 @@ class Interpreter:
                         failure = _
                         break
         if failure is None:
+            self.returned_lent = lent
             return result
         for a, henv in reversed(chain):
             if a["on_failure"] is not None:
@@ -1077,13 +1243,38 @@ class Interpreter:
             if not terminated:
                 self.exit_block(inner, unwinding)
 
+    @staticmethod
+    def returned_local(e, env: Env) -> Optional[Cell]:
+        """The cell of `x` in `return x` when `x` is a local of the running call: a binding of one of its blocks, not a
+        parameter, a capture or a module name. Its value leaves with the return and is not destroyed at block exit
+        (7.5, X-345); it stays readable, so a trivial local is read exactly as before. `x` is read structurally, as
+        the checkers' place path reads it: through single-child rules and parentheses, so `return (x)` is `return x`
+        (D-313); a marked `return (move x)` moves `x` itself."""
+        n = e
+        while not isinstance(n, Token):
+            kids = children(n)
+            if name(n) == "primaryExpr" and len(kids) == 3 and isinstance(kids[0], Token) and kids[0].text == "(":
+                n = kids[1]
+            elif len(kids) == 1:
+                n = kids[0]
+            else:
+                return None
+        if n.kind != "LOWER":
+            return None
+        cur: Optional[Env] = env
+        while cur is not None and not cur.frame and cur.parent is not None:
+            if n.text in cur.vars:
+                return cur.vars[n.text]
+            cur = cur.parent
+        return None
+
     def exit_block(self, inner: Env, unwinding: bool):
         """Block exit (5.1, 12.2, 12.4): the block's loans end and the tasks launched on a scope declared
         in it are cancelled and joined; then deferred blocks LIFO; then, when unwinding, `abandon` on every
         live Abandonable local in reverse initialisation order; then locals drop in reverse order."""
         scope = getattr(inner, "scope", None)
-        abandonables = [(n, c) for n, c in inner.vars.items() if not c.moved and n != "self" and isinstance(c.value, Instance) and "Abandonable" in c.value.cls.implements] if unwinding else []
-        noisy = bool(inner.defers) or (scope is not None and scope.tasks) or abandonables or any(isinstance(c.value, Instance) and c.value.cls.cleanup is not None and not c.moved for c in inner.vars.values())
+        abandonables = [(n, c) for n, c in inner.vars.items() if not c.moved and c.owns and n != "self" and isinstance(c.value, Instance) and "Abandonable" in c.value.cls.implements] if unwinding else []
+        noisy = bool(inner.defers) or (scope is not None and scope.tasks) or abandonables or any(self.cleanup_runs(c.value) and not c.moved and not c.returned and c.owns for c in inner.vars.values())
         if noisy:
             self.trace.append("loans-end")
         if scope is not None:
@@ -1119,11 +1310,29 @@ class Interpreter:
         """Block exit (7.9): locals are destroyed in reverse initialisation order; a destroyed class value
         runs its cleanup first; dropping the last strong Shared handle destroys the value."""
         for n, cell in reversed(list(env.vars.items())):
-            if cell.moved or n == "self":
-                continue
-            if isinstance(cell.value, Instance) and cell.value.cls.cleanup is not None:
-                self.trace.append(f"drop {cell.value.cls.name}")
+            if cell.moved or cell.returned or not cell.owns or n == "self":
+                continue                                 # a binding that holds a loan destroys nothing (D-338)
+            self.announce_drop(cell.value)
             self.destroy(cell.value)
+
+    def cleanup_runs(self, v) -> bool:
+        """Destroying this owned value runs a class's `cleanup`: a class value that declares one and that its owner
+        has not destroyed yet (7.9; D-348)."""
+        return isinstance(v, Instance) and v.cls.cleanup is not None and not v.destroyed
+
+    def announce_drop(self, v):
+        """The trace's `drop` event for an owned value about to be destroyed, exactly when its `cleanup` runs (D-351)."""
+        if self.cleanup_runs(v):
+            self.trace.append(f"drop {v.cls.name}")
+
+    def writing(self, label: str, run):
+        """Run a lambda's body or a cleanup as the function `label` that a log record names, until it ends however it
+        ends (13; D-323)."""
+        self.writers.append((label, len(self.stack)))
+        try:
+            return run()
+        finally:
+            self.writers.pop()
 
     def destroy(self, v):
         if v is _MOVED:
@@ -1136,13 +1345,17 @@ class Interpreter:
             return
         if isinstance(v, Instance):
             # a class value: its own cleanup if declared, then its fields in declaration order (7.9), whether or
-            # not the class declares a cleanup
+            # not the class declares a cleanup. Only an owner destroys, and a value already destroyed is not
+            # destroyed again, so cleanup runs exactly once (12.2; D-338, D-348)
+            if v.destroyed:
+                return
+            v.destroyed = True
             if v.cls.cleanup is not None:
                 e = Env(None)
                 e.declare("self", v, mutable=True)
                 self.cleanup_depth += 1                  # a report from `cleanup` is labelled as cleanup's (12.1; D-154)
                 try:
-                    self.run_block(v.cls.cleanup, e)
+                    self.writing(f"cleanup {v.cls.name}", lambda: self.run_block(v.cls.cleanup, e))
                 except ReturnSignal:
                     pass
                 finally:
@@ -1160,11 +1373,15 @@ class Interpreter:
             for x in v.items:
                 self.destroy(x)
         elif isinstance(v, tuple):
-            for x in v:
-                self.destroy(x)
+            lent = lent_parts(v)                            # a borrowed element is its owner's, not the tuple's (D-349)
+            for i, x in enumerate(v):
+                if i not in lent:
+                    self.destroy(x)
         elif isinstance(v, dict):
-            for x in v.values():                            # a record literal: its fields in written order (7.9)
-                self.destroy(x)
+            lent = lent_parts(v)
+            for k, x in v.items():                          # a record literal: its fields in written order (7.9)
+                if k not in lent:
+                    self.destroy(x)
         elif isinstance(v, intrinsics.MapVal):
             for k, x in v.entries.values():
                 self.destroy(k)
@@ -1377,7 +1594,7 @@ class Interpreter:
                     if y is not x:
                         changed = True
                     items.append(y)
-            return tuple(items) if changed else parent
+            return retuple(parent, items) if changed else parent
         items = parent.fields if isinstance(parent, Instance) else parent.payload if isinstance(parent, EnumValue) else parent if isinstance(parent, dict) else None
         if items is None:
             return parent
@@ -1406,8 +1623,7 @@ class Interpreter:
         """The temporaries of one statement, in reverse creation order (7.9); a destroyed class value is
         announced exactly as a dropped local is."""
         for v in reversed(list(temps.values())):
-            if isinstance(v, Instance) and v.cls.cleanup is not None:
-                self.trace.append(f"drop {v.cls.name}")
+            self.announce_drop(v)
             self.destroy(v)
 
     def eval_cond_temps(self, cond, env):
@@ -1416,6 +1632,7 @@ class Interpreter:
         for the integrator: the Reference gives a condition no full-statement end of its own)."""
         temps = {}
         self.temps.append(temps)
+        task, lent = self.lent_scope()
         terminated = False
         try:
             return self.eval(cond, env)
@@ -1423,6 +1640,7 @@ class Interpreter:
             terminated = True
             raise
         finally:
+            task.lent = lent
             self.temps.pop()
             if not terminated:
                 self.destroy_temps(temps)
@@ -1433,7 +1651,7 @@ class Interpreter:
         A tuple cannot be mutated, so this returns a new one with a hole where a bound element was, including
         an element bound inside a tuple that itself was not bound. Other structures are updated in place."""
         if isinstance(v, tuple):
-            return tuple(_MOVED if id(x) in bound else self.excise(x, bound) for x in v)
+            return retuple(v, [_MOVED if id(x) in bound else self.excise(x, bound) for x in v])
         if isinstance(v, ListVal):
             v.items = [self.excise(x, bound) for x in v.items if id(x) not in bound]
             return v
@@ -1494,6 +1712,8 @@ class Interpreter:
         modes (`item: owned T`); the registry runs them in Python, so the kernel mirrors them here."""
         if isinstance(out, Failure):
             return out                                    # a failed intrinsic stored nothing
+        if (tn, mname) in (("List", "get"), ("Array", "get"), ("Map", "get"), ("ListCursor", "next")):
+            return self.lend(out)                         # `(alias T from self)?`: a loan of the stored value (D-338)
         if tn == "List" and mname == "push":
             self.release(pos[0])
         elif tn in ("List", "Array") and mname == "set":
@@ -1530,6 +1750,7 @@ class Interpreter:
         temps = {}
         stack = self.temps
         stack.append(temps)
+        task, lent = self.lent_scope()
         terminated = False
         try:
             self.statement_body(st, env)
@@ -1537,6 +1758,7 @@ class Interpreter:
             terminated = True                # a defect terminates the task at once: no cleanup runs (10.8)
             raise
         finally:
+            task.lent = lent
             stack.pop()
             if not terminated:
                 self.destroy_temps(temps)
@@ -1550,16 +1772,27 @@ class Interpreter:
             exprs = [c for c in children(st) if name(c) == "expr"]
             if kw == "return":
                 v = self.eval(exprs[0], env) if exprs else VOID
-                self.release(v)                            # the value moves with the signal, field and all (7.9)
-                raise ReturnSignal(v)
+                local = self.returned_local(exprs[0], env) if exprs else None
+                if local is not None:
+                    local.returned = True                  # `return x` of a local moves it, as `return move x` (X-345)
+                    if not trivial(v):
+                        local.moved = True                 # so a deferred block that still names it fails loudly (12.1; D-391)
+                lent = self.is_lent(v)
+                if not lent:
+                    self.release(v)                        # the value moves with the signal, field and all (7.9)
+                raise ReturnSignal(v, lent)               # a `from` result of the function's own is owned where it lands (D-373)
             if kw == "give":
                 v = self.eval(exprs[0], env)
-                self.release(v)
-                raise GiveSignal(v)
+                lent = self.is_lent(v)
+                if not lent:
+                    self.release(v)
+                raise GiveSignal(v, lent)                  # a loan given stays a loan where it lands (D-338)
             if kw == "recover":
                 v = self.eval(exprs[0], env)
-                self.release(v)
-                raise RecoverSignal(v)
+                lent = self.is_lent(v)
+                if not lent:
+                    self.release(v)
+                raise RecoverSignal(v, lent)
             if kw == "report":
                 f = self.eval(exprs[0], env)
                 if not isinstance(f, Failure):
@@ -1577,8 +1810,9 @@ class Interpreter:
                 # `move place.method()` do not: the temporary dies at statement end, and the call already
                 # moved its receiver.
                 if self._moves_place(exprs[0]):
-                    if isinstance(v, Instance) and v.cls.cleanup is not None:
-                        self.trace.append(f"drop {v.cls.name}")
+                    if self.is_lent(v):
+                        return                             # a loan owns nothing to destroy (7.9; D-338)
+                    self.announce_drop(v)
                     self.fresh_remove(v)
                     self.destroy(v)
                 return
@@ -1600,8 +1834,11 @@ class Interpreter:
                 return
             nm = next(t for t in ts if t.kind == "LOWER")
             value = self.eval(next(c for c in children(first) if name(c) == "expr"), env)
-            env.declare(nm.text, self.expected(value, next((c for c in children(first) if name(c) == "type"), None)), mutable)
-            self.release(value)                            # the local owns the value, even a field of a temporary (7.9)
+            # a loan the statement produced is held, not owned: the binding's end destroys nothing (7.3; D-338)
+            owns = not self.is_lent(value)
+            env.declare(nm.text, self.expected(value, next((c for c in children(first) if name(c) == "type"), None)), mutable, owns)
+            if owns:
+                self.release(value)                        # the local owns the value, even a field of a temporary (7.9)
             return
         if n == "assignStmt":
             place = find(first, "place")
@@ -1698,7 +1935,7 @@ class Interpreter:
                     for item in seq:
                         body_env = Env(env)
                         if var != "_":
-                            body_env.declare(var, item, mutable=False)
+                            body_env.declare(var, item, mutable=False, owns=False)     # a loan of the item (7.5; D-338)
                         if self.loop_body(blk, body_env, label) == "break":
                             break
                     return
@@ -1738,6 +1975,10 @@ class Interpreter:
             self.run_block(first, env)
             return
         if n == "exprStmt":
+            lc = reading.log_call(first)
+            if lc is not None and not self.names_something(lc[0], env):
+                self.log_statement(lc[1].text, lc[2], env)
+                return
             self.eval(first, env)
             return
         if n == "captureStmt":
@@ -1831,11 +2072,14 @@ class Interpreter:
                 raise FortisError("cannot assign to self")
             if not cell.mutable:
                 raise FortisError(f"`{root}` is not mutable (E-NAM-002)")     # plug-in: typing (DEL-12)
-            self.release(value)                        # before the store: the place may be a temporary record or object (7.9)
-            if not cell.moved:
+            owns = not self.is_lent(value)             # a loan stored stays a loan: the binding holds it (D-350)
+            if owns:
+                self.release(value)                    # before the store: the place may be a temporary record or object (7.9)
+            if not cell.moved and cell.owns:
                 self.destroy(cell.value)               # 7.9: the new value is evaluated first, then the old value is dropped, then the store
-            cell.value = value
+            cell.value = value                         # a binding that held a loan drops nothing: the loan ends (D-350)
             cell.moved = False
+            cell.owns = owns
             return
         if cell is not None and not cell.mutable and not isinstance(target, Instance):
             raise FortisError(f"`{root}` is not mutable")
@@ -1857,6 +2101,23 @@ class Interpreter:
             return self.literal(node, env)
         n = name(node)
         kids = children(node)
+        if self.in_test_body and ((n in tree.ARITH_RULES and len(kids) > 1) or (n == "unaryExpr" and len(kids) == 2 and isinstance(kids[0], Token) and kids[0].text == "-")):
+            ops = self.region_cache.get(id(node))
+            if ops is None:
+                ops = self.region_cache[id(node)] = tree.region_operators(node)
+            if ops and not (self.regions and ops & self.regions[-1]):
+                # integer arithmetic in a test body is a checked region with an implied `or fail`: the first checked
+                # operator that fails fails the test (14, 6.4; X-345)
+                self.regions.append(ops)
+                try:
+                    return self.eval_node(node, n, kids, env)
+                except RegionFailure as rf:
+                    raise FailureSignal(rf.failure)
+                finally:
+                    self.regions.pop()
+        return self.eval_node(node, n, kids, env)
+
+    def eval_node(self, node, n, kids, env: Env):
         if n in ("expr", "constExpr", "exprStmt", "literal") and len(kids) == 1:
             return self.eval(kids[0], env)
         if n == "constExpr":
@@ -1868,15 +2129,15 @@ class Interpreter:
                 return self.eval(kids[0], env)
             words = [k.text for k in kids if isinstance(k, Token)]
             if words[:2] == ["or", "fail"]:
-                v = self.eval(kids[0], env)
+                v = self.eval_left(kids[0], env)
                 if isinstance(v, Failure):
                     raise FailureSignal(v)
                 return v
             if words[:2] == ["or", "recover"]:
-                v = self.eval(kids[0], env)
+                v = self.eval_left(kids[0], env)
                 return self.eval(kids[-1], env) if isinstance(v, Failure) else v
             if words[0] == "catch":
-                v = self.eval(kids[0], env)
+                v = self.eval_left(kids[0], env)
                 if not isinstance(v, Failure):
                     return v
                 ident = next(k for k in kids if isinstance(k, Token) and k.kind == "LOWER")
@@ -1885,7 +2146,7 @@ class Interpreter:
                 try:
                     self.run_block(find(node, "block"), cenv)
                 except RecoverSignal as r:
-                    return self.fresh_add(r.value)
+                    return self.lend(r.value) if r.lent else self.fresh_add(r.value)
                 raise FortisError("catch block fell through without recover/return/fail")      # plug-in: obligations (DEL-17)
         if n == "coalesceExpr":
             if len(kids) == 1:
@@ -1912,6 +2173,9 @@ class Interpreter:
                     return self.await_value(self.eval(kids[1], env))
                 v = self.eval(kids[1], env)
                 if op == "-":
+                    r = self.checked(kids[0], 0, v)          # `-x` in a checked region is `Int.sub(0, x)` (6.4, X-345)
+                    if r is not None:
+                        return r
                     return check_int(-v, "neg") if isinstance(v, int) and not isinstance(v, bool) else self.negate(v)
                 if op == "!":
                     self.expect_bool(v)
@@ -1927,6 +2191,13 @@ class Interpreter:
                 v = BoundMember(self.eval_place_tokens(pts[:-2], env, move=True), pts[-1].text)
             else:
                 v = self.eval_place(place, env, move=(marker == "move"))
+            # a binding that holds a loan moves that loan: a tuple, a record or a binding that takes it borrows it, and
+            # its end destroys nothing (7.9; D-368)
+            held = marker == "move" and len(pts) == 1 and pts[0].text != "self" and not env.cell(pts[0].text).owns
+            if marker in ("alias", "editable"):
+                self.lend(v)                                 # a loan of the place, held by whatever takes it (7.3; D-338)
+            elif marker == "move" and not held:
+                self.unlend(v)                               # ownership moves with the value
             if marker == "copy":
                 v = deep_copy(v)
             rest = kids[2:]
@@ -1952,11 +2223,20 @@ class Interpreter:
                         v = self.call_value(v, args)
                     i += 2 if al else 1
                 i += 1
+            if self.in_test_body:
+                v = self.implied_fail(v, reading.call_name_token(node))
             return v
         if n == "postfixExpr":
-            v = self.eval(kids[0], env)
-            for k in kids[1:]:
+            # a test body's implied `or fail` (14) at each call the checker recorded: the primary's own call
+            # (`Code.validate(s)`, D-308), then each postfix that makes a call, the last one or a receiver
+            prim, posts = kids[0], kids[1:]
+            v = self.eval(prim, env)
+            if self.in_test_body:
+                v = self.implied_fail(v, reading.primary_call_token(prim))
+            for j, k in enumerate(posts):
                 v = self.postfix(v, k, env)
+                if self.in_test_body:
+                    v = self.implied_fail(v, reading.postfix_call_token(posts, j, prim))
             return v
         if n == "primaryExpr":
             return self.primary(node, env)
@@ -1983,25 +2263,37 @@ class Interpreter:
                     if marker == "copy":
                         cenv.declare(root, deep_copy(env.get(root)))
                     else:
-                        cenv.declare(root, self.eval_place(ck[1], env, move=True), mutable=True)
+                        moved = self.eval_place(ck[1], env, move=True)
+                        if self.is_lent(moved):
+                            # a loan moved into the closure stays a loan: the closure holds it, and destroys nothing
+                            # when it goes (7.9; D-338)
+                            cenv.declare(root, moved, mutable=True, owns=False)
+                            continue
+                        cenv.declare(root, moved, mutable=True)
                     owned.append(root)                       # the closure owns a copy or moved value (7.9; D-30)
             words = [t.text for t in direct_tokens(node)]
             kind = "fn once" if "once" in words else ("fn mut" if "mut" in words else "fn")
             mods = tree.child(node, "modifiers")
             is_async = mods is not None and any(t.text == "async" for t in tokens(mods))
+            is_try = mods is not None and any(t.text == "try" for t in tokens(mods))
             ptypes = [find(p, "paramType") for p in children(lp) if name(p) == "lambdaParam"] if lp else []
             ret = next((c for c in children(node) if name(c) == "type"), None)
-            return Closure(params=params, body=tree.child(node, "funcBody"), env=cenv, kind=kind, is_async=is_async,
-                           ptypes=ptypes, ret=ret, owned=owned, owned_params=owned_params)
+            fn_tok = next((t for t in direct_tokens(node) if t.text == "fn"), tokens(node)[0])
+            return Closure(params=params, body=tree.lambda_body(node), env=cenv, kind=kind, is_async=is_async,
+                           ptypes=ptypes, ret=ret, owned=owned, owned_params=owned_params, label=f"lambda@{fn_tok.line}:{fn_tok.col}",
+                           is_try=is_try)
         if n == "matchExpr":
             return self.match_expr(node, env)
         if n == "ifExpr":
             return self.if_expr(node, env)
         if n == "tupleLit":
-            out = tuple(self.eval(k, env) for k in kids if name(k) == "expr")
-            for x in out:
-                self.release(x)                            # the tuple takes its components, even a field of a temporary (7.9)
-            return self.fresh_add(out)
+            items = [self.eval(k, env) for k in kids if name(k) == "expr"]
+            # an element the statement produced as a loan stays a loan: the tuple borrows it and owns the rest (D-349)
+            lent = [i for i, x in enumerate(items) if self.is_lent(x)]
+            for i, x in enumerate(items):
+                if i not in lent:
+                    self.release(x)                        # the tuple takes its components, even a field of a temporary (7.9)
+            return self.fresh_add(LentTuple(items, lent) if lent else tuple(items))
         if n == "recordLit":
             out = {}
             ks = [k for k in kids if not (isinstance(k, Token) and k.text in ("{", "}", ",", ":", "\n")) and name(k) != "NL"]
@@ -2009,19 +2301,53 @@ class Interpreter:
             for i in range(0, len(ks), 2):
                 key = ks[i].text if isinstance(ks[i], Token) else tokens(ks[i])[0].text
                 out[key] = self.eval(ks[i + 1], env)
-            for x in out.values():
-                self.release(x)                            # the record takes its fields, even a field of a temporary (7.9)
-            return self.fresh_add(out)
+            lent = [k for k, x in out.items() if self.is_lent(x)]
+            for k, x in out.items():
+                if k not in lent:
+                    self.release(x)                        # the record takes its fields, even a field of a temporary (7.9)
+            return self.fresh_add(LentRecord(out, lent) if lent else out)
         if n == "rangeExpr":
             raise FortisError("range outside a for")
         if n == "place":
             return self.eval_place(node, env, move=False)
         raise FortisError(f"cannot evaluate {n}")
 
+    def eval_left(self, node, env):
+        """The left operand of an outcome operator. Integer arithmetic there is a checked region (6.4, X-345): each
+        operator is the checked operation, and the first that fails ends the region with its failure, which is then the
+        operand's value (a proved operator cannot fail, so checking it too changes nothing)."""
+        ops = self.region_cache.get(id(node))
+        if ops is None:
+            ops = self.region_cache[id(node)] = tree.region_operators(node)
+        if not ops:
+            return self.eval(node, env)
+        self.regions.append(ops)
+        try:
+            return self.eval(node, env)
+        except RegionFailure as rf:
+            return rf.failure
+        finally:
+            self.regions.pop()
+
+    CHECKED = {"+": intrinsics.int_add, "-": intrinsics.int_sub, "*": intrinsics.int_mul, "/": intrinsics.int_div, "%": intrinsics.int_rem, "<<": intrinsics.int_shl}
+
+    def checked(self, tok, a, b):
+        """The checked operation of an operator in the current region, or None outside one (6.4, X-345)."""
+        if not self.regions or (tok.line, tok.col) not in self.regions[-1] or tok.text not in self.CHECKED:
+            return None
+        if not isinstance(a, int) or not isinstance(b, int) or isinstance(a, bool) or isinstance(b, bool):
+            return None
+        r = self.CHECKED[tok.text](self, [a, b])
+        if isinstance(r, Failure):
+            raise RegionFailure(r)
+        return r
+
     def chain(self, kids, env):
         v = self.eval(kids[0], env)
         for i in range(1, len(kids), 2):
-            v = self.binary(kids[i].text, v, self.eval(kids[i + 1], env))
+            w = self.eval(kids[i + 1], env)
+            r = self.checked(kids[i], v, w)
+            v = r if r is not None else self.binary(kids[i].text, v, w)
         return v
 
     def binary(self, op, a, b):
@@ -2099,13 +2425,13 @@ class Interpreter:
             if tok.text == "true": return True
             if tok.text == "false": return False
             if tok.text == "null": return None
-            if tok.text == "self": return env.get("self")
+            if tok.text == "self": return self.read_binding(env, "self")
         if tok.kind == "LOWER":
             key = self.resolve(tok.text, env)
             if key in self.const_nodes:
                 return self.const(key)
             try:
-                return env.get(tok.text)
+                return self.read_binding(env, tok.text)
             except FortisError:
                 if self.lib_ctx:
                     v = self.library_name(self.lib_ctx[-1], tok.text)
@@ -2207,7 +2533,8 @@ class Interpreter:
         if sp is None or [t.text for t in tokens(sp)] != ["self"] or (mods is not None and any(t.text in ("async", "try") for t in tokens(mods))):
             return False
         pt = find(ps[0], "paramType")
-        ret = [t.text for t in tokens(sig)][-1] if sig is not None and tokens(sig) else ""
+        rt = next((c for c in children(sig) if name(c) == "returnType"), None) if sig is not None else None
+        ret = "Void" if rt is None else "".join(t.text for t in tokens(rt))     # no return type: Void (8.1, X-345)
         return pt is not None and any(t.text == "editable" for t in direct_tokens(pt)) and tokens(pt)[-1].text == "Builder" and ret == "Void"
 
     def run_display(self, v, method) -> str:
@@ -2223,7 +2550,7 @@ class Interpreter:
     def eval_place_tokens(self, ts, env: Env, move: bool):
         root = ts[0].text
         if root == "self":
-            v = env.get("self")
+            v = self.read_binding(env, "self")
         else:
             cell = env.cell(root)
             if cell.moved:
@@ -2231,16 +2558,44 @@ class Interpreter:
             v = cell.value
             if move and len(ts) == 1:
                 cell.moved = True                                     # plug-in: loans/moves (DEL-14)
+            if not cell.owns:
+                self.lend(v)                                          # moved or read, a loan stays a loan (D-338)
         for t in ts[1:]:
             if t.text in (".", "[", "]"):
                 continue
             if t.kind == "INT":
-                v = self.index(v, int(t.text))
+                v = self.through(v, self.index(v, int(t.text)))
             else:
-                v = self.field(v, t.text)
+                v = self.through(v, self.field(v, t.text))
         if move and len(ts) > 1:
             raise FortisError("partial move (E-OWN-040)")
         return v
+
+    def read_binding(self, env: Env, n: str):
+        """A binding's value. Read through a binding that holds a loan, it is that loan (7.3; D-338)."""
+        c = env.cell(n)
+        if c.moved:
+            raise FortisError(f"`{n}` was moved (use after move)")
+        if not c.owns:
+            self.lend(c.value)
+        return c.value
+
+    def through(self, base, part):
+        """A field or element read through a loan is a loan of that part (7.3; D-338), and so is an element a tuple or
+        a record borrows (D-349)."""
+        if self.is_lent(base) or (lent_parts(base) and any(base_part is part for base_part in self.borrowed(base))):
+            self.lend(part)
+        return part
+
+    @staticmethod
+    def borrowed(v):
+        """The parts an aggregate borrows rather than owns (D-349)."""
+        lent = lent_parts(v)
+        if isinstance(v, tuple):
+            return [x for i, x in enumerate(v) if i in lent]
+        if isinstance(v, dict):
+            return [x for k, x in v.items() if k in lent]
+        return []
 
     def field(self, v, fname):
         if isinstance(v, ModuleRef):
@@ -2281,10 +2636,10 @@ class Interpreter:
         if isinstance(first, Token) and first.text == ".":
             second = kids[1]
             if isinstance(second, Token) and second.kind == "INT":
-                return self.index(v, int(second.text))
-            return self.field(v, tokens(second)[0].text)
+                return self.through(v, self.index(v, int(second.text)))
+            return self.through(v, self.field(v, tokens(second)[0].text))
         if isinstance(first, Token) and first.text == "?.":
-            return None if v is None else self.field(v, tokens(kids[1])[0].text)
+            return None if v is None else self.through(v, self.field(v, tokens(kids[1])[0].text))
         if name(first) == "methodCall":
             return self.method_call(v, first, env)
         if isinstance(first, Token) and first.text == "(":
@@ -2300,6 +2655,18 @@ class Interpreter:
         def is_spread(a) -> bool:
             ks = children(a)
             return bool(ks) and isinstance(ks[0], Token) and ks[0].text == "..."
+
+        # a bare local name is `name: name` where a positional argument cannot stand: after a named argument, and in a
+        # class's generated constructor (5.8, 9.2, X-345)
+        puns = set()
+        seen_named = False
+        for i, a in enumerate(nodes):
+            ks = children(a)
+            if isinstance(ks[0], Token) and ks[0].kind == "LOWER" and len(ks) > 1 and isinstance(ks[1], Token) and ks[1].text == ":":
+                seen_named = True
+            elif (seen_named or target is not None) and tree.pun_name(a) is not None:
+                puns.add(i)
+                seen_named = True
 
         def eval_one(a):
             ks = children(a)
@@ -2323,6 +2690,8 @@ class Interpreter:
         out: List[Any] = [None] * len(nodes)
         for i in order:
             out[i] = eval_one(nodes[i])
+            if i in puns:
+                out[i] = (tree.pun_name(nodes[i]).text, out[i][1])
         return out
 
     # ---- the canonical codec (6.10) ------------------------------------------------
@@ -2450,37 +2819,50 @@ class Interpreter:
             return self.type_dispatch(v.name, None, args, True, v.bounds)
         if isinstance(v, Closure):
             env = Env(v.env)
+            env.frame = True
             for i, (pn, (_, av)) in enumerate(zip(v.params, args)):
-                env.declare(pn, self.expected(av, v.ptypes[i] if i < len(v.ptypes) else None))
+                env.declare(pn, self.expected(av, v.ptypes[i] if i < len(v.ptypes) else None), owns=pn in v.owned_params)
             if v.is_async:
                 # an async lambda's call binds its arguments and returns a Future; its body runs when polled (12.3)
                 fut = FutureVal("lambda", None, None, None, False)
                 fut.closure = Closure(params=[], body=v.body, env=env, kind=v.kind, is_async=False,
-                                      owned_params=v.owned_params)
+                                      owned_params=v.owned_params, label=v.label, is_try=v.is_try)
                 return fut
             body = v.body
             blk = find(body, "block") if name(children(body)[0]) == "block" else None
             defect = False
+            in_test, self.in_test_body = self.in_test_body, False  # a lambda's body is not the test's (14)
+            self.writers.append((v.label, len(self.stack)))        # a log record in the body names the lambda (13; D-323)
             try:
                 if blk is not None:
                     self.run_block(blk, env)
                     return VOID
-                return self.fresh_add(self.expected(self.eval(find(body, "expr"), env), v.ret))
+                rv = self.eval(find(body, "expr"), env)
+                self.returned_lent = self.is_lent(rv)
+                return self.call_result(self.expected(rv, v.ret), v.ret)
             except ReturnSignal as r:
-                return self.fresh_add(self.expected(r.value, v.ret))
+                self.returned_lent = r.lent
+                return self.call_result(self.expected(r.value, v.ret), v.ret)
+            except FailureSignal as f:
+                if v.is_try:
+                    return f.failure                         # a `try fn` lambda's failure is its call's outcome (10.2)
+                raise
             except DefectSignal:
                 defect = True                                # a defect runs no cleanup (10.8)
                 raise
             finally:
-                if not defect:
-                    # the owned parameters are the call's oldest values: destroyed last, unless moved (7.9; D-152)
-                    for pn in reversed(v.owned_params):
-                        cell = env.cell(pn)
-                        if not cell.moved:
-                            if isinstance(cell.value, Instance) and cell.value.cls.cleanup is not None:
-                                self.trace.append(f"drop {cell.value.cls.name}")
-                            cell.moved = True
-                            self.destroy(cell.value)
+                self.in_test_body = in_test
+                try:
+                    if not defect:
+                        # the owned parameters are the call's oldest values: destroyed last, unless moved (7.9; D-152)
+                        for pn in reversed(v.owned_params):
+                            cell = env.cell(pn)
+                            if not cell.moved:
+                                self.announce_drop(cell.value)
+                                cell.moved = True
+                                self.destroy(cell.value)
+                finally:
+                    self.writers.pop()
         # a payload-free variant used as its constructor (`let f: fn() Coin = Coin.Penny`) is the value itself;
         # calling it yields that value (LR 9.7). `let c: Coin = Coin.Penny` never comes through here.
         if isinstance(v, EnumValue) and not v.payload and not args:
@@ -2685,7 +3067,7 @@ class Interpreter:
                 # a trusted intrinsic of a library class (Money.multiply)
                 return self.intrinsic_ownership(cls.name, member, [v for _, v in args], fn(self, [v for _, v in args]))
             if member == "default" and called and self.derives(cls, "Default"):
-                return self.construct(cls, [])                 # `derive Default`: every field at its initialiser (9.2; D-170)
+                return self.derived_default(cls)               # `derive Default`: every field at its initialiser (9.2; D-170)
             raise FortisError(f"{cls.name} has no associated function `{member}`")
         if type_tok_text in self.enums:
             en = self.enums[type_tok_text]
@@ -2802,7 +3184,7 @@ class Interpreter:
             return v
         if isinstance(v, tuple):
             subs = [c for c in children(nt) if name(c) == "type"]
-            return tuple(self.expected(x, s, tenv) for x, s in zip(v, subs)) if len(subs) == len(v) else v
+            return retuple(v, [self.expected(x, s, tenv) for x, s in zip(v, subs)]) if len(subs) == len(v) else v
         if isinstance(v, dict):
             fl = find(nt, "fieldList")
             fks = children(fl) if fl is not None else []
@@ -2835,6 +3217,7 @@ class Interpreter:
         else:
             raise FortisError(f"validate of a {r.measure} refinement on {display(x)}")
         if (r.lo is not None and n < r.lo) or (r.hi is not None and n > r.hi):
+            # the outcome of a fallible call: a test body's implied `or fail` fails the test with it (14; D-308)
             return Failure("refinement.out_of_range", {"value": n, "low": r.lo, "high": r.hi}, origin=self.stack[-1] if self.stack else "main")
         return x
 
@@ -2862,6 +3245,74 @@ class Interpreter:
             if isinstance(k, lexer.Token) and k.text == "derive" and i + 1 < len(kids) and not isinstance(kids[i + 1], lexer.Token):
                 return any(t.text == iface for t in direct_tokens(kids[i + 1]))
         return False
+
+    def derived_default(self, cls: ClassInfo, building=()):
+        """`Name.default()` of a class deriving `Default` (6.10, X-345): each field at its initialiser, and a field without
+        one at its type's default. `building` names the classes and newtypes whose defaults are being built."""
+        building = self.enter_default(cls.name, building)
+        args = [(f, self.type_default(cls.field_types.get(f), building)) for f, init in cls.fields.items() if init is None]
+        return self.construct(cls, args)
+
+    @staticmethod
+    def enter_default(tn: str, building):
+        """`building` with `tn` added. A class or newtype whose default is already being built is a cycle, which the
+        checker rejects (E-TYP-090; D-335, D-336): it stops here with an error naming it, never a stack overflow."""
+        if tn in building:
+            cycle = list(building[building.index(tn):]) + [tn]
+            raise FortisError(f"the default of {tn} contains itself ({' -> '.join(cycle)}), which the checker rejects (E-TYP-090)")
+        return building + (tn,)
+
+    INT_NAMES = ("Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "Byte")
+
+    def type_default(self, tnode, building=()):
+        """The value of a type's `Default` (6.10): `false`, `0`, `0.0`, `0s`, empty text, bytes and collections, `null` for
+        an optional, `default()` of a class that derives it, and a newtype's representation's default, at any depth
+        (D-242, D-337): a chain of newtypes is unfolded in a loop, with no limit on its length. A class of this program
+        is itself, whatever its name (a user's `class Array`). The checker has proved the type has one. `building`
+        names the classes and newtypes whose defaults are being built (`enter_default`)."""
+        while True:
+            if tnode is None:
+                raise FortisError("a field without an initialiser or a type")
+            if name(tnode) == "type":
+                if any(isinstance(k, Token) and k.text == "?" for k in children(tnode)):
+                    return None
+                tnode = children(tnode)[0]
+            if name(tnode) == "namedType":
+                tnode = next((c for c in children(tnode) if name(c) in ("type", "typeRef")), None)
+                continue
+            if name(tnode) != "typeRef":
+                raise FortisError("a field type without a default")
+            tn = next(t.text for t in direct_tokens(tnode) if t.kind == "UPPER")
+            if tn not in self.newtype_repr:
+                break
+            # a newtype's value is its representation (6.9), so its default is the representation's
+            building = self.enter_default(tn, building)
+            tnode = self.newtype_repr[tn]
+        if tn in self.classes and self.derives(self.classes[tn], "Default"):
+            return self.derived_default(self.classes[tn], building)
+        # a class or an enum that implements Default itself: its `default()`
+        own = self.classes.get(tn) or self.enums.get(tn)
+        if own is not None and "default" in own.methods and own.methods["default"][1] is not None:
+            head, body = own.methods["default"]
+            return self.call(head, body, [], None)
+        if tn == "Bool":
+            return False
+        if tn in self.INT_NAMES:
+            return 0
+        if tn == "Float":
+            return 0.0
+        if tn == "Float32":
+            return numeric.F32.of(0.0)
+        if tn == "Duration":
+            return numeric.Dur(0)
+        if tn == "String":
+            return ""
+        if tn == "Bytes":
+            return intrinsics.BytesVal(b"")
+        fn = intrinsics.ASSOC.get((tn, "default"))
+        if fn is not None:
+            return fn(self, [])
+        raise FortisError(f"{tn} has no default")
 
     def construct(self, cls: ClassInfo, args):
         fields = {}
@@ -2903,8 +3354,7 @@ class Interpreter:
         order (9.2, 7.9)."""
         for fname, fv in source.items():
             if fname not in target.fields:
-                if isinstance(fv, Instance) and fv.cls.cleanup is not None:
-                    self.trace.append(f"drop {fv.cls.name}")
+                self.announce_drop(fv)
                 self.destroy(fv)
 
     def variant(self, en: EnumInfo, vname, args):
@@ -3095,11 +3545,12 @@ class Interpreter:
         # an arm that binds nothing drops the moved value only when some other arm takes it. When none do,
         # Rust leaves the local in place and the block drops it once (7.9). A pattern that opens the value
         # moves it, so a field matched by `_` drops after the arm (D-315).
-        any_binds = any(self.pattern_binds(find(a, "pattern")) for a in arms)
+        any_binds = any(self.pattern_binds(p) for a in arms for p in children(a) if name(p) == "pattern")
         for arm in arms:
             aenv = Env(env)
-            pat = find(arm, "pattern")
-            if not self.match(pat, v, aenv):
+            # an or-pattern `A | B` matches when an alternative does, tried left to right; alternatives bind nothing (9.8)
+            pat = next((p for p in children(arm) if name(p) == "pattern" and self.match(p, v, aenv)), None)
+            if pat is None:
                 continue
             ak = children(arm)
             if any(isinstance(k, Token) and k.text == "when" for k in ak):
@@ -3113,14 +3564,18 @@ class Interpreter:
                 body = ak[-1]
             fresh = self.is_temp(v) and id(v) not in already
             owning = moved_place or fresh          # a read of an existing value shares it: the binding is not its owner
+            if not owning:
+                for c in aenv.vars.values():
+                    c.owns = False                 # a borrowed scrutinee's bindings hold loans of its parts (7.5; D-338)
             if name(body) == "block":
                 rest = self.take_scrutinee_parts(v, aenv, fresh) if owning else None
                 terminated = False
                 given = None
+                given_lent = False
                 try:
                     self.run_block(body, aenv)
                 except GiveSignal as g:
-                    given = g.value
+                    given, given_lent = g.value, g.lent
                 except ReturnSignal as r:
                     self.mark_given(aenv, r.value)   # the returned binding leaves with the return (7.9)
                     raise
@@ -3141,7 +3596,7 @@ class Interpreter:
                         elif rest is not None:
                             self.destroy(rest)       # an opened moved scrutinee: what no binding took drops after the arm (7.9)
                 if given is not None:
-                    return self.fresh_add(given)
+                    return self.lend(given) if given_lent else self.fresh_add(given)
                 return VOID                      # a statement-position arm block (the checker requires `give` in expression position)
             result = self.eval(body, aenv)
             if owning:
@@ -3166,7 +3621,7 @@ class Interpreter:
             try:
                 self.run_block(b, env)
             except GiveSignal as g:
-                return self.fresh_add(g.value)
+                return self.lend(g.value) if g.lent else self.fresh_add(g.value)
             raise FortisError("if-expression block without give")
         return run(kids[2]) if cond else run(kids[4])
 
@@ -3212,17 +3667,33 @@ class Interpreter:
                 return pf is None or self.match_fields(pf, v.payload, env)
             if t == "(":
                 subs = [k for k in kids if name(k) == "pattern"]
-                return isinstance(v, tuple) and len(v) == len(subs) and all(self.match(p, x, env) for p, x in zip(subs, v))
+                if not (isinstance(v, tuple) and len(v) == len(subs)):
+                    return False
+                lent = lent_parts(v)
+                return all(self.match_part(p, x, env, i in lent) for i, (p, x) in enumerate(zip(subs, v)))
             if t == "{":
                 ks = [k for k in kids if not (isinstance(k, Token) and k.text in ("{", "}", ",", ":"))]
+                lent = lent_parts(v)
                 for i in range(0, len(ks), 2):
                     fname = ks[i].text
-                    if not isinstance(v, dict) or fname not in v or not self.match(ks[i + 1], v[fname], env):
+                    if not isinstance(v, dict) or fname not in v or not self.match_part(ks[i + 1], v[fname], env, fname in lent):
                         return False
                 return True
         if name(first) == "literal":
             return self.equal(v, self.literal(children(first)[0], env))
         raise FortisError("pattern")
+
+    def match_part(self, pat, v, env: Env, lent: bool) -> bool:
+        """Match an element of a tuple or a record. The bindings inside an element the aggregate borrows hold loans, so
+        their end destroys nothing, even in an arm that owns the rest of the scrutinee (7.9; D-349)."""
+        before = set(env.vars)
+        if not self.match(pat, v, env):
+            return False
+        if lent:
+            for n, c in env.vars.items():
+                if n not in before:
+                    c.owns = False
+        return True
 
     def match_fields(self, pf, payload: Dict[str, Any], env) -> bool:
         fields = [c for c in children(pf) if name(c) == "patternField"]

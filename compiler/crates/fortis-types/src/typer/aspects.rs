@@ -590,7 +590,9 @@ impl<'a> Typer<'a> {
 
     pub fn defer_stmt(&mut self, inner: N<'a>, env: &Env) {
         let blk = inner.find("block").unwrap();
-        let roots: BTreeSet<String> = blk.tokens().iter().filter(|t| t.kind == Kind::Lower && env_lookup(env, &t.text).is_some()).map(|t| t.text.clone()).collect();
+        let mut named = BTreeSet::new();
+        lower_names(blk.tokens(), &mut named);
+        let roots: BTreeSet<String> = named.into_iter().filter(|n| env_lookup(env, n).is_some()).collect(); // the bindings the defer names, in holes too
         let tok = inner.direct_tokens()[0].clone();
         for r in &roots {
             let b = env_lookup(env, r);
@@ -646,5 +648,21 @@ impl<'a> Typer<'a> {
     #[allow(dead_code)]
     fn _unused(&self) -> Option<Rc<DeclChecker<'a>>> {
         None
+    }
+}
+
+/// The text of every lower identifier among the tokens, those inside the holes of a string token included: a hole is an
+/// expression evaluated where its string is (3.6), so a place named only in `"${t.label}"` is named (D-391).
+fn lower_names<'t>(toks: impl IntoIterator<Item = &'t Token>, out: &mut BTreeSet<String>) {
+    for t in toks {
+        if t.kind == Kind::Lower {
+            out.insert(t.text.clone());
+        } else if t.kind == Kind::Str && t.text.contains("${") {
+            for (k, src) in expr::hole_sources(t).into_iter().enumerate() {
+                if let Some(p) = expr::hole_tree_at(t, k, &src) {
+                    lower_names(p.toks.iter(), out);
+                }
+            }
+        }
     }
 }

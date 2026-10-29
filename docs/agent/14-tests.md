@@ -11,11 +11,13 @@
 |---|---|---|
 | LANG-14-01 | A table test binds its rows explicitly: `test "name" cases { "row": { f: v, … } … } as row { … }`; no implicit names enter scope. | LR 14 |
 | LANG-14-02 | `expect e` takes a `Bool`, records a typed actual/expected pair, and fails the test when false. | LR 14 |
+| LANG-14-03 | In `test` and `property` bodies `or fail` is implied: a call of a fallible function that is not the left operand of `or` or `catch` or a `match` scrutinee has its success type, and its failure fails the test with the failure's record. `let o = f()` keeps the outcome when the body later consumes `o` with `or`, `catch` or `match`, or annotates it `Outcome[…]`. Integer arithmetic the checker cannot prove safe is a checked region with the same implied `or fail` (LR 6.4): write `expect a * b == c`. A lambda in the body keeps its own rules; outside tests nothing changes (X-345). | LR 14 |
 
 Further statements of LR 14:
 
 - Tests are core declarations; no kit is needed to test a package (LR 14).
-- A `test` body is an implicit `try` body: `or fail` is available; an escaping failure fails the test (LR 14).
+- A `test` body is an implicit `try` body: `or fail` is implied after a fallible call and may still be written;
+  an escaping failure fails the test (LR 14). Write `expect f() == v`, not `expect (f() or fail) == v`.
 - A row's record type is inferred from the body's uses; every row literal is then checked against it at compile
   time, exactly as the same literal in that position (LR 14).
 - Expecting a failure consumes its obligation inside the test (LR 14).
@@ -25,6 +27,8 @@ Further statements of LR 14:
 
 ## Commands
 
+<!-- no-citation: the toolchain's test commands and records, not language rules -->
+
 | Command | Backend | Options |
 |---|---|---|
 | `fortis test FILE\|DIR` | interpreter | `--format json` |
@@ -33,7 +37,8 @@ Further statements of LR 14:
 
 Records (JSON lines with `--format json` or on a pipe): `test-result` (`test`, `case`, `status`, `evidence`),
 `property-failure` (`seed`, `original`, `minimal`, `shrinks`, `replay`), and a final `test-summary`
-(`passed`, `failed`) (X-131, Programme 8.1). Exit status 1 when any test fails.
+(`passed`, `failed`) (X-131). Both runners write the results on standard error and the summary on standard output.
+Exit status 1 when any test fails.
 
 ## Diagnostics
 
@@ -42,7 +47,7 @@ Records (JSON lines with `--format json` or on a pipe): `test-result` (`test`, `
 | E-TYP-010 | `expect` of a non-`Bool` | compare: `expect f() == v` | LR 14, LR 5.2 |
 | E-SYN-000 | a `cases` table without `as name` | add `as row` and use `row.field` | LR 14, LR 3.2 |
 | E-REF-001 | a row literal outside the refinement of the position its field reaches | fix the row, or widen the parameter's type | LR 14, LR 3.5 |
-| E-OBL-001 | a fallible call in a test left unconsumed | `or fail` (fails the test), or a `catch e` block that inspects `e` with `expect` and ends `recover v` (one statement per line) | LR 14, LR 10.1 |
+| E-OBL-001 | a fallible call left unconsumed outside a test body, or in a lambda written in one (its body is its own function); in the body itself `or fail` is implied | `or fail`, or, to expect the failure, a `catch e` block that inspects `e` with `expect` and ends `recover v` (one statement per line) | LR 14, LR 10.1 |
 
 ## Correction patterns
 
@@ -117,7 +122,10 @@ test "percent" cases {
 }
 ```
 
-### E-OBL-001: an outcome dropped in a test (LR 14, LR 10.1)
+### E-OBL-001: an outcome dropped outside a test (LR 10.1, LR 14)
+
+In a test or property body `or fail` is implied after a call of a fallible function (LANG-14-03, X-345). Outside
+tests it is not: an outcome nothing consumes is dropped.
 
 ```fortis
 // reject: E-OBL-001
@@ -132,7 +140,7 @@ pure try func average(total: Int<0..100000>, count: Int<0..1000>) Int {
   return total / count
 }
 
-test "empty" {
+func touch() {
   average(10, 0)             // reject: E-OBL-001
 }
 ```
@@ -156,7 +164,7 @@ test "empty" {
     recover -1
   }
   expect r == -1
-  expect (average(10, 5) or fail) == 2
+  expect average(10, 5) == 2
 }
 ```
 
@@ -180,4 +188,4 @@ property "clamp never exceeds the bound" forall (n: Int<0..1000>, high: Int<0..1
 
 - Replay a failing property: run the `replay` command of its `property-failure` record (`--test`, `--seed`,
   `--case`) with `fortisc test` (X-131).
-- Never change an expected value, remove an `expect` or weaken a property to make a test pass (Programme 9.2).
+- Never change an expected value, remove an `expect` or weaken a property to make a test pass.

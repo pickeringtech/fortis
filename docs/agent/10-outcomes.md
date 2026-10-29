@@ -3,7 +3,7 @@
 <!-- covers: LR 10 -->
 *Agent mode. Human mode: [Outcomes and failures](../guide/10-outcomes.md). Source of truth: LR 10.*
 
-> Preview: linear containers in generic code (LR 10.7) arrive in v0.1. The rest of this chapter (LR 10) is in v0.0.1.
+> Preview: linear containers (LR 10.7) arrive in v0.1. The rest of this chapter (LR 10) is in v0.0.1.
 
 ## Rules
 
@@ -34,6 +34,10 @@
 
 - No bare `or value`, no `?`, no call-site `try`, no `unwrap` (LR 10.2). `or` binds loosest: write
   `let v = f() or fail` on its own line (LR 1.1).
+- Integer arithmetic the checker cannot prove safe, as the left operand of an outcome operator, is a checked
+  region handled like a call: `total = total + r or fail`, `value * 10 + d or recover 0` (LR 6.4).
+- In `test` and `property` bodies `or fail` is implied after a fallible call nothing else consumes:
+  `expect half(4) == 2` (LR 14).
 - `Failure`: stable `code` (`StringView from static`), typed payload, origin, optional cause chain; linear, not
   copyable; created in a `pure` function it reads no clock and allocates no identifier; bounded payload (64 bytes
   inline) satisfies `noalloc` (LR 10.3).
@@ -49,9 +53,11 @@
 - Failure match: `match move f { is A(x: v) => …, is B as b => { …consume b… }, otherwise(o) => { …consume o… } }`;
   payloads bound by copy; `is` without `as` discharges (adds `recovers`); `otherwise(name)` is required (open type);
   `match f` without `move` inspects only and `f` must still be consumed (LR 10.5).
-- `report` is a statement; the one `io` operation needing no capability (diagnostic plane only); a `pure`
-  function cannot report (LR 10.6). `annotate(f: owned Failure, note: StringView) Failure`;
-  `Failures.aggregate(list: owned List[Failure]) Failure` (LR 10.6).
+- `report` is a statement; with the `log` statements, the `io` needing no capability (diagnostic plane only); a
+  `pure` function cannot report (LR 10.6, LR 11.6). A failure is recorded with `report e` alone, never logged as
+  well; `log.warn(…)` is for what is not a failure, such as a fallback taken (LR 13).
+  `annotate(f: owned Failure, note: StringView) Failure`; `Failures.aggregate(list: owned List[Failure]) Failure`
+  (LR 10.6).
 - A failing `try main`: one report on standard error, exit status 1 (LR 4.6).
 - Linear containers: `push(move x)` in, `pop()` out as a linear `T?`, `consumeEach(owned self, fn mut(owned T) Void)`
   (in order, no early exit), `clear()` and dropping rejected, `count()`/`isEmpty()` borrow;
@@ -121,7 +127,7 @@ pure try func check(key: Int) Bool {
 }
 
 test "check" {
-  expect check(1) or fail
+  expect check(1)
 }
 ```
 
@@ -147,7 +153,7 @@ pure try func twice(key: Int) Int {
 }
 
 test "twice" {
-  expect (twice(2) or fail) == 4
+  expect twice(2) == 4
 }
 ```
 
@@ -172,7 +178,7 @@ pure try func twice(key: Int) Int {
 }
 
 test "twice" {
-  expect (twice(2) or fail) == 4
+  expect twice(2) == 4
 }
 ```
 
@@ -306,7 +312,7 @@ try func strict(key: Int) Int {
 }
 
 test "strict" {
-  expect (strict(1) or fail) == 1
+  expect strict(1) == 1
 }
 ```
 
@@ -331,7 +337,7 @@ try func strict(key: Int) Int {
 }
 
 test "strict" {
-  expect (strict(1) or fail) == 1
+  expect strict(1) == 1
 }
 ```
 
@@ -376,7 +382,7 @@ test "classify" cases {
   "letter": { text: "x7", expected: "not a number" }
   "empty": { text: "", expected: "empty" }
 } as row {
-  expect (classify(row.text) or fail) == row.expected
+  expect classify(row.text) == row.expected
 }
 ```
 
@@ -398,7 +404,7 @@ pure try func lookup(key: Int) Int {
 pure try func sumAll(keys: List[Int]) Int {
   let mut outcomes: List[Outcome[Int]] = List.default()
   for k in keys {
-    editable outcomes.push(lookup(k))
+    outcomes.push(lookup(k))
   }
   let values = Outcome.collect(move outcomes) or fail
   let mut total = 0
@@ -409,7 +415,7 @@ pure try func sumAll(keys: List[Int]) Int {
 }
 
 test "sumAll" {
-  expect (sumAll(List.of(1, 2, 3)) or fail) == 6
+  expect sumAll(List.of(1, 2, 3)) == 6
   let bad = sumAll(List.of(1, 9)) catch e {
     expect e.code == "store.missing"
     recover -1

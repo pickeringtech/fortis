@@ -2,18 +2,17 @@
 // requires: runtime
 // covers: LANG-08-04
 // The List operations with Fortis bodies (DEL-26): reversed, concat, countWhere, filter, map, isEmpty, first.
-import fortis.host { Host }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+import fortis.host { Console }
+func main(console: Console) {
   let xs = List.of(1, 2, 3)
-  caps.console.print("${xs.reversed()}")
-  caps.console.print("${xs.concat(List.of(4, 5))}")
+  console.print("${xs.reversed()}")
+  console.print("${xs.concat(List.of(4, 5))}")
   let four = List.of(1, 2, 3, 4)
-  caps.console.print("${four.countWhere(fn(n: Int) Bool => n % 2 == 0)}")
-  caps.console.print("${four.filter(fn(n: Int) Bool => n % 2 == 0)}")
-  caps.console.print("${xs.map(fn(n: Int) Int => Int.wrappingMul(n, 10))}")
+  console.print("${four.countWhere(fn(n: Int) Bool => n % 2 == 0)}")
+  console.print("${four.filter(fn(n: Int) Bool => n % 2 == 0)}")
+  console.print("${xs.map(fn(n: Int) Int => Int.wrappingMul(n, 10))}")
   let none: List[Int] = List.default()
-  caps.console.print("${none.isEmpty()}")
-  caps.console.print("${xs.isEmpty()}")
-  caps.console.print("${xs.first() ?? 0}")
+  console.print("${none.isEmpty()}")
+  console.print("${xs.isEmpty()}")
+  console.print("${xs.first() ?? 0}")
 }

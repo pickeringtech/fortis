@@ -4,8 +4,8 @@
 // covers: LANG-11-07, LANG-12-03
 // 15, 12.4: `Process.run` waits for the program (the `block` effect), so async code runs it as work on the
 // blocking pool, which owns the capability it was given; the cooperative task runs on while it waits (DEL-47).
-import fortis.host { Host, Capabilities, Process, Console }
-async func tick(console: Console) Void {
+import fortis.host { Process, Console }
+async func tick(console: Console) {
   console.print("tick")
 }
 async func run(process: owned Process, console: Console) Int {
@@ -20,9 +20,7 @@ async func run(process: owned Process, console: Console) Int {
     return status
   }
 }
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(process: proc, console: console, fileSystem: fs, network: net, clock: clock, random: rnd, environment: envc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+async func main(proc: Process, console: Console) {
   let s = await run(move proc, console)
   console.print("done ${s}")
 }

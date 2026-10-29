@@ -1,9 +1,9 @@
 // accept
 // covers: LANG-05-08
 try func half(n: Int) Int => n
-func nothing() Void {
+func nothing() {
 }
-recovers func run(items: List[Int], n: Int) Void {
+recovers func run(items: List[Int], n: Int) {
   discard items.count()
   discard half(n) or recover 0
   nothing()

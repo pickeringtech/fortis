@@ -1,0 +1,8 @@
+// A capability named inside an interpolation is a use the rewrite does not follow: `main` keeps its
+// `Host.capabilities()`, and loses only `export` and the unused `args` (4.6; X-345, R8).
+import fortis.host { Host }
+
+func main() {
+  let caps = Host.capabilities()
+  caps.console.print("the clock reads ${caps.clock.now()}")
+}

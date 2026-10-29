@@ -21,7 +21,7 @@ declaration     = { aspectUse NL } [ "export" ]
                   ( constDecl | typeDecl | classDecl | enumDecl | errorDecl | interfaceDecl
                   | implementDecl | mixinDecl | contractDecl | aspectDecl | observationDecl | funcDecl
                   | testDecl | propertyDecl | headBlock ) ;
-aspectUse       = "@" lowerIdent "(" [ argList ] ")" ;             (* the only use of "@" *)
+aspectUse       = "@" lowerIdent [ "(" [ argList ] ")" ] ;         (* the only use of "@"; `@name` alone when the aspect needs no arguments: @ignorable *)
 
 constDecl       = "const" lowerIdent [ ":" type ] "=" constExpr ;
 typeDecl        = "type" upperIdent "=" type ;                     (* always nominal *)
@@ -39,7 +39,7 @@ classMember     = { aspectUse NL } [ "export" ] ( fieldDecl | constDecl | method
                                                                    (* a method body is absent exactly when the head is trusted (LR 8.1): signature modules *)
 fieldDecl       = lowerIdent ":" type [ "=" constExpr ] ;
 injectDecl      = "inject" [ "lazy" ] lowerIdent ":" type ;        (* DI kit; slot 2; `export inject` exports the field it becomes (X-138) *)
-cleanupDecl     = "cleanup" "(" "editable" "self" ")" "Void" block ;
+cleanupDecl     = "cleanup" "(" "editable" "self" ")" [ "Void" ] block ;    (* `Void` may be left out (LR 8.1, X-345) *)
 
 enumDecl        = "enum" upperIdent [ typeParams ] [ "derive" upperIdentList ] [ "implements" typeList ]
                   "{" { NL } [ enumMember { NL { NL } enumMember } { NL } ] "}" ;
@@ -93,7 +93,10 @@ modifiers       = { upperIdent } [ "trusted" ] [ "pure" ] [ "noalloc" ] [ "async
                                                                    (* leading upperIdents are named contracts *)
 funcHead        = modifiers "func" lowerIdent funcSignature ;              (* a free function: its name is never a keyword *)
 methodHead      = modifiers "func" memberName funcSignature ;              (* a method or associated function: LR 3.4 admits a keyword *)
-funcSignature   = [ typeParams ] "(" [ paramList ] ")" returnType [ whereClause ] ;
+funcSignature   = [ typeParams ] "(" [ paramList ] ")" ( returnType [ whereClause ] | [ whereClause ] ) ;
+                                                                   (* no return type: the result is Void (LR 8.1, X-345). P3: a return
+                                                                      type is tried first, so `) { a: Int } {` keeps its record result
+                                                                      and a body `{` that is not a record type is the body *)
 returnType      = type ;                                          (* a loan result is written as a loan type: editable Cell from c *)
 paramList       = param { "," param } [ "," ] ;
 param           = selfParam | restParam | [ "..." ] lowerIdent ":" paramType [ "=" constExpr ] ;   (* "...": variadic last parameter of a trusted signature (6.7, X-90) *)
@@ -189,14 +192,17 @@ rangeExpr       = additiveExpr ( ".." | "..<" ) additiveExpr ;
 tupleLit        = "(" expr "," [ expr { "," expr } ] ")" ;
 recordLit       = "{" { NL } ident ":" expr { "," ident ":" expr } [ "," ] { NL } "}" ;   (* uppercase keys: a variant map *)
 
-lambda          = modifiers "fn" [ "mut" | "once" ] [ "[" captureList "]" ] "(" [ lambdaParams ] ")" type funcBody ;
+lambda          = modifiers "fn" [ "mut" | "once" ] [ "[" captureList "]" ] "(" [ lambdaParams ] ")"
+                  ( type funcBody | "=>" expr ) ;                (* an expression body may leave out its return type: inferred (LR 8.2, X-345) *)
 captureList     = capture { "," capture } ;
 capture         = marker place | lowerIdent ;                      (* bare name: trivial value, copied *)
 lambdaParams    = lambdaParam { "," lambdaParam } ;
 lambdaParam     = lowerIdent [ ":" paramType ] ;
 
 matchExpr       = "match" [ "move" ] expr "{" { NL } [ matchArm { NL { NL } matchArm } { NL } ] "}" ;
-matchArm        = pattern [ "when" expr ] "=>" ( expr | block ) ;  (* block arms end in give *)
+matchArm        = pattern { "|" pattern } [ "when" expr ] "=>" ( expr | block ) ;
+                                                                   (* block arms end in give; "|" separates the alternatives
+                                                                      of an or-pattern, which bind no names (LR 9.8, X-345) *)
 ifExpr          = "if" expr block "else" ( ifExpr | block ) ;      (* every block ends in give *)
 
 pattern         = "_" | lowerIdent | literal

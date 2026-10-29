@@ -7,7 +7,7 @@
 
 | Rule | Statement | LR |
 |---|---|---|
-| LANG-07-01 | Assigning, returning or capturing an existing ownership-bearing place carries `copy`, `alias` or `move`; `owned` arguments carry `move`/`copy`, `editable` arguments carry `editable`. | LR 7.5 |
+| LANG-07-01 | Assigning, returning or capturing an existing ownership-bearing place carries `copy`, `alias` or `move`, except that `return local` moves a local `let` binding; `owned` arguments carry `move`/`copy`, `editable` arguments carry `editable`; an unmarked `editable self` receiver or `fn mut` call is checked exactly as the marked one, and is rejected where the marker could not be written. | LR 7.5 |
 | LANG-07-02 | Parameter bindings are never reassignable. | LR 7.6 |
 | LANG-07-03 | The checker never inserts clones, reference counts or hidden sharing to repair a rejected program. | LR 7.10 |
 | LANG-07-04 | Use after move, conflicting loans, owner use while loaned and escaping loans are rejected statically, including through closures, `defer`, `await` and `scope`. | LR 7.3, 7.4 |
@@ -21,15 +21,15 @@
 
 | Code | Trigger | Correction | LR |
 |---|---|---|---|
-| E-OWN-001 | an existing ownership-bearing place assigned, returned or initialised into a field without a marker | `copy p` (independent duplicate), `alias p` (read loan), or `move p` (transfer) | LR 7.5 |
-| E-OWN-002 | `copy` of a non-copyable place (`Shared`, `Weak`, …) | `s.retain()` for `Shared`/`Weak`; otherwise `move` or a loan | LR 7.5 |
+| E-OWN-001 | an existing ownership-bearing place assigned, returned (other than a local) or initialised into a field without a marker; a loan of a copyable value (`xs.get(0)`, a binding holding one) where an owned value is expected; an `editable self` call or `fn mut` call, marked or not, on a root that cannot change (a `let` binding, a read parameter, capture or loan, the `self` of a read method) | `copy p` (independent duplicate), `alias p` (read loan), or `move p` (transfer); for a loan, `let v = xs.get(0)` then `copy v`; for a receiver, declare the binding `let mut` or the parameter `editable` | LR 7.5, LR 7.6 |
+| E-OWN-002 | `copy` of a non-copyable place (`Shared`, `Weak`, …); a loan of a value that is not Copyable where an owned value is expected | `s.retain()` for `Shared`/`Weak`; otherwise `move` or a loan | LR 7.5, LR 7.6 |
 | E-OWN-010 | a loan conflicting with an active loan (exclusive while read loans live, two exclusive) | end the earlier loan: put its binding in an inner block, or loan once | LR 7.3 |
 | E-OWN-011 | the owner (or a suspended parent loan) used while loaned | use the owner after the loan's block ends, or go through the loan | LR 7.3 |
 | E-OWN-012 | a later argument breaks an earlier argument's reservation | evaluate the later argument into a binding first | LR 5.7 |
 | E-OWN-020 | a place used after `move` | `copy` before the move, re-initialise a `let mut`, or restructure | LR 7.4 |
 | E-OWN-040 | a partial move (`move x.field` while `x` still owns the rest) | move the whole value, or consume it with a class pattern `let C(field: f, other: _) = move x` | LR 7.2 |
 | E-OWN-050 | a return keeps a loan of a parameter other than the declared `from` origin | return an owned value, or split the function | LR 7.6 |
-| E-OWN-051 | a loan of a local or a temporary returned or kept beyond it | bind the owner first (`let u = make()` then `f(alias u)`), or return an owned value | LR 7.6 |
+| E-OWN-051 | a loan of a local or a temporary returned or kept beyond it; a value of the function's own (a `move`, a copy, a fresh value, a tuple or record literal, a constructor, an arm or branch giving one) where the result is declared `from` a parameter | bind the owner first (`let u = make()` then `f(alias u)`), or return an owned value | LR 7.6 |
 | E-OWN-052 | a deferred block uses a binding of its block that holds a loan | use the owner, or move the use out of the `defer` | LR 12.1 |
 | E-OWN-053 | a lifetime parameter, or a field of a loan or loan-carrying type (other than `from static`) | own the value (`String`, not `StringView`), hold a `Shared`, or pass it per call | LR 7.7 |
 | E-OWN-090 | an ownership shape with no lowering (a loan stored in `Shared`/`Mutex`, a `fn mut` escaping into `Shared`) | own the value; `Mutex` around state with an `fn` closure | LR 7.10, C.2 |
@@ -38,25 +38,36 @@
 
 - Places: a binding, a field path from a binding or `self`, an `Array` element at a literal index. Call results,
   `a ?? b`, literals and `list[i]` with a variable index are values, not places (LR 7.2).
-- Markers by position (LR 7.5): `let x = p`, `x = p`, `name: p` field initialiser and `return p` need a marker;
-  plain parameter arguments and `self` receivers are implicit read loans; `editable self` receivers need
-  `editable p.m()`, `owned self` receivers `move p.m()`; `editable` parameters `editable p`; `owned` parameters
-  `move p`/`copy p`; an argument the result borrows `from` needs `alias p` (or `editable p` for an `editable`
-  parameter); `fn mut` / `fn once` calls are `editable f()` / `move f()`; comparison and interpolation operands,
-  `match p` and `for x in p` are implicit read loans; `match move p` / `for x in move p` consume. Fresh and
-  trivial values never need a marker.
+- Markers by position (LR 7.5): `let x = p`, `x = p`, `name: p` field initialiser and `return p` need a marker,
+  except `return local`, which moves a local `let`/`let mut` binding; plain parameter arguments and `self`
+  receivers are implicit read loans; `owned self` receivers `move p.m()`; `editable` parameters `editable p`;
+  `owned` parameters `move p`/`copy p`; an argument the result borrows `from` needs `alias p` (or `editable p` for
+  an `editable` parameter); `fn once` calls `move f()`; comparison and interpolation operands, `match p` and
+  `for x in p` are implicit read loans; `match move p` / `for x in move p` consume. Fresh and trivial values never
+  need a marker.
+- What the declaration shows (LR 7.5): an `editable self` receiver and a `fn mut` call take an exclusive loan with
+  no marker, `readings.push(40)`, `bump()`, when the root is a `let mut` binding, an `editable` parameter, an
+  `editable` or `move` capture, a binding holding an exclusive loan, or the method's own `editable self`
+  (`self.order.push(w)`). The unmarked call is checked as the marked one (the same loans, `E-OWN-010`,
+  `E-OWN-020`, and `E-REF-003` on a length-refined collection, LR 6.3), on a trivial receiver too. On any other root it is `E-OWN-001`, marked or not.
+  Arguments keep their markers: `normalise(editable readings)`. Older code writes `editable readings.push(40)`,
+  `editable bump()` and `return move out`; they stay accepted and `fortis fmt` removes the marker.
 - Loan lifetimes (LR 7.3): binding-held loans last to the end of the declaring block; call-argument loans end at
   return unless the result carries them; comparison/interpolation/`capture` loans end with the statement;
   `for`-header loans last for the loop; `async`-call argument loans are held by the future; `from` results are
-  held by the receiving binding; no non-lexical shortening.
+  held by the receiving binding, a loan inside an optional, tuple or record result too (`let t = xs.get(0)`: until
+  `t`'s block ends, `xs.pop()` is `E-OWN-010` and `move xs` is `E-OWN-011`; a `List[Int]` element holds nothing);
+  no non-lexical shortening.
 - Child loans (LR 7.3): a read child of an exclusive parent freezes it; an exclusive child suspends it; a parent
-  cannot be moved, reassigned or dropped while a child lives; a loan-holding binding is never reassignable; at a
-  join a loan is live if live on any path.
+  cannot be moved, reassigned or dropped while a child lives; a loan-holding binding (a parameter, `alias p`,
+  `editable p`, a `from` result that is a loan) is never reassignable, but a `let mut` holding a loan inside an
+  optional, tuple or record is (`t = xs.get(1)`, `t = null`: the new value's loans replace the old); at a join a
+  loan is live if live on any path.
 - Receivers (LR 7.6): `self` read loan, `editable self` exclusive loan, `owned self` consumes. `from` names
   exactly one plain or `editable` parameter or `self`, never `owned`. The kept loan has the declared mode
   (`StringView from user` read; `editable Cell from c` exclusive, needs `c: editable`).
-- Returns (LR 7.6): `return move local`; `return copy obj.field` or a `from` signature for a borrowed field; fresh
-  expressions unmarked.
+- Returns (LR 7.6): `return local` (a move); `return move param` for an `owned` parameter; `return copy obj.field`
+  or a `from` signature for a borrowed field; fresh expressions unmarked.
 - Loan-carrying types (LR 7.7): `StringView`, `BytesView`, `ListView[T]`, standard cursors. Usable as a local's
   type, a parameter type, or a `from` return type; owned by their holder; may not cross `launchParallel` or
   `launchBlocking`.
@@ -66,7 +77,9 @@
   carries `A` (LR 11.6).
 - Destruction order (LR 7.9): block exit = loans end, `defer`s last-first, locals in reverse initialisation;
   assignment = evaluate new, drop old, store; temporaries at statement end in reverse creation; a class value =
-  its `cleanup`, then fields in declaration order.
+  its `cleanup`, then fields in declaration order. Only an owner destroys: a loan's end (`xs.get(0)`, `alias p`, a
+  `from` result, a parameter that is not `owned`, a borrowed pattern or loop binding) runs no `cleanup`, which
+  runs once per value, at its owner's destruction.
 
 ## Correction patterns
 
@@ -80,7 +93,7 @@ class User {
 
 pure func rename(user: User) User {
   let other = user                    // reject: E-OWN-001
-  return move other
+  return other
 }
 
 test "rename" {
@@ -96,13 +109,77 @@ class User {
 
 pure func rename(user: User) User {
   let other = copy user
-  return move other
+  return other
 }
 
 test "rename" {
   expect rename(User(name: "a")).name == "a"
 }
 ```
+
+### E-OWN-001: an `editable self` call on a binding that cannot change (LR 7.5)
+
+The receiver of an `editable self` method needs no marker on a `let mut` binding; on a `let` binding the call is
+rejected, marked or not.
+
+```fortis
+// reject: E-OWN-001
+func readings() List[Int] {
+  let out: List[Int] = List.default()
+  out.push(40)                        // reject: E-OWN-001
+  return out
+}
+
+test "readings" {
+  expect readings().count() == 1
+}
+```
+
+```fortis
+// accept
+func readings() List[Int] {
+  let mut out: List[Int] = List.default()
+  out.push(40)
+  return out
+}
+
+test "readings" {
+  expect readings().count() == 1
+}
+```
+
+### E-OWN-001: a loan where an owned value is expected (LR 7.6)
+
+`xs.get(0)` lends the list's element. A loan stays a loan, so returning it as an owned `T?`, binding it to an owned
+type, or passing it `owned` needs `copy`, which copies the value the loan lends.
+
+```fortis
+// reject: E-OWN-001
+func first(names: List[String]) String? {
+  return names.get(0)                 // reject: E-OWN-001
+}
+
+test "first" {
+  let got = first(List.of("a")) ?? "none"
+  expect got == "a"
+}
+```
+
+```fortis
+// accept
+func first(names: List[String]) String? {
+  let name = names.get(0)
+  return copy name
+}
+
+test "first" {
+  let got = first(List.of("a")) ?? "none"
+  expect got == "a"
+}
+```
+
+A value that is not Copyable (a `Shared`, a class holding a capability) has no owned copy: the same return is
+`E-OWN-002`. Keep the loan, or take the value out of its owner.
 
 ### E-OWN-020: use after move (LR 7.4)
 
@@ -135,7 +212,7 @@ test "consume" {
 class Invoice {
   export customer: Int
   export lines: List[String]
-  export func issue(editable self) Void {
+  export func issue(editable self) {
     self.customer = 0
   }
 }
@@ -143,7 +220,7 @@ class Invoice {
 test "issue" {
   let mut invoice = Invoice(customer: 7, lines: List.of("tea"))
   let lines = alias invoice.lines
-  editable invoice.issue()            // reject: E-OWN-010
+  invoice.issue()                     // reject: E-OWN-010
   expect invoice.customer == 0
 }
 ```
@@ -153,7 +230,7 @@ test "issue" {
 class Invoice {
   export customer: Int
   export lines: List[String]
-  export func issue(editable self) Void {
+  export func issue(editable self) {
     self.customer = 0
   }
 }
@@ -164,7 +241,7 @@ test "issue" {
     let lines = alias invoice.lines
     expect lines.count() == 1
   }
-  editable invoice.issue()
+  invoice.issue()
   expect invoice.customer == 0
 }
 ```
@@ -272,6 +349,43 @@ test "guest" {
   let user = User.guest()
   let name = displayName(alias user)
   expect name == "guest"
+}
+```
+
+A value of the function's own is the same case where the result is declared `from` a parameter: `return
+xs.get(0) ?? move d`, `return move d` or a fresh value would leave the caller holding a loan of what ended with
+the call (D-373). A `from` result is a loan, so what produces it must lend: a place read through a loan, `alias p`,
+a call whose result lends, a `??` both of whose sides lend, an `if` or `match` every one of whose results lends,
+or `present` of one. A tuple or record literal (`return (xs.get(0) ?? move d, 1)`), a constructor, a lambda, a
+call whose result is owned, and an arm or branch that gives any of these are the function's own too (D-377,
+D-381). Bind the loan and return an owned value from a function whose result is owned, or lend on every path.
+
+```fortis
+// reject: E-OWN-051
+class Token {
+  export label: String
+}
+
+func pick(xs: List[Token], d: owned Token) alias Token from xs {
+  return xs.get(0) ?? move d                // reject: E-OWN-051
+}
+```
+
+```fortis
+// accept
+class Token {
+  export label: String
+}
+
+func pick(xs: List[Token], d: owned Token) Token {
+  let v = xs.get(0)
+  return copy v ?? move d
+}
+
+test "pick" {
+  let xs: List[Token] = List.default()
+  let t = pick(xs, Token(label: "fallback"))
+  expect t.label == "fallback"
 }
 ```
 

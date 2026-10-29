@@ -80,10 +80,10 @@ export class Parser {
 
   // Reads one line. Malformed input never fails: it becomes a diagnostic, and the failure behind it, if any,
   // goes to the sink. Only text operations on the line itself can fail, and they cannot for a line of text.
-  export pure try func feed(editable self, line: SourceLine, sink: editable List[Failure]) Void {
+  export pure try func feed(editable self, line: SourceLine, sink: editable List[Failure]) {
     let blank = isBlank(line.text) or fail
     if blank {
-      editable self.closeOpen()
+      self.closeOpen()
       self.skipping = false
       return
     }
@@ -93,57 +93,57 @@ export class Parser {
       return
     }
     if isBlankScalar(first) {
-      editable self.readPosting(line, editable sink) or fail
+      self.readPosting(line, editable sink) or fail
       return
     }
-    editable self.closeOpen()
+    self.closeOpen()
     self.skipping = false
     let words = Text.words(line.text)
     let keyword = wordAt(words, 0)
     if keyword == "commodity" {
-      editable self.readCommodity(line.number, words, editable sink) or fail
+      self.readCommodity(line.number, words, editable sink) or fail
       return
     }
     if keyword == "account" {
-      editable self.readAccount(line.number, words, editable sink)
+      self.readAccount(line.number, words, editable sink)
       return
     }
     if Scalar.digitValue(first) != null {
-      editable self.readHeader(line.number, words, editable sink) or fail
+      self.readHeader(line.number, words, editable sink) or fail
       return
     }
-    editable self.refuse(line.number, Problem.UnknownDirective, "\"${keyword}\" is not a directive or a date")
+    self.refuse(line.number, UnknownDirective, "\"${keyword}\" is not a directive or a date")
   }
 
   // Ends the parse: closes the transaction being read and hands over everything read.
   export pure func finish(owned self) ParsedJournal {
     let mut parser = move self
-    editable parser.closeOpen()
+    parser.closeOpen()
     let Parser(commodities: c, accounts: a, accountTexts: _, drafts: d, diagnostics: g, openHeader: _, openPostings: _, openBroken: _, skipping: _) = move parser
     return ParsedJournal(commodities: move c, accounts: move a, drafts: move d, diagnostics: move g)
   }
 
   // Records a problem with a line. A problem inside a transaction removes the whole transaction; a problem
   // with a header also skips the postings that follow it.
-  pure func refuse(editable self, line: LineNo, problem: Problem, detail: owned String) Void {
-    discard editable self.diagnostics.note(line, problem, move detail)
+  pure func refuse(editable self, line: LineNo, problem: Problem, detail: owned String) {
+    discard self.diagnostics.note(line, problem, move detail)
     if self.openHeader != null {
       self.openBroken = true
     }
   }
 
   // Records a problem explained by a failure, and moves the failure, annotated with its line, to the sink.
-  pure func refuseWith(editable self, line: LineNo, refusal: Refusal, f: owned Failure, sink: editable List[Failure]) Void {
-    editable self.refuse(line, refusal.problem, copy refusal.detail)
-    editable sink.push(annotate(move f, "journal line ${line}"))
+  pure func refuseWith(editable self, line: LineNo, refusal: Refusal, f: owned Failure, sink: editable List[Failure]) {
+    self.refuse(line, refusal.problem, copy refusal.detail)
+    sink.push(annotate(move f, "journal line ${line}"))
   }
 
   // Moves the transaction being read, unless one of its lines was malformed, to the drafts.
-  pure func closeOpen(editable self) Void {
+  pure func closeOpen(editable self) {
     let header = copy self.openHeader
     if header != null && !self.openBroken {
       let postings = copy self.openPostings
-      editable self.drafts.push(TransactionDraft(
+      self.drafts.push(TransactionDraft(
         line: header.line,
         date: header.date,
         flag: header.flag,
@@ -158,65 +158,65 @@ export class Parser {
   }
 
   // `commodity CODE SCALE`
-  pure try func readCommodity(editable self, line: LineNo, words: ListView[String], sink: editable List[Failure]) Void {
+  pure try func readCommodity(editable self, line: LineNo, words: ListView[String], sink: editable List[Failure]) {
     if words.count() != 3 {
-      editable self.refuse(line, Problem.MalformedDirective, "write `commodity CODE PLACES`, for example `commodity GBP 2`")
+      self.refuse(line, MalformedDirective, "write `commodity CODE PLACES`, for example `commodity GBP 2`")
       return
     }
     let codeText = wordAt(words, 1)
     let code = parseCommodityCode(codeText) catch e {
-      editable self.refuseWith(line, codeRefusal(e, codeText), move e, editable sink)
+      self.refuseWith(line, codeRefusal(e, codeText), move e, editable sink)
       return
     }
     let placesText = wordAt(words, 2)
     let places = parseNatural(placesText) catch e {
-      editable self.refuseWith(line, placesRefusal(e, placesText), move e, editable sink)
+      self.refuseWith(line, placesRefusal(e, placesText), move e, editable sink)
       return
     }
     if places > 8 {
-      editable self.refuse(line, Problem.MalformedDirective, "a commodity has 0 to 8 decimal places, not ${places}")
+      self.refuse(line, MalformedDirective, "a commodity has 0 to 8 decimal places, not ${places}")
       return
     }
     let scale = Int<0..8>.validate(places) or fail
-    if !(editable self.commodities.declare(copy code, scale)) {
-      editable self.refuse(line, Problem.DuplicateCommodity, "commodity ${code} is already declared")
+    if !(self.commodities.declare(copy code, scale)) {
+      self.refuse(line, DuplicateCommodity, "commodity ${code} is already declared")
     }
   }
 
   // `account NAME`
-  pure func readAccount(editable self, line: LineNo, words: ListView[String], sink: editable List[Failure]) Void {
+  pure func readAccount(editable self, line: LineNo, words: ListView[String], sink: editable List[Failure]) {
     if words.count() != 2 {
-      editable self.refuse(line, Problem.MalformedDirective, "write `account NAME`, for example `account assets:cash`")
+      self.refuse(line, MalformedDirective, "write `account NAME`, for example `account assets:cash`")
       return
     }
     let text = wordAt(words, 1)
     let name = AccountName.parse(text) catch e {
-      editable self.refuseWith(line, accountRefusal(e, text), move e, editable sink)
+      self.refuseWith(line, accountRefusal(e, text), move e, editable sink)
       return
     }
-    if !(editable self.accountTexts.add(name.text())) {
-      editable self.refuse(line, Problem.DuplicateAccount, "account ${text} is already declared")
+    if !(self.accountTexts.add(name.text())) {
+      self.refuse(line, DuplicateAccount, "account ${text} is already declared")
       return
     }
-    editable self.accounts.push(move name)
+    self.accounts.push(move name)
   }
 
   // `DATE [*|!] DESCRIPTION [#tag …]`
-  pure try func readHeader(editable self, line: LineNo, words: ListView[String], sink: editable List[Failure]) Void {
+  pure try func readHeader(editable self, line: LineNo, words: ListView[String], sink: editable List[Failure]) {
     self.skipping = true
     let dateText = wordAt(words, 0)
     let date = Date.parse(dateText) catch e {
-      editable self.refuseWith(line, dateRefusal(e, dateText), move e, editable sink)
+      self.refuseWith(line, dateRefusal(e, dateText), move e, editable sink)
       return
     }
     let mut flag = Flag.Unmarked
     let mut next = 1
     let second = wordAt(words, 1)
     if second == "*" {
-      flag = Flag.Cleared
+      flag = Cleared
       next = 2
     } else if second == "!" {
-      flag = Flag.Pending
+      flag = Pending
       next = 2
     }
     let mut description = Builder.create()
@@ -229,42 +229,42 @@ export class Parser {
       if isTag {
         let length = word.scalarCount()
         if length < 2 {
-          editable self.refuse(line, Problem.MalformedHeader, "a tag needs a name after `#`")
+          self.refuse(line, MalformedHeader, "a tag needs a name after `#`")
           return
         }
         let tagText = tagName(word) or fail
-        editable tags.push(move tagText)
+        tags.push(move tagText)
       } else {
         if described {
-          editable description.append(" ")
+          description.append(" ")
         }
-        editable description.append(word)
+        description.append(word)
         described = true
       }
-      next = Int.add(next, 1) or fail
+      next = next + 1
     }
     if !described {
-      editable self.refuse(line, Problem.MalformedHeader, "a transaction needs a description after its date")
+      self.refuse(line, MalformedHeader, "a transaction needs a description after its date")
       return
     }
     self.skipping = false
-    self.openHeader = Header(line: line, date: date, flag: flag, description: description.finish(), tags: move tags)
+    self.openHeader = Header(line, date, flag, description: description.finish(), tags: move tags)
   }
 
   // `  ACCOUNT [AMOUNT CODE]`
-  pure try func readPosting(editable self, line: SourceLine, sink: editable List[Failure]) Void {
+  pure try func readPosting(editable self, line: SourceLine, sink: editable List[Failure]) {
     let words = Text.words(line.text)
     let n = commentFreeCount(words) or fail
     if n == 0 {
       return
     }
     if n != 1 && n != 3 {
-      editable self.refuse(line.number, Problem.MalformedPosting, "a posting is an account, optionally followed by an amount and a commodity")
+      self.refuse(line.number, MalformedPosting, "a posting is an account, optionally followed by an amount and a commodity")
       return
     }
     let accountText = wordAt(words, 0)
     let account = AccountName.parse(accountText) catch e {
-      editable self.refuseWith(line.number, accountRefusal(e, accountText), move e, editable sink)
+      self.refuseWith(line.number, accountRefusal(e, accountText), move e, editable sink)
       return
     }
     let mut amount: Amount? = null
@@ -272,28 +272,28 @@ export class Parser {
       let quantityText = wordAt(words, 1)
       let codeText = wordAt(words, 2)
       let code = parseCommodityCode(codeText) catch e {
-        editable self.refuseWith(line.number, codeRefusal(e, codeText), move e, editable sink)
+        self.refuseWith(line.number, codeRefusal(e, codeText), move e, editable sink)
         return
       }
       let scale = self.commodities.scaleOf(copy code)
       if scale == null {
-        editable self.refuse(line.number, Problem.UnknownCommodity, "commodity ${code} is not declared")
+        self.refuse(line.number, UnknownCommodity, "commodity ${code} is not declared")
         return
       }
       let minor = parseAmount(quantityText, scale) catch e {
-        editable self.refuseWith(line.number, amountRefusal(e, quantityText), move e, editable sink)
+        self.refuseWith(line.number, amountRefusal(e, quantityText), move e, editable sink)
         return
       }
-      amount = Amount(minor: minor, code: move code)
+      amount = Amount(minor, code: move code)
     }
     if self.skipping {
       return
     }
     if self.openHeader == null {
-      editable self.refuse(line.number, Problem.PostingOutsideTransaction, "a posting must follow a transaction header")
+      self.refuse(line.number, PostingOutsideTransaction, "a posting must follow a transaction header")
       return
     }
-    editable self.openPostings.push(PostingDraft(line: line.number, account: move account, amount: move amount))
+    self.openPostings.push(PostingDraft(line: line.number, account: move account, amount: move amount))
   }
 }
 
@@ -302,7 +302,7 @@ export pure try func parseJournal(text: StringView, sink: editable List[Failure]
   let lines = splitLines(text) or fail
   let mut parser = Parser.create()
   for line in lines {
-    editable parser.feed(line, editable sink) or fail
+    parser.feed(line, editable sink) or fail
   }
   return move parser.finish()
 }
@@ -334,7 +334,7 @@ pure try func commentFreeCount(words: ListView[String]) Int {
     if comment {
       return n
     }
-    n = Int.add(n, 1) or fail
+    n = n + 1 or fail
   }
   return n
 }
@@ -352,8 +352,8 @@ pure try func tagName(word: StringView) String {
 // The refusal for a date that did not parse.
 pure func dateRefusal(f: Failure, text: StringView) Refusal {
   return match f {
-    is DateSyntax => Refusal(problem: Problem.MalformedDate, detail: "\"${text}\" is not a date of the form YYYY-MM-DD")
-    is DateRange => Refusal(problem: Problem.InvalidDate, detail: "${text} is not a day of the calendar")
+    is DateSyntax => Refusal(problem: MalformedDate, detail: "\"${text}\" is not a date of the form YYYY-MM-DD")
+    is DateRange => Refusal(problem: InvalidDate, detail: "${text} is not a day of the calendar")
     otherwise(other) => unexpectedRefusal(other, text)
   }
 }
@@ -388,7 +388,7 @@ pure func codeRefusal(f: Failure, text: StringView) Refusal {
 // The refusal for a number of decimal places that did not parse. Its failures come from `parseNatural`.
 pure func placesRefusal(f: Failure, text: StringView) Refusal {
   if f.code == "ledger.scan.not_a_number" || f.code == "ledger.scan.empty_number" {
-    return Refusal(problem: Problem.MalformedDirective, detail: "\"${text}\" is not a number of decimal places")
+    return Refusal(problem: MalformedDirective, detail: "\"${text}\" is not a number of decimal places")
   }
   return unexpectedRefusal(f, text)
 }
@@ -396,7 +396,7 @@ pure func placesRefusal(f: Failure, text: StringView) Refusal {
 // The refusal for an amount that did not parse at the commodity's scale.
 pure func amountRefusal(f: Failure, text: StringView) Refusal {
   return match f {
-    is AmountSyntax(position: at) => Refusal(problem: Problem.MalformedAmount, detail: "\"${text}\" is not an amount (problem at position ${at})")
+    is AmountSyntax(position: at) => Refusal(problem: MalformedAmount, detail: "\"${text}\" is not an amount (problem at position ${at})")
     is TooPrecise(places: n, scale: s) => Refusal(problem: Problem.TooPrecise, detail: "\"${text}\" has ${n} decimal places but the commodity has ${s}")
     otherwise(other) => unexpectedRefusal(other, text)
   }
@@ -407,9 +407,9 @@ pure func amountRefusal(f: Failure, text: StringView) Refusal {
 // anything else, shown by its code.
 pure func unexpectedRefusal(f: Failure, text: StringView) Refusal {
   if f.code == "numeric.overflow" {
-    return Refusal(problem: Problem.Overflow, detail: "\"${text}\" is too large")
+    return Refusal(problem: Overflow, detail: "\"${text}\" is too large")
   }
-  return Refusal(problem: Problem.Unexpected, detail: "\"${text}\" could not be read (${f.code})")
+  return Refusal(problem: Unexpected, detail: "\"${text}\" could not be read (${f.code})")
 }
 
 // Parses a journal for a test: the failures in the sink are settled before anything else can fail, so that no
@@ -418,7 +418,7 @@ pure try recovers func parsedForTest(text: StringView) ParsedJournal {
   let mut sink: List[Failure] = List.default()
   let parsed = parseJournal(text, editable sink)
   discard settle(move sink)
-  return move parsed or fail
+  return parsed or fail
 }
 
 // A small, well-formed journal used by the tests below.
@@ -445,24 +445,24 @@ pure func rendered(parsed: ParsedJournal) List[String] {
 }
 
 test "a well-formed journal parses without problems" {
-  let parsed = parsedForTest(sample) or fail
+  let parsed = parsedForTest(sample)
   expect parsed.diagnostics.count() == 0
   expect parsed.commodities.count() == 2
   expect parsed.accounts.count() == 4
   expect parsed.drafts.count() == 2
-  let salary = parsed.drafts.at(0) or fail
+  let salary = parsed.drafts.at(0)
   expect salary.line == LineNo(9)
   expect salary.description == "Salary for January"
-  expect salary.flag == Flag.Cleared
+  expect salary.flag == Cleared
   expect salary.tags.count() == 1
   expect salary.postings.count() == 2
-  let lunch = parsed.drafts.at(1) or fail
-  expect lunch.flag == Flag.Unmarked
+  let lunch = parsed.drafts.at(1)
+  expect lunch.flag == Unmarked
   expect lunch.tags.count() == 2
-  let cash = lunch.postings.at(1) or fail
+  let cash = lunch.postings.at(1)
   expect cash.amount == null
   expect cash.account.text() == "assets:cash"
-  let food = lunch.postings.at(0) or fail
+  let food = lunch.postings.at(0)
   let foodAmount = copy food.amount
   expect foodAmount != null
   if foodAmount != null {
@@ -488,11 +488,11 @@ test "one malformed line, one problem" cases {
   "stray posting":   { line: "  assets:cash  1.00 GBP", code: "posting.outside_transaction" }
 } as row {
   let text: String = "${sample}\n${row.line}\n"
-  let parsed = parsedForTest(text) or fail
+  let parsed = parsedForTest(text)
   let problems = rendered(parsed)
   expect problems.count() == 1
-  let only = problems.at(0) or fail
-  let isExpected = containsText(only, row.code) or fail
+  let only = problems.at(0)
+  let isExpected = containsText(only, row.code)
   expect isExpected
   expect parsed.drafts.count() == 2
 }
@@ -508,50 +508,50 @@ test "malformed postings remove their transaction and nothing else" cases {
   "overflow":        { posting: "expenses:food  99999999999999999999 GBP", code: "amount.overflow" }
 } as row {
   let text: String = "${sample}\n2026-01-03 Dinner\n  ${row.posting}\n  assets:cash\n"
-  let parsed = parsedForTest(text) or fail
+  let parsed = parsedForTest(text)
   let problems = rendered(parsed)
   expect problems.count() == 1
-  let only = problems.at(0) or fail
-  let isExpected = containsText(only, row.code) or fail
+  let only = problems.at(0)
+  let isExpected = containsText(only, row.code)
   expect isExpected
   expect parsed.drafts.count() == 2
 }
 
 test "every malformed line is reported once and parsing goes on" {
   let text: String = "${sample}\n2026-02-30 Bad date\n  expenses:food  1.00 GBP\n  assets:cash\n\n2026-01-05 Fine\n  expenses:food  x GBP\n  assets:cash  y GBP\n\n2026-01-06 Also fine\n  expenses:food  3.00 GBP\n  assets:cash\n"
-  let parsed = parsedForTest(text) or fail
+  let parsed = parsedForTest(text)
   let problems = rendered(parsed)
   expect problems.count() == 3
-  expect (problems.at(0) or fail) == "line 17: error date.invalid: 2026-02-30 is not a day of the calendar"
-  expect (problems.at(1) or fail) == "line 22: error amount.malformed: \"x\" is not an amount (problem at position 0)"
-  expect (problems.at(2) or fail) == "line 23: error amount.malformed: \"y\" is not an amount (problem at position 0)"
+  expect problems.at(0) == "line 17: error date.invalid: 2026-02-30 is not a day of the calendar"
+  expect problems.at(1) == "line 22: error amount.malformed: \"x\" is not an amount (problem at position 0)"
+  expect problems.at(2) == "line 23: error amount.malformed: \"y\" is not an amount (problem at position 0)"
   expect parsed.drafts.count() == 3
-  let last = parsed.drafts.at(2) or fail
+  let last = parsed.drafts.at(2)
   expect last.description == "Also fine"
 }
 
 test "comments are ignored everywhere" {
   let text: String = "// header comment\n# another\n${sample}\n2026-01-07 Snack\n  ; a note inside\n  expenses:food  1.00 GBP ; trailing\n  assets:cash\n"
-  let parsed = parsedForTest(text) or fail
+  let parsed = parsedForTest(text)
   expect parsed.diagnostics.count() == 0
   expect parsed.drafts.count() == 3
-  let snack = parsed.drafts.at(2) or fail
+  let snack = parsed.drafts.at(2)
   expect snack.postings.count() == 2
 }
 
 test "pending flag and windows line ends" {
   let text: String = "commodity GBP 2\r\naccount assets:cash\r\naccount expenses:food\r\n2026-01-01 ! Coffee\r\n  expenses:food  2.00 GBP\r\n  assets:cash\r\n"
-  let parsed = parsedForTest(text) or fail
+  let parsed = parsedForTest(text)
   expect parsed.diagnostics.count() == 0
-  let coffee = parsed.drafts.at(0) or fail
-  expect coffee.flag == Flag.Pending
+  let coffee = parsed.drafts.at(0)
+  expect coffee.flag == Pending
   expect coffee.description == "Coffee"
 }
 
 property "blank lines between transactions change nothing" forall (gap: Int<1..4>) {
   let separator = repeat("\n", gap)
   let text: String = "${sample}${separator}2026-01-09 Tea\n  expenses:food  1.00 GBP\n  assets:cash\n"
-  let parsed = parsedForTest(text) or fail
+  let parsed = parsedForTest(text)
   expect parsed.diagnostics.count() == 0
   expect parsed.drafts.count() == 3
 }

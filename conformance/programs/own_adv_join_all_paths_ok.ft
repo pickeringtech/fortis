@@ -3,7 +3,7 @@
 export class Box {
   export label: String
 }
-func consume(b: owned Box) Void {
+func consume(b: owned Box) {
 }
 func run(flag: Bool) Int {
   let box = Box(label: "a")

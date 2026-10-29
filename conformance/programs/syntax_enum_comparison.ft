@@ -5,4 +5,4 @@ export enum Level derive Equatable, Comparable {
   High
 }
 
-export pure func ordered() Bool => Level.Low < Level.High   // comparison, not a refinement
+export pure func ordered() Bool => Level.Low < High   // comparison, not a refinement

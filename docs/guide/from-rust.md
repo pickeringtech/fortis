@@ -3,6 +3,8 @@
 <!-- covers: LR 1 -->
 *Human mode. Source of truth: the LR; each note cites the section that states the rule.*
 
+> Preview: interfaces, mixins and generics (LR 6.10, 9.5, 9.6) arrive in v0.1, effects and claims as a whole (LR 11.1 to 11.4, 11.6) are completed in v0.2, and async with scopes (LR 12.3, 12.5, 12.7) arrives in v0.3; the examples under "Traits are interfaces" and "Async is structured" are checked and run today. The rest of these notes is in v0.0.2.
+
 Fortis will feel familiar to a Rust programmer: values have one owner, moves are real, shared mutation is not
 allowed, failures are values, and the native backend emits safe Rust (LR 1). The differences come from one
 design choice: everything a reader needs to know about a line is written on the line, and nothing is inferred
@@ -23,7 +25,7 @@ loan, `move` to transfer ownership, `copy` for an independent duplicate (LR 7.5,
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Account {
   export owner: String
@@ -34,21 +36,20 @@ class Account {
 func describe(a: Account) String => "${a.owner}: ${a.balance}"
 
 // An `editable` parameter is an exclusive loan, like `&mut Account`.
-func deposit(a: editable Account, amount: Int<0..1000>) Void {
+func deposit(a: editable Account, amount: Int<0..1000>) {
   a.balance = Int.saturatingAdd(a.balance, amount)
 }
 
 // An `owned` parameter takes ownership, like passing `Account` by value.
 func close(a: owned Account) Int => a.balance
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut account = Account(owner: "ada", balance: 10)
-  caps.console.print(describe(account))
+  console.print(describe(account))
   deposit(editable account, 5)
   let backup = copy account
-  caps.console.print("closed with ${close(move account)}")
-  caps.console.print(describe(backup))
+  console.print("closed with ${close(move account)}")
+  console.print(describe(backup))
 }
 ```
 
@@ -59,9 +60,10 @@ ada: 15
 ```
 
 The marker is also required where Rust would move silently: `let other = account` on an ownership-bearing value
-is `E-OWN-001`, because a reader could not tell a move from a copy (LR 7.5). Method receivers follow the same
-rule: `editable self` is called as `editable account.deposit(5)` and `owned self` as `move account.close()`
-(LR 7.6).
+is `E-OWN-001`, because a reader could not tell a move from a copy (LR 7.5). A method with `owned self` is called
+as `move account.close()`. A method with `editable self` is called as `account.deposit(5)`, like Rust's `&mut self`
+auto-borrow, and only on a place that may change: a `let mut` binding (Rust's `let mut`), an `editable` parameter
+or an exclusive loan (LR 7.5, LR 7.6).
 
 ```fortis
 // reject: E-OWN-001
@@ -69,7 +71,7 @@ class Account {
   export owner: String
 }
 
-export func main(args: List[String]) Void {
+func main() {
   let account = Account(owner: "ada")
   let other = account          // reject: E-OWN-001
 }
@@ -194,7 +196,7 @@ pure try func quarter(n: Int) Int {
 }
 
 test "outcomes" {
-  expect (quarter(12) or fail) == 3
+  expect quarter(12) == 3
   let fallback = quarter(6) catch e {
     expect e.code == "demo.odd"
     recover 0
@@ -216,7 +218,7 @@ pure try func half(n: Int) Int {
   return n / 2
 }
 
-export func main(args: List[String]) Void {
+func main() {
   half(3)                      // reject: E-OBL-001
 }
 ```
@@ -231,8 +233,8 @@ silently discards a failure must say so with the `recovers` modifier, so a signa
 
 In Rust, `a + b` on `i64` panics on overflow in debug builds and wraps in release builds. In Fortis it is
 accepted only when the checker can show it cannot overflow; otherwise it is rejected with `E-REF-002`, and you
-use a named operation that states the behaviour: checked (`Int.add`, an outcome), wrapping or saturating
-(LR 6.4). Integer behaviour never depends on the build mode (LR 6.4).
+say what happens on overflow: handle it, `a + b or fail` (Rust's `checked_add(b)?`), or use a named wrapping or
+saturating operation (LR 6.4). Integer behaviour never depends on the build mode (LR 6.4).
 
 ```fortis
 // reject: E-REF-002
@@ -243,11 +245,11 @@ pure func sum(a: Int, b: Int) Int => a + b      // reject: E-REF-002
 // accept
 pure func sum(a: Int<0..1000>, b: Int<0..1000>) Int<0..2000> => a + b
 
-pure try func checkedSum(a: Int, b: Int) Int => Int.add(a, b) or fail
+pure try func checkedSum(a: Int, b: Int) Int => a + b or fail
 
 test "arithmetic" {
   expect sum(1000, 1000) == 2000
-  expect (checkedSum(1, 2) or fail) == 3
+  expect checkedSum(1, 2) == 3
   expect Int.wrappingAdd(9223372036854775807, 1) == -9223372036854775807 - 1
 }
 ```
@@ -309,8 +311,8 @@ test "closure kinds" {
     let mut count = fn mut[editable seen](n: Int) Void {
       seen = Int.saturatingAdd(seen, n)
     }
-    editable count(4)
-    editable count(5)
+    count(4)
+    count(5)
   }
   let message = String.from("done")
   let finish = fn once[move message]() String => move message
@@ -335,7 +337,7 @@ class Config {
   export name: String
 }
 
-export func main(args: List[String]) Void {
+func main() {
   let config = Shared.create(Config(name: "prod"))
   let second = copy config     // reject: E-OWN-002
 }
@@ -369,11 +371,11 @@ that introduces the effect (LR 11.1):
 // reject: E-EFF-001
 import fortis.host { Console }
 
-pure func greet(console: Console) Void {      // reject: E-EFF-001 (a pure function takes no capability)
+pure func greet(console: Console) {      // reject: E-EFF-001 (a pure function takes no capability)
   console.print("hello")                   // reject: E-EFF-001
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -387,7 +389,7 @@ with no `'static` bound and no `Arc` (LR 12.5). Pool launches (`launchParallel`,
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 async func total(numbers: List[Int]) Int {
   let mut sum = 0
@@ -397,8 +399,7 @@ async func total(numbers: List[Int]) Int {
   return sum
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async func main(console: Console) {
   let odds = List.of(1, 3, 5)
   let evens = List.of(2, 4)
   scope tasks {
@@ -406,7 +407,7 @@ export async func main(args: List[String]) Void {
     let b = tasks.launch(total(evens))
     let x = await a
     let y = await b
-    caps.console.print("${x} and ${y}")
+    console.print("${x} and ${y}")
   }
 }
 ```

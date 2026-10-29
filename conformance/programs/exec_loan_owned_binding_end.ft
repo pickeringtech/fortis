@@ -1,0 +1,147 @@
+// execute: held h-fb h-side|drop h-fb|drop h-side|after held|first g-fb g-side|drop g-side|drop g-fb|after first|lent item l-side|drop l-side|after lent|rebound b-fb b-side|drop b-fb|drop b-side|after rebound|inner c-fb c-side|drop c-fb|drop c-side|after inner|drop r-fb|drop r-side|returned r-fb|drop v-fb|drop v-side|given 4|failing f-fb|drop f-fb|drop f-side|recovered|back 0|turn l0 m0|drop l0|drop m0|turn l1 m1|drop l1|drop m1|after loop|end|drop item
+// reports: log:level=info,message=drop h-fb,function=cleanup Token|log:level=info,message=drop h-side,function=cleanup Token|log:level=info,message=drop g-side,function=cleanup Token|log:level=info,message=drop g-fb,function=cleanup Token|log:level=info,message=drop l-side,function=cleanup Token|log:level=info,message=drop b-fb,function=cleanup Token|log:level=info,message=drop b-side,function=cleanup Token|log:level=info,message=drop c-fb,function=cleanup Token|log:level=info,message=drop c-side,function=cleanup Token|log:level=info,message=drop r-fb,function=cleanup Token|log:level=info,message=drop r-side,function=cleanup Token|log:level=info,message=drop v-fb,function=cleanup Token|log:level=info,message=drop v-side,function=cleanup Token|log:level=info,message=drop f-fb,function=cleanup Token|log:level=info,message=drop f-side,function=cleanup Token|log:level=info,message=drop l0,function=cleanup Token|log:level=info,message=drop m0,function=cleanup Token|log:level=info,message=drop l1,function=cleanup Token|log:level=info,message=drop m1,function=cleanup Token|log:level=info,message=drop item,function=cleanup Token
+// execute-trace: loans-end|drop Token|drop Token|loans-end|drop Token|drop Token|loans-end|drop Token|loans-end|drop Token|drop Token|loans-end|drop Token|drop Token|loans-end|drop Token|drop Token|loans-end|drop Token|drop Token|loans-end|drop Token|drop Token|loans-end|drop Token|drop Token|loans-end|drop Token|drop Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-380, 7.9: a binding of a `??` whose fallback it owns (`let t = empty.get(0) ?? move d`) is destroyed with its
+// block, in reverse declaration order with the block's other locals and traced as their owner is, whether it was
+// declared after them or before, and at every exit of the block: its end, `return`, `give`, `fail` and a loop's
+// turn; one that took a loan destroys nothing. A binding moved from it (`let q = move t`) owns the value instead,
+// and destroys it with its own block, in its order, outside a closure and inside one. Native code left the value
+// to Rust's scope end, after a local declared before the binding and without the `drop` event, and a binding moved
+// from it left the value with the first binding's block (D-380).
+import fortis.host { Console }
+
+export error Late {
+  code: "demo.late"
+}
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func heldAfter(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "h-fb")
+  {
+    let s = make(console, "h-side")
+    let t = empty.get(0) ?? move d
+    console.print("held ${t.label} ${s.label}")
+  }
+  console.print("after held")
+}
+
+func heldBefore(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "g-fb")
+  {
+    let t = empty.get(0) ?? move d
+    let s = make(console, "g-side")
+    console.print("first ${t.label} ${s.label}")
+  }
+  console.print("after first")
+}
+
+func lentAfter(console: Shared[Console], xs: List[Token]) {
+  {
+    let s = make(console, "l-side")
+    let t = xs.get(0) ?? make(console, "unused")
+    console.print("lent ${t.label} ${s.label}")
+  }
+  console.print("after lent")
+}
+
+func rebound(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "b-fb")
+  let t = empty.get(0) ?? move d
+  {
+    let s = make(console, "b-side")
+    let q = move t
+    console.print("rebound ${q.label} ${s.label}")
+  }
+  console.print("after rebound")
+}
+
+func reboundInClosure(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "c-fb")
+  let t = empty.get(0) ?? move d
+  {
+    let f = fn once[move t, alias console]() Void {
+      let s = make(console, "c-side")
+      let q = move t
+      console.print("inner ${q.label} ${s.label}")
+    }
+    move f()
+  }
+  console.print("after inner")
+}
+
+func returned(console: Shared[Console], empty: List[Token]) String {
+  let d = make(console, "r-fb")
+  let s = make(console, "r-side")
+  let t = empty.get(0) ?? move d
+  return copy t.label
+}
+
+func given(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "v-fb")
+  let n = if empty.count() == 0 {
+    let s = make(console, "v-side")
+    let t = empty.get(0) ?? move d
+    give t.label.scalarCount()
+  } else {
+    give 0
+  }
+  console.print("given ${n}")
+}
+
+try func failed(console: Shared[Console], empty: List[Token]) Int {
+  let d = make(console, "f-fb")
+  let s = make(console, "f-side")
+  let t = empty.get(0) ?? move d
+  console.print("failing ${t.label}")
+  fail Late()
+}
+
+func looped(console: Shared[Console], empty: List[Token]) {
+  let mut i = 0
+  while i < 2 {
+    let d = make(console, "l${i}")
+    let s = make(console, "m${i}")
+    let t = empty.get(0) ?? move d
+    console.print("turn ${t.label} ${s.label}")
+    i = i + 1
+    if i == 2 {
+      break
+    }
+  }
+  console.print("after loop")
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  heldAfter(console, empty)
+  heldBefore(console, empty)
+  lentAfter(console, xs)
+  rebound(console, empty)
+  reboundInClosure(console, empty)
+  console.print("returned ${returned(console, empty)}")
+  given(console, empty)
+  let n = failed(console, empty) catch e {
+    console.print("recovered")
+    recover 0
+  }
+  console.print("back ${n}")
+  looped(console, empty)
+  console.print("end")
+}

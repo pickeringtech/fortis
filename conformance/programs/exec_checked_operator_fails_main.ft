@@ -1,0 +1,17 @@
+// execute: 9 before|fail:numeric.overflow
+// requires: runtime
+// covers: LANG-06-04
+// 6.4 (X-345): `a * b + c or fail` propagates the first checked operation's failure out of the `try` function, here
+// `try main`, whose failure the runtime reports: the multiplication overflows, so the addition never runs.
+import fortis.host { Console }
+
+try func scale(a: Int, b: Int, c: Int) Int {
+  return a * b + c or fail
+}
+
+try func main(console: Console) {
+  let fine = scale(2, 4, 1) or fail
+  console.print("${fine} before")
+  let big = scale(4611686018427387904, 2, -1) or fail
+  console.print("after ${big}")
+}

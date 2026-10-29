@@ -3,27 +3,25 @@
 // covers: LANG-07-07
 // 7.9: three owners are destroyed in reverse initialisation order at block exit; an assignment evaluates
 // the new value (make 4) before dropping the old one (cleanup 1).
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(console: Shared[Console], id: Int) Handle {
     console.print("make ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   let mut a = Handle.make(alias console, 1)
   let b = Handle.make(alias console, 2)
   let c = Handle.make(alias console, 3)
   a = Handle.make(alias console, 4)
 }
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
   console.print("done")

@@ -16,5 +16,5 @@ export try func find(count: Int) Item {
   if count == 0 {
     fail Missing(count: count)
   }
-  return Item(count: count, weight: Int.wrappingMul(count, 3))
+  return Item(count, weight: Int.wrappingMul(count, 3))
 }

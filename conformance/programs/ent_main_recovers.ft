@@ -2,14 +2,13 @@
 // covers: LANG-04-06
 // Each of the four entry forms of 4.6 may also carry `recovers` (X-155): a `recovers` main is a valid entry form,
 // and the disposition is what the body needs when it discharges a failure without reporting it.
-import fortis.host { Host }
+import fortis.host { Console }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+recovers func main(console: Console) {
   let big = 9_223_372_036_854_775_807
-  let overflow = Int.add(big, 1) catch e {
-    caps.console.print("checked add failed: ${e.code}")
+  let overflow = big + 1 catch e {
+    console.print("checked add failed: ${e.code}")
     recover 0
   }
-  caps.console.print("overflow ${overflow}")
+  console.print("overflow ${overflow}")
 }

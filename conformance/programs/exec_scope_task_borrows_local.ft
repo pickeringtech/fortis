@@ -5,12 +5,12 @@
 // joins its tasks when the block exits, before the block's locals are destroyed in reverse order (7.9), an
 // awaited result and a closure that holds a loan of the task set among them, and a binding a `let` pattern makes
 // may be lent too. Natively those locals are declared before the task set so that Rust drops them after it.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Res {
   console: Shared[Console]
   label: String
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("drop ${self.label}")
   }
 }
@@ -29,9 +29,7 @@ export class Boxed {
   export guard: Res
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+async func main(out: Console) {
   let console = Shared.create(move out)
   scope tasks {
     let words = List.of(String.from("abc"), String.from("de"))

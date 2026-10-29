@@ -12,6 +12,6 @@ fortis-types = { path = "../fortis-types" }
 fortis-diag = { path = "../fortis-diag" }
 
 [features]
-# the apparatus check of SP-07 (spikes/SP-07/design.md 13): fault switches read from FORTIS_RELOAD_FAULT; never in a
+# the apparatus check of SP-07 (SP-07's design, section 13): fault switches read from FORTIS_RELOAD_FAULT; never in a
 # default build
 reload-faults = []

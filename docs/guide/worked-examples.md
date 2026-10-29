@@ -4,6 +4,8 @@
 *Human mode. Each program is shown whole, with its output, and then explained piece by piece. Source of truth:
 the LR; the [tour](tour.md) has the worked module of LR 2.*
 
+> Preview: the ledger's `Sku` is a newtype (LR 6.9), which arrives in v0.1, and the last program is concurrent (LR 12.3, 12.5), which arrives in v0.3; both are checked and run today. The word tally and the expression evaluator are in v0.0.1.
+
 The chapters each show one construct at a time. Real programs use several at once, and the interesting part is
 how they fit together: who owns what, where a failure goes, which line is allowed to change which value. These
 four programs are the size of a first real task. Every one of them is checked and run by the toolchain, like
@@ -16,7 +18,7 @@ things about the counts. It uses a class with private state, a `Map`, loops, and
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 import fortis.text { Text, Builder }
 
 // One word and the number of times it occurred.
@@ -32,21 +34,21 @@ class Tally {
 
   export pure func empty() Tally => Tally(counts: Map.default(), order: List.default())
 
-  export func add(editable self, word: StringView) Void {
-    let seen = self.counts.get(String.from(word)) ?? 0
+  export func add(editable self, word: StringView) {
+    let seen = self.counts.get(word) ?? 0
     if seen == 0 {
-      editable self.order.push(String.from(word))
+      self.order.push(String.from(word))
     }
-    editable self.counts.set(String.from(word), Int.saturatingAdd(seen, 1))
+    self.counts.set(String.from(word), Int.saturatingAdd(seen, 1))
   }
 
   export pure func entries(self) List[Entry] {
     let mut out: List[Entry] = List.default()
     for word in self.order {
-      let n = self.counts.get(copy word) ?? 0
-      editable out.push(Entry(word: copy word, count: n))
+      let n = self.counts.get(word) ?? 0
+      out.push(Entry(word: copy word, count: n))
     }
-    return move out
+    return out
   }
 }
 
@@ -60,38 +62,37 @@ pure func mostFrequent(entries: ListView[Entry]) Entry? {
       bestCount = entry.count
     }
   }
-  return move best
+  return best
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut tally = Tally.empty()
   for word in Text.words("the cat and the hat and the bat") {
-    editable tally.add(word)
+    tally.add(word)
   }
   let entries = tally.entries()
   for entry in entries {
-    caps.console.print("${entry.word}: ${entry.count}")
+    console.print("${entry.word}: ${entry.count}")
   }
 
   let threshold = 2
   let repeated = entries.countWhere(fn[threshold](e: Entry) Bool => e.count >= threshold)
-  caps.console.print("${repeated} words occur at least ${threshold} times")
+  console.print("${repeated} words occur at least ${threshold} times")
 
   let mut summary = Builder.create()
   {
     let mut describe = fn mut[editable summary](e: Entry) Void {
-      editable summary.append("[${e.word} ${e.count}]")
+      summary.append("[${e.word} ${e.count}]")
     }
     for entry in entries {
-      editable describe(entry)
+      describe(entry)
     }
   }
-  caps.console.print(summary.finish())
+  console.print(summary.finish())
 
   match mostFrequent(entries) {
-    present(top) => caps.console.print("most frequent: ${top.word}")
-    null => caps.console.print("no words")
+    present(top) => console.print("most frequent: ${top.word}")
+    null => console.print("no words")
   }
 }
 ```
@@ -119,28 +120,29 @@ class with no `self` (LR 9.2). That is how a class keeps an invariant, here that
 initialise (LR 6.10). Rather than iterating the map, the class keeps the order of first sight in a list of its
 own, so the order is part of its state and is visible in its declaration.
 
-### Changing the tally is visible at the call
+### Changing the tally is visible where it is declared
 
-`add` declares `editable self`: it needs an exclusive loan of the tally. The caller must say so, `editable
-tally.add(word)`, and the tally must be a `let mut` binding (LR 7.5, LR 9.3). A reader of `main` sees every line
-that can change `tally`. `entries` takes plain `self`, a read loan, so `tally.entries()` needs no marker and
-cannot change anything.
+`add` declares `editable self`: it needs an exclusive loan of the tally. The tally is a `let mut` binding, which
+is what allows `tally.add(word)` to change it, so a reader of `main` learns from one declaration that `tally`
+changes (LR 7.5, LR 9.3). `entries` takes plain `self`, a read loan, so `tally.entries()` cannot change anything.
 
 `word` is a `StringView`, a borrowed piece of text. The map's keys are owned `String`s, so `add` makes each one
-with `String.from(word)`, which is where the allocation happens and is written down (LR 6.6). The three calls to
+with `String.from(word)`, which is where the allocation happens and is written down (LR 6.6). The two calls to
 `String.from` each produce a fresh value, and a fresh value is passed to an `owned` parameter such as `push`'s
 without any marker (LR 7.5).
 
-`self.counts.get(…)` returns an optional read loan of the stored count, `null` when the key is absent, and
-`?? 0` supplies the fallback (LR 6.7, LR 6.8). The count is incremented with `Int.saturatingAdd`, one of the
+A lookup needs no owned key: a `Map` with `String` keys takes its `get` key as a `StringView`, so
+`self.counts.get(word)` looks the word up as it is, allocating nothing (LR 6.7). Older code writes
+`get(String.from(word))` or `get(copy word)`; `fortis fmt` drops the copy. `get` returns an optional read loan of
+the stored count, `null` when the key is absent, and `?? 0` supplies the fallback (LR 6.7, LR 6.8). The count is incremented with `Int.saturatingAdd`, one of the
 named integer operations, because a plain `+` on an unbounded `Int` could overflow and the checker would refuse
 it (LR 6.4).
 
 ### Building a list and returning it
 
 `entries` is `pure`, although it pushes onto a list: the list is created in the same call, so writing to it
-changes nothing anyone else can see (LR 11.1). It returns the list with `return move out`, transferring the
-local's ownership to the caller (LR 7.6). Each `Entry` gets its own copy of the word, written `copy word`:
+changes nothing anyone else can see (LR 11.1). It returns the list with `return out`, which moves the local to
+the caller, since nothing can use it afterwards (LR 7.5). Each `Entry` gets its own copy of the word, written `copy word`:
 duplicating a `String` allocates, so it is never implicit (LR 6.11, LR 7.5).
 
 `mostFrequent` takes a `ListView[Entry]`, a borrowed view of a list, and `main` passes `entries`, the list
@@ -154,7 +156,7 @@ lambda does nothing but compare, so its inferred summary is `pure` and it satisf
 parameter without saying so (LR 6.7, LR 11.3).
 
 `describe` appends to `summary`, so it captures it with `editable summary` and is a `fn mut`; its binding is
-`let mut`, and each call is written `editable describe(entry)` (LR 8.2). While `describe` exists it holds an
+`let mut`, which is what lets each call, `describe(entry)`, change it (LR 7.5, LR 8.2). While `describe` exists it holds an
 exclusive loan of `summary`, so the closure lives in an inner block: at the block's closing brace the closure is
 dropped, the loan ends, and `summary.finish()` may read the builder again (LR 7.3, LR 8.3). Without the block the
 call to `finish` would be rejected as a use of a loaned owner.
@@ -169,6 +171,8 @@ call to `finish` would be rejected as a use of a loaned owner.
 The second program is a package: a library module with the ledger and its tests, and an application module that
 uses it. It shows nominal ids, declared errors, and the ways a failure can be handled: propagated, recovered
 after a report, and left to end the program.
+
+> Preview: `Sku` is a newtype (LR 6.9), which arrives in v0.1.
 
 ```yaml
 # file: guide.ledger/project.yaml
@@ -211,8 +215,8 @@ export class Ledger {
 
   export pure func empty() Ledger => Ledger(items: List.default())
 
-  export func add(editable self, item: owned Item) Void {
-    editable self.items.push(move item)
+  export func add(editable self, item: owned Item) {
+    self.items.push(move item)
   }
 
   // Where the item with this SKU is held.
@@ -222,7 +226,7 @@ export class Ledger {
       if item.sku == sku {
         return i
       }
-      i = Int.add(i, 1) or fail
+      i = i + 1 or fail
     }
     fail UnknownSku(sku: sku)
   }
@@ -238,59 +242,58 @@ export class Ledger {
     let at = self.indexOf(sku) or fail
     let item = self.items.at(at) or fail
     if wanted > item.quantity {
-      fail Insufficient(sku: sku, held: item.quantity, wanted: wanted)
+      fail Insufficient(sku: sku, held: item.quantity, wanted)
     }
     let left = Int<0..10000>.validate(item.quantity - wanted) or fail
-    editable self.items.set(at, Item(sku: sku, name: copy item.name, quantity: left)) or fail
+    self.items.set(at, Item(sku, name: copy item.name, quantity: left)) or fail
     return left
   }
 }
 
 test "taking stock leaves the rest" {
   let mut ledger = Ledger.empty()
-  editable ledger.add(Item(sku: Sku(7), name: "washer", quantity: 10))
-  expect (editable ledger.take(Sku(7), 4) or fail) == 6
-  expect (ledger.quantityOf(Sku(7)) or fail) == 6
+  ledger.add(Item(sku: Sku(7), name: "washer", quantity: 10))
+  expect ledger.take(Sku(7), 4) == 6
+  expect ledger.quantityOf(Sku(7)) == 6
 }
 
 test "taking too much fails and changes nothing" {
   let mut ledger = Ledger.empty()
-  editable ledger.add(Item(sku: Sku(7), name: "washer", quantity: 3))
-  let left = editable ledger.take(Sku(7), 4) catch e {
+  ledger.add(Item(sku: Sku(7), name: "washer", quantity: 3))
+  let left = ledger.take(Sku(7), 4) catch e {
     expect e.code == "ledger.insufficient"
     recover 0
   }
   expect left == 0
-  expect (ledger.quantityOf(Sku(7)) or fail) == 3
+  expect ledger.quantityOf(Sku(7)) == 3
 }
 ```
 
 ```fortis
 // accept (exit status 1)
 // file: guide.ledger/src/app.ft
-import fortis.host { Host }
+import fortis.host { Console }
 import guide.ledger.stock { Ledger, Item, Sku }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let mut ledger = Ledger.empty()
-  editable ledger.add(Item(sku: Sku(101), name: "bolt", quantity: 40))
-  editable ledger.add(Item(sku: Sku(202), name: "nut", quantity: 5))
+  ledger.add(Item(sku: Sku(101), name: "bolt", quantity: 40))
+  ledger.add(Item(sku: Sku(202), name: "nut", quantity: 5))
 
-  let bolts = editable ledger.take(Sku(101), 15) or fail
-  caps.console.print("bolts left: ${bolts}")
+  let bolts = ledger.take(Sku(101), 15) or fail
+  console.print("bolts left: ${bolts}")
 
   // An expected failure, handled where it happens: reported once, then replaced.
-  let nuts = editable ledger.take(Sku(202), 9) catch e {
-    caps.console.print("could not take 9 nuts: ${e.code}")
+  let nuts = ledger.take(Sku(202), 9) catch e {
+    console.print("could not take 9 nuts: ${e.code}")
     report e
     recover ledger.quantityOf(Sku(202)) or fail
   }
-  caps.console.print("nuts left: ${nuts}")
+  console.print("nuts left: ${nuts}")
 
   // An unexpected failure propagates: main fails, and the runtime reports it once.
-  let washers = editable ledger.take(Sku(303), 1) or fail
-  caps.console.print("never printed: ${washers}")
+  let washers = ledger.take(Sku(303), 1) or fail
+  console.print("never printed: ${washers}")
 }
 ```
 
@@ -325,8 +328,9 @@ because a newtype over a trivial type is `Equatable` when its representation is 
 that may name only payload fields (LR 10.3). `fail UnknownSku(sku: sku)` inside a `try` function ends it with that
 failure (LR 10.1).
 
-`indexOf` is `pure try`: it reads only the ledger and may fail. Its counter uses `Int.add(i, 1) or fail`, the
-checked addition, which fails rather than wrapping (LR 6.4). `items.at(at)` is the checked way to read a list
+`indexOf` is `pure try`: it reads only the ledger and may fail. Its counter uses `i = i + 1 or fail`: the checker
+cannot prove that `i + 1` fits, so under `or fail` the `+` is the checked addition, which fails rather than
+wrapping (LR 6.4). `items.at(at)` is the checked way to read a list
 element, an outcome that fails past the end (LR 6.7).
 
 ### The checker's view of a subtraction
@@ -345,7 +349,8 @@ element, and the new one needs its own `String` (LR 7.5).
 
 In `main`, every call to a `try` function produces an outcome that must be consumed exactly once (LR 10.1):
 
-- `editable ledger.take(Sku(101), 15) or fail` propagates any failure out of `main` (LR 10.2).
+- `ledger.take(Sku(101), 15) or fail` propagates any failure out of `main` (LR 10.2). `take` changes the ledger,
+  which `main` declares `let mut`.
 - The second `take` is expected to fail. Its `catch e { … }` block runs only on failure; it prints the code,
   writes the failure to the diagnostic plane with `report e`, which consumes it, and ends with `recover …`, the
   value the expression has instead (LR 10.4, LR 10.6). Because the failure was reported before being replaced,
@@ -355,8 +360,9 @@ In `main`, every call to a `try` function produces an outcome that must be consu
   fails, the runtime writes exactly one report of the failure to standard error and the process exits with
   status 1 (LR 4.6).
 
-The tests in `stock.ft` are part of the module and are compiled only in test builds (LR 14). A test body is
-implicitly `try`, so `or fail` works there, and expecting a failure inside `catch` consumes it (LR 14).
+The tests in `stock.ft` are part of the module and are compiled only in test builds (LR 14). In a test body a
+failing call fails the test, so `expect ledger.take(Sku(7), 4) == 6` needs no `or fail`, and expecting a failure
+inside `catch` consumes it (LR 14).
 
 ## An expression evaluator
 
@@ -365,7 +371,7 @@ The third program evaluates arithmetic expressions held as a tree. It shows an e
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error DivideByZero {
   code: "calc.divide_by_zero"
@@ -387,12 +393,12 @@ pure try func eval(e: Expr) Int {
     Add(left: l, right: r) => {
       let a = eval(l) or fail
       let b = eval(r) or fail
-      give Int.add(a, b) or fail
+      give a + b or fail
     }
     Multiply(left: l, right: r) => {
       let a = eval(l) or fail
       let b = eval(r) or fail
-      give Int.mul(a, b) or fail
+      give a * b or fail
     }
     Divide(left: l, right: r) => {
       let a = eval(l) or fail
@@ -400,11 +406,11 @@ pure try func eval(e: Expr) Int {
       if b == 0 {
         fail DivideByZero()
       }
-      give Int.div(a, b) or fail
+      give a / b or fail
     }
     Negate(operand: o) => {
       let a = eval(o) or fail
-      give Int.sub(0, a) or fail
+      give 0 - a or fail
     }
   }
 }
@@ -420,21 +426,20 @@ pure func show(e: Expr) String {
   }
 }
 
-pure func number(v: Int) Expr => Expr.Number(value: v)
+pure func number(v: Int) Expr => Number(value: v)
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let examples = List.of(
-    Expr.Add(left: number(2), right: Expr.Multiply(left: number(3), right: number(4))),
-    Expr.Negate(operand: Expr.Divide(left: number(10), right: number(3))),
-    Expr.Divide(left: number(1), right: Expr.Add(left: number(2), right: Expr.Negate(operand: number(2)))),
-    Expr.Multiply(left: number(4611686018427387904), right: number(2)),
+    Expr.Add(left: number(2), right: Multiply(left: number(3), right: number(4))),
+    Negate(operand: Divide(left: number(10), right: number(3))),
+    Divide(left: number(1), right: Add(left: number(2), right: Negate(operand: number(2)))),
+    Multiply(left: number(4611686018427387904), right: number(2)),
   )
   for e in examples {
     match eval(e) {
-      success(v) => caps.console.print("${show(e)} = ${v}")
+      success(v) => console.print("${show(e)} = ${v}")
       failure(f) => {
-        caps.console.print("${show(e)} fails: ${f.code}")
+        console.print("${show(e)} fails: ${f.code}")
         report f
       }
     }
@@ -466,8 +471,9 @@ A single-expression arm is just `Pattern => value`. An arm that needs statements
 `give value` (LR 9.8, LR 5.4). Inside those blocks `or fail` and `fail` leave `eval` itself, not the arm: they
 always mean the enclosing function (LR 5.4).
 
-Each operation uses the checked integer family, `Int.add`, `Int.mul`, `Int.div`, `Int.sub`, whose results are
-outcomes failing with `numeric.overflow` or `numeric.divide_by_zero` (LR 6.4). The evaluator also checks for a
+Each operation is checked: `a + b or fail`, `a * b or fail`, `a / b or fail` and `0 - a or fail` cannot be
+proved safe on any `Int`, so under `or fail` each is the checked operation, failing with `numeric.overflow` or
+`numeric.divide_by_zero` (LR 6.4). The evaluator also checks for a
 zero divisor itself, so that a division by zero reports the calculator's own code. Integer division truncates
 toward zero, so `10 / 3` is `3` (LR 6.4).
 
@@ -482,9 +488,11 @@ reported rather than silently replaced, `main` needs no `recovers` (LR 10.4, LR 
 The last program runs work concurrently on the core executor. Each batch of readings is summed by its own task;
 the tasks belong to a `scope`, which joins them before it ends.
 
+> Preview: async functions, `scope` and `join` (LR 12.3, 12.5) arrive in v0.3.
+
 ```fortis
 // accept
-import fortis.host { Host, Console }
+import fortis.host { Console }
 
 export error Empty {
   code: "stats.empty"
@@ -497,7 +505,7 @@ async try func total(readings: owned List[Int]) Int {
   }
   let mut sum = 0
   for r in readings {
-    sum = Int.add(sum, r) or fail
+    sum = sum + r or fail
   }
   return sum
 }
@@ -522,27 +530,26 @@ async try func sumAll(console: Console, a: owned List[Int], b: owned List[Int]) 
     let x = await first or fail
     let y = await second or fail
     console.print("batch totals ${x} and ${y}")
-    return Int.add(x, y) or fail
+    return x + y or fail
   }
 }
 
-export async try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async try func main(console: Console) {
   defer {
-    caps.console.print("finished")
+    console.print("finished")
   }
-  let all = await sumAll(caps.console, List.of(3, 5, 8), List.of(13, 21)) or fail
-  caps.console.print("grand total ${all}")
+  let all = await sumAll(console, List.of(3, 5, 8), List.of(13, 21)) or fail
+  console.print("grand total ${all}")
 
   let peaks = await join(peak(List.of(4, 9, 2)), peak(List.default()))
-  caps.console.print("peaks ${peaks.0 ?? -1} and ${peaks.1 ?? -1}")
+  console.print("peaks ${peaks.0 ?? -1} and ${peaks.1 ?? -1}")
 
-  let empty = await sumAll(caps.console, List.of(1), List.default()) catch f {
-    caps.console.print("could not sum: ${f.code}")
+  let empty = await sumAll(console, List.of(1), List.default()) catch f {
+    console.print("could not sum: ${f.code}")
     report f
     recover 0
   }
-  caps.console.print("after the failure: ${empty}")
+  console.print("after the failure: ${empty}")
 }
 ```
 

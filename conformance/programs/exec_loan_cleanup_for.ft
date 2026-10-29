@@ -1,0 +1,66 @@
+// execute: loop b|break at a|after borrowed|fail at a|recovered 1|local own|after local|drop own|end|drop a|drop b
+// reports: log:level=info,message=drop own,function=cleanup Token|log:level=info,message=drop a,function=cleanup Token|log:level=info,message=drop b,function=cleanup Token
+// requires: runtime
+// covers: LANG-07-07, LANG-07-05
+// D-338, 7.5, 12.2: `for t in xs` over a borrowed list lends each element to `t`; the loan ends with the loop,
+// however it ends (normally, by `break`, `continue` or a failure), and runs no cleanup. Each element's cleanup runs
+// once, when the list's owner ends, whether the owner is the caller or a local of the loop's own block. The VM
+// runs a cleanup for a value's last handle only, so its loop binding lets go of its element when the loop ends:
+// had it kept it, the owner's cleanup of that element would not run.
+import fortis.host { Console }
+
+export error Stop {
+  code: "demo.stop"
+}
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    log.info("drop ${self.label}")
+  }
+}
+
+func borrowed(console: Shared[Console], xs: List[Token]) {
+  for t in xs {
+    if t.label == "a" {
+      continue
+    }
+    console.print("loop ${t.label}")
+  }
+  for t in xs {
+    console.print("break at ${t.label}")
+    break
+  }
+  console.print("after borrowed")
+}
+
+try func failing(console: Shared[Console], xs: List[Token]) Int {
+  for t in xs {
+    console.print("fail at ${t.label}")
+    fail Stop()
+  }
+  return 0
+}
+
+func local(console: Shared[Console]) {
+  let mut xs: List[Token] = List.default()
+  xs.push(Token(label: String.from("own"), console: console.retain()))
+  for t in xs {
+    console.print("local ${t.label}")
+  }
+  console.print("after local")
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut toks: List[Token] = List.default()
+  toks.push(Token(label: String.from("a"), console: console.retain()))
+  toks.push(Token(label: String.from("b"), console: console.retain()))
+  borrowed(console, toks)
+  let n = failing(console, toks) or recover 1
+  console.print("recovered ${n}")
+  local(console)
+  console.print("end")
+}

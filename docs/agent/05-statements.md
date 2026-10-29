@@ -7,15 +7,15 @@
 
 | Rule | Statement | LR |
 |---|---|---|
-| LANG-05-01 | `let x = e` / `let mut x = e` declare (initialiser required); `x = e` assigns only to a visible `let mut` binding, or a field path rooted in a `let mut` binding, an `editable` parameter or an `editable` loan. Assignment is a statement and does not chain. | LR 5.1 |
+| LANG-05-01 | `let x = e` / `let mut x = e` declare (initialiser required); `let Pattern = move p` destructures a class, tuple or record, and a pattern that can fail to match (a variant, a literal, `null`, `present(…)`, at any depth) is `E-MAT-004`: use `match`; `x = e` assigns only to a visible `let mut` binding, or a field path rooted in a `let mut` binding, an `editable` parameter or an `editable` loan. Assignment is a statement and does not chain. | LR 5.1 |
 | LANG-05-02 | Every block exit (fall-through, `return`, `fail`, `break`, `continue`, `give`) ends the block's loans, runs its `defer`s LIFO, then drops its owned locals in reverse initialisation order. | LR 5.1 |
 | LANG-05-03 | `if` and `while` conditions are `Bool`; nothing else converts. | LR 5.2 |
 | LANG-05-04 | `for i in a..<b` (or `a..b`) gives an immutable index refined to the range; the index is never assignable. | LR 5.3 |
 | LANG-05-05 | A non-`Void` function ends every path in `return`, `fail` or a `Never` call; no implicit value. | LR 5.4 |
 | LANG-05-06 | Precedence and associativity follow the LR 5.6 table; outcome operators (`or fail`, `or recover`, `catch`), `??` and `&&`/`\|\|` do not mix without parentheses. | LR 5.6 |
 | LANG-05-07 | Operands and arguments evaluate left to right, once; receiver before arguments; calls run evaluate, activate, invoke, release. | LR 5.7 |
-| LANG-05-08 | A non-`Void` expression statement needs `discard`; a linear value (`Outcome`, `Future`, `Task`, …) cannot be discarded, except a never-polled future whose environment holds no linear value and no exclusive loan (it emits a `not_started` record). | LR 5.5, 12.3 |
-| LANG-05-09 | Positional arguments first, then named in any order; each parameter bound once; parameter names are exported API. | LR 5.8 |
+| LANG-05-08 | A non-`Void` expression statement needs `discard`, except a call of a function declared `@ignorable`; a linear value (`Outcome`, `Future`, `Task`, …) cannot be discarded, except a never-polled future whose environment holds no linear value and no exclusive loan (it emits a `not_started` record). | LR 5.5, 12.3 |
+| LANG-05-09 | Positional arguments first, then named in any order; each parameter bound once; parameter names are exported API. A pun `wanted` is `wanted: wanted`: after a named argument, and anywhere in a class constructor; before the first named argument a bare name is positional; an owned ownership-bearing local is written `name: move name`, never punned. | LR 5.8, X-345 |
 
 Related, stated in LR 4.5: shadowing a visible binding is `E-NAM-003`.
 
@@ -30,7 +30,7 @@ Related, stated in LR 4.5: shadowing a visible binding is `E-NAM-003`.
 | E-TYP-110 | a path reaches the end of a non-`Void` function, or a block arm or `if`-expression branch does not end in `give` | add `return`/`fail` on that path, or `give` in the branch | LR 5.4 |
 | E-TYP-120 | `give` outside a match arm or `if` expression, `recover` outside `catch`, `break`/`continue` outside a loop | move the statement into the construct it ends | LR 5.4 |
 | E-ERR-001 | `fail` outside a `try` function | declare the function `try`, or handle the condition without failing | LR 5.4 |
-| E-TYP-140 | unused non-`Void` expression statement | `discard e`, or bind and use the value | LR 5.5 |
+| E-TYP-140 | unused non-`Void` expression statement (a call of an `@ignorable` function excepted) | `discard e`, or bind and use the value; declare the function `@ignorable` when most callers drop its result | LR 5.5 |
 | E-OBL-001 | `discard` of a linear value (a never-polled future holding nothing linear and no exclusive loan excepted) | consume it: `or fail`, `or recover v`, `catch`, `match`, `await`, launch | LR 5.5, 12.3 |
 | E-SYN-004 | outcome operators, `??` and `&&`/`\|\|` mixed without parentheses | parenthesise the intended grouping | LR 5.6 |
 | E-SYN-000 | not a sentence of the grammar (for example `f() or fail ?? 0`) | split the expression; `let v = f() or fail` on its own line | LR 5.6 |
@@ -218,7 +218,7 @@ class Buffer {
   export bytes: Int
 }
 
-func update(target: editable Buffer, size: Int) Void {
+func update(target: editable Buffer, size: Int) {
   target.bytes = size
 }
 
@@ -237,7 +237,7 @@ class Buffer {
   export bytes: Int
 }
 
-func update(target: editable Buffer, size: Int) Void {
+func update(target: editable Buffer, size: Int) {
   target.bytes = size
 }
 
@@ -278,6 +278,25 @@ pure func area(width: Int<0..100>, height: Int<0..100>) Int => width * height
 test "area" {
   expect area(2, height: 3) == 6
   expect area(height: 3, width: 2) == 6
+}
+```
+
+### `@ignorable` instead of `discard` (LR 5.5)
+
+A function whose result most callers do not need is declared `@ignorable` once, and its call statements drop the
+result without `discard` (LR 5.5, X-345). A linear result can never be ignorable (`E-TYP-150`).
+
+```fortis
+// accept
+@ignorable
+func remember(seen: editable Set[Int], n: Int) Bool {
+  return seen.add(n)
+}
+
+test "remember" {
+  let mut seen: Set[Int] = Set.default()
+  remember(editable seen, 4)
+  expect seen.count() == 1
 }
 ```
 

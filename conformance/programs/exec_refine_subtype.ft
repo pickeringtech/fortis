@@ -1,18 +1,17 @@
 // execute: 42|142|refinement.out_of_range
 // requires: runtime
 // covers: LANG-06-02
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func wide(value: Int<0..200>) Int => value
 
-export try recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try recovers func main(console: Console) {
   let small = Int<0..50>.validate(42) or fail
-  caps.console.print("${wide(small)}")
+  console.print("${wide(small)}")
   let big = Int<0..200>.validate(142) or fail
-  caps.console.print("${wide(big)}")
+  console.print("${wide(big)}")
   let bad = Int<0..50>.validate(142) catch e {
-    caps.console.print(e.code)
+    console.print(e.code)
     recover 0
   }
   discard bad

@@ -1,0 +1,72 @@
+// execute: bye 1|got 1|bare|got 2|bye 3|got 3|bye 9|got 9|end
+// execute-trace: loans-end|defer|loans-end|defer|loans-end|defer|loans-end|defer
+// requires: runtime
+// covers: LANG-12-01, LANG-06-11, LANG-07-05, LANG-03-06
+// D-411: a value of a class declared `trivial` (6.11) is copied by `return p` (7.5), so a deferred block that reads
+// the local after the return, in a hole or bare, still sees it: alone, inside a tuple and inside an enum payload.
+// The interpreter's value-level test of 6.11 had no case for a trivial class, so it marked the local moved and
+// stopped with a dynamic failure where both checkers accept the program and the VM and native code run it. The
+// same output and trace on every backend. A record holding one runs on the interpreter and the VM as well, but
+// native code does not build a record returned past a deferred block that reads it (a known limitation).
+import fortis.host { Console }
+
+trivial class Point {
+  export x: Int
+  export y: Int
+}
+
+enum Shape {
+  Dot(p: Point)
+  Empty
+}
+
+func px(s: Shape) Int => match s {
+  Dot(p) => p.x
+  Empty => 0
+}
+
+func alone(console: Shared[Console]) Point {
+  let p = Point(x: 1, y: 2)
+  defer {
+    console.print("bye ${p.x}")
+  }
+  return p
+}
+
+func bare(console: Shared[Console]) Point {
+  let p = Point(x: 2, y: 3)
+  defer {
+    discard p
+    console.print("bare")
+  }
+  return p
+}
+
+func inTuple(console: Shared[Console]) (Point, Int) {
+  let r = (Point(x: 3, y: 4), 7)
+  defer {
+    console.print("bye ${r.0.x}")
+  }
+  return r
+}
+
+func inEnum(console: Shared[Console]) Shape {
+  let s: Shape = Dot(p: Point(x: 9, y: 0))
+  defer {
+    console.print("bye ${px(s)}")
+  }
+  return s
+}
+
+func main(console: Console) {
+  let shared = Shared.create(move console)
+  let a = alone(shared)
+  shared.print("got ${a.x}")
+  let b = bare(shared)
+  shared.print("got ${b.x}")
+  let t = inTuple(shared)
+  shared.print("got ${t.0.x}")
+  let s = inEnum(shared)
+  shared.print("got ${px(s)}")
+  shared.print("end")
+}

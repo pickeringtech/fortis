@@ -1,5 +1,5 @@
 // Kit signature fixture (DEL-06).
 export class Application {
   export trusted func build(caps: owned Capabilities) Application
-  export trusted try func run(self) Void
+  export trusted try func run(self)
 }

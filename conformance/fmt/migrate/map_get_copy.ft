@@ -1,0 +1,14 @@
+// A `Map[String, V]` reads its key through a view, so the copy made only to look a key up goes: `get(copy key)`
+// and `get(String.from(word))` become `get(key)` and `get(word)` (6.7; X-345, R11). `set` keeps its owned key.
+pure func tally(words: ListView[StringView]) Map[String, Int] {
+  let mut counts: Map[String, Int] = Map.default()
+  for word in words {
+    let seen = counts.get(String.from(word)) ?? 0
+    editable counts.set(String.from(word), Int.wrappingAdd(seen, 1))
+  }
+  return move counts
+}
+
+pure func countOf(counts: Map[String, Int], key: String) Int {
+  return counts.get(copy key) ?? 0
+}

@@ -2,9 +2,8 @@
 // covers: LANG-04-06
 // A comment does not select tests (LR 3.7, LR 4.6). The line below is the harness marker.
 // tests: run
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("hello")
+func main(console: Console) {
+  console.print("hello")
 }

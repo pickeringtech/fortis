@@ -3,7 +3,7 @@
 <!-- covers: LR 11 -->
 *Human mode. Agent mode: [Effects and contracts, by rule](../agent/11-effects.md). Source of truth: LR 11.*
 
-> Preview: contracts (LR 11.5) arrive in v0.1. Effects, claims, noalloc and capabilities (LR 11.1, 11.2, 11.3, 11.4 and 11.6) arrive in v0.2. The observation plane and aspects (LR 11.7, 11.8) arrive in v0.5.
+> Preview: contracts (LR 11.5) arrive in v0.1. Effects, claims, noalloc and capabilities (LR 11.1, 11.2, 11.3, 11.4 and 11.6) arrive in v0.2. The observation plane and aspects (LR 11.7, 11.8) arrive in v0.5, except the diagnostic plane that `report` and the `log` statements write to (LR 11.7, LR 13), which is in v0.0.2. `main`'s capability parameters (LR 4.6, 11.6) and the core aspect `@ignorable` (LR 5.5, 11.8) are in v0.0.2.
 
 A reader of a Fortis function wants to know what it may do besides compute its result: allocate, touch the
 outside world, change something it was not handed, read the clock, wait, fail, or quietly swallow a failure. The
@@ -34,15 +34,14 @@ When the summary contains something the function's modifiers do not admit, the f
 
 ```fortis
 // reject: E-EFF-001
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
-pure func greet(console: Console) Void {      // reject: E-EFF-001 (a pure function takes no capability)
+pure func greet(console: Console) {      // reject: E-EFF-001 (a pure function takes no capability)
   console.print("hello")              // reject: E-EFF-001
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  greet(caps.console)
+func main(console: Console) {
+  greet(console)
 }
 ```
 
@@ -54,20 +53,19 @@ list locally and returning it is pure:
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func squares(n: Int<0..10>) List[Int] {
   let mut out: List[Int] = List.default()
   for i in 1..n {
-    editable out.push(i * i)
+    out.push(i * i)
   }
-  return move out
+  return out
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   for s in squares(4) {
-    caps.console.print("${s}")
+    console.print("${s}")
   }
 }
 ```
@@ -115,14 +113,14 @@ try func half(n: Int) Int {
 
 func halfOrZero(n: Int) Int => half(n) or recover 0   // reject: E-EFF-001
 
-export recovers func main(args: List[String]) Void {
+recovers func main() {
   discard halfOrZero(3)
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Odd {
   code: "demo.odd"
@@ -137,9 +135,8 @@ try func half(n: Int) Int {
 
 recovers func halfOrZero(n: Int) Int => half(n) or recover 0
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${halfOrZero(8)} ${halfOrZero(3)}")
+recovers func main(console: Console) {
+  console.print("${halfOrZero(8)} ${halfOrZero(3)}")
 }
 ```
 
@@ -172,25 +169,24 @@ footprint; anything else, such as a mutable capture, makes the caller `mutate` (
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Cell {
   export value: Int
-  pure func set(editable self, value: Int) Void {
+  pure func set(editable self, value: Int) {
     self.value = value
   }
 }
 
 pure func build() Cell {
   let mut cell = Cell(value: 0)
-  editable cell.set(1)          // cell is fresh here, so the footprint imports nothing
-  return move cell
+  cell.set(1)          // cell is fresh here, so the footprint imports nothing
+  return cell
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let cell = build()
-  caps.console.print("${cell.value}")
+  console.print("${cell.value}")
 }
 ```
 
@@ -205,7 +201,7 @@ so it is `mutate`, and a `pure` function cannot do it (LR 11.3):
 // reject: E-EFF-001
 class Cell {
   export value: Int
-  pure func set(editable self, value: Int) Void {
+  pure func set(editable self, value: Int) {
     self.value = value
   }
 }
@@ -213,13 +209,13 @@ class Cell {
 pure func viaClosure() Int {
   let mut cell = Cell(value: 0)
   let mut poke = fn mut[editable cell]() Void {
-    editable cell.set(2)
+    cell.set(2)
   }
-  editable poke()               // reject: E-EFF-001
+  poke()                        // reject: E-EFF-001
   return 0
 }
 
-export func main(args: List[String]) Void {
+func main() {
   discard viaClosure()
 }
 ```
@@ -233,15 +229,14 @@ can be passed where a `pure fn` is required without writing the modifier (LR 11.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func countAbove(items: List[Int], threshold: Int) Int {
   return items.countWhere(fn[threshold](n: Int) Bool => n > threshold)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${countAbove(List.of(3, 8, 1, 9), 5)}")
+func main(console: Console) {
+  console.print("${countAbove(List.of(3, 8, 1, 9), 5)}")
 }
 ```
 
@@ -270,7 +265,7 @@ string is not.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure noalloc func clamp(v: Int, lo: Int, hi: Int) Int {
   if v < lo {
@@ -284,9 +279,8 @@ pure noalloc func clamp(v: Int, lo: Int, hi: Int) Int {
 
 pure noalloc func firstOrZero(xs: List[Int]) Int => xs.get(0) ?? 0
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${clamp(150, 0, 100)} ${firstOrZero(List.of(7, 8))}")
+func main(console: Console) {
+  console.print("${clamp(150, 0, 100)} ${firstOrZero(List.of(7, 8))}")
 }
 ```
 
@@ -298,7 +292,7 @@ export func main(args: List[String]) Void {
 // reject: E-EFF-001
 noalloc func pair(a: Int, b: Int) List[Int] => List.of(a, b)   // reject: E-EFF-001
 
-export func main(args: List[String]) Void {
+func main() {
   discard pair(1, 2)
 }
 ```
@@ -318,7 +312,7 @@ modifiers are written, before the single-word modifiers, and never with `@` (LR 
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export contract FastCalculation {
   pure
@@ -327,9 +321,8 @@ export contract FastCalculation {
 
 export FastCalculation pure noalloc func square(value: Int<-1000000..1000000>) Int => value * value
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${square(-12)}")
+func main(console: Console) {
+  console.print("${square(-12)}")
 }
 ```
 
@@ -363,7 +356,7 @@ contract NoSilentRecovery {
 
 NoSilentRecovery recovers func quiet(n: Int) Int => half(n) or recover 0   // reject: E-EFF-001
 
-export recovers func main(args: List[String]) Void {
+recovers func main() {
   discard quiet(4)
 }
 ```
@@ -373,7 +366,7 @@ call, directly or through any callee, a function that requires it (LR 11.5).
 
 ```fortis
 // reject: E-EFF-001
-import fortis.host { Host, Network }
+import fortis.host { Network }
 
 contract Offline {
   excludes capability Network
@@ -383,9 +376,8 @@ func lookup(net: Network, name: StringView) Int => name.scalarCount()
 
 Offline func viaNetwork(net: Network) Int => lookup(net, "example")   // reject: E-EFF-001
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  discard viaNetwork(caps.network)
+func main(network: Network) {
+  discard viaNetwork(network)
 }
 ```
 
@@ -399,37 +391,41 @@ in its head (LR 11.5).
 I/O needs authority, and authority is a value. A function with the `io` effect must take an **authority value**
 as a parameter: a nominal, non-copyable value implementing the marker interface `Authority` (LR 11.6). The
 process-wide authorities are the **capabilities** `FileSystem`, `Network`, `Clock`, `Random`, `Environment`,
-`Process`, `Supervisor`, `Console`, `SecretAccess` and `RawSql`, and exactly one function creates them:
-`Host.capabilities()` from `fortis.host`, which may be called only in `main`, and only once (LR 11.6).
+`Process`, `Supervisor`, `Console`, `SecretAccess` and `RawSql`. The runtime creates them once and hands them to the
+entry `main`, which declares the ones it needs as parameters: `func main(console: Console, files: FileSystem)`
+(LR 4.6, LR 11.6). No other function receives them from the runtime, and none can create them. Older code creates
+them in `main` with `Host.capabilities()`, which `fortis fmt` rewrites into parameters; anywhere else that call is
+rejected (LR 11.6):
 
 ```fortis
 // reject: E-EFF-010
 import fortis.host { Host }
 
-func sneak() Void {
+func sneak() {
   let caps = Host.capabilities()      // reject: E-EFF-010
 }
 
-export func main(args: List[String]) Void {
+func main() {
   sneak()
 }
 ```
 
 From `main` the authorities are passed down explicitly, so a function's signature names every authority it
-uses. A function that reaches I/O without taking an `Authority` value, for example by reaching into a
-`Capabilities` record, is rejected with the same code, at the statement that performs the I/O (LR 11.6):
+uses. A function that reaches I/O without taking an `Authority` value, for example by reaching into the
+`Capabilities` record `Host.capabilities()` returns, is rejected with the same code, at the statement that performs
+the I/O (LR 11.6):
 
 ```fortis
 // reject: E-EFF-010
 import fortis.host { Capabilities, Host }
 
-func log(caps: Capabilities, text: StringView) Void {
+func write(caps: Capabilities, text: StringView) {
   caps.console.print(text)            // reject: E-EFF-010
 }
 
-export func main(args: List[String]) Void {
+func main() {
   let caps = Host.capabilities()
-  log(caps, "hello")
+  write(caps, "hello")
 }
 ```
 
@@ -437,15 +433,14 @@ Pass the `Console` itself; the parameter is the visible statement that this func
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
-func log(console: Console, text: StringView) Void {
+func say(console: Console, text: StringView) {
   console.print(text)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  log(caps.console, "hello")
+func main(console: Console) {
+  say(console, "hello")
 }
 ```
 
@@ -466,15 +461,13 @@ where a new owner takes a handle (LR 7.8).
 
 ```fortis
 // accept
-import fortis.host { Capabilities, Console, Host }
+import fortis.host { Console }
 
-func announce(console: Shared[Console], who: StringView) Void {
+func announce(console: Shared[Console], who: StringView) {
   console.print("hello from ${who}")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: _, network: _, clock: _, random: _, environment: _, process: _, supervisor: _, secretAccess: _, rawSql: _) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   announce(console.retain(), "one")
   announce(console, "two")
@@ -509,7 +502,7 @@ that needs no capability value (LR 10.6, LR 11.6):
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Odd {
   code: "demo.odd"
@@ -529,9 +522,8 @@ func halfOrReport(n: Int) Int {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${halfOrReport(10)} ${halfOrReport(3)}")
+func main(console: Console) {
+  console.print("${halfOrReport(10)} ${halfOrReport(3)}")
 }
 ```
 
@@ -576,7 +568,7 @@ line is the outermost wrapper (LR 11.8).
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 export error TooBig {
   code: "demo.too_big"
@@ -617,12 +609,11 @@ try func checked(console: Console, n: Int) Int {
   return n
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("square: ${square(caps.console, 7)}")
-  let small = checked(caps.console, 5) or fail
-  let big = checked(caps.console, 500) or fail
-  caps.console.print("${small} ${big}")
+try func main(console: Console) {
+  console.print("square: ${square(console, 7)}")
+  let small = checked(console, 5) or fail
+  let big = checked(console, 500) or fail
+  console.print("${small} ${big}")
 }
 ```
 
@@ -659,7 +650,7 @@ export aspect logged(label: StringView) {
 @logged("count")                      // reject: E-TYP-150
 func count(n: Int) Int => n
 
-export func main(args: List[String]) Void {
+func main() {
   discard count(3)
 }
 ```
@@ -684,7 +675,7 @@ try func produce(n: Int) Outcome[Int] {
   return Outcome.success(n)
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -697,7 +688,7 @@ fixed; `...rest` forwards every remaining named argument (LR 11.8). The core dec
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 export aspect traced(label: StringView, depth: Int = 1) {
   needs console: Console
@@ -711,9 +702,8 @@ export aspect topLevel(label: StringView, ...rest) = traced(label: label, depth:
 @topLevel("work")
 func work(console: Console, n: Int) Int => n
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${work(caps.console, 3)}")
+func main(console: Console) {
+  console.print("${work(console, 3)}")
 }
 ```
 

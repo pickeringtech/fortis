@@ -11,3 +11,11 @@ license = "MIT"
 
 [profile.release]
 debug = false
+
+# CI builds the toolchain with this table (`cargo build` given its name, ci): quicker to compile than release, and the same in what a
+# program can observe, because it inherits release's overflow checks, panic strategy and debug assertions.
+[profile.ci]
+inherits = "release"
+opt-level = 1
+codegen-units = 16
+incremental = false

@@ -1,0 +1,49 @@
+// backstop: tuple t-fb|drop t-fb|record r-fb|drop r-fb|closure c-fb|drop c-fb|end
+// D-381: a function whose result is declared `from` a parameter returns a tuple or a record built around
+// `empty.get(0) ?? move d`, or a closure does (both checkers once accepted it; E-OWN-051 now). The VM reported the
+// aggregate as lent, so the caller's binding never ran the fallback's cleanup. A value constructed by the callee is
+// the callee's own, whatever its parts: what receives it owns it and destroys the parts that are not loans, so the
+// cleanup runs once even where a check is missed.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func tuple(empty: List[Token], d: owned Token) alias (Token, Int) from empty {
+  return (empty.get(0) ?? move d, 1)
+}
+
+func rec(empty: List[Token], d: owned Token) alias { item: Token, n: Int } from empty {
+  return { item: empty.get(0) ?? move d, n: 1 }
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  {
+    let r = tuple(alias empty, make(console, "t-fb"))
+    console.print("tuple ${r.0.label}")
+  }
+  {
+    let r = rec(alias empty, make(console, "r-fb"))
+    console.print("record ${r.item.label}")
+  }
+  {
+    let d = make(console, "c-fb")
+    let f = fn once[alias empty, move d]() alias (Token, Int) from empty {
+      return (empty.get(0) ?? move d, 1)
+    }
+    let r = move f()
+    console.print("closure ${r.0.label}")
+  }
+  console.print("end")
+}

@@ -3,7 +3,7 @@
 // covers: LANG-05-07
 // Evaluation is left to right: operands, arguments, then the receiver before its arguments (5.7), identically on
 // every backend.
-import fortis.host { Host, Console }
+import fortis.host { Console }
 
 func note(console: Console, what: String, n: Int) Int {
   console.print(what)
@@ -23,9 +23,8 @@ func make(console: Console) Recorder {
   return Recorder(count: 0)
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let sum = Int.wrappingAdd(note(caps.console, "left", 1), note(caps.console, "right", 2))
-  caps.console.print("args 1 ${Int.wrappingSub(sum, 1)}")
-  discard make(caps.console).add(caps.console, 1)
+func main(console: Console) {
+  let sum = Int.wrappingAdd(note(console, "left", 1), note(console, "right", 2))
+  console.print("args 1 ${Int.wrappingSub(sum, 1)}")
+  discard make(console).add(console, 1)
 }

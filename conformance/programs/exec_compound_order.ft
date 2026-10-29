@@ -5,7 +5,7 @@
 // before `e` runs, and the store goes to the place `x` names after `e` has run. Each pair is the compound form and
 // its expansion, where `e` changes `x` through an editable loan; the two must agree on every backend. The last line
 // is the plain forms: a whole local of each kind and a field reached through an editable parameter.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class C {
   export n: Int<0..100>
@@ -35,7 +35,7 @@ func shift(s: editable S) Int<1..9> {
   return 6
 }
 
-func halve(c: editable C) Void {
+func halve(c: editable C) {
   c.n /= 2
 }
 
@@ -44,31 +44,30 @@ func scale(s: editable S) Float {
   return 2.0
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut a = C(n: 0)
   a.n %= bump(editable a)
   let mut b = C(n: 0)
   b.n = b.n % bump(editable b)
-  caps.console.print("${a.n} ${b.n}")
+  console.print("${a.n} ${b.n}")
   let mut o = O(inner: C(n: 6))
   o.inner.n %= swap(editable o)
   let mut p = O(inner: C(n: 6))
   p.inner.n = p.inner.n % swap(editable p)
-  caps.console.print("${o.inner.n} ${p.inner.n}")
+  console.print("${o.inner.n} ${p.inner.n}")
   let mut s = S(n: -60, f: 3.0)
   s.n /= shift(editable s)
   let mut t = S(n: -60, f: 3.0)
   t.n = t.n / shift(editable t)
-  caps.console.print("${s.n} ${t.n}")
+  console.print("${s.n} ${t.n}")
   s.f /= scale(editable s)
   t.f = t.f / scale(editable t)
-  caps.console.print("${s.f} ${t.f}")
+  console.print("${s.f} ${t.f}")
   let mut k: Int<0..100> = 50
   k %= 7
   let mut g = 2.5
   g *= 3.0
   let mut h = C(n: 7)
   halve(editable h)
-  caps.console.print("${k} ${g} ${h.n}")
+  console.print("${k} ${g} ${h.n}")
 }

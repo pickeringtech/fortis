@@ -1,0 +1,138 @@
+// reject: E-OWN-002 (at the marked lines)
+// covers: LANG-07-01, LANG-07-08
+// D-341, 6.11, 7.5: a loan of a value that is not Copyable has no owned copy, so it is E-OWN-002 wherever an owned
+// value is expected: a return, an expression body, an annotated binding, an assignment, an `owned` argument, a
+// field, a pushed item, a variant's payload and a recovered value, from a list or a map, and through a binding
+// that holds the loan, narrowed or not; and for every kind that is not Copyable: a `Shared`, a `Weak`, a `Mutex`,
+// an atomic, a class holding a capability or a `Shared`, and a closure. Both checkers accepted each, which made a
+// second owner of one value (a `Shared` handle not counted, a capability duplicated).
+import fortis.host { Console }
+
+export error Late {
+  code: "demo.late"
+}
+
+class Item {
+  name: String
+}
+
+class Port {
+  console: Console
+}
+
+class Holds {
+  item: Shared[Item]
+}
+
+class Holder {
+  item: Shared[Item]?
+}
+
+enum Slot {
+  Full(item: Shared[Item])
+  Empty
+}
+
+func keep(item: owned Shared[Item]?) {
+}
+
+try func risky() Shared[Item] {
+  fail Late()
+}
+
+func returned(xs: List[Shared[Item]]) Shared[Item]? {
+  return xs.get(0)                                  // reject: E-OWN-002 — a Shared is duplicated with retain()
+}
+
+func looked(m: Map[String, Shared[Item]]) Shared[Item]? {
+  return m.get("k")                                 // reject: E-OWN-002 — a map's value
+}
+
+func body(xs: List[Shared[Item]]) Shared[Item]? => xs.get(0)   // reject: E-OWN-002 — an expression body
+
+func bound(xs: List[Shared[Item]]) {
+  let item: Shared[Item]? = xs.get(0)               // reject: E-OWN-002 — an owned binding
+}
+
+func assigned(xs: List[Shared[Item]]) {
+  let mut item: Shared[Item]? = null
+  item = xs.get(0)                                  // reject: E-OWN-002 — an assignment
+}
+
+func passed(xs: List[Shared[Item]]) {
+  keep(xs.get(0))                                   // reject: E-OWN-002 — an `owned` argument
+}
+
+func stored(xs: List[Shared[Item]]) Holder {
+  return Holder(item: xs.get(0))                    // reject: E-OWN-002 — a field
+}
+
+func pushed(xs: List[Shared[Item]]) {
+  let mut ys: List[Shared[Item]?] = List.default()
+  ys.push(xs.get(0))                                // reject: E-OWN-002 — a pushed item
+}
+
+func held(xs: List[Shared[Item]]) Shared[Item]? {
+  let v = xs.get(0)
+  return v                                          // reject: E-OWN-002 — a binding that holds the loan
+}
+
+func narrowed(xs: List[Shared[Item]], d: owned Shared[Item]) Shared[Item] {
+  let v = xs.get(0)
+  if v == null {
+    return move d
+  }
+  return v                                          // reject: E-OWN-002 — narrowed, still a loan
+}
+
+func payload(xs: List[Shared[Item]]) Slot {
+  let v = xs.get(0)
+  if v == null {
+    return Slot.Empty
+  }
+  return Slot.Full(item: v)                         // reject: E-OWN-002 — a payload
+}
+
+recovers func recovered(xs: List[Shared[Item]], d: owned Shared[Item]) Shared[Item] {
+  let v = xs.get(0)
+  if v == null {
+    return move d
+  }
+  let item = risky() catch e {
+    recover v                                       // reject: E-OWN-002 — a recovered value
+  }
+  return item
+}
+
+func copied(xs: List[Shared[Item]]) Shared[Item]? {
+  let v = xs.get(0)
+  return copy v                                     // reject: E-OWN-002 — `copy` of what the loan lends
+}
+
+func weak(xs: List[Weak[Item]]) Weak[Item]? {
+  return xs.get(0)                                  // reject: E-OWN-002 — a Weak
+}
+
+func mutex(xs: List[Mutex[Int]]) Mutex[Int]? {
+  return xs.get(0)                                  // reject: E-OWN-002 — a Mutex
+}
+
+func atomic(xs: List[AtomicInt]) AtomicInt? {
+  return xs.get(0)                                  // reject: E-OWN-002 — an atomic
+}
+
+func port(xs: List[Port]) Port? {
+  return xs.get(0)                                  // reject: E-OWN-002 — a class holding a capability
+}
+
+func holds(xs: List[Holds]) Holds? {
+  return xs.get(0)                                  // reject: E-OWN-002 — a class holding a Shared
+}
+
+func closure(xs: List[fn(Int) Int]) (fn(Int) Int)? {
+  return xs.get(0)                                  // reject: E-OWN-002 — a closure
+}
+
+func main(console: Console) {
+  console.print("loans")
+}

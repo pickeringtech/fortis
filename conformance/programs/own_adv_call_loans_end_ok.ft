@@ -5,8 +5,8 @@ func total(a: Int, b: Int) Int => Int.saturatingAdd(a, b)
 export class Acc {
   export sum: Int
 }
-func run(acc: editable Acc, n: Int) Void {
+func run(acc: editable Acc, n: Int) {
   acc.sum = total(acc.sum, n)
   let mut s = List.of(1)
-  editable s.push(s.count())
+  s.push(s.count())
 }

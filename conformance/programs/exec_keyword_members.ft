@@ -3,7 +3,7 @@
 // covers: LANG-03-04
 // A keyword may name a method or associated function, and is admitted after `.` (memberName), though not as a
 // binding (3.4).
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Probe {
   export label: String
@@ -12,10 +12,9 @@ export class Probe {
   export pure func view(self) String => "viewed"
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let p = Probe(label: "p")
-  caps.console.print(p.match())
-  caps.console.print(p.type())
-  caps.console.print(p.view())
+  console.print(p.match())
+  console.print(p.type())
+  console.print(p.view())
 }

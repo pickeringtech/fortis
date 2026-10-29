@@ -1,7 +1,7 @@
 // execute: badge: gold|pair: gold silver
 // covers: PLAT-03-01
 // A slot written on the class's own line, or beside another member, loses the word `inject` at its own column.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class Label { text: String }
 
@@ -18,10 +18,9 @@ context Production {
   provide Pair
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let app = Production.application()
-  caps.console.print("badge: ${app.badge().label.text}")
+  console.print("badge: ${app.badge().label.text}")
   let p = app.pair()
-  caps.console.print("pair: ${p.first.text} ${p.second.text}")
+  console.print("pair: ${p.first.text} ${p.second.text}")
 }

@@ -1,0 +1,24 @@
+// D-398: the VM's observed text for a run that stops with a dynamic check failure is `dynamic:…` alone: the
+// console lines printed before the failure are left out (fortis-vm `lib.rs`, `finish(vm, "dynamic:…", 2)` does not
+// join `vm.out` as the defect path does, D-53), while `fortis run` prints them before its failure. A dynamic check
+// is one the static layers exclude, so only a program a missed check lets run reaches it: this one is E-OWN-020 to
+// both checkers (a use after move) and shows the difference when it is built without the checker's verdict, as
+// fortisc's tests/unchecked_cleanup.rs builds its programs: the interpreter observes
+// `before|dynamic:`t` was moved (use after move)`, the VM's text is `dynamic:`t` was moved (use after move)`
+// with `before` only in its `out` lines. v0.0.1 behaved the same. Found by the v0.0.2-rc.9 wide review (GLM 5.3).
+import fortis.host { Console }
+
+class Token {
+  label: String
+}
+
+func eat(t: owned Token) {
+  discard t
+}
+
+func main(console: Console) {
+  let t = Token(label: String.from("x"))
+  console.print("before")
+  eat(move t)
+  console.print("${t.label}")
+}

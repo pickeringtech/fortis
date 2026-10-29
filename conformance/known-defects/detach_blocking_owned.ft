@@ -1,4 +1,4 @@
-// D-182 (docs/delivery/defects.json): a `launchBlocking` task whose closure owns its captures may be detached (12.5:
+// D-182: a `launchBlocking` task whose closure owns its captures may be detached (12.5:
 // it holds no loan). The interpreter and the VM run it and print `detached|end`; natively the blocking work is always
 // registered as a local child, so `detach` fails at run time ("detach of a task whose future holds a loan").
 import fortis.host { Host, Capabilities }

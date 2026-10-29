@@ -3,7 +3,7 @@
 // `p == null` narrows the other branch. The null branch still has an optional receiver (LR 6.8).
 export class Cell {
   export n: Int
-  export func change(editable self) Void {
+  export func change(editable self) {
     self.n = 1
   }
 }

@@ -1,6 +1,6 @@
 // reject: E-TYP-140 (at the marked line)
 // Pinned for the corrections check: the correction writes `discard` before the unused value.
 pure func double(n: Int) Int => Int.wrappingAdd(n, n)
-export func main(args: List[String]) Void {
+func main() {
   double(2)                                // reject: E-TYP-140
 }

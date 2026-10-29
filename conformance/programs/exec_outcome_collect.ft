@@ -1,7 +1,7 @@
 // execute: 2|demo.odd
 // requires: runtime
 // covers: LANG-10-02
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error Odd {
   code: "demo.odd"
@@ -15,18 +15,17 @@ try func half(n: Int) Int {
   return Int.div(n, 2) or fail
 }
 
-export try recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try recovers func main(console: Console) {
   let mut good: List[Outcome[Int]] = List.default()
-  editable good.push(half(2))
-  editable good.push(half(4))
+  good.push(half(2))
+  good.push(half(4))
   let values = Outcome.collect(move good) or fail
-  caps.console.print("${values.count()}")
+  console.print("${values.count()}")
   let mut mixed: List[Outcome[Int]] = List.default()
-  editable mixed.push(half(2))
-  editable mixed.push(half(3))
+  mixed.push(half(2))
+  mixed.push(half(3))
   let none = Outcome.collect(move mixed) catch e {
-    caps.console.print(e.code)
+    console.print(e.code)
     recover List.default()
   }
   discard none

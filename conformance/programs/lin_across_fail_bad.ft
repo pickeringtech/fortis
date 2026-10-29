@@ -3,7 +3,7 @@
 export class Tx {
   witness: Must
   export func begin() Tx => Tx(witness: Must.create())
-  export func commit(owned self) Void {
+  export func commit(owned self) {
     let Tx(witness: w) = move self
     Must.discharge(move w)
   }

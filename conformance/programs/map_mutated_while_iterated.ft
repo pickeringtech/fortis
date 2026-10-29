@@ -2,7 +2,7 @@
 // covers: LANG-06-06
 // Iteration order is deterministic per build because a map cannot change while it is iterated: the loop holds a read
 // loan of it for its whole body (6.6, 7.3).
-func run() Void {
+func run() {
   let mut m: Map[String, Int] = Map.default()
   editable m.set("a", 1)
   for entry in m {

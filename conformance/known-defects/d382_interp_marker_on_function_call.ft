@@ -1,0 +1,43 @@
+// D-382: a marker written on a call is accepted by both checkers, which read the call and let the marker stand,
+// and the interpreter reads the callee's name as a place and stops with a dynamic failure (`first` is not
+// declared, exit 2, after `drop x0` as the stop unwinds). Two shapes here: a marker on a call of a module function
+// whose result is declared `from` its argument (`let t = alias first(alias xs)`, where the marker belongs on the
+// argument alone: `let t = first(alias xs)`), and a marker on a call whose result is fresh (`let d = move
+// make(console, "m")`, where 7.5 needs no marker at all). The VM and native code run both
+// (`first x0|move m|drop m|end|drop x0`). A third shape, `alias` on a cursor of a temporary, is
+// d382_interp_marker_on_cursor_of_temporary.ft: there the VM and native code refuse the program with the wrong
+// message. Pre-existing since v0.0.1, identical on every tool. Found by the sweep of D-381's fix and widened by the
+// v0.0.2-rc.9 wide review (GLM 5.3). The spellings the Language Reference gives, `first(alias xs)` and
+// `make(console, "m")`, run alike on every backend (7.5, 7.6).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func first(xs: List[Token]) (alias Token from xs)? {
+  return xs.get(0)
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "x0"))
+  {
+    let t = alias first(alias xs)
+    console.print("first ${t?.label ?? "none"}")
+  }
+  {
+    let d = move make(console, "m")
+    console.print("move ${d.label}")
+  }
+  console.print("end")
+}

@@ -3,7 +3,7 @@
 // covers: LANG-06-07
 // D-170: `derive Default` generates the associated `default()` from each field's initialiser (6.10, 9.2); both checkers
 // refused `HttpLimits.default()` (E-NAM-001), in an expression and in a constant.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export class HttpLimits derive Default {
   export maxBody: Int = 1_048_576
@@ -14,9 +14,8 @@ const standard = HttpLimits.default()
 
 func limits() HttpLimits => HttpLimits.default()
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let l = limits()
-  caps.console.print("${l.maxBody} ${l.name}")
-  caps.console.print("${standard.maxBody} ${standard.name}")
+  console.print("${l.maxBody} ${l.name}")
+  console.print("${standard.maxBody} ${standard.name}")
 }

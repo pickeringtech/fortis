@@ -1,5 +1,5 @@
 // illustrative
-export func main(args: List[String]) Void
-export try func main(args: List[String]) Void
-export async func main(args: List[String]) Void
-export async try func main(args: List[String]) Void
+func main(…)
+try func main(…)
+async func main(…)
+async try func main(…)

@@ -3,10 +3,9 @@
 // requires: runtime
 // covers: LANG-12-03
 // 12.3: a never-polled future may be discarded; it emits a not_started lifecycle record.
-import fortis.host { Host, Console }
+import fortis.host { Console }
 async func work(n: Int) Int => n
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   discard work(1)
-  caps.console.print("done")
+  console.print("done")
 }

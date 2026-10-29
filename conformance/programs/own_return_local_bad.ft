@@ -1,0 +1,53 @@
+// reject: E-OWN-001, E-OWN-011, E-OWN-020 (at the marked lines)
+// covers: LANG-07-01, LANG-07-04, LANG-07-05
+// X-345 (R16): `return x` of a local is `return move x`, so ownership is checked as strongly: a local still loaned
+// or already moved is rejected with the codes the marked form gives. Returning anything that is not a local `let`
+// binding keeps the markers of 7.5: a parameter, a field, a capture, a pattern binding.
+export class Entry {
+  export word: String
+}
+
+func loaned() Entry {
+  let e = Entry(word: String.from("a"))
+  let seen = alias e
+  return e                                           // reject: E-OWN-011: `seen` still holds a loan of e
+}
+
+func moved() Entry {
+  let e = Entry(word: String.from("a"))
+  let other = move e
+  discard other.word
+  return e                                           // reject: E-OWN-020: e was moved
+}
+
+func parameter(e: Entry) Entry {
+  return e                                           // reject: E-OWN-001: a read parameter owns nothing
+}
+
+func taken(e: owned Entry) Entry {
+  return e                                           // reject: E-OWN-001: an owned parameter still writes `move`
+}
+
+func member(e: Entry) String {
+  return e.word                                      // reject: E-OWN-001: a field is not a local
+}
+
+func fieldOfLocal() String {
+  let e = Entry(word: String.from("a"))
+  return e.word                                      // reject: E-OWN-001: a field of a local is not the local
+}
+
+func captured() Entry {
+  let e = Entry(word: String.from("a"))
+  let hand = fn once[move e]() Entry {
+    return e                                         // reject: E-OWN-001: a capture is not a local of the lambda
+  }
+  return move hand()
+}
+
+func pattern(es: List[Entry]) Entry {
+  for e in es {
+    return e                                         // reject: E-OWN-001: a `for` binding is a read loan
+  }
+  return Entry(word: String.from("none"))
+}

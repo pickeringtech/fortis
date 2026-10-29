@@ -5,7 +5,7 @@
 export class Cell {
   export n: Int
   export pure func read(self) Bool => self.n == 0
-  export func change(editable self) Void {
+  export func change(editable self) {
     self.n = 1
   }
 }

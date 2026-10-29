@@ -1,0 +1,7 @@
+// accept: S9: no return type, and a body that starts with a statement: the head ends at `)` (X-345)
+func tally(xs: List[Int]) {
+  let mut total = 0
+  for x in xs {
+    total = Int.saturatingAdd(total, x)
+  }
+}

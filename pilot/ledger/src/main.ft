@@ -5,7 +5,7 @@
 // The failures behind problems that came from a failed parse (a bad date, amount, account name or commodity
 // code) are also reported, one failure record each, on standard error: the parser hands them over instead of
 // discarding them (see parser.ft).
-import fortis.host { Console, FileSystem, Host, Path }
+import fortis.host { Console, FileSystem, Path }
 import pilot.ledger.cli { Command, Invocation, UsageError, UsageProblem, parseArguments, usage, usageProblemText, wantsHelp }
 import pilot.ledger.validate { Loaded, loadJournal }
 import pilot.ledger.diagnostic { Diagnostic, Diagnostics }
@@ -24,34 +24,33 @@ export error JournalHasErrors {
 
 // A usage error, an unreadable journal, or `check` on a journal with errors makes `main` fail: the runtime then
 // writes one failure record to standard error and the exit status is 1.
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console, fileSystem: FileSystem, args: List[String]) {
   let invocation = parseArguments(args) catch e {
-    explainUsage(caps.console, e)
-    caps.console.print(usage)
+    explainUsage(console, e)
+    console.print(usage)
     fail e
   }
   let Invocation(file: file, command: command) = move invocation
   if wantsHelp(command) {
-    caps.console.print(usage)
+    console.print(usage)
     return
   }
   let mut sink: List[Failure] = List.default()
-  let outcome = readJournal(caps.fileSystem, file, editable sink)
+  let outcome = readJournal(fileSystem, file, editable sink)
   // The sink is reported before the outcome is looked at, so that no failure is left in it on any path.
   reportAll(move sink)
   let loaded = move outcome catch e {
-    caps.console.print("ledger: cannot read ${file}: ${e.code}")
+    console.print("ledger: cannot read ${file}: ${e.code}")
     fail e
   }
   let Loaded(journal: journal, diagnostics: diagnostics) = move loaded
-  caps.console.print("ledger: ${file}: ${summary(journal)}")
-  printProblems(caps.console, diagnostics)
-  run(caps.console, journal, diagnostics, move command) or fail
+  console.print("ledger: ${file}: ${summary(journal)}")
+  printProblems(console, diagnostics)
+  run(console, journal, diagnostics, move command) or fail
 }
 
 // Prints what the command asks for.
-try func run(console: Console, journal: Journal, diagnostics: Diagnostics, command: owned Command) Void {
+try func run(console: Console, journal: Journal, diagnostics: Diagnostics, command: owned Command) {
   match move command {
     All => {
       printReport(console, balanceReport(journal) or fail)
@@ -94,14 +93,14 @@ try func readJournal(fs: FileSystem, file: StringView, sink: editable List[Failu
 }
 
 // Reports every failure of the sink, in order, on the diagnostic plane (standard error).
-func reportAll(sink: owned List[Failure]) Void {
+func reportAll(sink: owned List[Failure]) {
   move sink.consumeEach(fn mut(f: owned Failure) Void {
     report f
   })
 }
 
 // Prints the problems of a journal, if it has any.
-func printProblems(console: Console, diagnostics: Diagnostics) Void {
+func printProblems(console: Console, diagnostics: Diagnostics) {
   if diagnostics.count() == 0 {
     return
   }
@@ -113,7 +112,7 @@ func printProblems(console: Console, diagnostics: Diagnostics) Void {
 }
 
 // Prints a report, after a blank line.
-func printReport(console: Console, lines: ListView[String]) Void {
+func printReport(console: Console, lines: ListView[String]) {
   console.print("")
   for line in lines {
     console.print(line)
@@ -121,7 +120,7 @@ func printReport(console: Console, lines: ListView[String]) Void {
 }
 
 // Prints the income statement of the whole journal.
-try func printWholeIncomeStatement(console: Console, journal: Journal) Void {
+try func printWholeIncomeStatement(console: Console, journal: Journal) {
   match journal.dateRange() {
     present(range) => printReport(console, incomeStatement(journal, range) or fail)
     null => {
@@ -132,7 +131,7 @@ try func printWholeIncomeStatement(console: Console, journal: Journal) Void {
 }
 
 // Prints what was wrong with the command line. The failure is only inspected here; the caller still owns it.
-func explainUsage(console: Console, f: Failure) Void {
+func explainUsage(console: Console, f: Failure) {
   match f {
     is UsageError(problem: p, argument: at) => console.print("ledger: ${usageProblemText(p)} (argument ${at})")
     otherwise(other) => console.print("ledger: an argument was refused: ${other.code}")

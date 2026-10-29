@@ -1,0 +1,62 @@
+// execute: 27 passed, 1 failed
+// tests: run
+// requires: runtime
+// covers: LANG-14-03
+// In test and property bodies `or fail` is implied (14; X-345, R7): a fallible call has its success type and its
+// failure fails the test with the failure's record. A call that `or`, `catch` or `match` consumes keeps its outcome.
+export error Negative {
+  code: "demo.negative"
+}
+
+try func half(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n / 2
+}
+
+class Halver {
+  export n: Int
+  try func halved(self) Halver {
+    return Halver(n: half(self.n) or fail)
+  }
+  func value(self) Int {
+    return self.n
+  }
+}
+
+test "half of an even number" {
+  expect half(10) == 5
+  let quarter = half(half(8))
+  expect quarter == 2
+  expect Halver(n: 8).halved().halved().value() == 2
+  expect (half(4) or fail) == 2
+}
+
+test "a consumed failure" {
+  let r = half(-2) catch e {
+    expect e.code == "demo.negative"
+    report e
+    recover 0
+  }
+  expect r == 0
+  match half(-4) {
+    success(v) => {
+      expect v == 0
+    }
+    failure(f) => {
+      expect f.code == "demo.negative"
+      expect (half(-6) or recover 7) == 7
+      report f
+    }
+  }
+}
+
+property "halving never grows" forall (n: Int<0..100>) {
+  expect half(n) <= n
+}
+
+test "an unexpected failure fails the test" {
+  let x = half(-1)
+  expect x == 0
+}

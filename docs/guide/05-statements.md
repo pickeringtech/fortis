@@ -15,14 +15,13 @@ reassigns (LR 5.1). The type comes from the initialiser, or from an annotation w
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let greeting = "hello"
   let mut count: Int<0..10> = 0
   count = 3
-  caps.console.print("${greeting}, count is ${count}")
+  console.print("${greeting}, count is ${count}")
 }
 ```
 
@@ -36,7 +35,7 @@ There is no `let` without an initialiser, and assignment is a statement, not an 
 
 ```fortis
 // reject: E-NAM-001, E-NAM-002
-export func main(args: List[String]) Void {
+func main() {
   let total = 1
   missing = 3        // reject: E-NAM-001
   total = 2          // reject: E-NAM-002
@@ -48,7 +47,7 @@ name instead; a reader then never has to work out which of two `total`s a line m
 
 ```fortis
 // reject: E-NAM-003
-export func main(args: List[String]) Void {
+func main() {
   let total = 1
   {
     let total = 2    // reject: E-NAM-003
@@ -68,14 +67,13 @@ other value.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 const limit = 3
 const names = List.of("ada", "brian", "carla")
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("limit ${limit}, ${names.count()} names")
+func main(console: Console) {
+  console.print("limit ${limit}, ${names.count()} names")
 }
 ```
 
@@ -90,7 +88,7 @@ truthiness, so an `Int`, an optional or a string in a condition is `E-TYP-010` (
 
 ```fortis
 // reject: E-TYP-010
-export func main(args: List[String]) Void {
+func main() {
   let count = 3
   if count {          // reject: E-TYP-010
   }
@@ -102,13 +100,12 @@ branches must agree on one type (LR 5.2).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let count = 0
   let label = if count == 0 { give "none" } else { give "some" }
-  caps.console.print(label)
+  console.print(label)
 }
 ```
 
@@ -126,19 +123,18 @@ There are three loops: `while`, `for … in …` and `loop` (LR 5.3).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   for i in 1..3 {
-    caps.console.print("inclusive ${i}")
+    console.print("inclusive ${i}")
   }
   for i in 0..<2 {
-    caps.console.print("exclusive ${i}")
+    console.print("exclusive ${i}")
   }
   let words = List.of("red", "green")
   for word in words {
-    caps.console.print(word)
+    console.print(word)
   }
 }
 ```
@@ -166,10 +162,9 @@ untouched afterwards. `for word in move words` would consume the list instead an
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut n: Int<0..100> = 0
   loop {
     if n >= 3 {
@@ -177,13 +172,13 @@ export func main(args: List[String]) Void {
     }
     n = n + 1
   }
-  caps.console.print("stopped at ${n}")
+  console.print("stopped at ${n}")
   outer: for row in 1..3 {
     for column in 1..3 {
       if column == 2 {
         continue outer
       }
-      caps.console.print("${row},${column}")
+      console.print("${row},${column}")
     }
   }
 }
@@ -224,7 +219,7 @@ pure func sign(n: Int) Int {        // reject: E-TYP-110
   }
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -237,30 +232,32 @@ export error TooLarge {
   code: "demo.too_large"
 }
 
-func check(n: Int) Void {
+func check(n: Int) {
   if n > 100 {
     fail TooLarge()   // reject: E-ERR-001
   }
 }
 
-export func main(args: List[String]) Void {
+func main() {
   check(5)
 }
 ```
 
-Declaring the function `try func check(n: Int) Void` makes the `fail` legal; callers must then handle the
+Declaring the function `try func check(n: Int)` makes the `fail` legal; callers must then handle the
 outcome, which is the subject of [Outcomes and failures](10-outcomes.md).
 
 ## Expression statements and `discard`
 
 An expression used as a statement must have type `Void` or `Never`. A value you compute and then ignore is
-`E-TYP-140`; if ignoring it is intended, say so with `discard` (LR 5.5):
+`E-TYP-140`; if ignoring it is intended, say so with `discard` (LR 5.5). A function whose result most callers do
+not need says so once, on its declaration, with `@ignorable`, and then no caller writes `discard`
+([`@ignorable`](#results-callers-may-drop-ignorable), LR 5.5):
 
 ```fortis
 // reject: E-TYP-140
 pure func double(n: Int<0..1000>) Int => n * 2
 
-export func main(args: List[String]) Void {
+func main() {
   double(4)           // reject: E-TYP-140
 }
 ```
@@ -269,7 +266,7 @@ export func main(args: List[String]) Void {
 // accept
 pure func double(n: Int<0..1000>) Int => n * 2
 
-export func main(args: List[String]) Void {
+func main() {
   discard double(4)
 }
 ```
@@ -304,7 +301,7 @@ the parentheses that say which one you mean:
 
 ```fortis
 // reject: E-SYN-004
-export func main(args: List[String]) Void {
+func main() {
   let a = false
   let b: Bool? = null
   let c = true
@@ -314,15 +311,14 @@ export func main(args: List[String]) Void {
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let a = false
   let b: Bool? = null
   let c = true
   let d = a || (b ?? c)
-  caps.console.print("${d}")
+  console.print("${d}")
 }
 ```
 
@@ -344,7 +340,7 @@ arguments (LR 5.7). `&&` and `||` evaluate their right operand only when they ne
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 func note(console: Console, label: StringView, value: Int) Int {
   console.print("evaluating ${label}")
@@ -353,10 +349,9 @@ func note(console: Console, label: StringView, value: Int) Int {
 
 func pair(a: Int, b: Int) Int => a
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let first = pair(note(caps.console, "left", 1), note(caps.console, "right", 2))
-  caps.console.print("got ${first}")
+func main(console: Console) {
+  let first = pair(note(console, "left", 1), note(console, "right", 2))
+  console.print("got ${first}")
 }
 ```
 
@@ -381,13 +376,13 @@ class Buffer {
   export bytes: Int
 }
 
-func update(target: editable Buffer, size: Int) Void {
+func update(target: editable Buffer, size: Int) {
   target.bytes = size
 }
 
 func consume(b: owned Buffer) Int => b.bytes
 
-export func main(args: List[String]) Void {
+func main() {
   let mut buffer = Buffer(bytes: 0)
   update(editable buffer, consume(move buffer))   // reject: E-OWN-012
 }
@@ -397,24 +392,23 @@ Evaluate the argument first, on its own line, and pass the result:
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Buffer {
   export bytes: Int
 }
 
-func update(target: editable Buffer, size: Int) Void {
+func update(target: editable Buffer, size: Int) {
   target.bytes = size
 }
 
 func size(b: Buffer) Int => 7
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut buffer = Buffer(bytes: 0)
   let n = size(buffer)
   update(editable buffer, n)
-  caps.console.print("${buffer.bytes}")
+  console.print("${buffer.bytes}")
 }
 ```
 
@@ -428,14 +422,18 @@ creation (LR 5.7).
 ## Calls, named arguments and defaults
 
 Arguments are positional or named (`name: value`). Positional arguments come first, in declaration order; named
-ones follow in any order, and each parameter is bound once (LR 5.8). A parameter may have a default: a pure,
+ones follow in any order, and each parameter is bound once (LR 5.8). When the value is a local of the parameter's
+own name, the name is written once: `Insufficient(sku, held: item.quantity, wanted)` means `sku: sku` and
+`wanted: wanted`. A bare name is read that way after a named argument, and anywhere in a class constructor, whose
+arguments are all named; before the first named argument of any other call it is positional, as before. A local
+that is moved keeps its label, `name: move name` (LR 5.8). A parameter may have a default: a pure,
 non-allocating constant expression, evaluated afresh at every call that leaves the argument out (LR 5.8). That is
 stricter than a module constant, whose initialiser may build a list with `List.of`, because a default runs at
 every such call (LR 5.1, LR 5.8).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func page(items: Int<0..1000>, size: Int<1..100> = 20) Int<0..1000> {
   if items < size {
@@ -444,9 +442,8 @@ pure func page(items: Int<0..1000>, size: Int<1..100> = 20) Int<0..1000> {
   return size
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${page(50)} ${page(50, size: 10)} ${page(size: 5, items: 3)}")
+func main(console: Console) {
+  console.print("${page(50)} ${page(50, size: 10)} ${page(size: 5, items: 3)}")
 }
 ```
 
@@ -461,7 +458,7 @@ arguments are all `E-TYP-130` (LR 5.8):
 // reject: E-TYP-130
 pure func area(width: Int<0..100>, height: Int<0..100>) Int => width * height
 
-export func main(args: List[String]) Void {
+func main() {
   discard area(width: 2, depth: 3)      // reject: E-TYP-130
 }
 ```
@@ -473,7 +470,7 @@ missing a field (LR 5.8):
 // reject: E-TYP-050
 pure func area(width: Int<0..100>, height: Int<0..100>) Int => width * height
 
-export func main(args: List[String]) Void {
+func main() {
   discard area(width: 2)                // reject: E-TYP-050
 }
 ```
@@ -481,3 +478,28 @@ export func main(args: List[String]) Void {
 Parameter names are part of a function's public signature: renaming an exported parameter breaks its callers
 (LR 5.8). User functions have no variadic parameters; a function that takes many values takes a `ListView[T]`,
 and the caller passes `List.of(…)` or an existing list (LR 5.8).
+
+## Results callers may drop: `@ignorable`
+
+Some functions return something most callers do not need, such as whether an insert found the item new. Such a
+function says so once, on its declaration, with `@ignorable`, and a call of it used as a statement drops the result
+without `discard` (LR 5.5, LR 11.8). Older code writes `discard` at every such call; it is still accepted, and
+`fortis fmt` leaves it, since only the function's author can declare a result ignorable:
+
+```fortis
+// accept
+@ignorable
+func remember(seen: editable Set[Int], n: Int) Bool {
+  return seen.add(n)
+}
+
+test "remembering twice keeps one" {
+  let mut seen: Set[Int] = Set.default()
+  remember(editable seen, 3)
+  remember(editable seen, 3)
+  expect seen.count() == 1
+}
+```
+
+Every other result still needs its `discard` (see [Expression statements and `discard`](#expression-statements-and-discard)),
+and a function whose result is linear cannot be `@ignorable` (`E-TYP-150`, LR 5.5).

@@ -13,7 +13,7 @@ export pure func sortedBy[T](items: ListView[T], precedes: pure fn(T, T) Bool) L
   let n = items.count()
   let mut order: List[Int] = List.default()
   for i in 0..<n {
-    editable order.push(i)
+    order.push(i)
   }
   let mut width = 1
   while width < n {
@@ -40,10 +40,10 @@ export pure func sortedBy[T](items: ListView[T], precedes: pure fn(T, T) Bool) L
           }
         }
         if takeLeft {
-          editable next.push(left)
+          next.push(left)
           i = Int.saturatingAdd(i, 1)
         } else {
-          editable next.push(right)
+          next.push(right)
           j = Int.saturatingAdd(j, 1)
         }
       }
@@ -56,13 +56,13 @@ export pure func sortedBy[T](items: ListView[T], precedes: pure fn(T, T) Bool) L
   for k in order {
     match items.get(k) {
       present(item) => {
-        editable out.push(copy item)
+        out.push(copy item)
       }
       null => {
       }
     }
   }
-  return move out
+  return out
 }
 
 // Strings in ascending order.
@@ -85,11 +85,11 @@ export pure func distinctStrings(items: ListView[String]) List[String] {
   let mut seen: Set[String] = Set.default()
   let mut out: List[String] = List.default()
   for item in items {
-    if editable seen.add(copy item) {
-      editable out.push(copy item)
+    if seen.add(copy item) {
+      out.push(copy item)
     }
   }
-  return move out
+  return out
 }
 
 class Keyed {
@@ -101,20 +101,20 @@ test "sorting strings" {
   let fruit: List[String] = List.of("pear", "apple", "fig", "apple")
   let ordered = sortedStrings(fruit)
   expect ordered.count() == 4
-  expect (ordered.at(0) or fail) == "apple"
-  expect (ordered.at(1) or fail) == "apple"
-  expect (ordered.at(2) or fail) == "fig"
-  expect (ordered.at(3) or fail) == "pear"
+  expect ordered.at(0) == "apple"
+  expect ordered.at(1) == "apple"
+  expect ordered.at(2) == "fig"
+  expect ordered.at(3) == "pear"
 }
 
 test "sorting is stable" {
   let items = List.of(Keyed(key: 2, label: "b1"), Keyed(key: 1, label: "a"), Keyed(key: 2, label: "b2"), Keyed(key: 0, label: "z"))
   let ordered: List[Keyed] = sortedBy(items, pure noalloc fn(x: Keyed, y: Keyed) Bool => x.key < y.key)
   let labels = ordered.map(pure fn(k: Keyed) String => copy k.label)
-  expect (labels.at(0) or fail) == "z"
-  expect (labels.at(1) or fail) == "a"
-  expect (labels.at(2) or fail) == "b1"
-  expect (labels.at(3) or fail) == "b2"
+  expect labels.at(0) == "z"
+  expect labels.at(1) == "a"
+  expect labels.at(2) == "b1"
+  expect labels.at(3) == "b2"
 }
 
 test "empty and single lists" {
@@ -122,7 +122,7 @@ test "empty and single lists" {
   expect sortedStrings(none).count() == 0
   let single: List[String] = List.of("x")
   let one = sortedStrings(single)
-  expect (one.at(0) or fail) == "x"
+  expect one.at(0) == "x"
 }
 
 test "membership and distinct" {
@@ -131,8 +131,8 @@ test "membership and distinct" {
   expect !containsString(items, "d")
   let distinct = distinctStrings(items)
   expect distinct.count() == 3
-  expect (distinct.at(0) or fail) == "b"
-  expect (distinct.at(2) or fail) == "c"
+  expect distinct.at(0) == "b"
+  expect distinct.at(2) == "c"
 }
 
 property "sorted integers are in order and keep their count" forall (items: List[Int<-50..50>]) {

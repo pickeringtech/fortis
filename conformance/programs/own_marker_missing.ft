@@ -6,7 +6,7 @@ export class User {
   export age: Int
 }
 
-func enqueue(user: owned User) Void {
+func enqueue(user: owned User) {
 }
 
 func positions(user: User) User {

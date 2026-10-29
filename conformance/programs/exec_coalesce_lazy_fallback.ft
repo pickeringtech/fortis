@@ -1,0 +1,152 @@
+// execute: list hi|fallback list|list fb|item it|fallback item|item fb|map mv|fallback map|map fb|param p|fallback param|param fb|place hi|place dd|owned o|fallback owned|owned fb|owned item it|fallback item|owned item fb|list hi|kept|boom|caught demo.boom|item it|kept|boom item|caught demo.boom|kept o|boom|caught demo.boom
+// requires: runtime
+// covers: LANG-05-07, LANG-06-08
+// D-246, 5.7: the right operand of `??` runs only when the left one is null. A fallback that prints and one that
+// fails (`or fail`), with the value present and absent, through a loan (a list's text and class items, a map's
+// value, an optional read parameter, with a place fallback too) and through an owned value. Native code evaluated a
+// borrowed result's fallback first (`unwrap_or(&fallback)`), so it printed the fallback, or failed, with the value
+// present, where the interpreter and the VM did not.
+import fortis.host { Console }
+
+export error Boom {
+  code: "demo.boom"
+}
+
+export class Item {
+  export name: String
+}
+
+func noisy(console: Console, label: StringView) String {
+  console.print("fallback ${label}")
+  return String.from("fb")
+}
+
+func noisyItem(console: Console) Item {
+  console.print("fallback item")
+  return Item(name: String.from("fb"))
+}
+
+try func boom(console: Console) String {
+  console.print("boom")
+  fail Boom()
+}
+
+try func boomItem(console: Console) Item {
+  console.print("boom item")
+  fail Boom()
+}
+
+func show(console: Console, label: StringView, s: String) {
+  console.print("${label} ${s}")
+}
+
+func showItem(console: Console, label: StringView, it: Item) {
+  console.print("${label} ${it.name}")
+}
+
+func maybe(given: Bool) String? {
+  if given {
+    return String.from("o")
+  }
+  return null
+}
+
+func maybeItem(given: Bool) Item? {
+  if given {
+    return Item(name: String.from("it"))
+  }
+  return null
+}
+
+// a loan: the present value is lent to the call, and the fallback is made only when there is none
+func loanText(console: Console, xs: List[String]) {
+  show(console, "list", xs.get(0) ?? noisy(console, "list"))
+}
+
+func loanItem(console: Console, items: List[Item]) {
+  showItem(console, "item", items.get(0) ?? noisyItem(console))
+}
+
+func loanMap(console: Console, m: Map[String, String]) {
+  show(console, "map", m.get("k") ?? noisy(console, "map"))
+}
+
+func loanParam(console: Console, s: String?) {
+  show(console, "param", s ?? noisy(console, "param"))
+}
+
+func loanPlace(console: Console, xs: List[String], d: String) {
+  show(console, "place", xs.get(0) ?? d)
+}
+
+// an owned value
+func ownedText(console: Console, given: Bool) {
+  let v = maybe(given) ?? noisy(console, "owned")
+  console.print("owned ${v}")
+}
+
+func ownedItem(console: Console, given: Bool) {
+  let v = maybeItem(given) ?? noisyItem(console)
+  console.print("owned item ${v.name}")
+}
+
+// a fallback that fails leaves the function only when the left side is null
+try func loanTextFail(console: Console, xs: List[String]) String {
+  show(console, "list", xs.get(0) ?? (boom(console) or fail))
+  return String.from("kept")
+}
+
+try func loanItemFail(console: Console, items: List[Item]) String {
+  showItem(console, "item", items.get(0) ?? (boomItem(console) or fail))
+  return String.from("kept")
+}
+
+try func ownedFail(console: Console, given: Bool) String {
+  let v = maybe(given) ?? (boom(console) or fail)
+  return "kept ${v}"
+}
+
+recovers func settle(console: Console, o: owned Outcome[String]) {
+  let v = move o catch e {
+    recover "caught ${e.code}"
+  }
+  console.print(v)
+}
+
+recovers func main(console: Console) {
+  let mut texts: List[String] = List.default()
+  texts.push(String.from("hi"))
+  let noTexts: List[String] = List.default()
+  let mut items: List[Item] = List.default()
+  items.push(Item(name: String.from("it")))
+  let noItems: List[Item] = List.default()
+  let mut m: Map[String, String] = Map.default()
+  m.set(String.from("k"), String.from("mv"))
+  let noMap: Map[String, String] = Map.default()
+  loanText(console, texts)
+  loanText(console, noTexts)
+  loanItem(console, items)
+  loanItem(console, noItems)
+  loanMap(console, m)
+  loanMap(console, noMap)
+  loanParam(console, String.from("p"))
+  loanParam(console, null)
+  loanPlace(console, texts, String.from("dd"))
+  loanPlace(console, noTexts, String.from("dd"))
+  ownedText(console, true)
+  ownedText(console, false)
+  ownedItem(console, true)
+  ownedItem(console, false)
+  let a: Outcome[String] = loanTextFail(console, texts)
+  settle(console, move a)
+  let b: Outcome[String] = loanTextFail(console, noTexts)
+  settle(console, move b)
+  let c: Outcome[String] = loanItemFail(console, items)
+  settle(console, move c)
+  let d: Outcome[String] = loanItemFail(console, noItems)
+  settle(console, move d)
+  let e: Outcome[String] = ownedFail(console, true)
+  settle(console, move e)
+  let f: Outcome[String] = ownedFail(console, false)
+  settle(console, move f)
+}

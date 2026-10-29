@@ -194,19 +194,21 @@ pub fn index<T: Clone>(xs: &[T], i: i64) -> T {
     }
 }
 
-/// `List.iterate()`: a cursor over a snapshot of the items.
-pub struct Cursor<T> {
-    items: Vec<T>,
+/// `List.iterate()`: a cursor over read loans of the items (`ListCursor[T] from self`). It copies nothing: a copy
+/// of an item would be a second owner, and its drop would run the item's `cleanup` again (12.2; D-338).
+pub struct Cursor<'a, T> {
+    items: &'a [T],
     pos: usize,
 }
-impl<T: Clone> Cursor<T> {
+impl<'a, T> Cursor<'a, T> {
     #[inline]
-    pub fn new(items: &[T]) -> Cursor<T> {
-        Cursor { items: items.to_vec(), pos: 0 }
+    pub fn new(items: &'a [T]) -> Cursor<'a, T> {
+        Cursor { items, pos: 0 }
     }
+    /// `next()`: a read loan of the next item, `(alias T from self)?`.
     #[inline]
-    pub fn next(&mut self) -> Option<T> {
-        let v = self.items.get(self.pos).cloned();
+    pub fn next(&mut self) -> Option<&'a T> {
+        let v = self.items.get(self.pos);
         if v.is_some() {
             self.pos += 1;
         }

@@ -2,14 +2,14 @@
 // covers: LANG-11-01, LANG-11-03
 // D-143: an effect whose site is inside an interpolation hole is reported at the hole's place in the file; the reference
 // checker reported it at the hole's own first line and column (1:1), so the two checkers disagreed.
-import fortis.host { Host, Console }
+import fortis.host { Console }
 
 func loud(console: Console) Int {
   console.print("x")
   return 1
 }
 
-pure func quiet(console: Console) Void {
+pure func quiet(console: Console) {
   let s = "value ${loud(console)}"         // reject: E-EFF-001 — io inside a hole of a pure function
 }
 
@@ -18,7 +18,6 @@ noalloc func lean() Int {
   return 1
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  quiet(caps.console)
+func main(console: Console) {
+  quiet(console)
 }

@@ -5,7 +5,7 @@
 export class Cell {
   export n: Int
   export pure func read(self) Bool => self.n == 0
-  export func change(editable self) Void {
+  export func change(editable self) {
     self.n = 1
   }
 }
@@ -16,7 +16,7 @@ export class Holder {
 
 export func viaIf(p: editable Cell?) Bool {
   if p != null {
-    editable p.change()
+    p.change()
     return true
   }
   return false
@@ -26,13 +26,13 @@ export func viaGuard(p: editable Cell?) Bool {
   if p == null {
     return false
   }
-  editable p.change()
+  p.change()
   return true
 }
 
 export func viaField(d: editable Holder) Bool {
   if d.p != null {
-    editable d.p.change()
+    d.p.change()
     return true
   }
   return false

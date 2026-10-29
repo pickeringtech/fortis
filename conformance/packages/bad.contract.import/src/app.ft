@@ -11,5 +11,5 @@ export class Box implements Measured {
   }
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }

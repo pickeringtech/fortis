@@ -1,0 +1,39 @@
+// D-402: `match move o` of a binding that holds a loan (`let o = xs.get(0)`) does not release the loan `o` held,
+// so the owner stays frozen after the match: `xs.push(…)` on the line after it is E-OWN-010 ("exclusive loan of
+// `xs` while `o` holds a read loan") from both checkers, for a program in which nothing holds the loan any more.
+// Run unchecked, the interpreter prints `v x|drop x|after match x|count 2|end|drop y` (the arm-end destruction is
+// D-394). v0.0.1 accepted the program and ran it on every backend (the interpreter and the VM with their double
+// cleanup of the time), so this came with the loan holders of v0.0.2 (D-348); it rejects a valid program and is
+// recorded as a known limitation. Found by the v0.0.2-rc.9 wide review (Kimi K3).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "x"))
+  {
+    let o = xs.get(0)
+    match move o {
+      present(v) => {
+        console.print("v ${v.label}")
+      }
+      null => console.print("none")
+    }
+    console.print("after match ${xs.get(0)?.label ?? "gone"}")
+    xs.push(make(console, "y"))
+    console.print("count ${xs.count()}")
+  }
+  console.print("end")
+}

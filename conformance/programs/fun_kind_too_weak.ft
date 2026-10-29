@@ -3,9 +3,9 @@
 export class Box {
   export label: String
 }
-func keep(b: owned Box) Void {
+func keep(b: owned Box) {
 }
-func run(box: owned Box) Void {
+func run(box: owned Box) {
   let mut counter = 0
   let bump = fn[editable counter]() Void {
     counter = Int.saturatingAdd(counter, 1)        // reject: E-FUN-010 — mutating a capture needs fn mut

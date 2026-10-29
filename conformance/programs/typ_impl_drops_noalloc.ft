@@ -16,5 +16,5 @@ export class Box implements Measured {            // reject: E-TYP-080 — Box.s
 
 noalloc func measure(s: dynamic Measured) Int => s.size()
 
-export func main(args: List[String]) Void {
+func main() {
 }

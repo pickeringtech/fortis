@@ -1,0 +1,56 @@
+// execute: 3 passed, 0 failed
+// tests: run
+// requires: runtime
+// covers: LANG-14-03
+// A `let` keeps a fallible call's outcome, as in v0.0.1, when the test body later consumes the binding as an
+// outcome (`catch`, `or`, `match`) or annotates it `Outcome[...]`; any other binding takes the success value
+// (14; X-345).
+export error Negative {
+  code: "demo.negative"
+}
+
+try func half(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n / 2
+}
+
+func attempt(n: Int) Outcome[Int] {
+  return half(n)
+}
+
+test "a binding matched later keeps its outcome" {
+  let outcome = half(-2)
+  match move outcome {
+    success(v) => {
+      expect v == 0
+    }
+    failure(f) => {
+      expect f.code == "demo.negative"
+      report f
+    }
+  }
+}
+
+test "bindings caught later or annotated keep their outcome" {
+  let caught = half(-4)
+  let v = caught catch e {
+    report e
+    recover 7
+  }
+  let kept: Outcome[Int] = half(6)
+  let w = kept or recover 0
+  let x = half(10)
+  expect Int.wrappingAdd(Int.wrappingAdd(v, w), x) == 15
+}
+
+test "a function returning an outcome it built is not a failing call" {
+  let o = attempt(-2)
+  let v = move o catch e {
+    expect e.code == "demo.negative"
+    report e
+    recover 0
+  }
+  expect v == 0
+}

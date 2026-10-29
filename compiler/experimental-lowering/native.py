@@ -41,6 +41,8 @@ def corpus() -> list:
     for s in ("SP-01", "SP-02", "SP-03", "SP-04", "SP-05"):
         p = os.path.join(ROOT, "spikes", s, "README.md")
         if not os.path.exists(p):
+            print(f"native: skipped the accepted programs of {s}'s corpus: its spike record is a maintainers' planning "
+                  f"file and is not in this checkout", file=sys.stderr)
             continue
         for l in open(p, encoding="utf-8"):
             m = re.match(r"\| (conformance/programs/\S+) \|", l)

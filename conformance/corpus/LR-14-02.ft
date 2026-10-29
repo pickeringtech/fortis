@@ -1,0 +1,25 @@
+// accept
+export error Negative {
+  code: "demo.negative"
+}
+
+try func half(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n / 2
+}
+
+test "half of an even number" {
+  expect half(10) == 5
+  let quarter = half(half(8))
+  expect quarter == 2
+}
+
+test "a negative number fails" {
+  let r = half(-2) catch e {
+    expect e.code == "demo.negative"
+    recover 0
+  }
+  expect r == 0
+}

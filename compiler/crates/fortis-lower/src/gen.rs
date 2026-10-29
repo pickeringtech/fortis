@@ -233,6 +233,10 @@ pub struct FnGen<'p> {
     /// the Rust of each statement temporary's value. The slot is `Option`, initialised where the operand is
     /// evaluated, so a skipped `&&`/`||` operand is never created and a second lowering initialises once (5.7)
     temp_inits: HashMap<LocalId, String>,
+    /// a `let` bound to a lent `??` that can give a value of its own (its fallback moved or made): the name of the
+    /// `MaybeOwned` that holds that value beside the binding, so a move of the binding into a tuple moves what it
+    /// owns with it (7.9; D-367)
+    held: HashMap<LocalId, String>,
     /// statement temporaries whose non-copyable field move has already hoisted a hold slot per field (7.9).
     /// A tuple-element move uses the same set for its element slots (D-301).
     split_hoisted: HashSet<LocalId>,
@@ -242,6 +246,14 @@ pub struct FnGen<'p> {
     pub audit: &'p mut Audit,
     pub fn_names: &'p HashMap<String, String>,
     pub errors: Vec<LowerError>,
+}
+
+/// A loan's inner type; any other type itself.
+fn loan_inner(t: &Type) -> &Type {
+    match t {
+        Type::Loan { inner, .. } => inner.as_ref(),
+        t => t,
+    }
 }
 
 pub fn indent(s: &str, n: usize) -> String {
@@ -286,7 +298,7 @@ impl<'p> FnGen<'p> {
             }
         }
         let manual = manual_locals(prog, f);
-        FnGen { prog, f, names, forms, is_try: f.is_try(), is_async: f.has("async"), scopes: vec![None], quiet: vec![false], pending_scope: None, deferred_lets: vec![], deferred_binds: vec![], future_fns: HashMap::new(), deferred_decls: vec![], detachable: detached_tasks(f), launch_detachable: false, closure_as_future: false, box_result: false, test: f.label.starts_with("test "), labels: 0, await_lets: vec![], await_depth: 0, give: vec![], recover: vec![], arm_prelude: vec![], arm_guards: vec![], boxed_locals: vec![], last_box: None, guard_prelude: vec![], pat_guards: vec![], pat_ref: false, in_guard: false, guard_as_ref: vec![], closure_refs: None, closure_generic: None, give_ty: vec![], recover_ty: vec![], abandonable: vec![vec![]], cleanups: vec![owned_cleanup_params(prog, f)], discards: vec![vec![]], arm_discards: vec![], discard_ord: vec![], defers: vec![vec![]], loops: vec![], give_depth: vec![], recover_depth: vec![], moved: Default::default(), partial: HashSet::new(), manual, hoist: vec![], hoist_owners: vec![], emitted_temps: vec![], temp_inits: HashMap::new(), split_hoisted: HashSet::new(), transfer_drops: vec![], in_transfer: false, audit, fn_names, errors: vec![] }
+        FnGen { prog, f, names, forms, is_try: f.is_try(), is_async: f.has("async"), scopes: vec![None], quiet: vec![false], pending_scope: None, deferred_lets: vec![], deferred_binds: vec![], future_fns: HashMap::new(), deferred_decls: vec![], detachable: detached_tasks(f), launch_detachable: false, closure_as_future: false, box_result: false, test: f.label.starts_with("test "), labels: 0, await_lets: vec![], await_depth: 0, give: vec![], recover: vec![], arm_prelude: vec![], arm_guards: vec![], boxed_locals: vec![], last_box: None, guard_prelude: vec![], pat_guards: vec![], pat_ref: false, in_guard: false, guard_as_ref: vec![], closure_refs: None, closure_generic: None, give_ty: vec![], recover_ty: vec![], abandonable: vec![vec![]], cleanups: vec![owned_cleanup_params(prog, f)], discards: vec![vec![]], arm_discards: vec![], discard_ord: vec![], defers: vec![vec![]], loops: vec![], give_depth: vec![], recover_depth: vec![], moved: Default::default(), partial: HashSet::new(), manual, hoist: vec![], hoist_owners: vec![], emitted_temps: vec![], temp_inits: HashMap::new(), held: HashMap::new(), split_hoisted: HashSet::new(), transfer_drops: vec![], in_transfer: false, audit, fn_names, errors: vec![] }
     }
 
     pub fn err_pub(&mut self, line: u32, m: impl Into<String>) -> String {
@@ -407,11 +419,109 @@ impl<'p> FnGen<'p> {
         t
     }
 
+    /// A lent `??` of a non-trivial value as the value the statement holds (D-246): a `Cow<str>` for text, a
+    /// `MaybeOwned` otherwise, holding the present value as the left side gives it (a loan, or the copy `m.get(k)`
+    /// makes) or the fallback (a place lent, a new value owned). The fallback runs only in the `None` arm (5.7). A
+    /// fallback that is itself a lent `??` is that `??`'s own `Cow` or `MaybeOwned`, held in the arm as it is: a
+    /// borrow of it there would end with the arm (rustc E0716; D-339).
+    /// A lent `??` whose sides are both borrowed, a loan on the left (`xs.get(0)`, an `Option<&T>`) and a place or
+    /// another such `??` on the right, is a reference into what they borrow, with no value of the statement's own: it
+    /// can outlive the statement, as the value an `if` expression gives (`give xs.get(0) ?? alias d`; D-345). None
+    /// when either side may make a value.
+    fn lent_coalesce_ref(&mut self, a: &Expr, b: &Expr, ty: &Type) -> Option<String> {
+        if !matches!(strip(&a.ty), Type::Optional(i) if i.is_loan()) {
+            return None;
+        }
+        let text = matches!(ty, Type::Loan { inner, .. } if is_string(inner));
+        let fb = match &b.kind {
+            ExprKind::Place(_, Use::Read | Use::Alias) if text => format!("AsRef::<str>::as_ref({})", self.expr(b, Want::Str)),
+            ExprKind::Place(_, Use::Read | Use::Alias) => self.expr(b, Want::Ref),
+            ExprKind::Coalesce(ba, bb) if lent_coalesce_ty(&b.ty, self.prog) => {
+                // a nested `??` qualifies only when it is itself wholly borrowed; nothing is lowered before that is known
+                if !matches!(strip(&ba.ty), Type::Optional(i) if i.is_loan()) || !wholly_borrowed(bb, self.prog) {
+                    return None;
+                }
+                self.lent_coalesce_ref(ba, bb, &b.ty)?
+            }
+            _ => return None,
+        };
+        let l = self.expr(a, Want::Value);
+        Some(if text {
+            format!("(match {l} {{ Some(__v) => AsRef::<str>::as_ref(__v), None => {fb} }})")
+        } else {
+            format!("(match {l} {{ Some(__v) => __v, None => {fb} }})")
+        })
+    }
+
+    /// Whether a lent `??` (of a value that is not text) can give a value of its own: its fallback is moved or made,
+    /// so its result is a `MaybeOwned` that owns the fallback when it is taken. Not when both sides are borrowed (a
+    /// reference into them) or the left side is an optional read parameter (lowered on its own).
+    fn holds_fallback(&self, a: &Expr, b: &Expr, ty: &Type) -> bool {
+        lent_coalesce_ty(ty, self.prog)
+            && !matches!(ty, Type::Loan { inner, .. } if is_string(inner))
+            && !matches!(&a.kind, ExprKind::Place(p, _) if p.proj.is_empty() && self.forms[p.local as usize] == Form::OptRef)
+            && !(matches!(strip(&a.ty), Type::Optional(i) if i.is_loan()) && wholly_borrowed(b, self.prog))
+    }
+
+    /// A part of a tuple literal. A lent `??` that can give a value of its own is held in the tuple as its
+    /// `MaybeOwned`, and a `let` bound to one moves its holder in, so the tuple owns that value and destroys it with
+    /// its other parts, in element order, as the interpreter and the VM do; a loan stays a reference (7.9; D-367).
+    fn tuple_part(&mut self, x: &Expr) -> String {
+        match &x.kind {
+            ExprKind::Coalesce(a, b) if self.holds_fallback(a, b, &x.ty) => self.lent_coalesce(a, b, &x.ty),
+            ExprKind::Place(p, Use::Move) if p.proj.is_empty() && self.held.contains_key(&p.local) => {
+                // the holder goes with the binding: its block no longer destroys it (D-380)
+                self.moved.insert(p.local);
+                self.held[&p.local].clone()
+            }
+            // `present(…)` of either: the optional holds it
+            ExprKind::Present(i) if matches!(&i.kind, ExprKind::Coalesce(a, b) if self.holds_fallback(a, b, &i.ty))
+                || matches!(&i.kind, ExprKind::Place(p, Use::Move) if p.proj.is_empty() && self.held.contains_key(&p.local)) =>
+            {
+                format!("Some({})", self.tuple_part(i))
+            }
+            _ => self.expr(x, Want::Value),
+        }
+    }
+
+    fn lent_coalesce(&mut self, a: &Expr, b: &Expr, ty: &Type) -> String {
+        let l = self.expr(a, Want::Value);
+        let place = matches!(b.kind, ExprKind::Place(_, Use::Read | Use::Alias));
+        let nested = match &b.kind {
+            ExprKind::Coalesce(ba, bb) if lent_coalesce_ty(&b.ty, self.prog) => Some(self.lent_coalesce(ba, bb, &b.ty)),
+            _ => None,
+        };
+        if matches!(ty, Type::Loan { inner, .. } if is_string(inner)) {
+            let fb = match (&b.kind, nested) {
+                (_, Some(n)) => n,
+                (ExprKind::Const(Const::Str(s)), None) => format!("std::borrow::Cow::Borrowed({s:?})"),
+                _ if place => format!("std::borrow::Cow::Borrowed(AsRef::<str>::as_ref({}))", self.expr(b, Want::Str)),
+                _ => format!("std::borrow::Cow::<str>::from({})", self.expr(b, Want::Value)),
+            };
+            return format!("(match {l} {{ Some(__v) => std::borrow::Cow::<str>::from(__v), None => {fb} }})");
+        }
+        let fb = match nested {
+            Some(n) => n,
+            None if place => format!("rt::MaybeOwned::Borrowed({})", self.expr(b, Want::Ref)),
+            None => format!("rt::MaybeOwned::Owned({})", self.expr(b, Want::Value)),
+        };
+        format!("(match {l} {{ Some(__v) => rt::IntoMaybeOwned::into_maybe_owned(__v), None => {fb} }})")
+    }
+
     fn place_expr(&mut self, p: &Place, u: Use, ty: &Type, want: Want, line: u32) -> String {
         // a read of an optional the checker narrowed to present (`if v != null`): its value
         let declared = self.place_ty(p);
         if p.proj.is_empty() && self.forms[p.local as usize] == Form::OptRef {
             return self.opt_ref_read(p, u, ty, want, line);
+        }
+        // `copy v` of a local holding an optional loan (`let v = xs.get(0)`, an `Option<&T>`) copies the value it
+        // lends, narrowed to present or not, as for an optional read parameter (7.5; D-341)
+        if p.proj.is_empty() && u == Use::Copy && want == Want::Value && self.forms[p.local as usize] == Form::Owned {
+            if let Type::Optional(i) = strip(&declared) {
+                if matches!(&**i, Type::Loan { inner, .. } if !trivial(inner, self.prog)) {
+                    return self.opt_ref_read(p, u, ty, want, line);
+                }
+            }
         }
         // a branch-moved cleanup is `Option<T>`: a move takes the inner value, and a read borrows it.
         // `Want::Any` must not move it except on `Use::Move` (a launch records no move of its own).
@@ -446,6 +556,17 @@ impl<'p> FnGen<'p> {
         let whole = p.proj.is_empty();
         let code = self.place(p);
         let triv = trivial(ty, self.prog);
+        // a tuple's element whose type is a loan is a reference, or the `MaybeOwned` of a lent `??` the tuple holds
+        // (D-367): read through `&*`, it is the reference either way, and an optional one through `as_deref()`
+        let element_loan = |t: &Type| matches!(t, Type::Loan { inner, .. } if !is_string(inner) && !trivial(inner, self.prog)) && !loan_is_value(t, self.prog);
+        let element = !whole && matches!(want, Want::Value | Want::Any) && matches!(p.proj.last(), Some(Proj::Tuple(_)));
+        let code = if element && matches!(u, Use::Read | Use::Copy) && element_loan(strip(&declared)) {
+            format!("(&*{code})")
+        } else if element && u == Use::Read && matches!(strip(&declared), Type::Optional(i) if element_loan(i)) {
+            format!("{code}.as_deref()")
+        } else {
+            code
+        };
         match want {
             Want::Value => match u {
                 Use::Copy => {
@@ -599,6 +720,11 @@ impl<'p> FnGen<'p> {
             }
             ExprKind::Const(Const::Null) => "None".into(),
             ExprKind::Place(p, _) if p.proj.is_empty() && self.forms[p.local as usize] == Form::OptRef => self.place(p),
+            // an optional loan of a value that is not trivial (`xs.get(0)`, `m.get(k)`, a binding of one) is already
+            // `Option<&T>`: it passes on as it is (D-338)
+            _ if !text && matches!(&e.ty, Type::Optional(i) if matches!(&**i, Type::Loan { inner: li, .. } if !trivial(li, self.prog) && !is_string(li))) => {
+                self.expr(e, Want::Any)
+            }
             // a present value the call did not wrap (a closure call's arguments are not coerced)
             _ if fortis_types::types::known(&e.ty) && !matches!(strip(&e.ty), Type::Optional(_)) => {
                 if text {
@@ -760,7 +886,7 @@ impl<'p> FnGen<'p> {
                 s
             }
             ExprKind::Tuple(es) => {
-                let parts: Vec<String> = es.iter().map(|x| self.expr(x, Want::Value)).collect();
+                let parts: Vec<String> = es.iter().map(|x| self.tuple_part(x)).collect();
                 format!("({}{})", parts.join(", "), if parts.len() == 1 { "," } else { "" })
             }
             ExprKind::Record(fs) => {
@@ -863,6 +989,8 @@ impl<'p> FnGen<'p> {
                     _ => unreachable!(),
                 };
                 let text = matches!(strip(&a.ty), Type::Optional(i) if is_string(i));
+                // a lent result is a reference to the place the arm reads (`&*…`); an owned one reads the place (D-341)
+                let deref = if matches!(&e.ty, Type::Loan { .. }) { "&*" } else { "*" };
                 if matches!(b.kind, ExprKind::Place(_, Use::Read | Use::Alias)) {
                     // a fallback that is a place: where the result is owned, either side is copied (text, a copyable
                     // value); otherwise it is lent, as the present value is, and the result is a place read or lent
@@ -873,13 +1001,14 @@ impl<'p> FnGen<'p> {
                     };
                     if owned_result && text {
                         let fb = format!("AsRef::<str>::as_ref({}).to_string()", self.expr(b, Want::Str));
-                        return format!("{l}.map(|v| v.to_string()).unwrap_or_else(|| {fb})");
+                        return or_else(format!("{l}.map(|v| v.to_string())"), fb, leaves(b));
                     }
                     if owned_result && copyable_inner {
-                        return format!("{l}.cloned().unwrap_or_else(|| ({}).clone())", self.expr(b, Want::Ref));
+                        let fb = format!("({}).clone()", self.expr(b, Want::Ref));
+                        return or_else(format!("{l}.cloned()"), fb, leaves(b));
                     }
                     let fb = if text { format!("AsRef::<str>::as_ref({})", self.expr(b, Want::Str)) } else { self.expr(b, Want::Ref) };
-                    return format!("(*(match {l} {{ Some(__v) => __v, None => {fb} }}))");
+                    return format!("({deref}(match {l} {{ Some(__v) => __v, None => {fb} }}))");
                 }
                 // a value that cannot be copied is borrowed, fallback and all, for the statement (as `&T`)
                 let copyable = match strip(&a.ty) {
@@ -888,26 +1017,49 @@ impl<'p> FnGen<'p> {
                 };
                 if matches!(&e.ty, Type::Loan { .. }) || !copyable {
                     // the fallback is evaluated only when the parameter is null, and lives as a temporary of the
-                    // statement either way; the result is a place (`*…`) that is lent or read, never moved
+                    // statement either way; the result is a place (`*…`) that is lent or read, never moved. A
+                    // fallback that is itself a lent `??` is held as it is, a `Cow` or a `MaybeOwned` (D-339)
+                    if matches!(b.kind, ExprKind::Coalesce(..)) && lent_coalesce_ty(&b.ty, self.prog) {
+                        let ExprKind::Coalesce(ba, bb) = &b.kind else { unreachable!() };
+                        let inner = self.lent_coalesce(ba, bb, &b.ty);
+                        return if text {
+                            format!("({deref}(match {l} {{ Some(__v) => std::borrow::Cow::Borrowed(__v), None => {inner} }}))")
+                        } else {
+                            format!("({deref}(match {l} {{ Some(__v) => rt::MaybeOwned::Borrowed(__v), None => {inner} }}))")
+                        };
+                    }
                     match (&b.kind, text) {
                         (ExprKind::Const(Const::Str(s)), true) => format!("{l}.unwrap_or({s:?})"),
-                        (_, true) => format!("(*(match {l} {{ Some(__v) => std::borrow::Cow::Borrowed(__v), None => std::borrow::Cow::Owned({}) }}))", self.expr(b, Want::Value)),
+                        (_, true) => format!("({deref}(match {l} {{ Some(__v) => std::borrow::Cow::Borrowed(__v), None => std::borrow::Cow::Owned({}) }}))", self.expr(b, Want::Value)),
                         // a fallback that is a place is lent; a new value is owned
-                        _ if matches!(b.kind, ExprKind::Place(_, Use::Read | Use::Alias)) => format!("(*(match {l} {{ Some(__v) => __v, None => {} }}))", self.expr(b, Want::Ref)),
-                        _ => format!("(*(match {l} {{ Some(__v) => rt::MaybeOwned::Borrowed(__v), None => rt::MaybeOwned::Owned({}) }}))", self.expr(b, Want::Value)),
+                        _ if matches!(b.kind, ExprKind::Place(_, Use::Read | Use::Alias)) => format!("({deref}(match {l} {{ Some(__v) => __v, None => {} }}))", self.expr(b, Want::Ref)),
+                        _ => format!("({deref}(match {l} {{ Some(__v) => rt::MaybeOwned::Borrowed(__v), None => rt::MaybeOwned::Owned({}) }}))", self.expr(b, Want::Value)),
                     }
                 } else if text {
-                    format!("{l}.map(|v| v.to_string()).unwrap_or_else(|| {})", self.expr(b, Want::Value))
+                    // a fallback that is itself a lent `??` is made owned in place (D-339)
+                    let fb = if matches!(b.kind, ExprKind::Coalesce(..)) && lent_coalesce_ty(&b.ty, self.prog) {
+                        let ExprKind::Coalesce(ba, bb) = &b.kind else { unreachable!() };
+                        format!("{}.into_owned()", self.lent_coalesce(ba, bb, &b.ty))
+                    } else {
+                        self.expr(b, Want::Value)
+                    };
+                    or_else(format!("{l}.map(|v| v.to_string())"), fb, leaves(b))
                 } else {
-                    format!("{l}.cloned().unwrap_or_else(|| {})", self.expr(b, Want::Value))
+                    let fb = self.expr(b, Want::Value);
+                    or_else(format!("{l}.cloned()"), fb, leaves(b))
                 }
             }
-            ExprKind::Coalesce(a, b) if matches!(&e.ty, Type::Loan { inner, .. } if !trivial(inner, self.prog)) => {
-                let l = self.expr(a, Want::Value);
-                match (&b.kind, matches!(&e.ty, Type::Loan { inner, .. } if is_string(inner))) {
-                    (ExprKind::Const(Const::Str(s)), true) => format!("{l}.map(rt::text::as_str).unwrap_or({s:?})"),
-                    _ => format!("{l}.unwrap_or(&{})", self.expr(b, Want::Value)),
+            // a borrowed result of a non-trivial value (`show(xs.get(0) ?? fallback())`): the fallback runs only when the
+            // left side is null (5.7), so it sits in the `None` arm (D-246). The result borrows a temporary of the
+            // statement that holds the present value as the left side gives it (a loan, or the copy `m.get(k)` makes)
+            // or the fallback: a place lent, a new value owned. Text is read as `&str` (a `Cow`), the rest through a
+            // `MaybeOwned`
+            ExprKind::Coalesce(a, b) if lent_coalesce_ty(&e.ty, self.prog) => {
+                if let Some(lent) = self.lent_coalesce_ref(a, b, &e.ty) {
+                    return lent;
                 }
+                let held = self.lent_coalesce(a, b, &e.ty);
+                format!("(&*{held})")
             }
             // an optional loan of a non-trivial value with an owned fallback: the result is owned, so the loan is cloned
             // (a generic body records no types, so there the loan is known from the getter that produced it)
@@ -918,7 +1070,9 @@ impl<'p> FnGen<'p> {
                         && matches!(&a.kind, ExprKind::Call { callee: Callee::Intrinsic(n), .. } if matches!(n.as_str(), "List.get" | "ListView.get" | "Map.get"))
                         && !matches!(&b.kind, ExprKind::Place(_, u) if *u != Use::Copy)) =>
             {
-                format!("{}.cloned().unwrap_or_else(|| {})", self.expr(a, Want::Value), self.expr(b, Want::Value))
+                let l = self.expr(a, Want::Value);
+                let fb = self.expr(b, Want::Value);
+                or_else(format!("{l}.cloned()"), fb, leaves(b))
             }
             ExprKind::Coalesce(a, b) => {
                 if matches!(a.kind, ExprKind::Temp { .. }) {
@@ -928,7 +1082,9 @@ impl<'p> FnGen<'p> {
                     let right = self.expr(b, Want::RefMut);
                     format!("(match {left} {{ Some(ref mut __v) => __v, None => {right} }})")
                 } else {
-                    format!("{}.unwrap_or_else(|| {})", self.expr(a, Want::Value), self.expr(b, Want::Value))
+                    let l = self.expr(a, Want::Value);
+                    let fb = self.expr(b, Want::Value);
+                    or_else(l, fb, leaves(b))
                 }
             }
             ExprKind::OrFail(a) => {
@@ -1424,6 +1580,12 @@ impl<'p> FnGen<'p> {
             }
             return format!("({} {sym} {})", self.expr(a, Want::Ref), self.expr(b, Want::Ref));
         }
+        // a signed remainder the checker proved is the language's: `Int.MIN % -1` is 0, as `Int.rem`, the interpreter
+        // and the VM give it, where Rust's `%` panics; every other remainder is the same (D-240). A proved `/` never
+        // divides the minimum by -1: the checker leaves that division unproved (6.4)
+        if op == BinOp::Rem && matches!(rust_ty(&a.ty, self.prog).as_str(), "i64" | "i32" | "i16" | "i8") {
+            return format!("({}).wrapping_rem({})", self.expr(a, Want::Value), self.expr(b, Want::Value));
+        }
         format!("({} {sym} {})", self.expr(a, Want::Value), self.expr(b, Want::Value))
     }
 
@@ -1712,6 +1874,11 @@ impl<'p> FnGen<'p> {
         let env = format!("__env{}", self.labels);
         let mut owned: Vec<String> = Vec::new();
         let mut plan: Vec<(LocalId, String, Form)> = Vec::new();
+        // `move t` of a binding that owns its `??` fallback (`let t = empty.get(0) ?? move d`): the closure takes the
+        // binding's holder as a field of the env tuple, so it owns that value and destroys it when the consuming
+        // call ends, or in index order inside a tuple the body moved it into (7.9; D-378). Inside the body the
+        // capture is the holder's reference, as the binding was outside (D-367); a real loan stays a reference.
+        let mut held_caps: Vec<(LocalId, usize)> = Vec::new();
         for (cd, v) in cdef.captures.iter().zip(captures) {
             match cd.mode {
                 CaptureMode::Implicit => {
@@ -1732,6 +1899,12 @@ impl<'p> FnGen<'p> {
                     };
                     pre.push(format!("let {n} = {init};"));
                     plan.push((cd.local, n, form));
+                }
+                CaptureMode::Move if matches!(&v.kind, ExprKind::Place(p, Use::Move) if p.proj.is_empty() && self.held.contains_key(&p.local)) => {
+                    let ExprKind::Place(p, _) = &v.kind else { unreachable!() };
+                    self.moved.insert(p.local);
+                    held_caps.push((cd.local, owned.len()));
+                    owned.push(self.held[&p.local].clone());
                 }
                 _ => {
                     plan.push((cd.local, format!("{env}.{}", owned.len()), Form::Owned));
@@ -1754,6 +1927,14 @@ impl<'p> FnGen<'p> {
         for (l, n, form) in plan {
             sub.names[l as usize] = n;
             sub.forms[l as usize] = form;
+        }
+        // a held capture keeps its own name, bound to the holder's reference at the top of the body (D-378)
+        let mut held_binds: Vec<String> = Vec::new();
+        for (l, i) in &held_caps {
+            let holder = format!("{env}.{i}");
+            sub.forms[*l as usize] = Form::Ref;
+            sub.held.insert(*l, holder.clone());
+            held_binds.push(format!("let {} = &*{holder};", sub.names[*l as usize]));
         }
         let refs = self.closure_refs.take();
         let generic = self.closure_generic.take();
@@ -1791,7 +1972,7 @@ impl<'p> FnGen<'p> {
             Some(b) => sub.fn_body(b),
             None => "todo!()".into(),
         };
-        let body = if owned.is_empty() { body } else { format!("let _ = &{env};\n{body}") };
+        let body = if owned.is_empty() { body } else { format!("let _ = &{env};\n{}{body}", held_binds.iter().map(|b| format!("{b}\n")).collect::<String>()) };
         let (sub_labels, sub_errors) = (sub.labels, std::mem::take(&mut sub.errors));
         drop(sub);
         self.labels = sub_labels;
@@ -1926,8 +2107,10 @@ impl<'p> FnGen<'p> {
                 StmtKind::Let { local, init } => {
                     let local = *local;
                     let t = self.local_ty(local).clone();
-                    // a user class implementing Abandonable (a task is cancelled and joined by its scope instead, 12.4)
-                    let ab = name_of(&t).filter(|n| *n != "Task").and_then(|n| self.prog.type_def(n)).map_or(false, |d| d.implements.iter().any(|i| i == "Abandonable"));
+                    // a user class implementing Abandonable (a task is cancelled and joined by its scope instead, 12.4),
+                    // held by its owner: a local that holds a loan of one (`let r = alias tx`) abandons nothing (D-338)
+                    let ab = self.forms[local as usize] == Form::Owned
+                        && name_of(&t).filter(|n| *n != "Task").and_then(|n| self.prog.type_def(n)).map_or(false, |d| d.implements.iter().any(|i| i == "Abandonable"));
                     if ab {
                         self.abandonable.last_mut().unwrap().push(local);
                     }
@@ -1936,6 +2119,13 @@ impl<'p> FnGen<'p> {
                     // Dropping the closure in its initialisation slot destroys that capture before an earlier local
                     // (7.9); leaving it to Rust's scope end runs it after those explicit drops.
                     self.note_closure_cleanup(local, init);
+                    // a binding that holds its `??` fallback is destroyed with its block too, when it owns it (D-380)
+                    if self.held.contains_key(&local) {
+                        let ls = self.cleanups.last_mut().unwrap();
+                        if !ls.contains(&local) {
+                            ls.push(local);
+                        }
+                    }
                 }
                 StmtKind::LetPattern { pattern, .. } => {
                     // once: the same binding used to be registered again below, so a cleanup local was dropped
@@ -2069,6 +2259,17 @@ impl<'p> FnGen<'p> {
                     .get(depth)
                     .map(|v| v.iter().filter(|l| self.manual.contains(l) && declares(l)).map(|l| format!("{}.is_some()", self.names[*l as usize])).collect())
                     .unwrap_or_default();
+                // a binding that holds its `??` fallback owns a value only when the fallback was taken (D-380)
+                let held_live: Vec<String> = self
+                    .cleanups
+                    .get(depth)
+                    .map(|v| {
+                        v.iter()
+                            .filter(|l| self.held.contains_key(l) && !self.moved.contains(l) && crate::declares_cleanup(self.prog, loan_inner(&self.f.locals[**l as usize].ty)))
+                            .map(|l| format!("matches!({}, rt::MaybeOwned::Owned(_))", self.held[l]))
+                            .collect()
+                    })
+                    .unwrap_or_default();
                 if depth > 0 && ((unwinding && live(self.abandonable.get(depth), &self.moved)) || own_live) {
                     noisy = vec!["true".into()];
                 }
@@ -2076,6 +2277,7 @@ impl<'p> FnGen<'p> {
                 // loans-end of the function itself. A branch-moved parameter is the same (7.9, D-181).
                 if depth > 0 {
                     noisy.extend(manual_live);
+                    noisy.extend(held_live);
                 }
                 if !noisy.is_empty() {
                     out.push(format!("if {} {{ rt::trace::event(\"loans-end\"); }}", noisy.join(" || ")));
@@ -2116,6 +2318,17 @@ impl<'p> FnGen<'p> {
             // the value a second time when the scope ends.
             let ls = self.cleanups.get(depth).cloned().unwrap_or_default();
             for l in ls.iter().rev() {
+                // a binding that holds its `??` fallback destroys that value here, in its turn and traced as the
+                // interpreter does, when it owns it; a loan it holds ends and destroys nothing (D-367, D-380)
+                if let Some(holder) = self.held.get(l).cloned() {
+                    if self.moved.contains(l) || self.partial.contains(l) {
+                        continue;
+                    }
+                    let inner = loan_inner(&self.f.locals[*l as usize].ty).clone();
+                    let trace = if crate::declares_cleanup(self.prog, &inner) { name_of(&inner).map(|n| format!("rt::trace::event(\"drop {n}\"); ")).unwrap_or_default() } else { String::new() };
+                    out.push(format!("if let rt::MaybeOwned::Owned(__v) = {holder} {{ {trace}drop(__v); }}"));
+                    continue;
+                }
                 if self.forms[*l as usize] != Form::Owned {
                     continue;
                 }
@@ -2267,6 +2480,34 @@ impl<'p> FnGen<'p> {
                     _ => Form::Owned,
                 };
                 self.forms[*local as usize] = form;
+                self.held.remove(local);
+                // a binding of a lent `??` that can give a value of its own names that value's holder beside it, so a
+                // move of the binding into a tuple moves what it owns with it (7.9; D-367). The binding is the
+                // holder's reference, as the statement's temporary was.
+                if let ExprKind::Coalesce(a, b) = &init.kind {
+                    if form == Form::Ref && !self.f.locals[*local as usize].mutable && !self.deferred_lets.contains(local) && self.holds_fallback(a, b, &init.ty) {
+                        let held = self.lent_coalesce(a, b, &init.ty);
+                        let holder = format!("__held{local}");
+                        let name = self.names[*local as usize].clone();
+                        self.held.insert(*local, holder.clone());
+                        self.note_future(*local, init);
+                        return format!("let {holder} = {held}; let {name} = &*{holder};");
+                    }
+                }
+                // a binding moved from such a binding (`let q = move t`) takes the holder with it, so the value is
+                // destroyed with the new binding's block, in its order (7.9; D-380)
+                if let ExprKind::Place(p, Use::Move) = &init.kind {
+                    if p.proj.is_empty() && form == Form::Ref && !self.f.locals[*local as usize].mutable && !self.deferred_lets.contains(local) {
+                        if let Some(src) = self.held.get(&p.local).cloned() {
+                            self.moved.insert(p.local);
+                            let holder = format!("__held{local}");
+                            let name = self.names[*local as usize].clone();
+                            self.held.insert(*local, holder.clone());
+                            self.note_future(*local, init);
+                            return format!("let {holder} = {src}; let {name} = &*{holder};");
+                        }
+                    }
+                }
                 let v = match form {
                     Form::Owned if matches!(&init.kind, ExprKind::Const(Const::Int(_))) || matches!(&init.kind, ExprKind::Unary(UnOp::Neg, x) if matches!(x.kind, ExprKind::Const(Const::Int(_)))) => {
                         let n = match &init.kind {
@@ -2396,6 +2637,10 @@ impl<'p> FnGen<'p> {
                 let read = if place.proj.is_empty() && self.forms[place.local as usize] != Form::Owned { format!("(*{code})") } else { code };
                 let lv = self.lvalue(place);
                 let v = self.expr(value, Want::Value);
+                // a signed `%=` is the language's remainder, as `%` is (D-240)
+                if *op == BinOp::Rem && matches!(rust_ty(&value.ty, self.prog).as_str(), "i64" | "i32" | "i16" | "i8") {
+                    return format!("{{ let __lhs = {read}; {lv} = __lhs.wrapping_rem({v}); }}");
+                }
                 format!("{{ let __lhs = {read}; {lv} = __lhs {} {v}; }}", op.symbol())
             }
             StmtKind::Expr(e) => {
@@ -3729,6 +3974,42 @@ fn spelled(prog: &Program, t: &Type) -> bool {
         Some(d) if !d.type_params.is_empty() && args_of(t).is_empty() => false,
         _ => true,
     }
+}
+
+/// Whether a `??` fallback borrows all it gives: a place read or lent, or a lent `??` whose left side is a loan and
+/// whose own fallback is wholly borrowed (D-345).
+fn wholly_borrowed(b: &Expr, prog: &Program) -> bool {
+    match &b.kind {
+        ExprKind::Place(_, Use::Read | Use::Alias) => true,
+        ExprKind::Coalesce(ba, bb) => lent_coalesce_ty(&b.ty, prog) && matches!(strip(&ba.ty), Type::Optional(i) if i.is_loan()) && wholly_borrowed(bb, prog),
+        _ => false,
+    }
+}
+
+/// Whether a `??` of this type is lent: its result borrows a non-trivial value (D-246).
+fn lent_coalesce_ty(t: &Type, prog: &Program) -> bool {
+    matches!(t, Type::Loan { inner, .. } if !trivial(inner, prog))
+}
+
+/// `opt ?? fallback` of an `Option` and its fallback's code: inline, as a `match`, when the fallback may leave the
+/// function (an `or fail`'s `?`, a `fail`), which a closure cannot; otherwise `unwrap_or_else` evaluates it lazily
+/// all the same (5.7).
+fn or_else(opt: String, fallback: String, inline: bool) -> String {
+    if inline {
+        format!("(match {opt} {{ Some(__v) => __v, None => {fallback} }})")
+    } else {
+        format!("{opt}.unwrap_or_else(|| {fallback})")
+    }
+}
+
+/// Whether evaluating `e` may leave the enclosing function: an `or fail`, a `fail`, or a block of statements (a
+/// `catch` handler, an `if` or `match` with blocks) that may `return`. A lambda's body is its own function.
+fn leaves(e: &Expr) -> bool {
+    let mut found = false;
+    crate::visit_expr(e, &mut |x| {
+        found |= matches!(x.kind, ExprKind::OrFail(_) | ExprKind::Fail(_) | ExprKind::Catch { .. } | ExprKind::If { .. } | ExprKind::Match { .. } | ExprKind::Block(_));
+    });
+    found
 }
 
 pub fn int_suffix(t: &Type) -> &'static str {

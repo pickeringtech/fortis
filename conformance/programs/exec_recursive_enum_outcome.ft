@@ -3,7 +3,7 @@
 // covers: LANG-09-05
 // `Outcome[Tree]` stores the tree inline, so a recursive field of that type is boxed (D-55). A
 // consuming match handles the success and reports the failure.
-import fortis.host { Host }
+import fortis.host { Console }
 
 export enum Tree {
   Leaf
@@ -23,7 +23,6 @@ func consume(t: owned Tree) Int {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("leaf ${consume(Tree.Leaf)}")
+func main(console: Console) {
+  console.print("leaf ${consume(Leaf)}")
 }

@@ -1,0 +1,25 @@
+// Formatter rewrite R14 (LR 6.4, X-345): `Int.add(a, b)` and its family, as the left operand of `or fail`,
+// `or recover` or `catch`, become the operator where the operator would be unproved, so it is the same checked
+// operation; operands keep their grouping. A call the interval rules prove stays, since `a + b or fail` would then be
+// a value that cannot fail; so does a call under another operator, or one spread over lines.
+try func digits(text: List[Int]) Int {
+  let mut fraction = 0
+  let mut places = 0
+  for d in text {
+    fraction = Int.add(Int.mul(fraction, 10) or fail, d) or fail
+    places = Int.add(places, 1) or fail
+  }
+  return Int.sub(fraction, places) or fail
+}
+
+recovers func ratio(a: Int, b: Int, small: Int<0..10>) Int {
+  let q = Int.div(a, b) or recover 0
+  let s: Int = Int.add(small, 1) or recover 0
+  let w = Int.mul(Int.wrappingAdd(a, 1), Int.wrappingSub(b, small)) catch e {
+    recover 0
+  }
+  let r = Int.rem(
+    a,
+    b) or recover 0
+  return Int.wrappingAdd(Int.wrappingAdd(q, s), Int.wrappingAdd(w, r))
+}

@@ -2,7 +2,7 @@
 // covers: LANG-11-07
 // D-110: a test may not run the entry `main`: it would create a second set of capabilities in the test runner (11.6, 14).
 import fortis.host { Host }
-export func main(args: List[String]) Void {
+export func main(args: List[String]) {
   let caps = Host.capabilities()
   caps.console.print("run")
 }

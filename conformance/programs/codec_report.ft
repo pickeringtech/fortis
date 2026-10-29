@@ -6,7 +6,7 @@ import acme.ledger.entries { Entry }
 export pure func render(entries: ListView[Entry]) String {
   let mut out = text.Builder.create()
   for entry in entries {
-    editable out.appendLine(entry.toJson())
+    out.appendLine(entry.toJson())
   }
   return out.finish()
 }

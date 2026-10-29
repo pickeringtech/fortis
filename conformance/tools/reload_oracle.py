@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SP-07's oracle (spikes/SP-07/design.md 11): what a development session must log for a script.
+"""SP-07's oracle (SP-07's design, section 11): what a development session must log for a script.
 
 It is written from the design and the edit catalogue, never from the session's code. It has its own model of the
 workload (conformance/reload/template.ft):

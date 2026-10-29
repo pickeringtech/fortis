@@ -1,7 +1,7 @@
 // execute: small|large|equal
 // requires: runtime
 // covers: LANG-05-03
-import fortis.host { Host }
+import fortis.host { Console }
 
 pure func size(n: Int) String {
   if n < 10 {
@@ -13,9 +13,8 @@ pure func size(n: Int) String {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(size(3))
-  caps.console.print(size(30))
-  caps.console.print(size(10))
+func main(console: Console) {
+  console.print(size(3))
+  console.print(size(30))
+  console.print(size(10))
 }

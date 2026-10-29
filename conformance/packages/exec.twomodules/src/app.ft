@@ -1,11 +1,10 @@
 // LANG-04-04, LANG-04-05 (X-136): two modules of one package each declare a private class `Node` and a private
 // function `helper`; each module's code uses its own.
-import fortis.host { Host }
+import fortis.host { Console }
 import exec.twomodules.one { first }
 import exec.twomodules.two { second }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(first())
-  caps.console.print(second())
+func main(console: Console) {
+  console.print(first())
+  console.print(second())
 }

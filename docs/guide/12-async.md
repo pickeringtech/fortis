@@ -20,25 +20,24 @@ The classic use is closing what you opened, right next to where you opened it:
 
 ```fortis
 // accept
-import fortis.host { FileSystem, Host, Path }
+import fortis.host { FileSystem, Path, Console }
 
-try func copyFile(fs: FileSystem, source: Path, target: Path) Void {
+try func copyFile(fs: FileSystem, source: Path, target: Path) {
   let mut input = fs.open(source) or fail
-  defer { editable input.close() }
+  defer { input.close() }
   let mut output = fs.create(target) or fail
-  defer { editable output.close() }
-  let data = editable input.readAll() or fail
-  editable output.writeAll(data) or fail
+  defer { output.close() }
+  let data = input.readAll() or fail
+  output.writeAll(data) or fail
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(fileSystem: FileSystem, console: Console) {
   let source = Path.parse("source.txt") or fail
   let target = Path.parse("copy.txt") or fail
-  caps.fileSystem.writeAll(source, "copied by Fortis") or fail
-  copyFile(caps.fileSystem, source, target) or fail
-  let text = caps.fileSystem.readText(target) or fail
-  caps.console.print(text)
+  fileSystem.writeAll(source, "copied by Fortis") or fail
+  copyFile(fileSystem, source, target) or fail
+  let text = fileSystem.readText(target) or fail
+  console.print(text)
 }
 ```
 
@@ -55,17 +54,17 @@ every exit. Moving one of them away between the `defer` and an exit is `E-DEF-00
 // reject: E-DEF-002
 export class Handle {
   export open: Bool
-  export func close(editable self) Void {
+  export func close(editable self) {
     self.open = false
   }
 }
 
-func keep(h: owned Handle) Void {
+func keep(h: owned Handle) {
 }
 
-export func main(args: List[String]) Void {
+func main() {
   let mut input = Handle(open: true)
-  defer { editable input.close() }
+  defer { input.close() }
   keep(move input)                    // reject: E-DEF-002
 }
 ```
@@ -81,7 +80,7 @@ export error FlushFailed {
   code: "demo.flush"
 }
 
-try func flush() Void {
+try func flush() {
   fail FlushFailed()
 }
 
@@ -92,24 +91,24 @@ try func work(n: Int) Int {
   return n
 }
 
-export try func main(args: List[String]) Void {
+try func main() {
   discard work(1) or fail
 }
 ```
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 export error FlushFailed {
   code: "demo.flush"
 }
 
-try func flush() Void {
+try func flush() {
   fail FlushFailed()
 }
 
-func work(console: Console) Void {
+func work(console: Console) {
   defer {
     flush() catch e {
       report e
@@ -119,10 +118,9 @@ func work(console: Console) Void {
   console.print("work")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  work(caps.console)
-  caps.console.print("done")
+func main(console: Console) {
+  work(console)
+  console.print("done")
 }
 ```
 
@@ -150,7 +148,7 @@ func run(items: Buffer) Int {
   return seen.used
 }
 
-export func main(args: List[String]) Void {
+func main() {
   discard run(Buffer(used: 1))
 }
 ```
@@ -167,17 +165,17 @@ runs its own `cleanup` method before its fields are dropped. The order does not 
 
 ```fortis
 // accept
-import fortis.host { Capabilities, Console, Host }
+import fortis.host { Console }
 
 export class Noisy {
   export name: String
   export console: Shared[Console]
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("drop ${self.name}")
   }
 }
 
-func steps(console: Shared[Console], stop: Bool) Void {
+func steps(console: Shared[Console], stop: Bool) {
   let first = Noisy(name: "first", console: console.retain())
   defer {
     console.print("defer one")
@@ -193,14 +191,8 @@ func steps(console: Shared[Console], stop: Bool) Void {
   console.print("end of body")
 }
 
-func sharedConsole(caps: owned Capabilities) Shared[Console] {
-  let Capabilities(console: out, fileSystem: _, network: _, clock: _, random: _, environment: _, process: _, supervisor: _, secretAccess: _, rawSql: _) = move caps
-  return Shared.create(move out)
-}
-
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let console = sharedConsole(move caps)
+func main(out: Console) {
+  let console = Shared.create(move out)
   steps(console.retain(), false)
   steps(console.retain(), true)
 }
@@ -232,19 +224,18 @@ cooperative executor (LR 4.6).
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 async func work(console: Console, n: Int) Int {
   console.print("work ${n} runs")
   return n
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let pending = work(caps.console, 1)
-  caps.console.print("future built")
+async func main(console: Console) {
+  let pending = work(console, 1)
+  console.print("future built")
   let value = await pending
-  caps.console.print("got ${value}")
+  console.print("got ${value}")
 }
 ```
 
@@ -270,7 +261,7 @@ async func run(n: Int) Int {
   return n
 }
 
-export async func main(args: List[String]) Void {
+async func main() {
   discard await run(1)
 }
 ```
@@ -304,7 +295,7 @@ try func parse(n: Int) Int {
   return n
 }
 
-async func pause() Void {
+async func pause() {
 }
 
 async try func run(n: Int) Int {
@@ -313,7 +304,7 @@ async try func run(n: Int) Int {
   return pending or fail
 }
 
-export async try func main(args: List[String]) Void {
+async try func main() {
   discard await run(3) or fail
 }
 ```
@@ -321,7 +312,7 @@ export async try func main(args: List[String]) Void {
 Consume the outcome before the `await` (`let value = parse(n) or fail`), pass it into the awaited call, or
 restructure (LR 12.4).
 
-`interface Abandonable { func abandon(owned self) Void }` is the escape hatch: its `abandon` is synchronous, cannot
+`interface Abandonable { func abandon(owned self) }` is the escape hatch: its `abandon` is synchronous, cannot
 fail and cannot suspend, and the unwind calls it on every live `Abandonable` local in reverse initialisation
 order, after the deferred blocks (LR 12.4). Unwinding means leaving by cancellation *or by `fail`*, so an
 `Abandonable` local is also the one linear value that may be live at an `or fail`; a normal exit must still
@@ -329,7 +320,7 @@ consume it explicitly. This is exactly what a transaction wants: failure rolls b
 
 ```fortis
 // accept (exit status 1)
-import fortis.host { Capabilities, Console, Host }
+import fortis.host { Console }
 
 export error Odd {
   code: "demo.odd"
@@ -342,12 +333,12 @@ export class Tx implements Abandonable {
     console.print("begin")
     return Tx(witness: Must.create(), console: console.retain())
   }
-  export func commit(owned self) Void {
+  export func commit(owned self) {
     self.console.print("commit")
     let Tx(witness: w, console: c) = move self
     Must.discharge(move w)
   }
-  func abandon(owned self) Void {
+  func abandon(owned self) {
     self.console.print("abandon")
     let Tx(witness: w, console: c) = move self
     Must.discharge(move w)
@@ -369,9 +360,7 @@ try func work(console: Shared[Console], n: Int) Int {
   return v
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: _, network: _, clock: _, random: _, environment: _, process: _, supervisor: _, secretAccess: _, rawSql: _) = move caps
+try func main(out: Console) {
   let console = Shared.create(move out)
   discard work(console, 2) or fail
   discard work(console, 1) or fail
@@ -399,7 +388,7 @@ handed to a `Supervisor` with `name.detach(move task, supervisor)`. A scope neve
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 async func measure(text: StringView) Int => text.scalarCount()
 
@@ -411,12 +400,11 @@ async func measureBoth(a: StringView, b: StringView) (Int, Int) {
   }
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async func main(console: Console) {
   let left = "cooperative"
   let right = "tasks"
   let pair = await measureBoth(left, right)
-  caps.console.print("${pair.0} and ${pair.1}")
+  console.print("${pair.0} and ${pair.1}")
 }
 ```
 
@@ -433,7 +421,7 @@ cancels them and waits for each to finish, as part of ending the block's loans a
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 export error Bad {
   code: "demo.bad"
@@ -458,10 +446,9 @@ async try func run(console: Console) Int {
   }
 }
 
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let r = await run(caps.console) or recover -1
-  caps.console.print("recovered ${r}")
+async recovers func main(console: Console) {
+  let r = await run(console) or recover -1
+  console.print("recovered ${r}")
 }
 ```
 
@@ -484,7 +471,7 @@ async func run(n: Int) Task[Int] {
   }
 }
 
-export async func main(args: List[String]) Void {
+async func main() {
 }
 ```
 
@@ -498,7 +485,7 @@ export async func main(args: List[String]) Void {
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 async func sum(items: owned List[Int]) Int {
   let mut total = 0
@@ -518,10 +505,9 @@ async func pools() (Int, Int) {
   }
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async func main(console: Console) {
   let counts = await pools()
-  caps.console.print("sum ${counts.0}, words ${counts.1}")
+  console.print("sum ${counts.0}, words ${counts.1}")
 }
 ```
 
@@ -543,7 +529,7 @@ async func pools() Int {
   }
 }
 
-export async func main(args: List[String]) Void {
+async func main() {
   discard await pools()
 }
 ```
@@ -560,13 +546,13 @@ and the completion of an `async main` ends the process (LR 4.6), so the example 
 
 ```fortis
 // accept
-import fortis.host { Console, Host, Supervisor }
+import fortis.host { Console, Supervisor }
 
 async func work() Int {
   return 1
 }
 
-async func run(console: Console, supervisor: Supervisor) Void {
+async func run(console: Console, supervisor: Supervisor) {
   scope tasks {
     let t = tasks.launch(work())
     tasks.detach(move t, supervisor)
@@ -574,10 +560,9 @@ async func run(console: Console, supervisor: Supervisor) Void {
   }
 }
 
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  await run(caps.console, caps.supervisor)
-  caps.console.print("done")
+async func main(console: Console, supervisor: Supervisor) {
+  await run(console, supervisor)
+  console.print("done")
 }
 ```
 
@@ -594,7 +579,7 @@ is simply part of the tuple, so the caller consumes both outcomes.
 
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 export error Bad {
   code: "demo.bad"
@@ -610,7 +595,7 @@ async func right(console: Console) Int {
   return 2
 }
 
-async recovers func run(console: Console) Void {
+async recovers func run(console: Console) {
   let pair = await join(left(console), right(console))
   let (a, b) = move pair
   let text = match move a {
@@ -626,9 +611,8 @@ async recovers func run(console: Console) Void {
   console.print("${text}, right ${b}")
 }
 
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  await run(caps.console)
+async recovers func main(console: Console) {
+  await run(console)
 }
 ```
 
@@ -677,7 +661,7 @@ Shared data is immutable unless it sits behind a `Mutex[T]` or is an atomic (LR 
 
 ```fortis
 // reject: E-ASY-002
-async func pause() Void {
+async func pause() {
 }
 
 async try func run(m: Mutex[Int]) Int {
@@ -686,7 +670,7 @@ async try func run(m: Mutex[Int]) Int {
   return 0
 }
 
-export async try func main(args: List[String]) Void {
+async try func main() {
   let m = Mutex.create(1)
   discard await run(m) or fail
 }
@@ -696,9 +680,9 @@ End the guard's block before suspending:
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-async func pause() Void {
+async func pause() {
 }
 
 async try func run(m: Mutex[Int]) Int {
@@ -709,11 +693,10 @@ async try func run(m: Mutex[Int]) Int {
   return 0
 }
 
-export async try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+async try func main(console: Console) {
   let m = Mutex.create(1)
   let r = await run(m) or fail
-  caps.console.print("released and resumed: ${r}")
+  console.print("released and resumed: ${r}")
 }
 ```
 
@@ -725,16 +708,15 @@ released and resumed: 0
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let counter = AtomicInt.create(5)
   let previous = counter.fetchAdd(2)
-  caps.console.print("${previous} then ${counter.load()}")
+  console.print("${previous} then ${counter.load()}")
   let flag = AtomicBool.create(true)
   flag.store(false)
-  caps.console.print("${flag.load()}")
+  console.print("${flag.load()}")
 }
 ```
 

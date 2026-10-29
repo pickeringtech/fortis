@@ -4,7 +4,7 @@
 // an Authority type, or, for a method, a field of its receiver's class whose type is an authority or a `Shared` of one
 // (`Stamp` holds a `Shared[Clock]`). A field of another type names none (`Toolbox` holds a `Capabilities` record). Both
 // checkers exempted every method and associated function.
-import fortis.host { Host, Capabilities, Clock, Console }
+import fortis.host { Capabilities, Clock, Console }
 
 class Reader {
   export name: String
@@ -19,14 +19,14 @@ class Stamp {
 
 class Closer {
   export caps: Capabilities
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.caps.console.print("bye")                                       // reject: E-EFF-010 — a cleanup without one
   }
 }
 
 class Quiet {
   export out: Shared[Console]
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.out.print("bye")
   }
 }
@@ -36,6 +36,5 @@ class Toolbox {
   func now(self) Timestamp => self.caps.clock.now()                      // reject: E-EFF-010 — a record of capabilities
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main() {
 }

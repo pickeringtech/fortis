@@ -3,19 +3,18 @@
 // requires: runtime
 // covers: LANG-12-04, LANG-05-02
 // 12.5: a scope's tasks are joined as part of ending the block's loans, before the block's deferred blocks run.
-import fortis.host { Host, Console }
-async func work(console: Console) Void {
+import fortis.host { Console }
+async func work(console: Console) {
   console.print("work")
 }
-async func run(console: Console) Void {
+async func run(console: Console) {
   scope tasks {
     defer { console.print("scope defer") }
     let t = tasks.launch(work(console))
     await t
   }
 }
-export async func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  await run(caps.console)
-  caps.console.print("done")
+async func main(console: Console) {
+  await run(console)
+  console.print("done")
 }

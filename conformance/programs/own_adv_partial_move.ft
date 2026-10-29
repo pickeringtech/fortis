@@ -4,9 +4,9 @@ export class Invoice {
   export lines: List[Int]
   export title: String
 }
-func take(xs: owned List[Int]) Void {
+func take(xs: owned List[Int]) {
 }
-func run(flag: Bool) Void {
+func run(flag: Bool) {
   let invoice = Invoice(lines: List.of(1), title: "t")
   take(move invoice.lines)                 // reject: E-OWN-040 — partial move out of a binding that still owns invoice
 }

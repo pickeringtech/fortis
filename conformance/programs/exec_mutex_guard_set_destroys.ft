@@ -3,22 +3,20 @@
 // covers: LANG-12-06, LANG-07-09
 // D-23 (review): `guard.set(value)` drops the old value, running its cleanup, on every backend; `replace` hands the old
 // value to the caller, which drops it at the end of its block.
-import fortis.host { Host, Capabilities, Console }
+import fortis.host { Console }
 
 class Note {
   export out: Shared[Console]
   export name: String
   export loud: Bool
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     if self.loud {
       self.out.print("closed ${self.name}")
     }
   }
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, console: c, secretAccess: access, rawSql: sql) = move caps
+try func main(c: Console) {
   let out = Shared.create(move c)
   let m = Mutex.create(Note(out: out.retain(), name: "a", loud: true))
   {

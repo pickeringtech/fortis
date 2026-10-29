@@ -1,0 +1,36 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-06-01
+// 9.7 (X-345): a bare variant whose name also reaches a declaration in scope (a class, an error, another type) is
+// ambiguous wherever the expected type would read it as the variant, and the record asks for the qualified form, so a
+// name never silently changes meaning. The qualified form, and a pattern (which has no qualified form), are accepted.
+enum Severity derive Equatable {
+  Error
+  Warning
+}
+
+class Warning {
+  count: Int
+}
+
+error Error {
+  code: "demo.error"
+}
+
+func take(s: Severity) Bool => s == Severity.Error
+
+func pick(flag: Bool) Severity {
+  if flag {
+    return Error                          // reject: E-TYP-040 — the error kind `Error` is in scope; write `Severity.Error`
+  }
+  return Severity.Warning
+}
+
+func uses(s: Severity) Bool {
+  let a: Severity = Warning              // reject: E-TYP-040 — the class `Warning` is in scope
+  let b = take(Error)                    // reject: E-TYP-040
+  let c = s == Warning                   // reject: E-TYP-040
+  return match s {
+    Error => b
+    Warning => c
+  }
+}

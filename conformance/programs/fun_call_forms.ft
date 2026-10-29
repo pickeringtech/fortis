@@ -3,19 +3,20 @@
 export class Box {
   export label: String
 }
-func keep(b: owned Box) Void {
+func keep(b: owned Box) {
 }
-func run(box: owned Box) Void {
+func run(box: owned Box) {
   let mut counter = 0
   let mut bump = fn mut[editable counter]() Void {
     counter = Int.saturatingAdd(counter, 1)
   }
-  bump()                                           // reject: E-OWN-001 — a fn mut is called `editable bump()`
+  bump()                                           // a fn mut held by a `let mut` binding needs no marker (X-345)
   let mut other = 0
   let fixed = fn mut[editable other]() Void {
     other = 0
   }
   editable fixed()                                 // reject: E-OWN-001 — the binding holding a fn mut must be let mut
+  fixed()                                          // reject: E-OWN-001: and unmarked, it is still not let mut
   let finish = fn once[move box]() Void {
     keep(move box)
   }

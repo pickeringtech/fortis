@@ -4,7 +4,7 @@ export class Pair {
   export left: Int
   export right: Int
 }
-func run() Void {
+func run() {
   let mut p = Pair(left: 0, right: 0)
   let mut both = fn mut[editable p.left, editable p.right]() Void {   // reject: E-OWN-010 — two editable captures of one owner
     p.left = 1

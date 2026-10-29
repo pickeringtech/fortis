@@ -18,6 +18,12 @@ use crate::types::strip;
 /// resolves exactly as the checker resolves it.
 fn plan_records(ty: &Typer) -> Vec<Record> {
     let mut out = Vec::new();
+    // `@observe` is the prelude's aspect only where this module's table resolves the name to it: an aspect the
+    // module declares or imports under that name attaches no core observation, and the IR builder records none
+    // for it (fortis-mir `core_aspect`), so it has no plan to conflict with (11.8; D-314)
+    if !ty.dc.table.get("observe").map_or(true, |d| d.module == "fortis.prelude") {
+        return out;
+    }
     for (_, d) in ty.dc.table.decls.iter() {
         if d.kind != "func" || d.module != ty.dc.module_name {
             continue;
@@ -123,4 +129,24 @@ pub fn check_path(p: &std::path::Path) -> Vec<Record> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn codes(src: &str) -> Vec<String> {
+        let parsed = fortis_syntax::parse_module(src).expect("parse");
+        check(&parsed, "t.ft").into_iter().map(|r| r.code).collect()
+    }
+
+    /// The plan step judges the core `@observe` only, resolved by identity (D-314): a module's own aspect named
+    /// `observe` attaches no core observation, so a `noalloc` function carrying it has no plan conflict.
+    #[test]
+    fn user_aspect_named_observe_has_no_plan() {
+        let own = include_str!("../../../../conformance/aspects/user_observe_plan.ft");
+        assert!(codes(own).is_empty(), "{:?}", codes(own));
+        let core = include_str!("../../../../conformance/programs/eff_noalloc_observe.ft");
+        assert_eq!(codes(core), vec!["E-EFF-030".to_string()]);
+    }
 }

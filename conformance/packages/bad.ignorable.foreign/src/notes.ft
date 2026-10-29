@@ -1,0 +1,11 @@
+// This module declares its own aspect `ignorable`, so `@ignorable` here is that aspect, not the core one: a caller
+// in another module, where `ignorable` is the prelude's, still drops `count`'s result only with `discard` (5.5,
+// 11.8; D-314).
+export aspect ignorable() {
+  metadata
+}
+
+@ignorable
+export func count(n: Int) Int {
+  return n
+}

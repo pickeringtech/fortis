@@ -4,7 +4,7 @@
 
 Each benchmark is a Fortis program in `fortis/` and a Rust program in `rust/` that performs the same operations
 in the same order, reviewed independently for equal work before the DEL-40 measurement
-(`docs/reviews/del40-kernel-review-*.md`). The Fortis program is checked, lowered to safe Rust by the production
+(the DEL-40 kernel reviews). The Fortis program is checked, lowered to safe Rust by the production
 lowering (`fortisc native`, `#![forbid(unsafe_code)]`, overflow checks on, `panic = "abort"`) and built in release
 mode. The Rust program is built with the same code-generation settings: `rustc -C opt-level=3 -C codegen-units=1
 -C overflow-checks=yes -C panic=abort`. The runner alternates the two programs in a seeded random order per round,

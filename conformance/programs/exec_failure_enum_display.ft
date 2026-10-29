@@ -3,14 +3,14 @@
 // covers: LANG-10-01
 // A payload-free enum stored in a failure keeps its variant when `display` is not the variant's name
 // (D-55). Matching `is` rebuilds the variant, and the custom display is not the discriminant.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 import fortis.text { Builder }
 
 export enum Kind implements Displayable {
   Odd
   Even
-  export pure func display(self, into: editable Builder) Void {
-    editable into.append("custom")
+  export pure func display(self, into: editable Builder) {
+    into.append("custom")
   }
 }
 
@@ -39,9 +39,7 @@ recovers func word(k: Kind) String {
   }
 }
 
-export recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
-  out.print(word(Kind.Odd))
-  out.print(word(Kind.Even))
+recovers func main(out: Console) {
+  out.print(word(Odd))
+  out.print(word(Even))
 }

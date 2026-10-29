@@ -11,7 +11,7 @@ use fortis_types::types::Type;
 
 use crate::machine::{dynamic, Frame, Vm, R};
 use crate::sync::Rc;
-use crate::value::{display, freeze, shared, EnumVal, FailureVal, Obj, OrderedMap, Value};
+use crate::value::{display, freeze, shared, EnumVal, FailureVal, Obj, OrderedMap, RecordVal, TupleVal, Value};
 
 const MAGIC: &[u8; 4] = b"FTB\x01";
 
@@ -724,7 +724,7 @@ struct Builder<'v, 'p> {
 
 impl Builder<'_, '_> {
     fn default_of(&mut self, e: &Expr) -> D<Value> {
-        let mut fr = Frame { locals: vec![], func: 0, consumed: None };
+        let mut fr = Frame { locals: vec![], func: 0, consumed: None, lent: std::collections::HashSet::new(), owned: std::collections::HashSet::new(), ret_lent: true };
         self.vm.eval(&mut fr, e).map_err(|_| Invalid { code: "codec.invalid", detail: "a field default could not be evaluated".into() })
     }
 
@@ -882,17 +882,17 @@ impl Builder<'_, '_> {
                 Value::Map(shared(m))
             }
             Desc::Tuple(ds) => match t {
-                J::Arr(xs) if xs.len() == ds.len() => Value::Tuple(Rc::new(ds.iter().zip(xs).map(|(d, x)| self.text(d, x)).collect::<D<_>>()?)),
+                J::Arr(xs) if xs.len() == ds.len() => Value::Tuple(Rc::new(TupleVal::from(ds.iter().zip(xs).map(|(d, x)| self.text(d, x)).collect::<D<Vec<_>>>()?))),
                 _ => return bad(format!("expected {} elements", ds.len())),
             },
             Desc::Record(fs) => {
                 let fields: Vec<(String, Desc, Option<Expr>)> = fs.iter().map(|(n, d)| (n.clone(), d.clone(), None)).collect();
                 let vals = self.fields(&fields, t)?;
-                Value::Record(shared(vals.into_iter().map(|(k, v)| (Rc::from(k.as_str()), v)).collect()))
+                Value::Record(shared(RecordVal::from(vals.into_iter().map(|(k, v)| (Rc::from(k.as_str()), v)).collect::<Vec<_>>())))
             }
             Desc::Class(name, fs) => {
                 let vals = self.fields(fs, t)?;
-                Value::Obj(shared(Obj { ty: Rc::from(name.as_str()), fields: vals.into_iter().map(|(k, v)| (Rc::from(k.as_str()), v)).collect() }))
+                Value::Obj(shared(Obj::new(Rc::from(name.as_str()), vals.into_iter().map(|(k, v)| (Rc::from(k.as_str()), v)).collect())))
             }
             Desc::Enum(name, variants) => match t {
                 J::Str(v) => match variants.iter().find(|(n, _)| n == v) {
@@ -1045,7 +1045,7 @@ impl Builder<'_, '_> {
                 if r.len()? != ds.len() {
                     return bad("wrong tuple arity");
                 }
-                Value::Tuple(Rc::new(ds.iter().map(|d| self.bin(d, r)).collect::<D<_>>()?))
+                Value::Tuple(Rc::new(TupleVal::from(ds.iter().map(|d| self.bin(d, r)).collect::<D<Vec<_>>>()?)))
             }
             Desc::Record(fs) => {
                 r.expect(T_RECORD, "a record")?;
@@ -1053,7 +1053,7 @@ impl Builder<'_, '_> {
                     return bad("wrong field count");
                 }
                 let vals: Vec<(Rc<str>, Value)> = fs.iter().map(|(n, d)| Ok((Rc::from(n.as_str()), self.bin(d, r)?))).collect::<D<_>>()?;
-                Value::Record(shared(vals))
+                Value::Record(shared(RecordVal::from(vals)))
             }
             Desc::Class(name, fs) => {
                 r.expect(T_RECORD, "a record")?;
@@ -1061,7 +1061,7 @@ impl Builder<'_, '_> {
                     return bad("wrong field count");
                 }
                 let vals: Vec<(Rc<str>, Value)> = fs.iter().map(|(n, d, _)| Ok((Rc::from(n.as_str()), self.bin(d, r)?))).collect::<D<_>>()?;
-                Value::Obj(shared(Obj { ty: Rc::from(name.as_str()), fields: vals }))
+                Value::Obj(shared(Obj::new(Rc::from(name.as_str()), vals)))
             }
             Desc::Enum(name, variants) => {
                 r.expect(T_VARIANT, "a variant")?;

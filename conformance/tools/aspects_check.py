@@ -32,6 +32,16 @@ def main(argv):
             print("  want:", want.strip())
             print("  got: ", got.strip(), [r["code"] for r in records])
     print(f"{len(goldens)} aspect goldens, {failures} FAIL")
+    # the reference plan step judges the core `@observe` only, resolved by identity (D-314); fortis-types `plans`
+    # tests judge the same two modules for the production step
+    from checker import plans
+    for rel, want in (("conformance/aspects/user_observe_plan.ft", []), ("conformance/programs/eff_noalloc_observe.ft", ["E-EFF-030"])):
+        src = open(os.path.join(ROOT, rel), encoding="utf-8").read()
+        mtree = lib.rec.parse(lexer.lex(src), "module")
+        got = [r["code"] for r in plans.check(lib, mtree, rel)]
+        ok = got == want
+        failures += not ok
+        print(f"{'PASS' if ok else 'FAIL'} PLAN-{os.path.basename(rel)[:-3]}" + ("" if ok else f": want {want}, got {got}"))
     return 1 if failures else 0
 
 

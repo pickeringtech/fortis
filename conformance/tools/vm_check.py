@@ -4,8 +4,10 @@ Runs every `// execute:` fixture on the VM (`fortisc vm`: the typed IR of fortis
 compares, fixture by fixture, what the interpreter observed (conformance/execution/results.json, written by
 execute_check.py): the console lines and final `fail:`/`defect:` marker, the `execute-trace` marker when the
 fixture has one, and the kinds and codes of the records the run emitted. Each fixture is classified by the
-features it uses; the G1 subset (docs/delivery/subsets.json) excludes defer, async, scope, pools, host
-capabilities other than the console, codecs, defects, kit modules and other packages.
+features it uses; the G1 subset (the delivery plan's subsets table) excludes defer, async, scope, pools, host
+capabilities other than the console, codecs, defects, kit modules and other packages. The subsets table is a
+maintainers' planning file, so the check also keeps a public copy of it, conformance/subsets.json, and a checkout
+without the plan reads the copy.
 
   python3 -I conformance/tools/vm_check.py [--json] [-v]"""
 from __future__ import annotations
@@ -21,6 +23,8 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 # the corpus reads captured values, so it runs under the permit-all telemetry plan (Language Reference 15; D-25)
 os.environ.setdefault("FORTIS_TELEMETRY", "permit-all")
 FORTISC = os.path.join(ROOT, "compiler", "target", "release", "fortisc")
+# the public copy of the delivery plan's subsets table (planning.mirrored keeps it equal to the plan's)
+SUBSETS_COPY = "conformance/subsets.json"
 
 FEATURES = [
     ("defer", re.compile(r"^\s*defer\b", re.M)),
@@ -49,8 +53,15 @@ def features(src: str) -> list:
     return out
 
 
-def g1_subset():
-    sub = json.load(open(os.path.join(ROOT, "docs", "delivery", "subsets.json"), encoding="utf-8"))
+def g1_subset(tool="vm"):
+    """The features the G1 subset excludes, from the delivery plan's subsets table (a maintainers' planning file)
+    or its public copy. With neither, none: every fixture is then judged, a superset of G1."""
+    sys.path.insert(0, HERE)
+    import planning
+    path = planning.mirrored(planning.SUBSETS, SUBSETS_COPY, tool, "the G1 subset restriction (every fixture is judged, none excluded)")
+    if not path:
+        return set()
+    sub = json.load(open(path, encoding="utf-8"))
     return set(sub["G1"]["excluded features"])
 
 

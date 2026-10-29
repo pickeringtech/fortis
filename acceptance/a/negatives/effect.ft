@@ -26,7 +26,7 @@ export pure noalloc try func segment(text: StringView, separator: Scalar, index:
       if seen == index {
         return text.slice(start, i) or fail
       }
-      seen = Int.add(seen, 1) or fail
+      seen = seen + 1 or fail
       start = i + 1
     }
   }
@@ -49,7 +49,7 @@ export pure noalloc try func number(field: StringView) Int<0..999999> {
     if d == null {
       fail Malformed()
     }
-    value = Int.add(Int.mul(value, 10) or fail, d) or fail
+    value = value * 10 + d or fail
   }
   return Int<0..999999>.validate(value) or fail
 }
@@ -60,7 +60,7 @@ export pure noalloc try func segmentCount(text: StringView, separator: Scalar) I
   for i in 0..<text.scalarCount() {
     let s = text.scalarAt(i) or fail
     if s == separator {
-      count = Int.add(count, 1) or fail
+      count = count + 1 or fail
     }
   }
   return count
@@ -75,7 +75,7 @@ export pure noalloc try func entry(line: StringView) Entry {
   let sku = SkuId.validate(number(segment(line, comma, 0) or fail) or fail) or fail
   let bin = BinId.validate(number(segment(line, comma, 1) or fail) or fail) or fail
   let quantity = Int<0..10000>.validate(number(segment(line, comma, 2) or fail) or fail) or fail
-  return Entry(sku: sku, bin: bin, quantity: quantity)
+  return Entry(sku, bin, quantity)
 }
 
 // The fourth field, the item's name, as a view of the line.
@@ -103,12 +103,12 @@ export pure noalloc func checksum(data: BytesView) Int {
 
 test "segments are views of the text" {
   let comma = Scalar.of(",")
-  expect (segment("a,bc,,d", comma, 0) or fail) == "a"
-  expect (segment("a,bc,,d", comma, 1) or fail) == "bc"
-  expect (segment("a,bc,,d", comma, 2) or fail) == ""
-  expect (segment("a,bc,,d", comma, 3) or fail) == "d"
-  expect (segmentCount("a,bc,,d", comma) or fail) == 4
-  expect (segmentCount("", comma) or fail) == 1
+  expect segment("a,bc,,d", comma, 0) == "a"
+  expect segment("a,bc,,d", comma, 1) == "bc"
+  expect segment("a,bc,,d", comma, 2) == ""
+  expect segment("a,bc,,d", comma, 3) == "d"
+  expect segmentCount("a,bc,,d", comma) == 4
+  expect segmentCount("", comma) == 1
   let past = segment("a,b", comma, 2) catch e {
     expect e.code == "feed.malformed"
     recover ""
@@ -121,7 +121,7 @@ test "numbers of one to six digits" cases {
   "largest": { text: "999999", value: 999999 }
   "leading zeros": { text: "000042", value: 42 }
 } as row {
-  expect (number(row.text) or fail) == row.value
+  expect number(row.text) == row.value
 }
 
 test "malformed numbers" cases {
@@ -139,9 +139,9 @@ test "malformed numbers" cases {
 }
 
 test "entries validate every field" {
-  let good = entry("999999,999,10000,max") or fail
+  let good = entry("999999,999,10000,max")
   expect good == Entry(sku: SkuId(999999), bin: BinId(999), quantity: 10000)
-  expect (nameField("1,1,1,widget") or fail) == "widget"
+  expect nameField("1,1,1,widget") == "widget"
   let zeroSku = entry("0,1,1,x") catch e {
     expect e.code == "refinement.out_of_range"
     recover copy good

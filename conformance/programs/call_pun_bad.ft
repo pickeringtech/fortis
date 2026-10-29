@@ -1,0 +1,23 @@
+// reject: E-TYP-130, E-OWN-001 (at the marked lines)
+// covers: LANG-05-09
+// 5.8, 9.2 (X-345): a pun is `name: name`, so it is matched by label: a name that is no parameter or field, or a
+// field given twice, is rejected as the written label would be. A pun passes the place unmarked, so an owned field of
+// an ownership-bearing local still needs `name: move name`, which is not a pun.
+class Item {
+  sku: Int
+  wanted: Int
+}
+
+class Holder {
+  name: String
+}
+
+func placed(sku: Int, wanted: Int) Int => sku
+
+func use(sku: Int, wanted: Int, count: Int, name: String) Int {
+  let a = Item(sku, count, wanted)           // reject: E-TYP-130 — Item has no field `count`
+  let b = Item(sku, sku: 2, wanted)          // reject: E-TYP-130 — field `sku` given twice
+  let c = placed(sku, wanted: 1, count)      // reject: E-TYP-130 — placed has no parameter `count`
+  let h = Holder(name)                       // reject: E-OWN-001 — an owned field: write `name: move name`
+  return placed(sku, wanted)
+}

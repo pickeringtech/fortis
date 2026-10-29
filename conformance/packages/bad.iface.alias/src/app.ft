@@ -5,5 +5,5 @@ import bad.iface.alias.gateways as gw
 
 func pay(g: gw.Gateway) Bool => true
 
-export func main(args: List[String]) Void {
+func main() {
 }

@@ -6,7 +6,7 @@
 // suspended at its await (`slow`, parked on a 100ms sleep after the parent yielded to it for 1ms) is cancelled
 // and joined (it observes cancellation only at that await, runs its own defer and completes as cancelled); then
 // the block's deferred blocks run; then `abandon` on the live Abandonable local; then the remaining locals drop.
-import fortis.host { Host, Console, Clock, Capabilities }
+import fortis.host { Console, Clock }
 export error Bad {
   code: "demo.bad"
 }
@@ -16,11 +16,11 @@ export class Tx implements Abandonable {
   export func begin(console: Shared[Console]) Tx {
     return Tx(witness: Must.create(), console: console.retain())
   }
-  export func commit(owned self) Void {
+  export func commit(owned self) {
     let Tx(witness: w, console: c) = move self
     Must.discharge(move w)
   }
-  func abandon(owned self) Void {
+  func abandon(owned self) {
     self.console.print("abandon tx")
     let Tx(witness: w, console: c) = move self
     Must.discharge(move w)
@@ -28,7 +28,7 @@ export class Tx implements Abandonable {
 }
 export class Res {
   export console: Shared[Console]
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("drop res")
   }
 }
@@ -57,9 +57,7 @@ async try func run(console: Shared[Console], clock: Clock) Int {
     return Int.wrappingAdd(x, y)
   }
 }
-export async recovers func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+async recovers func main(out: Console, clock: Clock) {
   let console = Shared.create(move out)
   let r = await run(console, clock) or recover -1
   console.print("recovered ${r}")

@@ -2,7 +2,7 @@
 // class: E-REF
 // change: a sum returned without validation: its interval exceeds the declared range
 // Nominal identifiers and refined quantities (Language Reference 6.3, 6.9). Plain operators where the interval
-// domain proves the result, a checked API or `validate` where it cannot.
+// domain proves the result, a checked operator or `validate` where it cannot.
 export type SkuId = Int<1..999999>
 export type BinId = Int<1..999>
 
@@ -29,11 +29,11 @@ export pure try func withdrawn(current: Int<0..10000>, taken: Int<0..10000>) Int
   return Int<0..10000>.validate(current - taken) or fail
 }
 
-// An unbounded running total uses the checked API: overflow is a failure, never a wrap.
+// An unbounded running total uses a checked operator: overflow is a failure, never a wrap.
 export pure try func total(values: List[Int<0..10000000000>]) Int {
   let mut sum = 0
   for v in values {
-    sum = Int.add(sum, v) or fail
+    sum = sum + v or fail
   }
   return sum
 }
@@ -42,8 +42,8 @@ test "refined arithmetic at its boundaries" {
   expect combined(10000, 10000) == 20000
   expect combined(0, 0) == 0
   expect lineValue(10000, 1000000) == 10000000000
-  expect (restocked(9999, 1) or fail) == 10000
-  expect (withdrawn(5, 5) or fail) == 0
+  expect restocked(9999, 1) == 10000
+  expect withdrawn(5, 5) == 0
 }
 
 test "a sum past the stock range fails its refinement" {
@@ -73,12 +73,12 @@ test "nominal identifiers are validated at the boundary" {
     recover BinId(999)
   }
   expect high == BinId(999)
-  expect (SkuId.validate(999999) or fail) == SkuId(999999)
+  expect SkuId.validate(999999) == SkuId(999999)
 }
 
-test "the checked API fails instead of wrapping" {
-  expect (total(List.of(1, 2, 3)) or fail) == 6
-  let r = Int.add(9223372036854775807, 1) catch e {
+test "a checked operator fails instead of wrapping" {
+  expect total(List.of(1, 2, 3)) == 6
+  let r = 9223372036854775807 + 1 catch e {
     expect e.code == "numeric.overflow"
     recover 0
   }

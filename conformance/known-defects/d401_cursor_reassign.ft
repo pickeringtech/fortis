@@ -1,0 +1,30 @@
+// D-401: a `let mut` cursor cannot be reassigned: `c = alias ys.iterate()` after `let mut c = alias xs.iterate()`
+// is E-OWN-011 ("holds a loan and cannot be reassigned") from both checkers, although 7.7 says a cursor is owned by
+// its binding (it carries a loan of the list through its lifetime parameter). Run unchecked, the interpreter prints
+// `n b|end|drop b|drop a`. v0.0.1 behaved the same. Found by the v0.0.2-rc.9 wide review (Kimi K3).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  let mut ys: List[Token] = List.default()
+  ys.push(make(console, "b"))
+  let mut c = alias xs.iterate()
+  discard c.next()
+  c = alias ys.iterate()
+  console.print("n ${c.next()?.label ?? "none"}")
+  console.print("end")
+}

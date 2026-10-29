@@ -5,6 +5,6 @@ import fortis.host { Console }
 export class Logger {
   export console: Console
 }
-func shout(l: Logger, msg: StringView) Void {
+func shout(l: Logger, msg: StringView) {
   l.console.print(msg)                     // reject: E-EFF-010 — io without an Authority parameter
 }

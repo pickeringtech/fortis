@@ -1,0 +1,25 @@
+// D-393: a `pure` function that owns a value and drops it at its block's end runs the value's `cleanup`, whose `io`
+// is not attributed to the function (11.3 says a `cleanup` contributes to every function that may drop its type).
+// Both checkers accept `pure func pf(d: owned Token)`, and the interpreter, the VM and native code all print
+// `drop a|end` from inside the pure function. v0.0.1 behaved the same. A `??` whose fallback is owned, or a
+// `let t = alias b.t` binding, is attributed the effect (D-400), so the attribution is uneven rather than absent.
+// Found by the v0.0.2-rc.9 wide review (Kimi K3).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+pure func pf(d: owned Token) {
+  discard d.label
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  pf(Token(label: String.from("a"), console: console.retain()))
+  console.print("end")
+}

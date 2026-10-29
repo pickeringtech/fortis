@@ -1,0 +1,40 @@
+// D-355: a loan carried out of a block by `give` (an `if` or `match` expression's branch), or by a `match`'s
+// temporary scrutinee into its arms, ends with its statement inside the block, so the owner can change while the
+// loan lives. Both checkers accept both functions; native code does not build them (rustc E0502); the interpreter
+// and the VM print `a a|a a`, reading an element after it left the list. A `let` binding of the same loan is held
+// to the end of its block (D-348).
+import fortis.host { Console }
+
+class Item {
+  label: String
+}
+
+func given(console: Console) {
+  let mut xs: List[Item] = List.default()
+  xs.push(Item(label: String.from("a")))
+  let some = xs.count() > 0
+  let t = if some {
+    give xs.get(0)
+  } else {
+    give xs.get(1)
+  }
+  let v = xs.pop()
+  console.print("${t?.label ?? "none"} ${v?.label ?? "none"}")
+}
+
+func scrutinee(console: Console) {
+  let mut xs: List[Item] = List.default()
+  xs.push(Item(label: String.from("a")))
+  match xs.get(0) {
+    present(w) => {
+      let v = xs.pop()
+      console.print("${w.label} ${v?.label ?? "none"}")
+    }
+    null => console.print("none")
+  }
+}
+
+func main(console: Console) {
+  given(console)
+  scrutinee(console)
+}

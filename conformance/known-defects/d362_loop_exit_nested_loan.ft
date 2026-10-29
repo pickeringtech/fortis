@@ -1,0 +1,68 @@
+// D-362: a loan held inside an optional by a `let mut` binding (D-348) is treated as ended after a loop whose body
+// ends it, although the paths that skip the body (a `while` or `for` that runs no times, a `break` before the
+// body's end, a `continue`) still hold it: LR 7.3 says a loan is live at a join if it is live on any incoming path.
+// Both checkers accept all three functions. The interpreter and the VM print `t item v item`, reading the element
+// after `pop` took it out of the list, then run its cleanup once; native code does not build (rustc E0502). A body
+// that still holds the loan at its end is rejected (E-OWN-010). Pre-existing: v0.0.1 accepts the same programs.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func skipped(console: Shared[Console]) {
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  let mut t = xs.get(0)
+  let go = false
+  while go {
+    t = null
+  }
+  let v = xs.pop()
+  console.print("t ${t?.label ?? "none"} v ${v?.label ?? "none"}")
+}
+
+func empty(console: Shared[Console]) {
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  let mut t = xs.get(0)
+  for i in 0 ..< 0 {
+    t = null
+  }
+  let v = xs.pop()
+  console.print("t ${t?.label ?? "none"} v ${v?.label ?? "none"}")
+}
+
+func broken(console: Shared[Console]) {
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  let mut t = xs.get(0)
+  let mut i = 0
+  while i < 2 {
+    t = xs.get(0)
+    if i == 1 {
+      break
+    }
+    t = null
+    i = i + 1
+  }
+  let v = xs.pop()
+  console.print("t ${t?.label ?? "none"} v ${v?.label ?? "none"}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  skipped(console)
+  empty(console)
+  broken(console)
+  console.print("end")
+}

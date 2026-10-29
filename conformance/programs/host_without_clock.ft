@@ -5,5 +5,5 @@ import fortis.host { Host, Capabilities, Path }
 func current(caps: Capabilities) Timestamp {
   return caps.clock.now()                         // reject: E-EFF-010
 }
-export func main(args: List[String]) Void {
+func main() {
 }

@@ -1,0 +1,59 @@
+// accept
+// covers: LANG-07-01, LANG-08-02
+// X-345 (R1, R2): the receiver of an `editable self` method, and a `fn mut` closure being called, need no `editable`
+// when the place is rooted in a `let mut` binding, an `editable` parameter, an `editable` capture or the method's own
+// `editable self`. The marker is still accepted.
+export class Tally {
+  order: List[String]
+  counts: Map[String, Int]
+  export func add(editable self, word: StringView) Void {
+    let seen = self.counts.get(String.from(word)) ?? 0
+    if seen == 0 {
+      self.order.push(String.from(word))
+    }
+    self.counts.set(String.from(word), Int.saturatingAdd(seen, 1))
+  }
+  export func addTwice(editable self, word: StringView) Void {
+    self.add(word)
+    editable self.add(word)
+  }
+  export func size(self) Int => self.order.count()
+}
+
+func fill(t: editable Tally, words: List[String]) Void {
+  for w in words {
+    t.add(w)
+  }
+  t.order.push(String.from("end"))
+}
+
+func run(words: List[String]) Int {
+  let mut readings = List.of(12, 30, 18)
+  readings.push(40)
+  editable readings.push(41)
+  let mut tally = Tally(order: List.default(), counts: Map.default())
+  tally.add("the")
+  tally.addTwice("cat")
+  fill(editable tally, words)
+  tally.order.push(String.from("field path"))
+  let mut summary = Builder.create()
+  {
+    let mut describe = fn mut[editable summary](n: Int) Void {
+      summary.append("[${n}]")
+    }
+    for r in readings {
+      describe(r)
+    }
+    editable describe(0)
+  }
+  discard summary.finish()
+  let mut count = 0
+  {
+    let mut bump = fn mut[editable count]() Void {
+      count = Int.saturatingAdd(count, 1)
+    }
+    bump()
+    bump()
+  }
+  return Int.saturatingAdd(tally.size(), count)
+}

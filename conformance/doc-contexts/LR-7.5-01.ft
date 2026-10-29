@@ -4,14 +4,14 @@ export class User {
   export age: Int
 }
 
-func rename(user: editable User, to: String) Void {
+func rename(user: editable User, to: String) {
   user.name = copy to
 }
 
-func enqueue(user: owned User) Void {
+func enqueue(user: owned User) {
   discard user.age
 }
 
-func example(name: String) Void {
+func example(name: String) {
   // {{example}}
 }

@@ -36,5 +36,5 @@ async func whole(h: owned Holder) Int {
   return await j
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }

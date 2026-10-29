@@ -1,0 +1,156 @@
+// execute: a b|b|a b b|1 2|1 b|a|b|a|b|v j|a b|x none|a a 2|a a a
+// requires: runtime
+// covers: LANG-07-05, LANG-07-06, LANG-07-07
+// D-348, 7.3, 7.6: the valid neighbours of own_nested_loan_bad.ft run alike on every backend. A loan held inside an
+// optional or a tuple ends with the block of the binding that holds it, so the list can change after that block; a
+// `copy` is owned; a loan of an `Int` element is that value; an assignment of `null` ends the old loan, and an
+// assignment in a loop replaces it; a map's key is not lent; a cursor's item is a read loan of the list, so the cursor may be advanced while the item lives; and a
+// function whose result is lent `from` its parameter returns the element, directly or through a binding.
+import fortis.host { Console }
+
+class Item {
+  label: String
+}
+
+func items() List[Item] {
+  let mut xs: List[Item] = List.default()
+  xs.push(Item(label: String.from("a")))
+  xs.push(Item(label: String.from("b")))
+  return xs
+}
+
+func innerBlock(console: Console) {
+  let mut xs = items()
+  {
+    let t = xs.get(0)
+    let pair = (xs.get(1), 1)
+    console.print("${t?.label ?? "none"} ${pair.0?.label ?? "none"}")
+  }
+  let v = xs.pop()
+  console.print("${v?.label ?? "none"}")
+}
+
+func copied(console: Console) {
+  let mut xs = items()
+  let mut c: Item? = null
+  {
+    let t = xs.get(0)
+    c = copy t
+  }
+  let first = match xs.get(1) {
+    present(w) => copy w
+    null => Item(label: String.from("none"))
+  }
+  let v = xs.pop()
+  console.print("${c?.label ?? "none"} ${first.label} ${v?.label ?? "none"}")
+}
+
+func trivialElement(console: Console) {
+  let mut ns: List[Int] = List.default()
+  ns.push(1)
+  let n = ns.get(0)
+  ns.push(2)
+  let m = ns.pop()
+  console.print("${n ?? 0} ${m ?? 0}")
+}
+
+func ownedResults(console: Console) {
+  let mut xs = items()
+  let size = match xs.get(0) {
+    present(w) => w.label.byteCount()
+    null => 0
+  }
+  let text = "${xs.get(1)?.label ?? "none"}"
+  xs.push(Item(label: String.from("c")))
+  console.print("${size} ${text}")
+}
+
+func cleared(console: Console) {
+  let mut xs = items()
+  let mut t = xs.get(0)
+  console.print("${t?.label ?? "none"}")
+  t = null
+  let v = xs.pop()
+  console.print("${v?.label ?? "none"}")
+}
+
+func reassignedInLoop(console: Console) {
+  let xs = items()
+  let mut t = xs.get(0)
+  let mut i = 0
+  while i < 2 {
+    t = xs.get(i)
+    console.print("${t?.label ?? "none"}")
+    i = i + 1
+  }
+}
+
+func mapKey(console: Console) {
+  let mut m: Map[String, String] = Map.default()
+  m.set(String.from("k"), String.from("v"))
+  let mut key = String.from("k")
+  let v = m.get(key)
+  key = String.from("j")
+  console.print("${v ?? "none"} ${key}")
+}
+
+func cursorTwice(console: Console) {
+  let mut xs: List[String] = List.default()
+  xs.push(String.from("a"))
+  xs.push(String.from("b"))
+  let mut c = alias xs.iterate()
+  let a = c.next()
+  let b = c.next()
+  console.print("${a ?? "none"} ${b ?? "none"}")
+}
+
+func cursorParam(c: editable ListCursor[String], console: Console) {
+  let a = c.next()
+  let b = c.next()
+  console.print("${a ?? "none"} ${b ?? "none"}")
+}
+
+func readParam(xs: List[Item], console: Console) {
+  let t = xs.get(0)
+  let u = xs.first()
+  console.print("${t?.label ?? "none"} ${u?.label ?? "none"} ${xs.count()}")
+}
+
+func firstOf(xs: List[Item]) (alias Item from xs)? {
+  return xs.get(0)
+}
+
+func firstBound(xs: List[Item]) (alias Item from xs)? {
+  let t = xs.get(0)
+  return t
+}
+
+class Bag {
+  items: List[Item]
+
+  func head(self) (alias Item from self)? {
+    return self.items.get(0)
+  }
+}
+
+func main(console: Console) {
+  innerBlock(console)
+  copied(console)
+  trivialElement(console)
+  ownedResults(console)
+  cleared(console)
+  reassignedInLoop(console)
+  mapKey(console)
+  cursorTwice(console)
+  let mut ws: List[String] = List.default()
+  ws.push(String.from("x"))
+  let mut c = alias ws.iterate()
+  cursorParam(editable c, console)
+  let xs = items()
+  readParam(xs, console)
+  let f = firstOf(alias xs)
+  let g = firstBound(alias xs)
+  let bag = Bag(items: items())
+  let h = bag.head()
+  console.print("${f?.label ?? "none"} ${g?.label ?? "none"} ${h?.label ?? "none"}")
+}

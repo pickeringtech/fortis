@@ -3,16 +3,16 @@
 // covers: LANG-09-06
 // 9.8: `match c` loans the enum. A field written `_` is not consumed, so both fields are destroyed when the local
 // ends, after the next statement, and the match traces nothing.
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 export class Handle {
   export id: Int
   export console: Shared[Console]
   export func make(id: Int, console: Shared[Console]) Handle {
     console.print("made ${id}")
-    return Handle(id: id, console: console.retain())
+    return Handle(id, console: console.retain())
   }
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("cleanup ${self.id}")
   }
 }
@@ -22,7 +22,7 @@ export enum Choice {
   Empty
 }
 
-func run(console: Shared[Console]) Void {
+func run(console: Shared[Console]) {
   let c = Choice.Two(a: Handle.make(1, alias console), b: Handle.make(2, alias console))
   match c {
     Two(a: a, b: _) => { console.print("arm ${a.id}") }
@@ -31,9 +31,7 @@ func run(console: Shared[Console]) Void {
   console.print("after")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: out, fileSystem: fs, network: net, clock: clock, random: rnd, environment: env, process: proc, supervisor: sup, secretAccess: sec, rawSql: sql) = move caps
+func main(out: Console) {
   let console = Shared.create(move out)
   run(console)
 }

@@ -3,6 +3,8 @@
 <!-- covers: LR 1, LR 2 -->
 *Human mode. Agent mode: [Overview, by rule](../agent/01-overview.md). Source of truth: LR 1 and LR 2.*
 
+> Preview: the whole program at the end declares a newtype (LR 6.9), an interface and a mixin (LR 9.5, 9.6), which arrive in v0.1; it is checked and runs today. Everything else this tour shows is in v0.0.2.
+
 This chapter says what Fortis is for, gets the tools running, and then walks through one whole program, a small
 to-do list, pointing to the chapter that explains each piece. You do not need to understand every line on first
 reading; the point is to see how the pieces fit before the later chapters take them one at a time.
@@ -33,8 +35,8 @@ an application imports; nothing in the core language depends on them (LR 1).
 Everything else in the language follows from a few decisions (LR 1).
 
 - **Explicit ownership.** When you assign or pass an existing value that owns resources, you write `copy`,
-  `alias` or `move`; a mutable borrow is a visible `editable`. Nothing is cloned or reference-counted behind your
-  back. See [Ownership](07-ownership.md).
+  `alias` or `move`; lending a value for writing is a visible `editable`, and a value that changes is declared
+  `let mut`. Nothing is cloned or reference-counted behind your back. See [Ownership](07-ownership.md).
 - **Three distinct answers.** An optional value (`T?`), a `Bool` and a fallible outcome (`Outcome[T]`) are three
   different types with three different operators (`??`, `||`, `or`). Nothing is "truthy". See
   [Types](06-types.md).
@@ -90,7 +92,7 @@ kinds, loan modes and modifiers the checker used (LR 1.1). You will see that in 
 
 ## Getting started
 
-<!-- no-citation: how to build and run the tools; the tools are described in Programme 5.4 and 9.2, cited below -->
+<!-- no-citation: how to build and run the tools -->
 
 The reference toolchain lives in this repository. Build the production compiler once (it needs a Rust
 toolchain, and no network once the sources are present):
@@ -116,18 +118,17 @@ compiler `fortisc`, which `fortis build`, `view` and `fmt` run for you, also run
 conformance tools compare), and `fortisc test FILE.ft` runs the tests there.
 
 Every finding and every runtime report is a record: text when the output is a terminal, one JSON object per
-line when it is a pipe, and `--format json` or `--format text` chooses explicitly (Programme 7.4).
+line when it is a pipe, and `--format json` or `--format text` chooses explicitly.
 
 ### Hello, world
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("hello, world")
-  caps.console.print("${args.count()} arguments")
+func main(console: Console, args: List[String]) {
+  console.print("hello, world")
+  console.print("${args.count()} arguments")
 }
 ```
 
@@ -145,10 +146,12 @@ While you iterate on tests, `fortisc test` on the development VM is much faster 
 `fortis test` ([Tests](14-tests.md)).
 Three things already show the language's character:
 
-- `main` is an ordinary exported function in the entry module, taking the command-line arguments (LR 4.6).
-- Printing is input/output, and input/output needs authority: `Host.capabilities()` hands `main` the process's
-  capabilities, once, and `caps.console` is the one that writes to standard output (LR 11.6). A function that
-  wants to print must be given a `Console`; it cannot reach for one.
+- `main` is an ordinary function in the entry module (`export` is implied there). Its parameters say what it
+  needs, and the runtime supplies each one by its type: here the `Console` and the command-line arguments
+  (LR 4.6). A `main` that needs neither is `func main() { … }`.
+- Printing is input/output, and input/output needs authority: the `Console` is the capability that writes to
+  standard output, and only `main` receives it from the runtime, once (LR 11.6). A function that wants to print
+  must be given a `Console`; it cannot reach for one.
 - `"${args.count()} arguments"` is string interpolation; the interpolated value must be displayable (LR 3.6).
 
 ## A whole program
@@ -157,9 +160,11 @@ Here is a complete module: a tiny to-do list with an identifier type, a state en
 interface, a mixin, a class, a closure, a deferred block, a fallible constructor and a test. It is the guide's
 counterpart of the invoicing module in LR 2, written to run on its own.
 
+> Preview: `TodoId` is a newtype (LR 6.9), and `Describable` and `Labelled` are an interface and a mixin (LR 9.5, 9.6); they arrive in v0.1.
+
 ```fortis
 // accept
-import fortis.host { Console, Host }
+import fortis.host { Console }
 
 // A nominal identifier: an Int that is never confused with any other Int.
 export type TodoId = Int<1..>
@@ -198,16 +203,16 @@ export class Todo implements Describable with Labelled {
     if name.byteCount() == 0 {
       fail EmptyTitle(id: id)
     }
-    return Todo(id: id, name: move name, status: Status.Open)
+    return Todo(id, name: move name, status: Open)
   }
 
   export pure func title(self) String => copy self.name
 
-  export pure func finish(editable self, by: StringView) Void {
-    self.status = Status.Done(by: String.from(by))
+  export pure func finish(editable self, by: StringView) {
+    self.status = Done(by: String.from(by))
   }
 
-  export pure func isOpen(self) Bool => self.status == Status.Open
+  export pure func isOpen(self) Bool => self.status == Open
 
   export pure func describe(self) String {
     let phase = match self.status {
@@ -224,7 +229,7 @@ export pure func countOpen(todos: List[Todo]) Int {
   return todos.countWhere(open)
 }
 
-func show(console: Console, todos: List[Todo]) Void {
+func show(console: Console, todos: List[Todo]) {
   defer {
     console.print("${countOpen(todos)} open")
   }
@@ -233,22 +238,21 @@ func show(console: Console, todos: List[Todo]) Void {
   }
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let mut first = Todo.create(id: TodoId(1), name: "write the guide") or fail
   let second = Todo.create(id: TodoId(2), name: "check the examples") or fail
-  editable first.finish("ada")
+  first.finish("ada")
   let todos = List.of(move first, move second)
-  show(caps.console, todos)
+  show(console, todos)
   let fallback = Todo.create(id: TodoId(3), name: "") catch e {
     report e
     recover Todo.create(id: TodoId(3), name: "untitled") or fail
   }
-  caps.console.print(fallback.describe())
+  console.print(fallback.describe())
 }
 
 test "a new to-do is open" {
-  let t = Todo.create(id: TodoId(9), name: "x") or fail
+  let t = Todo.create(id: TodoId(9), name: "x")
   expect t.isOpen()
 }
 ```
@@ -263,7 +267,7 @@ test "a new to-do is open" {
 The `report e` line also writes one failure record, with the code `todo.empty_title` and the payload `id: 3`, to
 standard error; it is not part of the program's output (LR 10.6). Now the pieces, top to bottom.
 
-**Imports.** `import fortis.host { Console, Host }` binds two names from the standard module `fortis.host`. The
+**Imports.** `import fortis.host { Console }` binds a name from the standard module `fortis.host`. The
 prelude (`Int`, `String`, `List`, `Bool`, …) needs no import (LR 4.3). See [Modules and packages](04-modules.md).
 
 **A newtype.** `type TodoId = Int<1..>` declares a new nominal type whose values are integers of at least 1. A
@@ -283,23 +287,27 @@ method, `label`, on top of a method it requires the class to have, `title`; a mi
 the class's exported members, so it never reads a private field (LR 9.5, LR 9.6).
 
 **A class.** `Todo` has an exported `id` and two private fields. Its methods show the three receiver forms you will
-meet everywhere: `self` borrows read-only, `editable self` borrows for writing, and a call to an `editable`
-method is written `editable first.finish("ada")`, so the call site shows that `first` changes (LR 9.3). The
+meet everywhere: `self` borrows read-only, `editable self` borrows for writing, and `owned self` takes the value.
+`first.finish("ada")` changes `first`, and its declaration, `let mut first`, already says that it will, so the call
+needs no marker (LR 7.5, LR 9.3). Older code writes `editable first.finish("ada")`; `fortis fmt` rewrites it. The
 generated constructor `Todo(id: …, name: …, status: …)` is usable only where every field is visible, which is
-why other modules must go through `Todo.create` (LR 9.2).
+why other modules must go through `Todo.create` (LR 9.2). In `Todo(id, name: move name, status: Open)`, the bare
+`id` stands for `id: id` (LR 9.2), and `Open` needs no `Status.` in front, because the field's type says which enum
+it is (LR 9.7).
 
 **A fallible constructor.** `pure try func create(…) Todo` may fail; its callers receive an outcome that they must
 consume. `name: owned String` says the function takes ownership of the string, so it can store it with
 `move name` (LR 7.6). `copy self.name` in `title` duplicates a string that `self` only lends (LR 7.6).
 
 **A closure.** `pure noalloc fn(t: Todo) Bool => t.isOpen()` is a lambda with no captures. You may write it as
-`fn(t: Todo) Bool => t.isOpen()`; the formatter prints back the `pure noalloc` it infers, so the file shows what
-the checker knows (LR 8.2, LR 1.1). `countWhere` accepts it because it is pure (LR 6.7). See
+`fn(t: Todo) Bool => t.isOpen()`, or `fn(t) => t.isOpen()`, where `countWhere`'s parameter type gives the parameter
+and the result; the checker infers `pure noalloc`, and `countWhere` accepts it because it is pure (LR 8.2, LR 6.7).
+The formatter does not print the inferred claims back, because the parameter type already states them. See
 [Functions and closures](08-functions.md).
 
 **Effects and authority.** `countOpen` is `pure`: it does no I/O and changes nothing outside itself. `show` prints,
 so it takes a `Console` parameter; that is how a reader knows, from the signature alone, that it does I/O
-(LR 11.6). See [Effects and contracts](11-effects.md).
+(LR 11.6). `main` has the `Console` because it declares it as a parameter (LR 4.6). See [Effects and contracts](11-effects.md).
 
 **A deferred block.** The `defer` in `show` runs when the function's body exits, after the loop, by whatever route
 it leaves (LR 12.1). See [Cleanup, async and concurrency](12-async.md).
@@ -310,11 +318,12 @@ title: it reports the failure and recovers with a replacement value (LR 10.4). N
 the `or fail` would leave an outcome unconsumed, which does not compile (LR 10.1).
 
 **Ownership at the call site.** `List.of(move first, move second)` moves both values into the list; after that,
-`first` and `second` cannot be used (LR 7.4). `show(caps.console, todos)` passes both arguments with no marker,
+`first` and `second` cannot be used (LR 7.4). `show(console, todos)` passes both arguments with no marker,
 which means read-only loans that end when `show` returns (LR 7.5).
 
-**A test.** `test "…" { … }` is a declaration like any other. Its body may use `or fail`, and `expect` records a
-check (LR 14). `fortis test` runs it. See [Tests](14-tests.md).
+**A test.** `test "…" { … }` is a declaration like any other. In its body a failing call fails the test, so
+`Todo.create(…)` needs no `or fail` there, and `expect` records a check (LR 14). `fortis test` runs it. See
+[Tests](14-tests.md).
 
 ## Where to go next
 

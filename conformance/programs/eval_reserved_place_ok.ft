@@ -7,11 +7,11 @@ export class Buffer {
   export pure func length(self) Int => self.items.count()
 }
 
-func update(buffer: editable Buffer, n: Int) Void {
-  editable buffer.items.push(n)
+func update(buffer: editable Buffer, n: Int) {
+  buffer.items.push(n)
 }
 
-func run() Void {
+func run() {
   let mut buffer = Buffer(items: List.default())
   update(editable buffer, buffer.length())
 }

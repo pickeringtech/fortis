@@ -1,0 +1,79 @@
+// accept
+// covers: LANG-08-01, LANG-05-05
+// X-345 (R6): a function or method head may leave out a `Void` return type; the head ends at `)` (or at its
+// `where` clause) and the function returns Void. It holds for every head: functions, methods, associated functions,
+// expression bodies, interface members, mixin requirements, implement blocks and `cleanup`. `Void` written is the
+// same. A record result is still written after `)`, and a function type keeps its result (8.4).
+export interface Resettable {
+  func reset(editable self)
+  func size(self) Int
+}
+export mixin Doubling {
+  requires func grow(editable self)
+  export func twice(editable self) {
+    self.grow()
+    self.grow()
+  }
+}
+export class Box implements Resettable with Doubling {
+  export n: Int
+  export func reset(editable self) {
+    self.n = 0
+  }
+  export func size(self) Int => self.n
+  export func grow(editable self) {
+    self.n = Int.saturatingAdd(self.n, 1)
+  }
+  export func make() Box => Box(n: 0)
+  export func check(self) => Box.ignore(self.n)
+  export func ignore(n: Int) {
+  }
+}
+export interface Labelled {
+  func label(self)
+}
+implement Labelled for Box {
+  export func label(self) {
+  }
+}
+export class Tidy {
+  n: Int
+  cleanup(editable self) {
+  }
+}
+func early(n: Int) {
+  if n > 0 {
+    return
+  }
+}
+func written() Void {
+}
+pure func bounds(n: Int) { low: Int, high: Int } {
+  return { low: n, high: n }
+}
+func labelled(xs: List[Int]) {
+  outer: for x in xs {
+    if x > 1 {
+      break outer
+    }
+  }
+}
+func apply(f: fn(Int) Void, g: pure fn() Void) {
+  f(1)
+  g()
+}
+func shown[T](x: T) where T implements Displayable {
+  discard "${x}"
+}
+func run() Int {
+  let mut b = Box.make()
+  b.reset()
+  b.twice()
+  early(1)
+  written()
+  labelled(List.of(1, 2))
+  apply(fn(n: Int) Void => early(n), pure fn() Void => Box.ignore(1))
+  shown(3)
+  b.check()
+  return bounds(b.size()).low
+}

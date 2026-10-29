@@ -24,7 +24,7 @@ field may have a constant default (LR 9.1, LR 4.4):
   [export] field: Type = constantDefault
   [export] … func method([editable | owned] self, params) Ret { … }
   [export] … func associated(params) Ret { … }
-  cleanup(editable self) Void { … }
+  cleanup(editable self) { … }
 }
 ```
 
@@ -40,7 +40,7 @@ class Account {
   export pure func balance(self) Int => self.balance      // reject: E-TYP-070
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -54,7 +54,7 @@ object.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Point derive Equatable {
   export x: Int
@@ -62,13 +62,12 @@ class Point derive Equatable {
   export label: String = "point"
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let name = String.from("home")
   let a = Point(x: 1, y: 2)
   let b = Point(x: 1, y: 2, label: copy name)
-  caps.console.print("${a.label} ${b.label} ${name}")
-  caps.console.print("${a == Point(x: 1, y: 2)}")
+  console.print("${a.label} ${b.label} ${name}")
+  console.print("${a == Point(x: 1, y: 2)}")
 }
 ```
 
@@ -135,7 +134,7 @@ dependencies:
 // file: demo.misuse/src/app.ft
 import demo.accounts.accounts { Account }
 
-export func main(args: List[String]) Void {
+func main() {
   let a = Account(owner: "ada", balance: 100)          // reject: E-NAM-004
 }
 ```
@@ -149,7 +148,7 @@ only way to reach private fields, they are where a class enforces its invariants
 
 ```fortis
 // accept (exit status 1)
-import fortis.host { Host }
+import fortis.host { Console }
 
 export error EmptyName {
   code: "people.empty_name"
@@ -169,12 +168,11 @@ class Person {
   export pure func age(self) Int<0..150> => self.years
 }
 
-export try func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+try func main(console: Console) {
   let ada = Person.create(String.from("Ada"), 36) or fail
-  caps.console.print("${ada.name} is ${ada.age()}")
+  console.print("${ada.name} is ${ada.age()}")
   let nobody = Person.create(String.from(""), 0) or fail
-  caps.console.print("not reached")
+  console.print("not reached")
 }
 ```
 
@@ -194,7 +192,7 @@ field.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Customer {
   export name: String
@@ -208,12 +206,11 @@ class Summary {
   export invoices: Int
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let customer = Customer(name: "Ada", email: "ada@example.org", notes: "prefers email")
   let summary = Summary(...copy customer, invoices: 3)
-  caps.console.print("${summary.name} <${summary.email}>: ${summary.invoices} invoices")
-  caps.console.print("still have ${customer.notes}")
+  console.print("${summary.name} <${summary.email}>: ${summary.invoices} invoices")
+  console.print("still have ${customer.notes}")
 }
 ```
 
@@ -232,18 +229,22 @@ permitted when `p`'s class declares a `cleanup` (LR 9.2).
 ## Methods and receivers
 
 A method is a function declared in a class whose first parameter is `self` (LR 9.3). The receiver says what the
-method may do with the value, and the call site says it again, so a reader sees at every call whether the value
-can change (LR 9.3, LR 7.6):
+method may do with the value. A call that consumes it says so with `move`; a call that changes it is written plainly
+and is accepted only on a place that may change (a `let mut` binding, an `editable` parameter or capture, an
+exclusive loan, or the method's own `editable self`), so the place's declaration already says it (LR 9.3, LR 7.5,
+LR 7.6):
 
 | Receiver | The method | Call site |
 |---|---|---|
 | `self` | reads the value | `value.method(args)` |
-| `editable self` | may change it | `editable place.method(args)` |
+| `editable self` | may change it | `place.method(args)`, on a place that may change |
 | `owned self` | consumes it | `move place.method(args)` |
+
+Older code writes `editable place.method(args)`; it is still accepted, and `fortis fmt` drops the marker.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Counter {
   export name: String
@@ -253,7 +254,7 @@ class Counter {
 
   export pure func value(self) Int<0..1000> => self.count
 
-  export pure func bump(editable self) Void {
+  export pure func bump(editable self) {
     if self.count < 1000 {
       self.count = self.count + 1
     }
@@ -262,14 +263,13 @@ class Counter {
   export func finish(owned self) String => "${self.name}: ${self.count}"
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut hits = Counter.start(String.from("hits"))
-  editable hits.bump()
-  editable hits.bump()
-  caps.console.print("value ${hits.value()}")
+  hits.bump()
+  hits.bump()
+  console.print("value ${hits.value()}")
   let summary = move hits.finish()
-  caps.console.print(summary)
+  console.print(summary)
 }
 ```
 
@@ -284,19 +284,19 @@ Inside a method, fields are always reached through `self` (LR 4.5). A `pure` met
 
 ## Cleanup
 
-A class may declare `cleanup(editable self) Void`, which runs when a value of the class is destroyed, before its
+A class may declare `cleanup(editable self)`, which runs when a value of the class is destroyed, before its
 fields are dropped (LR 9.4). The fields are then dropped in declaration order (LR 7.9). Cleanup can only release:
 it cannot be `try` or `async`, and a finalisation that can fail (a flush, a commit) is an ordinary method that the
 caller invokes explicitly (LR 9.4).
 
 ```fortis
 // accept
-import fortis.host { Host, Console, Capabilities }
+import fortis.host { Console }
 
 class Connection {
   export id: Int
   export console: Shared[Console]
-  cleanup(editable self) Void {
+  cleanup(editable self) {
     self.console.print("closing ${self.id}")
   }
 }
@@ -306,14 +306,12 @@ class Pool {
   export second: Connection
 }
 
-func open(console: Shared[Console]) Void {
+func open(console: Shared[Console]) {
   let pool = Pool(first: Connection(id: 1, console: console.retain()), second: Connection(id: 2, console: console.retain()))
   console.print("pool ready")
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let Capabilities(console: c, fileSystem: _, network: _, clock: _, random: _, environment: _, process: _, supervisor: _, secretAccess: _, rawSql: _) = move caps
+func main(c: Console) {
   let console = Shared.create(move c)
   open(console.retain())
   console.print("done")
@@ -334,13 +332,13 @@ The connections hold the console through `Shared`, because a field never stores 
 // reject: E-TYP-040
 class Cell {
   export value: Int
-  cleanup(editable self) Void {
+  cleanup(editable self) {
   }
 }
 
-export func main(args: List[String]) Void {
+func main() {
   let mut c = Cell(value: 1)
-  editable c.cleanup()                     // reject: E-TYP-040
+  c.cleanup()                              // reject: E-TYP-040
 }
 ```
 
@@ -353,7 +351,7 @@ enough (LR 9.5).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 interface Shape {
   pure func area(self) Int
@@ -380,10 +378,9 @@ pure func larger[T](a: T, b: T) Int where T implements Shape {
   return b.area()
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${larger(Square(side: 3), Square(side: 4))}")
-  caps.console.print("${Rect(width: 2, height: 5).name()}")
+func main(console: Console) {
+  console.print("${larger(Square(side: 3), Square(side: 4))}")
+  console.print("${Rect(width: 2, height: 5).name()}")
 }
 ```
 
@@ -409,7 +406,7 @@ class Pear implements Priced {                  // reject: E-TYP-080
   export func price(self) Int => 4
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -418,7 +415,7 @@ The `implement` block is the form used for implementations declared apart from t
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 interface Describe {
   pure func describe(self) String
@@ -434,9 +431,8 @@ implement Describe for Temperature {
 
 pure func show[T](x: T) String where T implements Describe => x.describe()
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print(show(Temperature(celsius: 21)))
+func main(console: Console) {
+  console.print(show(Temperature(celsius: 21)))
 }
 ```
 
@@ -460,7 +456,7 @@ interface Left requires Right {             // reject: E-TYP-060
 interface Right requires Left {             // reject: E-TYP-060
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -487,7 +483,7 @@ implement Named for Fig {                    // reject: E-TYP-100
   pure func name(self) String => "fig"
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -500,7 +496,7 @@ always written with an ownership form: `dynamic Shape` (owned), `alias dynamic S
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 interface Shape {
   pure func area(self) Int
@@ -520,17 +516,16 @@ class Rect implements Shape {
   export pure func name(self) StringView from static => "rectangle"
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let mut shapes: List[dynamic Shape] = List.default()
-  editable shapes.push(Square(side: 2))
-  editable shapes.push(Rect(width: 2, height: 5))
+  shapes.push(Square(side: 2))
+  shapes.push(Rect(width: 2, height: 5))
   let mut total = 0
   for shape in shapes {
-    caps.console.print("${shape.name()}: ${shape.area()}")
+    console.print("${shape.name()}: ${shape.area()}")
     total = Int.saturatingAdd(total, shape.area())
   }
-  caps.console.print("total ${total}")
+  console.print("total ${total}")
 }
 ```
 
@@ -551,7 +546,7 @@ the class declares itself wins over a mixin method of the same name (LR 9.6).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 mixin Loud {
   requires pure func name(self) String
@@ -564,10 +559,9 @@ class Dog with Loud {
   export pure func whisper(self) String => "..."
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let dog = Dog()
-  caps.console.print("${dog.shout()} ${dog.whisper()}")
+  console.print("${dog.shout()} ${dog.whisper()}")
 }
 ```
 
@@ -593,7 +587,7 @@ class Greeter with English, French {        // reject: E-MIX-001
   export id: Int
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -601,13 +595,15 @@ export func main(args: List[String]) Void {
 
 An enum is a closed set of variants, each optionally carrying named payload fields (LR 9.7). A variant is
 constructed as `Enum.Variant` or `Enum.Variant(field: value)`, and the `Enum.` prefix may be left out wherever the
-expected type is already that enum: in a `match` arm pattern, a `return`, an argument, a field initialiser or an
-annotated `let` (LR 9.7). Enums may have methods and implement interfaces, and an enum whose payloads are all
+expected type is already that enum: in a `match` arm pattern, a `return`, an argument, a field initialiser, an
+annotated `let`, or the right side of a comparison such as `severity == Error` (LR 9.7). If the bare name is also a
+class, an error or another type in scope, it is ambiguous, and the checker asks for `Severity.Error` (`E-TYP-040`),
+so a name never quietly means something else. Enums may have methods and implement interfaces, and an enum whose payloads are all
 trivial is itself trivial (LR 9.7).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 enum Coin derive Equatable {
   Penny
@@ -637,11 +633,10 @@ pure func rounded(c: Coin) Coin {
   return Penny
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  let c = larger(Coin.Pound, Coin.Other(pence: 250))
-  caps.console.print("${c.pence()}")
-  caps.console.print("${rounded(c) == Coin.Pound}")
+func main(console: Console) {
+  let c = larger(Pound, Other(pence: 250))
+  console.print("${c.pence()}")
+  console.print("${rounded(c) == Pound}")
 }
 ```
 
@@ -677,7 +672,7 @@ does not count toward exhaustiveness.
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 enum Light {
   Red
@@ -709,10 +704,9 @@ pure func orZero(n: Int?) Int {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
-  caps.console.print("${show(Light.Green(seconds: 90))}, ${show(Light.Green(seconds: 20))}, ${show(Light.Red)}")
-  caps.console.print("${size(0)} ${size(7)} ${orZero(null)} ${orZero(5)}")
+func main(console: Console) {
+  console.print("${show(Green(seconds: 90))}, ${show(Green(seconds: 20))}, ${show(Red)}")
+  console.print("${size(0)} ${size(7)} ${orZero(null)} ${orZero(5)}")
 }
 ```
 
@@ -741,7 +735,7 @@ pure func code(l: Light) Int {
   }
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
@@ -764,11 +758,11 @@ pure func code(l: Light) Int {
   }
 }
 
-export func main(args: List[String]) Void {
+func main() {
 }
 ```
 
-Or-patterns, range patterns and `x @ pattern` bindings are not in Fortis 1.0 (LR 9.8).
+An arm may list alternatives, `Red | Amber => true`, when they share a result: the arm matches when any alternative does. The alternatives bind no names, are never `otherwise`, and the arm takes no `when` guard (`E-MAT-003`); every variant still has to be named somewhere, so a new variant is still reported (LR 9.8). Range patterns and `x @ pattern` bindings are not in Fortis 1.0.
 
 ### Ownership in patterns
 
@@ -777,11 +771,13 @@ and the bindings own their values (LR 9.8). Taking a class apart with a class pa
 written with `match move` or `let Pattern = move p`; every field is named, and `_` drops a field that is not
 linear (LR 9.8). A class pattern needs every field of the class to be visible where it is written, and a class
 that declares a `cleanup` cannot be taken apart this way (LR 9.8). This is the one way to take a linear field out of a class, since there are no partial moves
-(LR 9.8, LR 7.2).
+(LR 9.8, LR 7.2). A `let` pattern has no other case to fall back on, so it must match every value: a variant, a
+literal, `null` or `present(…)` anywhere inside it is `E-MAT-004`, and `match` is the form that handles the other
+cases (LR 5.1).
 
 ```fortis
 // accept
-import fortis.host { Host }
+import fortis.host { Console }
 
 class Parcel {
   export label: String
@@ -794,12 +790,11 @@ pure func heavy(p: owned Parcel) Bool {
   }
 }
 
-export func main(args: List[String]) Void {
-  let caps = Host.capabilities()
+func main(console: Console) {
   let parcel = Parcel(label: "books", grams: 2500)
   let Parcel(label: label, grams: grams) = move parcel
-  caps.console.print("${label}: ${grams} g")
-  caps.console.print("${heavy(Parcel(label: "feather", grams: 1))}")
+  console.print("${label}: ${grams} g")
+  console.print("${heavy(Parcel(label: "feather", grams: 1))}")
 }
 ```
 

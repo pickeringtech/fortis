@@ -3,9 +3,9 @@
 export class Box {
   export label: String
 }
-func keep(b: owned Box) Void {
+func keep(b: owned Box) {
 }
-func run(box: owned Box, flag: Bool) Void {
+func run(box: owned Box, flag: Bool) {
   let finish = fn once[move box]() Void {
     keep(move box)
   }

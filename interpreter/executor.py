@@ -8,7 +8,7 @@ at its await, raises `CancelSignal`, unwinds (defers, abandon, drops) and comple
 from __future__ import annotations
 
 import threading
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 
 class CancelSignal(BaseException):
@@ -61,8 +61,14 @@ class TaskVal:
         # per-task evaluator state
         self.frames: List[Any] = []
         self.stack: List[str] = []
+        # the lambdas and cleanups running, each with the depth of `stack` it runs at: the innermost names the
+        # function that writes a log record when nothing was called since (13; D-323)
+        self.writers: List[Tuple[str, int]] = []
         self.cleanup_depth = 0
         self.temps: List[dict] = []       # statement temporary scopes (7.9): a stack of {id(value): value}, creation order
+        # the values the running statement produced as loans ({id(value): value}): a binding of one holds a loan,
+        # and its end destroys nothing (7.3, 12.2; D-338)
+        self.lent: dict = {}
 
     @property
     def done(self) -> bool:

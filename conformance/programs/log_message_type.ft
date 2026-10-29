@@ -1,0 +1,6 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-13-04
+// A log message is text, a `StringView` (13): a number is interpolated into a literal first.
+func main() {
+  log.info(42)                                     // reject: E-TYP-040 — not a StringView
+}

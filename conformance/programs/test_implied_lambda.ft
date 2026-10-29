@@ -1,0 +1,18 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-14-03
+// A lambda written in a test body is its own function, not the test's (14; X-345): `or fail` is not implied in it.
+export error Negative {
+  code: "demo.negative"
+}
+
+try func half(n: Int) Int {
+  if n < 0 {
+    fail Negative()
+  }
+  return n / 2
+}
+
+test "a lambda keeps its own rules" {
+  let h = fn(n: Int) Int => half(n)                // reject: E-TYP-040 — the lambda returns Outcome[Int]
+  expect h(4) == 2
+}

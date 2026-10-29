@@ -7,7 +7,7 @@
 
 | Rule | Statement | LR |
 |---|---|---|
-| LANG-08-01 | Every parameter has a type and the success type is written (`Void` included); modifiers in the order `[export] [Contract …] [pure] [noalloc] [async] [try] [recovers] func`; aspects on the lines above. | LR 8.1 |
+| LANG-08-01 | Every parameter has a type and the success type is written, except that a function or method head leaves out `Void` and a lambda's are inferred as LR 8.2 allows; modifiers in the order `[export] [Contract …] [pure] [noalloc] [async] [try] [recovers] func`; aspects on the lines above. | LR 8.1 |
 | LANG-08-02 | A lambda writes its kind (`fn`, `fn mut`, `fn once`) and its capture list (brackets only when non-empty); a body needing a stronger kind than declared is rejected. | LR 8.2 |
 | LANG-08-03 | A name not in the capture list is inaccessible in the lambda body. | LR 8.3 |
 | LANG-08-04 | Callable assignability: kind `fn` ≤ `fn mut` ≤ `fn once`; parameter modes match exactly; modifiers at least as strong; an owned closure's region at least as long. The backend boxes a closure only where `dynamic fn` is written. | LR 8.4 |
@@ -15,17 +15,25 @@
 ## Facts
 
 - Expression body: `func f(x: T) R => expr`, exactly one expression (LR 8.1).
+- A `Void` result is left out of every function and method head, expression bodies and `cleanup` included:
+  `func reset(c: editable Counter) { … }`. A function type keeps it (`fn(Int) Void`), and so does a block-bodied
+  lambda. Older code writes `) Void {`; `fortis fmt` drops it (LR 8.1).
 - A named function is not a value; its name where a callable is expected becomes a non-capturing `fn` of the
   matching type (LR 8.1).
 - `try`, `async`, `recovers` must be written when the summary has them (functions and lambdas); `pure` and
-  `noalloc` are optional claims, inferred for lambdas and printed back by the formatter (LR 8.1, LR 8.2).
-- Lambda shape below; `=> expr` for an expression body; return type always written; parameter types may be
-  omitted only when passed directly to a parameter of known function type; lambdas are not generic (LR 8.2).
+  `noalloc` are optional claims, inferred for lambdas; the formatter prints no inferred one back on a lambda and
+  keeps one the author wrote (the callee's function type states them and the checker enforces it there) (LR 8.1,
+  LR 8.2, X-345).
+- Lambda shape below; `=> expr` for an expression body; a block body writes its return type, an expression body
+  may leave it out: it is the callee's (or annotation's) result type when that names one, else the body's type
+  widened as an unannotated `let` (LR 8.2, X-345); parameter types may be omitted only when passed directly to a
+  parameter of known function type; lambdas are not generic (LR 8.2).
 
 ```fortis
 // illustrative
 [pure] [noalloc] [async] [try] [recovers] fn[captures](params) ReturnType { body }
 fn(params) ReturnType => expression
+fn(params) => expression
 ```
 
 - Kinds (LR 8.2):
@@ -33,9 +41,12 @@ fn(params) ReturnType => expression
   | Kind | Captures may be | Call | Binding | Lowers to |
   |---|---|---|---|---|
   | `fn` | `copy`, `alias`, `move` (read-only use) | `f(x)` | `let` | `Fn` |
-  | `fn mut` | plus `editable`, and mutated `move` captures | `editable f(x)` | `let mut` | `FnMut` |
+  | `fn mut` | plus `editable`, and mutated `move` captures | `f(x)`, an exclusive loan of `f` | `let mut` | `FnMut` |
   | `fn once` | plus `move` captures moved out | `move f(x)`, once | `let` | `FnOnce` |
 
+- A `fn mut` call needs no `editable` where the binding shows it may change (`let mut`, an `editable` parameter or
+  capture), and is checked as the marked call; through a `let` it is `E-OWN-001`, marked or not. Older code writes
+  `editable f(x)` (LR 8.2, LR 7.5).
 - A `move` capture alone does not require `fn once`; moving the captured value out does (LR 8.2).
 - Capture entries: `copy x`, `alias x`, `editable x`, `move x`; a trivial value may be bare (`[n]` = copy).
   Evaluated left to right when the lambda is evaluated. Module `const`s, functions and types are not captures
@@ -60,7 +71,7 @@ fn(params) ReturnType => expression
 | E-FUN-011 | a name used in the body is not in the capture list | add the capture with the right marker | LR 8.3 |
 | E-OWN-010 | two captures of one owner where one is `editable` | capture once, or narrow to disjoint field paths read-only | LR 8.3 |
 | E-OBL-006 | a `fn` or `fn mut` captures a linear value by `move` | declare `fn once` and call it once with `move f()` | LR 8.3 |
-| E-OWN-001 | a `fn mut` call without `editable`, or a `fn once` call without `move` | write `editable f(…)` / `move f(…)` | LR 7.5 |
+| E-OWN-001 | a `fn mut` called through a binding that cannot change (a `let`), marked or not; a `fn once` call without `move` | hold the `fn mut` in a `let mut` and call `f(…)`; write `move f(…)` | LR 7.5 |
 | E-OWN-020 | a `fn once` called a second time (the first call moved it) | call it once; restructure | LR 7.4 |
 | E-OWN-011 | a captured place used while the closure holds an exclusive loan of it | end the closure's block before using the place | LR 8.3 |
 
@@ -97,8 +108,8 @@ func countCalls() Int {
     let mut bump = fn mut[editable calls]() Void {
       calls = Int.saturatingAdd(calls, 1)
     }
-    editable bump()
-    editable bump()
+    bump()
+    bump()
   }
   return calls
 }
@@ -132,14 +143,16 @@ test "above" {
 }
 ```
 
-### E-OWN-001: `fn mut` called without `editable` (LR 7.5, LR 8.2)
+### E-OWN-001: `fn mut` called through a binding that cannot change (LR 7.5, LR 8.2)
+
+A `fn mut` held by a `let mut` binding is called as `add(item)`; held by a `let`, it cannot be called at all.
 
 ```fortis
 // reject: E-OWN-001
 func sum(items: List[Int]) Int {
   let mut total = 0
   {
-    let mut add = fn mut[editable total](n: Int) Void {
+    let add = fn mut[editable total](n: Int) Void {
       total = Int.saturatingAdd(total, n)
     }
     for item in items {
@@ -163,7 +176,7 @@ func sum(items: List[Int]) Int {
       total = Int.saturatingAdd(total, n)
     }
     for item in items {
-      editable add(item)
+      add(item)
     }
   }
   return total
@@ -184,7 +197,7 @@ func reset() Int {
     let mut both = fn mut[editable count, alias count]() Void {   // reject: E-OWN-010
       count = 0
     }
-    editable both()
+    both()
   }
   return count
 }
@@ -202,7 +215,7 @@ func reset() Int {
     let mut clear = fn mut[editable count]() Void {
       count = 0
     }
-    editable clear()
+    clear()
   }
   return count
 }
@@ -235,7 +248,7 @@ pure recovers func later(n: Int) Int {
   let mut run = fn mut[move pending]() Int {        // reject: E-OBL-006, E-OBL-001
     return 0
   }
-  return editable run()
+  return run()
 }
 
 test "later" {
@@ -309,7 +322,7 @@ func logged(console: Console, n: Int) Int {
   return n
 }
 
-func run(console: Console) Void {
+func run(console: Console) {
   discard applyPure(fn[alias console](n: Int) Int => logged(console, n), 1)   // reject: E-TYP-040
 }
 

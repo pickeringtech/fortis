@@ -119,14 +119,14 @@ export pure try func parseAmount(text: StringView, scale: Int<0..8>) Int {
     let d = Scalar.digitValue(s)
     if d != null {
       if inFraction {
-        fraction = Int.mul(fraction, 10) or fail
-        fraction = Int.add(fraction, d) or fail
-        places = Int.add(places, 1) or fail
+        fraction = fraction * 10 or fail
+        fraction = fraction + d or fail
+        places = places + 1 or fail
       } else {
-        whole = Int.mul(whole, 10) or fail
-        whole = Int.add(whole, d) or fail
-        wholeDigits = Int.add(wholeDigits, 1) or fail
-        groupDigits = Int.add(groupDigits, 1) or fail
+        whole = whole * 10 or fail
+        whole = whole + d or fail
+        wholeDigits = wholeDigits + 1 or fail
+        groupDigits = groupDigits + 1 or fail
         if sawComma && groupDigits > 3 {
           fail AmountSyntax(position: i)
         }
@@ -145,7 +145,7 @@ export pure try func parseAmount(text: StringView, scale: Int<0..8>) Int {
     } else {
       fail AmountSyntax(position: i)
     }
-    i = Int.add(i, 1) or fail
+    i = i + 1
   }
   if wholeDigits == 0 || (inFraction && places == 0) {
     fail AmountSyntax(position: n)
@@ -154,18 +154,18 @@ export pure try func parseAmount(text: StringView, scale: Int<0..8>) Int {
     fail AmountSyntax(position: n)
   }
   if places > scale {
-    fail TooPrecise(places: places, scale: scale)
+    fail TooPrecise(places: places, scale)
   }
   let mut padded = fraction
   let mut k = places
   while k < scale {
-    padded = Int.mul(padded, 10) or fail
-    k = Int.add(k, 1) or fail
+    padded = padded * 10 or fail
+    k = k + 1
   }
-  let scaledWhole = Int.mul(whole, powerOfTen(scale)) or fail
-  let magnitude = Int.add(scaledWhole, padded) or fail
+  let scaledWhole = whole * powerOfTen(scale) or fail
+  let magnitude = scaledWhole + padded or fail
   if negative {
-    return Int.sub(0, magnitude) or fail
+    return 0 - magnitude or fail
   }
   return magnitude
 }
@@ -175,7 +175,7 @@ pure func digitsOf(value: Int) List[Int<0..9>] {
   let mut digits: List[Int<0..9>] = List.default()
   let mut rest = value
   if rest == 0 {
-    editable digits.push(0)
+    digits.push(0)
   }
   while rest != 0 {
     let d = rest % 10
@@ -185,10 +185,10 @@ pure func digitsOf(value: Int) List[Int<0..9>] {
     } else {
       positive = d
     }
-    editable digits.push(positive)
+    digits.push(positive)
     rest = rest / 10
   }
-  return move digits
+  return digits
 }
 
 // An amount in minor units written at the given scale with thousands commas: `-1,234.50` for -123450 at
@@ -196,31 +196,31 @@ pure func digitsOf(value: Int) List[Int<0..9>] {
 export pure func formatAmount(minor: Int, scale: Int<0..8>) String {
   let mut digits = digitsOf(minor)
   while digits.count() <= scale {
-    editable digits.push(0)
+    digits.push(0)
   }
   let total = digits.count()
   let wholeCount = Int.saturatingSub(total, scale)
   let mut out = Builder.create()
   if minor < 0 {
-    editable out.append("-")
+    out.append("-")
   }
   let mut position = Int.saturatingSub(total, 1)
   let mut written = 0
   while position >= scale {
     let d = digits.get(position) ?? 0
-    editable out.append("${d}")
+    out.append("${d}")
     written = Int.saturatingAdd(written, 1)
     let remaining = Int.saturatingSub(wholeCount, written)
     if remaining > 0 && remaining % 3 == 0 {
-      editable out.append(",")
+      out.append(",")
     }
     position = Int.saturatingSub(position, 1)
   }
   if scale > 0 {
-    editable out.append(".")
+    out.append(".")
     while position >= 0 {
       let d = digits.get(position) ?? 0
-      editable out.append("${d}")
+      out.append("${d}")
       position = Int.saturatingSub(position, 1)
     }
   }
@@ -236,24 +236,24 @@ export class Commodities {
 
   // Declares a commodity; returns false (and changes nothing) when it was already declared.
   export pure func declare(editable self, code: CommodityCode, scale: Int<0..8>) Bool {
-    if self.scales.get(copy code) != null {
+    if self.scales.get(code) != null {
       return false
     }
-    editable self.declared.push(copy code)
-    editable self.scales.set(copy code, scale)
+    self.declared.push(copy code)
+    self.scales.set(copy code, scale)
     return true
   }
 
   // The scale of a declared commodity, or null.
   export pure func scaleOf(self, code: CommodityCode) Int<0..8>? {
-    let found = self.scales.get(copy code)
+    let found = self.scales.get(code)
     if found == null {
       return null
     }
     return found
   }
 
-  export pure func isDeclared(self, code: CommodityCode) Bool => self.scales.get(copy code) != null
+  export pure func isDeclared(self, code: CommodityCode) Bool => self.scales.get(code) != null
 
   export pure func count(self) Int => self.declared.count()
 
@@ -261,9 +261,9 @@ export class Commodities {
   export pure func codes(self) List[CommodityCode] {
     let mut out: List[CommodityCode] = List.default()
     for code in self.declared {
-      editable out.push(copy code)
+      out.push(copy code)
     }
-    return move out
+    return out
   }
 }
 
@@ -279,32 +279,32 @@ export class Holdings {
   // A holding of one commodity.
   export pure func single(code: CommodityCode, minor: Int) Holdings {
     let mut h = Holdings.empty()
-    editable h.seen.push(copy code)
-    editable h.amounts.set(copy code, minor)
-    return move h
+    h.seen.push(copy code)
+    h.amounts.set(copy code, minor)
+    return h
   }
 
   // Adds a quantity of one commodity; fails on overflow.
-  export pure try func add(editable self, code: CommodityCode, minor: Int) Void {
-    let current = self.amounts.get(copy code)
+  export pure try func add(editable self, code: CommodityCode, minor: Int) {
+    let current = self.amounts.get(code)
     if current == null {
-      editable self.seen.push(copy code)
-      editable self.amounts.set(copy code, minor)
+      self.seen.push(copy code)
+      self.amounts.set(copy code, minor)
       return
     }
-    let sum = Int.add(current, minor) or fail
-    editable self.amounts.set(copy code, sum)
+    let sum = current + minor or fail
+    self.amounts.set(copy code, sum)
   }
 
   // Adds every quantity of another holding.
-  export pure try func addAll(editable self, other: Holdings) Void {
+  export pure try func addAll(editable self, other: Holdings) {
     for code in other.seen {
-      editable self.add(copy code, other.amountOf(copy code)) or fail
+      self.add(copy code, other.amountOf(copy code)) or fail
     }
   }
 
   // The quantity of one commodity, zero when absent.
-  export pure func amountOf(self, code: CommodityCode) Int => self.amounts.get(copy code) ?? 0
+  export pure func amountOf(self, code: CommodityCode) Int => self.amounts.get(code) ?? 0
 
   // True when every quantity is zero.
   export pure func isZero(self) Bool {
@@ -321,7 +321,7 @@ export class Holdings {
     let mut out: List[CommodityCode] = List.default()
     for code in self.seen {
       if self.amountOf(copy code) != 0 {
-        editable out.push(copy code)
+        out.push(copy code)
       }
     }
     return sortedBy(out, pure noalloc fn(a: CommodityCode, b: CommodityCode) Bool => a < b)
@@ -331,10 +331,10 @@ export class Holdings {
   export pure try func negated(self) Holdings {
     let mut out = Holdings.empty()
     for code in self.seen {
-      let flipped = Int.sub(0, self.amountOf(copy code)) or fail
-      editable out.add(copy code, flipped) or fail
+      let flipped = 0 - self.amountOf(copy code) or fail
+      out.add(copy code, flipped) or fail
     }
-    return move out
+    return out
   }
 
   // True when both holdings have the same non-zero quantities.
@@ -356,9 +356,9 @@ export class Holdings {
   export pure func asAmounts(self) List[Amount] {
     let mut out: List[Amount] = List.default()
     for code in self.codes() {
-      editable out.push(Amount(minor: self.amountOf(copy code), code: copy code))
+      out.push(Amount(minor: self.amountOf(copy code), code: copy code))
     }
-    return move out
+    return out
   }
 }
 
@@ -373,7 +373,7 @@ test "commodity codes" cases {
 } as row {
   let parsed = parseCommodityCode(row.text) catch e {
     expect e.code == "ledger.amount.bad_code"
-    recover CommodityCode.validate(String.from("ERR")) or fail
+    recover CommodityCode.validate(String.from("ERR"))
   }
   let shown: String = "${parsed}"
   expect (shown == row.text) == row.ok
@@ -399,7 +399,7 @@ test "parse amounts" cases {
   "high scale":          { text: "0.00000001", scale: 8, minor: 1 }
   "group without point": { text: "1,000", scale: 0, minor: 1000 }
 } as row {
-  expect (parseAmount(row.text, row.scale) or fail) == row.minor
+  expect parseAmount(row.text, row.scale) == row.minor
 }
 
 test "malformed amounts" cases {
@@ -438,7 +438,7 @@ test "format amounts" cases {
 }
 
 test "amount text" {
-  let gbp = parseCommodityCode("GBP") or fail
+  let gbp = parseCommodityCode("GBP")
   let a = Amount(minor: -1999, code: copy gbp)
   expect a.text(2) == "-19.99 GBP"
   expect a == Amount(minor: -1999, code: copy gbp)
@@ -446,41 +446,41 @@ test "amount text" {
 
 test "commodity declarations" {
   let mut known = Commodities.empty()
-  let gbp = parseCommodityCode("GBP") or fail
-  let jpy = parseCommodityCode("JPY") or fail
-  expect editable known.declare(copy gbp, 2)
-  expect editable known.declare(copy jpy, 0)
-  expect !(editable known.declare(copy gbp, 3))
+  let gbp = parseCommodityCode("GBP")
+  let jpy = parseCommodityCode("JPY")
+  expect known.declare(copy gbp, 2)
+  expect known.declare(copy jpy, 0)
+  expect !(known.declare(copy gbp, 3))
   expect known.count() == 2
   expect known.scaleOf(copy gbp) == 2
   expect known.isDeclared(copy jpy)
-  let usd = parseCommodityCode("USD") or fail
+  let usd = parseCommodityCode("USD")
   expect known.scaleOf(usd) == null
 }
 
 test "holdings add up per commodity" {
-  let gbp = parseCommodityCode("GBP") or fail
-  let usd = parseCommodityCode("USD") or fail
+  let gbp = parseCommodityCode("GBP")
+  let usd = parseCommodityCode("USD")
   let mut h = Holdings.empty()
-  editable h.add(copy gbp, 100) or fail
-  editable h.add(copy usd, -50) or fail
-  editable h.add(copy gbp, -30) or fail
+  h.add(copy gbp, 100)
+  h.add(copy usd, -50)
+  h.add(copy gbp, -30)
   expect h.amountOf(copy gbp) == 70
   expect h.amountOf(copy usd) == -50
   expect !h.isZero()
   let codes = h.codes()
   expect codes.count() == 2
-  expect (codes.at(0) or fail) == gbp
-  let back = h.negated() or fail
-  editable h.addAll(back) or fail
+  expect codes.at(0) == gbp
+  let back = h.negated()
+  h.addAll(back)
   expect h.isZero()
   expect h.codes().count() == 0
 }
 
 test "holdings overflow is a failure" {
-  let gbp = parseCommodityCode("GBP") or fail
+  let gbp = parseCommodityCode("GBP")
   let mut h = Holdings.single(copy gbp, 9223372036854775807)
-  editable h.add(copy gbp, 1) catch e {
+  h.add(copy gbp, 1) catch e {
     expect e.code == "numeric.overflow"
     recover Void
   }
@@ -489,7 +489,7 @@ test "holdings overflow is a failure" {
 
 property "amounts survive formatting and parsing" forall (minor: Int<-100000000000000..100000000000000>, scale: Int<0..8>) {
   let text = formatAmount(minor, scale)
-  expect (parseAmount(text, scale) or fail) == minor
+  expect parseAmount(text, scale) == minor
 }
 
 property "negating an amount negates its text" forall (minor: Int<1..1000000000>, scale: Int<0..8>) {
@@ -499,27 +499,27 @@ property "negating an amount negates its text" forall (minor: Int<1..1000000000>
 }
 
 property "adding holdings is commutative" forall (a: Int<-1000000..1000000>, b: Int<-1000000..1000000>, c: Int<-1000000..1000000>) {
-  let gbp = parseCommodityCode("GBP") or fail
-  let eur = parseCommodityCode("EUR") or fail
+  let gbp = parseCommodityCode("GBP")
+  let eur = parseCommodityCode("EUR")
   let mut left = Holdings.single(copy gbp, a)
-  editable left.add(copy eur, b) or fail
+  left.add(copy eur, b)
   let mut right = Holdings.single(copy eur, c)
-  editable right.add(copy gbp, b) or fail
+  right.add(copy gbp, b)
   let mut leftThenRight = Holdings.empty()
-  editable leftThenRight.addAll(left) or fail
-  editable leftThenRight.addAll(right) or fail
+  leftThenRight.addAll(left)
+  leftThenRight.addAll(right)
   let mut rightThenLeft = Holdings.empty()
-  editable rightThenLeft.addAll(right) or fail
-  editable rightThenLeft.addAll(left) or fail
+  rightThenLeft.addAll(right)
+  rightThenLeft.addAll(left)
   expect leftThenRight.sameAs(rightThenLeft)
 }
 
 property "a holding plus its negation is zero" forall (a: Int<-1000000000..1000000000>, b: Int<-1000000000..1000000000>) {
-  let gbp = parseCommodityCode("GBP") or fail
-  let usd = parseCommodityCode("USD") or fail
+  let gbp = parseCommodityCode("GBP")
+  let usd = parseCommodityCode("USD")
   let mut h = Holdings.single(copy gbp, a)
-  editable h.add(copy usd, b) or fail
-  let minus = h.negated() or fail
-  editable h.addAll(minus) or fail
+  h.add(copy usd, b)
+  let minus = h.negated()
+  h.addAll(minus)
   expect h.isZero()
 }

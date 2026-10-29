@@ -1,0 +1,105 @@
+// reject: E-OWN-001 (at the marked lines)
+// covers: LANG-07-01
+// D-341, 7.5, 7.6, X-95: a loan stays a loan. `xs.get(0)` lends the list's element, and an owned value is made
+// from a loan only by `copy`, so a loan of a copyable, non-trivial value where an owned value is expected is
+// E-OWN-001: a return, an expression body, an annotated binding, an assignment, an `owned` argument, a field, a
+// pushed item, a variant's payload and a recovered value, from a list or a map, and through a binding that holds
+// the loan, narrowed or not. Both checkers accepted each, and the interpreter and the VM then aliased the element,
+// so a change to the "owned" value changed the list a read parameter had lent.
+import fortis.host { Console }
+
+export error Late {
+  code: "demo.late"
+}
+
+class Item {
+  name: String
+}
+
+class Holder {
+  item: Item?
+}
+
+enum Slot {
+  Full(item: Item)
+  Empty
+}
+
+func keep(item: owned Item?) {
+}
+
+try func risky() Item {
+  fail Late()
+}
+
+func returned(xs: List[Item]) Item? {
+  return xs.get(0)                                  // reject: E-OWN-001 — write `copy`
+}
+
+func text(xs: List[String]) String? {
+  return xs.get(0)                                  // reject: E-OWN-001 — text too
+}
+
+func looked(m: Map[String, Item]) Item? {
+  return m.get("k")                                 // reject: E-OWN-001 — a map's value
+}
+
+func body(xs: List[Item]) Item? => xs.get(0)        // reject: E-OWN-001 — an expression body returns it
+
+func bound(xs: List[Item]) {
+  let item: Item? = xs.get(0)                       // reject: E-OWN-001 — an owned binding
+}
+
+func assigned(xs: List[Item]) {
+  let mut item: Item? = null
+  item = xs.get(0)                                  // reject: E-OWN-001 — an assignment
+}
+
+func passed(xs: List[Item]) {
+  keep(xs.get(0))                                   // reject: E-OWN-001 — an `owned` argument
+}
+
+func stored(xs: List[Item]) Holder {
+  return Holder(item: xs.get(0))                    // reject: E-OWN-001 — a field
+}
+
+func pushed(xs: List[Item]) {
+  let mut ys: List[Item?] = List.default()
+  ys.push(xs.get(0))                                // reject: E-OWN-001 — a pushed item
+}
+
+func held(xs: List[Item]) Item? {
+  let v = xs.get(0)
+  return v                                          // reject: E-OWN-001 — a binding that holds the loan
+}
+
+func narrowed(xs: List[Item]) Item {
+  let v = xs.get(0)
+  if v == null {
+    return Item(name: String.from("none"))
+  }
+  return v                                          // reject: E-OWN-001 — narrowed, still a loan
+}
+
+func payload(xs: List[Item]) Slot {
+  let v = xs.get(0)
+  if v == null {
+    return Slot.Empty
+  }
+  return Slot.Full(item: v)                         // reject: E-OWN-001 — a payload
+}
+
+recovers func recovered(xs: List[Item]) Item {
+  let v = xs.get(0)
+  if v == null {
+    return Item(name: String.from("none"))
+  }
+  let item = risky() catch e {
+    recover v                                       // reject: E-OWN-001 — a recovered value
+  }
+  return item
+}
+
+func main(console: Console) {
+  console.print("loans")
+}

@@ -3,4 +3,4 @@
 // prelude's List (D-51.2).
 export class List[T] {}
 
-export func main(args: List[String]) Void {}
+export func main(args: List[String]) {}

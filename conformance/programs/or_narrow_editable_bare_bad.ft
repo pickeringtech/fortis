@@ -3,7 +3,7 @@
 // No null test: an editable call does not narrow its optional receiver (LR 6.8).
 export class Cell {
   export n: Int
-  export func change(editable self) Void {
+  export func change(editable self) {
     self.n = 1
   }
 }

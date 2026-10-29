@@ -18,6 +18,7 @@ import diagnostics  # noqa: E402
 import elaboration  # noqa: E402
 import parser       # noqa: E402
 import project      # noqa: E402
+import reading      # noqa: E402
 import tree         # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -154,27 +155,32 @@ class PackageSet:
             self.record("E-NAM-001", f"entry module {pkg.entry} does not exist", "LANG-04-06", os.path.join(pkg.dir, "project.yaml"), 1, 1, {"name": pkg.entry, "candidates": sorted(pkg.modules)})
             return
         mains = [d for d in mod.decls if d["kind"] == "func" and d["name"] == "main"]
-        if not mains or not mains[0]["exported"]:
-            self.record("E-NAM-001", f"entry module {pkg.entry} exports no main", "LANG-04-06", mod.file, 1, 1, {"name": "main", "candidates": [d["name"] for d in mod.decls if d["name"]]})
+        if not mains:
+            # the entry module's function main is the entry, exported or not (4.6, X-345)
+            self.record("E-NAM-001", f"entry module {pkg.entry} declares no main", "LANG-04-06", mod.file, 1, 1, {"name": "main", "candidates": [d["name"] for d in mod.decls if d["name"]]})
             return
         head = tree.find(mains[0]["node"], "funcHead")
         mods = tree.find(head, "modifiers")
         words = " ".join(t.text for t in tree.tokens(mods)) if mods else ""
         sig = tree.find(head, "funcSignature")
-        text = " ".join(t.text for t in tree.tokens(sig))
+        rt = tree.find(sig, "returnType")
+        ret = " ".join(t.text for t in tree.tokens(rt)) if rt is not None else ""
         tok = mains[0]["token"]
-        form = "export [async] [try] [recovers] func main(args: List[String]) Void"
-        if words not in MAIN_FORMS or text not in ("( args : List [ String ] ) Void",):
+        form = reading.ENTRY_FORM
+        if words not in MAIN_FORMS or ret not in ("Void", "") or tree.find(sig, "typeParams") is not None or tree.find(sig, "whereClause") is not None:
+            text = " ".join(t.text for t in tree.tokens(sig))
             self.record("E-NAM-001", f"main has signature `{words} func main{text}`, not one of the forms of 4.6", "LANG-04-06", mod.file, tok.line, tok.col,
                         {"name": "main", "candidates": [form]})
             return
-        # the token text can match while `List`, `String` or `Void` names a declaration or import of this module.
-        # 4.6's forms use the prelude types. The package resolver has no scope origins, so a module-level binding of
-        # the name is the shadow (D-51.2)
-        shadowed = entry_type_shadow(mod)
-        if shadowed:
-            self.record("E-NAM-001", f"main's `{shadowed}` is not the prelude {shadowed}, so the signature is not one of the forms of 4.6", "LANG-04-06", mod.file, tok.line, tok.col,
+        # the token text can match while `Void` names a declaration or import of this module. 4.6's forms use the
+        # prelude types. The package resolver has no scope origins, so a module-level binding of the name is the
+        # shadow (D-51.2)
+        if entry_type_shadow(mod, ("Void",)):
+            self.record("E-NAM-001", "main's `Void` is not the prelude Void, so the signature is not one of the forms of 4.6", "LANG-04-06", mod.file, tok.line, tok.col,
                         {"name": "main", "candidates": [form]})
+            return
+        for code, msg, t, fields in reading.param_findings(sig, lambda n: entry_origin(mod, n)):
+            self.record(code, msg, "LANG-04-06", mod.file, t.line, t.col, fields)
 
     def run(self):
         for p in self.packages.values():
@@ -197,18 +203,27 @@ class PackageSet:
         return self.records
 
 
-def entry_type_shadow(mod) -> Optional[str]:
+def entry_type_shadow(mod, names=ENTRY_TYPES) -> Optional[str]:
     """The first of 4.6's `List`, `String` and `Void` bound by a declaration or an import of `mod`."""
-    bound = {d["name"] for d in mod.decls if d.get("name")}
-    for imp in mod.imports:
-        if imp["members"] is None:
-            bound.add(imp["alias"] or imp["path"][-1])
-        else:
-            bound.update(imp["members"])
-    for n in ENTRY_TYPES:
-        if n in bound:
+    for n in names:
+        if entry_origin(mod, n) not in (None, "prelude"):
             return n
     return None
+
+
+def entry_origin(mod, n: str) -> Optional[str]:
+    """Where the module's name `n` comes from (reading.param_findings): "module", an import path, "alias:<path>",
+    "prelude" for 4.6's prelude types, or None."""
+    if any(d.get("name") == n for d in mod.decls):
+        return "module"
+    for imp in mod.imports:
+        path = ".".join(imp["path"])
+        if imp["members"] is None:
+            if (imp["alias"] or imp["path"][-1]) == n:
+                return "alias:" + path
+        elif n in imp["members"]:
+            return path
+    return "prelude" if n in ENTRY_TYPES else None
 
 
 def main(argv):

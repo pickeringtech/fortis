@@ -1,5 +1,6 @@
 // accept
-// A name one enum declares is unambiguous, so the prefix may be left out with no expected type (9.7, D-253).
+// A name one enum declares needs its enum as the expected type, as any bare variant does: an annotated `let` gives
+// it (9.7, D-253; with no expected type it is E-TYP-040, D-304).
 // `GBP` is declared by the imported `Currency` and by `Wallet`; a return and a function position pick `Currency`.
 import fortis.money { Currency }
 
@@ -14,7 +15,7 @@ enum Wallet {
 }
 
 pure func swatch() Int {
-  let red = Red
+  let red: Ink = Red
   return 1
 }
 
