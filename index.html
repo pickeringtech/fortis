@@ -29,7 +29,7 @@
  "name": "Fortis",
  "url": "https://fortis.picktech.co.uk/",
  "description": "Fortis is a programming language for software written mostly by AI agents and reviewed by people. Ownership, changes, failures and effects are explicit in the source.",
- "version": "0.0.2",
+ "version": "0.1.0",
  "license": "https://spdx.org/licenses/MIT.html",
  "publisher": {
   "@type": "Organization",
@@ -366,7 +366,7 @@ button.pin { padding: 0; }
   <a class="brand" href="#top" aria-label="Fortis home"><img src="/assets/logo-256.png" alt="" width="38" height="38">Fortis</a>
   <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-navigation" aria-label="Open navigation menu" hidden><span class="menu-icon" aria-hidden="true"><span></span><span></span><span></span></span></button>
   <div class="nav-panel" id="navigation-panel">
-    <nav aria-label="Main navigation"><a href="#example">Read the code</a><a href="/docs/docs/releases/v0.0.2.html">Status</a><a href="#start">Try Fortis</a><a class="agents" href="/llms.txt">For agents</a></nav>
+    <nav aria-label="Main navigation"><a href="#example">Read the code</a><a href="/docs/docs/releases/v0.1.0.html">Status</a><a href="#start">Try Fortis</a><a class="agents" href="/llms.txt">For agents</a></nav>
     <label class="theme"><span>Theme</span><select id="theme" aria-label="Colour theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
   </div>
 </div></header>
@@ -376,7 +376,7 @@ button.pin { padding: 0; }
     <nav class="menu-group" aria-label="On this page"><h2 class="menu-label">On this page</h2>
       <a class="menu-link" href="#example" style="--item: 0"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-13-2 16"/></svg><span><strong>Read the code</strong><small>Annotated example programs, with review notes</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
       <a class="menu-link" href="#start" style="--item: 1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg><span><strong>Try Fortis</strong><small>Build the tools and run your first program</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
-      <a class="menu-link" href="/docs/docs/releases/v0.0.2.html" style="--item: 2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m8 10V4m8 16V7"/></svg><span><strong>Status</strong><small>v0.0.2 release notes and known limitations</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+      <a class="menu-link" href="/docs/docs/releases/v0.1.0.html" style="--item: 2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m8 10V4m8 16V7"/></svg><span><strong>Status</strong><small>v0.1.0 release notes and known limitations</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
     </nav>
     <nav class="menu-group" aria-label="Documentation"><h2 class="menu-label">Documentation</h2>
       <a class="menu-link" href="/docs/docs/guide/tour.html" style="--item: 3"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 4 6 6-6 6M4 20v-6a4 4 0 0 1 4-4h12"/></svg><span><strong>Language tour</strong><small>Fortis from the first program</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
@@ -389,14 +389,14 @@ button.pin { padding: 0; }
       <label class="theme-choice"><input class="sr-only" type="radio" name="mobile-theme" value="light"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8m0-6v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/></svg>Light</span></label>
       <label class="theme-choice"><input class="sr-only" type="radio" name="mobile-theme" value="dark"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14A9 9 0 0 1 10 4a9 9 0 1 0 10 10Z"/></svg>Dark</span></label>
     </div></fieldset>
-    <div class="menu-footer"><p>v0.0.2 release candidate</p><p>Pickering Technologies Ltd · MIT License</p></div>
+    <div class="menu-footer"><p>v0.1.0</p><p>Pickering Technologies Ltd · MIT License</p></div>
   </div>
 </div>
 
 <main id="main" tabindex="-1">
   <section class="hero" aria-labelledby="hero-title"><div class="wrap hero-head">
     <div>
-      <p class="eyebrow">A programming language · v0.0.2 release candidate</p>
+      <p class="eyebrow"><a href="/docs/docs/releases/v0.1.0.html">Latest: Model a domain (v0.1.0)</a></p>
       <h1 id="hero-title">Written by AI.<br>Reviewed by people.</h1>
       <p class="thesis">Fortis is a statically checked, compiled language for software written mostly by AI agents. <strong>People can read, review and trust it because every decision is written in the source.</strong> Ownership, changes, failures and effects are explicit.</p>
       <div class="actions"><a class="button" href="#start">Try Fortis <span aria-hidden="true">↓</span></a><a href="#example">Read the annotated code</a></div>
@@ -643,7 +643,7 @@ bin/fortis run mean.ft</code></pre><button class="copy" type="button" data-copy=
     </ol>
     <p class="feedback" id="copy-status" role="status" aria-live="polite"></p>
     <div class="copy-fallback" id="copy-fallback" hidden><label for="copy-text">Select and copy this text</label><textarea id="copy-text" readonly spellcheck="false"></textarea></div>
-    <p class="small">v0.0.2 release candidate. Language 1.0 is still being built and is not released.</p>
+    <p class="small">v0.1.0. Language 1.0 is still being built and is not released.</p>
     <div class="docs"><a href="/docs/README.html">Repository instructions</a><a href="/docs/docs/guide/tour.html">Take the language tour</a><a href="/docs/docs/guide/README.html">Read the human guide</a><a href="/docs/docs/agent/README.html">Read the agent reference</a></div>
   </div></section>
   <section class="band" id="why" aria-labelledby="why-title"><div class="wrap">
@@ -666,18 +666,20 @@ bin/fortis run mean.ft</code></pre><button class="copy" type="button" data-copy=
   </div></section>
   <section class="band" id="roadmap" aria-labelledby="roadmap-title"><div class="wrap">
     <h2 id="roadmap-title">Where Fortis stands.</h2>
-    <p class="lead">The current status is <strong>v0.0.2 release candidate</strong>. Each release is a subset with its own documentation and release checks. Performance is judged at v1.0.</p>
+    <p class="lead">The latest release is <strong>v0.1.0</strong>. Each release is a subset with its own documentation and release checks. Performance is judged at v1.0.</p>
     <ol class="ladder"><li><span class="v">v0.0.1</span><span><b>Write, check, run, build, format and test programs.</b> Modules, functions, classes, enums, ownership and failures.</span></li>
-      <li class="current"><span class="v">v0.0.2 · now</span><span><b>Code that says only what matters.</b> Fewer markers, capabilities as parameters and built-in logging.</span></li></ol>
+      <li><span class="v">v0.0.2</span><span><b>Code that says only what matters.</b> Fewer markers, capabilities as parameters and built-in logging.</span></li>
+      <li class="current"><span class="v">v0.1.0</span><span><b>Latest: Model a domain (v0.1.0).</b> Refinements, newtypes, conversions, interfaces, generics, contracts, text and collections.</span></li></ol>
     <details><summary>See the planned releases through v1.0</summary><ol class="ladder">
-      <li><span class="v">v0.1</span><span><b>Domain modelling.</b> Interfaces, generics, refinements and contracts.</span></li>
-      <li><span class="v">v0.2</span><span><b>Effects and testing.</b> Checked effects, property tests and packages with dependencies.</span></li>
-      <li><span class="v">v0.3</span><span><b>Concurrency.</b> Async, tasks and structured concurrency.</span></li>
-      <li><span class="v">v0.4</span><span><b>Standard library.</b> Collections, text, Unicode and numerics.</span></li>
-      <li><span class="v">v0.5–0.6</span><span><b>Production tooling.</b> Observation, runtime, kits and an incremental compiler.</span></li>
+      <li><span class="v">v0.2</span><span><b>Trust effects and test properly.</b> Checked effects and capabilities, and property tests.</span></li>
+      <li><span class="v">v0.3</span><span><b>Build a web service.</b> An HTTP server with health, readiness and metrics built in, SQLite and typed queries.</span></li>
+      <li><span class="v">v0.4</span><span><b>Build web apps.</b> HTML, forms, sessions, authentication, Postgres and migrations.</span></li>
+      <li><span class="v">v0.5</span><span><b>Run it in production.</b> Telemetry, connection pools, timeouts, rate limits and containers.</span></li>
+      <li><span class="v">v0.6</span><span><b>Organise and extend code.</b> Packages with dependencies, checked architecture and extensions.</span></li>
+      <li><span class="v">v0.7–0.9</span><span><b>Async, library and scale.</b> Async in your own code, a complete standard library, and tooling for large code bases.</span></li>
       <li><span class="v">v1.0</span><span><b>Stability.</b> Editions, migration and a stability promise. Performance judged against Rust.</span></li>
     </ol></details>
-    <div class="docs"><a href="/docs/docs/releases/v0.0.2.html">Read the release notes</a><a href="#start">Try the release candidate ↑</a></div>
+    <div class="docs"><a href="/docs/docs/releases/v0.1.0.html">Read the release notes</a><a href="#start">Try v0.1.0 ↑</a></div>
   </div></section>
 </main>
 <footer><div class="wrap"><a class="brand" href="#top"><img src="/assets/logo-256.png" alt="" width="28" height="28">Fortis</a><span>Developed by Pickering Technologies Ltd</span><span>Released under the MIT License</span></div></footer>

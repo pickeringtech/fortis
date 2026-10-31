@@ -48,7 +48,7 @@ compiler defect only inside the Rust-checked fragment (LR 7.10, LR C.1).
 | loan `from` two parameters | `E-SYN-000` | return owned, or split | LR C.2, LR 7.6 |
 | class storing a loan (lifetime parameter, loan or loan-carrying field other than a loan `from static`) | `E-OWN-053` | own, copy, `Shared`, or pass per call | LR C.2, LR 7.7 |
 | self-referential class | `E-OWN-053` | indices, or `Shared` + `Weak` | LR C.2, LR 7.7 |
-| loan stored in `Shared`/`Mutex` | `E-OWN-090` | own the value | LR C.2 |
+| loan stored in a collection, `Shared` or `Mutex` | `E-OWN-053` | own the value | LR C.2 |
 | `fn mut` escaping into `Shared` | `E-OWN-090` | `Mutex` around the state + `fn` closure | LR C.2 |
 | future holding a loan on a parallel pool | `E-ASY-003` | pass owned data | LR C.2, LR 12.7 |
 | partial move | `E-OWN-040` | move the whole, or restructure | LR C.2, LR 7.2 |
@@ -67,8 +67,8 @@ identifies (LR C.2).
 | Code | Trigger | Correction | LR |
 |---|---|---|---|
 | E-OWN-040 | `move p.field` while `p` still owns the rest | move the whole binding; consume it with `let Name(field: x, …) = move p` | LR 7.2, LR C.2 |
-| E-OWN-053 | lifetime parameter, or a field of a loan or loan-carrying type (not `from static`) | own the data (`String` for `StringView`), copy it, `Shared`, or pass it per call | LR 7.7, LR C.2 |
-| E-OWN-090 | a shape with no lowering (loan or `fn mut` into `Shared`/`Mutex`) | own the value; `Mutex` or atomic state with a `fn` closure | LR 7.10, LR C.2 |
+| E-OWN-053 | lifetime parameter, or a field or storage type argument of a loan or loan-carrying type (not `from static`) | own the data (`String` for `StringView`), copy it, `Shared`, or pass it per call | LR 7.7, LR C.2 |
+| E-OWN-090 | a shape with no lowering (`fn mut` into `Shared`/`Mutex`) | own the value; `Mutex` or atomic state with a `fn` closure | LR 7.10, LR C.2 |
 | E-ASY-003 | a pool launch whose future borrows or holds a non-`Shareable` value | pass owned `Shareable` data (`move`, `copy`) | LR 12.7, LR C.2 |
 | E-EFF-001 | an allocating pattern in a `noalloc` body | remove the allocation (a caller-provided buffer, an inline `Array`/`FixedList`); removing the claim is an API change, never a correction (LR 11.3) | LR 11.1, LR 11.3, LR C.3 |
 
@@ -133,13 +133,13 @@ test "line" {
 ### E-OWN-090: `fn mut` into `Shared` (LR C.2)
 
 ```fortis
-// reject: E-OWN-090
+// reject: E-OWN-090, E-OWN-053
 test "bump" {
   let mut count = 0
   let bump = fn mut[editable count]() Void {
     count = Int.saturatingAdd(count, 1)
   }
-  let shared = Shared.create(move bump)     // reject: E-OWN-090
+  let shared = Shared.create(move bump)     // reject: E-OWN-090, E-OWN-053
 }
 ```
 

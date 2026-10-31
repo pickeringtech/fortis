@@ -3,8 +3,6 @@
 <!-- covers: LR 9 -->
 *Agent mode. Human mode: [Classes, interfaces, mixins and enums](../guide/09-classes.md). Source of truth: LR 9.*
 
-> Preview: interfaces and mixins (LR 9.5, 9.6) arrive in v0.1. Classes, cleanup, enums and match (LR 9.1, 9.2, 9.3, 9.4, 9.7 and 9.8) are in v0.0.1.
-
 ## Rules
 
 | Rule | Statement | LR |
@@ -12,9 +10,10 @@
 | LANG-09-01 | No inheritance, no runtime member lookup, no reflection-based construction. | LR 9.1 |
 | LANG-09-02 | The generated constructor `Name(field: v, …)` is callable only where every field is visible; private fields are settable only inside the module. | LR 9.2 |
 | LANG-09-03 | An implementation may not strengthen a precondition (narrower parameter refinement) or weaken a guarantee (drop `pure`, add `try`/`async`, widen a return refinement); coherence: implement only in the package defining the interface or the type, at most one implementation per (interface, type). | LR 9.5 |
-| LANG-09-04 | Mixins require methods only, add no fields, constructors or `cleanup`; a method name provided by two applied mixins and not declared by the class is rejected. | LR 9.6 |
-| LANG-09-05 | `match` over a closed type (enum, optional) is exhaustive without `otherwise`; each missing variant is named. | LR 9.8 |
+| LANG-09-04 | Mixins require methods only and add no state; a requirement is met by a method of a compatible signature, and a mixin body is checked at its application against the class's exported members; conflicts are rejected. | LR 9.6 |
+| LANG-09-05 | `match` over a closed type (enum, optional) is exhaustive without `otherwise`; each missing variant is named; or-pattern alternatives each count, bind nothing and take no guard; over a refined integer scrutinee the unguarded range-pattern arms' intervals count for coverage. | LR 9.8 |
 | LANG-09-06 | Pattern ownership: `match p` takes a read loan and binds read loans; `match move p` consumes and binds owned values; a match of a fresh value owns it; a linear payload needs the owning form and must be consumed. | LR 9.8 |
+| LANG-09-07 | `dynamic I` names a dynamic-eligible interface (`E-TYP-172`), and a value converts to `dynamic I` only from a type that implements `I`, a type parameter whose bound grants `I`, or a `dynamic J` where `J` requires `I` (`E-TYP-040`). | LR 9.5 |
 
 ## Facts
 
@@ -45,16 +44,38 @@
 - `cleanup(editable self)` runs at destruction before fields drop; not `try`, not `async`, not callable; its
   effects join every function that may drop the type (LR 9.4).
 - Interfaces: signatures with modifiers and receiver modes, associated functions, associated constants; no
-  bodies, no associated types; `where` on type parameters; `requires` other interfaces (LR 9.5).
-- Implementing: `implements I` with every member, `derive I`, or `implement I for T { … }` at module level
-  (the form for generic implementations); same names alone never implement (LR 9.5).
+  bodies, no associated types; `where` on type parameters, checked at every implementation and use (an unmet
+  bound is `E-TYP-080` at the implementation, `E-TYP-090` on the type); `requires` other interfaces, matched by
+  identity and type arguments (`requires Tagged[String]` is not met by `Tagged[Int]` nor by another module's
+  `Tagged`; a missing one is `E-TYP-080`); upcasting `dynamic J` to a required `dynamic I` also requires both interfaces to be
+  dynamic-eligible (LR 9.5).
+- Implementing: `implements I` with every member, `derive I`, or `implement I for T { … }` at module level;
+  same names alone never implement. In Language 1.0 a block's target is a non-generic class or enum the program
+  declares (a core type, a newtype, an optional, a generic class or enum is `E-TYP-171`; no generic
+  implementations yet, X-180); the block is then the target listing `I` in `implements`, its methods reached
+  through the interface; a method the target already has is `E-TYP-070`; a block for an interface the target
+  implements or derives, or a second block for one (interface, whole target type) pair in any module, is the
+  overlap `E-TYP-100`; `Box[Int]` and `Box[String]` are two targets; a block is seen by every module of the
+  package (D-132; LR 9.5).
 - Bundle = requirements, no members: satisfied automatically (`Codec`). Marker = no members, no requirements:
   explicit only (`Authority`). `Copyable`, `Shareable` are structural (LR 9.5).
-- `dynamic I`: owned and boxed (allocates on creation); `alias dynamic I` (loan); `Shared[dynamic I]`.
-  Dynamic-eligible: no associated types, no generic methods, no `Self` by value. An `async` method through
-  `dynamic` allocates its future (LR 9.5).
-- Mixin: `requires` method signatures; body checked at each application against the class's exported members
-  only; a class method beats a mixin method of the same name (LR 9.6).
+- `dynamic I`: owned and boxed (allocates on creation); `alias dynamic I` (loan); `Shared[dynamic I]`; a bare
+  interface name as a field, payload, parameter or result type is `E-TYP-040`. Dynamic-eligible: no associated
+  types, no generic methods, no method taking or returning `Self` beyond its receiver; `dynamic I` of any other
+  interface is `E-TYP-172` wherever the type is written (associated functions and constants do not count).
+  Conversion to `dynamic I` only from an implementing type (with the written arguments), a type parameter whose
+  bound grants `I`, or a `dynamic J` that is or requires `I`; anything else is `E-TYP-040`. An `async` method
+  through `dynamic` allocates its future (rejected in `noalloc`; LR 9.5).
+- Mixin: `requires` method signatures only, never an interface (`requires Displayable` is `E-SYN-000`, X-526),
+  never fields; adds no fields, constructors or `cleanup`. A requirement is compared as an implementation with
+  an interface member (receiver, modifiers and claims, parameters, result), or the application is `E-TYP-080`;
+  a method the class has by derivation or through an interface it lists meets it, and is visible to the mixin's
+  bodies whether or not it is exported (that mixin only, X-478); a mixin method may satisfy an interface member
+  the class lists. The body is checked at each application site against the class's exported members (and the
+  methods meeting its requirements) only, so it never reads a private field (`E-NAM-004`), including an
+  application from another module of the package: its names resolve in the mixin's declaring module, `self` is
+  the applying class, and the record names the mixin's file and line and the applying class (X-476). A class
+  method beats a mixin method of the same name (LR 9.6).
 - Enum variants UpperCamel, optional named payloads; `E.V`, `E.V(f: x)`; prefix optional in match patterns and
   wherever the expected type is that enum (return, argument, field initialiser, annotated `let`, the right operand
   of `==`/`!=`/`<`… whose left operand is that enum); a variant name where a function type is expected is its
@@ -63,8 +84,11 @@
   (LR 9.7, X-345).
 - Patterns: `name`, `_`, literal, `Variant(…)`, `present(x)`/`null`, `success(x)`/`failure(f)`,
   `is Error(…) [as n]`, `Name(field: p, …)` (consuming only, every field named or `_` for non-linear, no
-  `cleanup`), `(p1, p2)`, `{ f: p }`, `otherwise` (open types only: integers, strings, `Failure`). Guards
-  `when b`; guarded arms do not count for exhaustiveness. No range patterns, no `x @ p` (LR 9.8).
+  `cleanup`), `(p1, p2)`, `{ f: p }`, range patterns (`a..b`, `a..<b`, one-sided `a..`, `..<b`; integer
+  scrutinees only, a malformed one is `E-MAT-005`), `otherwise` (open types only: integers, strings, `Failure`).
+  Guards `when b`; guarded arms do not count for exhaustiveness. Over a refined integer scrutinee the unguarded
+  arms' intervals count for exhaustiveness (`E-MAT-001` names the intervals left uncovered) and narrow the arm's
+  scrutinee; no `x @ p` (LR 9.8).
 - Or-patterns: `A | B | C => v` matches when any alternative does, left to right. Alternatives bind nothing
   (`Circle(radius: _)`, literals, `null`, `present(0)`), are never `otherwise`, and the arm takes no `when`
   guard (`E-MAT-003`); each alternative counts for exhaustiveness (`E-MAT-001` for a variant none names), and a
@@ -80,14 +104,18 @@
 | E-TYP-050 | constructor call missing a field with no default and no spread source | pass the field | LR 9.2 |
 | E-OBL-007 | `...move p` would drop a linear field the target lacks | consume the field first (destructure), or give the target a field for it | LR 9.2 |
 | E-TYP-040 | `cleanup` called directly | let destruction run it; expose an explicit method for fallible finalisation | LR 9.4 |
-| E-TYP-080 | missing member, incompatible signature (a dropped `pure`, an added `try`), unmet `requires`, unmet mixin requirement | provide the member with the interface's exact contract | LR 9.5 |
+| E-TYP-080 | missing member, incompatible signature (a dropped `pure`, an added `try`), an associated constant of another type, unmet `requires` (by identity and type arguments), an unmet interface `where` at an implementation, unmet mixin requirement | provide the member with the interface's exact contract | LR 9.5 |
 | E-TYP-060 | interface requirement cycle | break the cycle | LR 9.5 |
+| E-TYP-171 | an `implement` block whose target is not a non-generic class or enum the program declares: a core type, a newtype, an optional, a generic class or enum (X-180) | wrap the value in a class the program declares and implement for that, or list the interface in the type's own `implements` | LR 9.5 |
+| E-TYP-172 | `dynamic I` of an interface that is not dynamic-eligible: an associated type, a generic method, or a method taking or returning `Self` beyond its receiver | take the value as a type parameter bounded by `I`, or give the interface a member without `Self` | LR 9.5 |
+| E-SYN-000 | a mixin `requires` naming an interface: a mixin requires methods only (X-526) | require the interface's methods the mixin uses, one signature each | LR 9.6 |
 | E-MIX-001 | derive plus a hand-written method the derivation generates; or two mixins provide one method the class does not declare | drop one; declare the method in the class | LR 9.5, LR 9.6 |
-| E-TYP-100 | implementation outside the packages defining the interface or the type; two implementations for one type | implement in the owning package; keep one | LR 9.5 |
-| E-TYP-090 | `derive` whose rule is not met (a field does not implement the interface) | implement it for the field type, or write the method by hand | LR 6.10 |
-| E-MAT-001 | match over a closed type misses variants (one record, each missing variant named) | add an arm per variant | LR 9.8 |
+| E-TYP-100 | implementation outside the packages defining the interface or the type; two implementations for one type; two `implement` blocks for one interface and one whole target type | implement in the owning package; keep one | LR 9.5 |
+| E-TYP-090 | `derive` whose rule is not met (a field does not implement the interface); an unmet interface `where` on the type itself | implement it for the field type, or write the method by hand | LR 6.10, LR 9.5 |
+| E-MAT-001 | match over a closed type misses variants (one record, each missing variant named); over a refined integer scrutinee, the uncovered intervals | add an arm per variant, or an arm per uncovered interval | LR 9.8 |
 | E-MAT-002 | catch-all (`_`, a bare binding, `otherwise`) as the last arm over a closed enum | name every variant | LR 9.8 |
 | E-MAT-003 | an or-pattern alternative binds a name or is `otherwise`, or the arm has a `when` guard | match the binding or guarded cases in arms of their own; `_` for an unused payload | LR 9.8 |
+| E-MAT-005 | a range pattern that is not well formed: an empty or inverted interval, a bound that does not fold at compile time, or one outside the scrutinee integer type's own range (X-517) | write a non-empty interval with literal or `const` bounds inside the type's range | LR 9.8 |
 
 ## Correction patterns
 

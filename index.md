@@ -2,7 +2,7 @@
 
 Fortis is a statically checked, compiled language for software written mostly by AI agents. **People can read, review and trust it because every decision is written in the source.** Ownership, changes, failures and effects are explicit.
 
-Status: v0.0.2 release candidate. Language 1.0 is still being built and is not released.
+Latest: Model a domain (v0.1.0). Language 1.0 is still being built and is not released.
 
 ## Examples
 
@@ -91,7 +91,7 @@ Notes:
 
 ### Patterns that take ownership (`parcel.ft`)
 
-Source: `docs/guide/09-classes.md#24`. Expected output: `books: 2500 g
+Source: `docs/guide/09-classes.md#28`. Expected output: `books: 2500 g
 false`.
 
 ```fortis
@@ -126,7 +126,7 @@ Notes:
 
 ### Recover, report or pass on (`half.ft`)
 
-Source: `docs/guide/10-outcomes.md#3`. Expected output: `0 4
+Source: `docs/guide/10-outcomes.md#4`. Expected output: `0 4
 half of 6 is 3
 3 has no half`.
 
@@ -188,12 +188,14 @@ The same program runs on the definitional interpreter (`bin/fortis run`), the de
 ## Roadmap
 
 - **v0.0.1**: write, check, run, build, format and test programs. Modules, functions, classes, enums, ownership and failures.
-- **v0.0.2 (now)**: code that says only what matters. Fewer markers, capabilities as parameters and built-in logging.
-- **v0.1**: domain modelling. Interfaces, generics, refinements and contracts.
-- **v0.2**: effects and testing. Checked effects, property tests and packages with dependencies.
-- **v0.3**: concurrency. Async, tasks and structured concurrency.
-- **v0.4**: standard library. Collections, text, Unicode and numerics.
-- **v0.5–0.6**: production tooling. Observation, runtime, kits and an incremental compiler.
+- **v0.0.2**: code that says only what matters. Fewer markers, capabilities as parameters and built-in logging.
+- **v0.1.0 (latest)**: model a domain. Refinements, newtypes, conversions, interfaces, generics, contracts, text and collections.
+- **v0.2**: trust effects and test properly. Checked effects and capabilities, and property tests.
+- **v0.3**: build a web service. An HTTP server with health, readiness and metrics built in, SQLite and typed queries.
+- **v0.4**: build web apps. HTML, forms, sessions, authentication, Postgres and migrations.
+- **v0.5**: run it in production. Telemetry, connection pools, timeouts, rate limits and containers.
+- **v0.6**: organise and extend code. Packages with dependencies, checked architecture and extensions.
+- **v0.7–0.9**: async in your own code, a complete standard library, and tooling for large code bases.
 - **v1.0**: stability. Editions, migration and a stability promise. Performance judged against Rust.
 
 ## Licence

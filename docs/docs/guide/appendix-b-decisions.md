@@ -28,7 +28,8 @@ effects or timing (LR 1.1).
 | Constructors are named `create`, `of` or `from`; there is no `new` | Construction is an ordinary associated function, named for what it does. | LR 1.1, LR 9.2 |
 | No transparent type aliases: `type` is always nominal | A reader never has to ask whether two type names are the same type. | LR 6.9 |
 | No operator overloading (`Money.add(a, b)`, not `a + b`) | An operator always means the same thing; behaviour is named. | LR 6.10 |
-| Range patterns, generic lambdas, const generics over `N`, associated types and explicit type arguments at calls are not in v1 | Each was left out of Language 1.0; the LR states the workaround (annotate the binding; take a generic parameter). | LR 6.2, LR 6.10, LR 8.2, LR 9.5, LR 9.8 |
+| Range patterns are in v0.1 (`0..9`, `..<10`, one-sided `5..`) | The range forms the language already had in `for` headers and refinements match integers too; over a refined scrutinee the arms' intervals count for exhaustiveness and narrow the arm. | LR 9.8 |
+| Generic lambdas, const generics over `N`, associated types and explicit type arguments at calls are not in v1 | Each was left out of Language 1.0; the LR states the workaround (annotate the binding; take a generic parameter). | LR 6.2, LR 6.10, LR 8.2, LR 9.5 |
 | The standard package is `fortis` (`fortis.prelude`, `fortis.text`, …) | One name for the standard library. | LR 4.3 |
 
 The decision about semicolons is checked like any rule. A stray `;` is `E-SYN-001` (LR 3.2), and the checker's
@@ -113,7 +114,7 @@ to standard error rather than standard output.
 | `@observe(Schema)` attaches an observation schema; it is a core aspect | Observation uses the same mechanism as every other aspect. | LR 11.8, LR 13 |
 | Interfaces are nominal; `requires` for sub-interfaces; bundles are satisfied automatically; no method bodies | Having methods with the right names is not an implementation; default behaviour is a mixin. | LR 9.5 |
 | `derive Codec` (= `Encodable` + `Decodable`); canonical `toBytes`/`toText`; formats are packages with `…Serialised` mixins; hand-written `encode` and `derive` cannot coexist | One description of a value's shape serves every format. | LR 6.10 |
-| Projection by constructor spread `...copy p` / `...move p`; `derive From[S]`; `to()` on every type | Narrowing one type into another is written once, with its ownership visible. | LR 6.10, LR 9.2 |
+| Projection by constructor spread `...copy p` / `...move p`; `derive convert from S`; explicit `x as T` conversions | Narrowing one type into another is written once, with its ownership visible. | LR 6.10, LR 6.13, LR 9.2 |
 | Constants include record and variant-map literals, declaration names and the `Type.of(…)` constructors | Tables and route lists can be constants. | LR 5.1 |
 | `VariantMap[E, V]` is written `{ Variant: value }`; an optional callable is written `(fn(…) R)?` | One entry per variant, checked for completeness; the parentheses say which part is optional. | LR 6.9 |
 
@@ -135,7 +136,7 @@ the author's choice, so they are left alone.
 | A labelled argument puns: `wanted` for `wanted: wanted` | The name was written twice. | LR 5.8, LR 9.2 |
 | `Map[String, V].get` takes a `StringView` key | A lookup allocates no key it then throws away. | LR 6.7 |
 | `@ignorable` on a declaration, instead of `discard` at every caller | The author decides once that the result may be dropped. | LR 5.5, LR 11.8 |
-| `derive Default` gives `Name.default()` | A class whose fields all have defaults needs no hand-written constructor. | LR 6.10, LR 9.2 |
+| `derive Default` gives `Name.default()` | A class whose fields all have defaults needs no hand-written constructor. | LR 6.10, LR 6.13, LR 9.2 |
 | The formatter does not print a lambda's inferred `pure` and `noalloc`; an expression-bodied lambda may leave out its result type | The function type it is passed to already says both. | LR 8.2 |
 
 ## Numbers, collections and concurrency

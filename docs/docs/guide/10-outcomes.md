@@ -3,8 +3,6 @@
 <!-- covers: LR 10 -->
 *Human mode. Agent mode: [Outcomes and failures, by rule](../agent/10-outcomes.md). Source of truth: LR 10.*
 
-> Preview: linear containers (LR 10.7) arrive in v0.1. The rest of this chapter (LR 10) is in v0.0.1.
-
 Fortis has no exceptions. A function that can fail says so with `try`, and its caller receives an `Outcome`: a
 value that holds either the success value or a `Failure`. An outcome is **linear**: it must be dealt with exactly
 once, and the checker rejects a program that drops one (LR 1, LR 10.1). This chapter shows the ways to deal with
@@ -87,6 +85,41 @@ These are all the ways to consume an outcome (LR 10.2):
 
 There is no bare `or value`: every discard of a failure is spelled `recover`, so a reader can find them all. There
 is no `?`, no `try` at the call site and no `unwrap` (LR 10.2).
+
+An `Outcome[T]` has one method, `map[U](owned self, f: pure fn(T) U) Outcome[U] where U: linear`, which consumes it: a success
+becomes the success of `f` applied to its value (read loan) and a failure passes through unchanged with `f` not
+called (LR 10.2, X-479). The result is an outcome like any other and is handled on the line, and the receiver is
+a `try` call's result or a place written `move result.map(f)`, since the method takes `owned self`. It is the
+only helper: `or fail`, `or recover`, `catch` and `match` handle a failure and `annotate` adds context (LR 10.6),
+and a `map` over the failure, an `andThen` or an `unwrapOr` would each be a second spelling of one of them.
+
+```fortis
+// accept
+import fortis.host { Console }
+
+export error NotEven {
+  code: "demo.not_even"
+}
+
+pure try func half(n: Int) Int {
+  if n % 2 != 0 {
+    fail NotEven()
+  }
+  return n / 2
+}
+
+recovers func main(console: Console) {
+  let label = half(8).map(fn(n) => "half is ${n}") or recover "none"
+  console.print(label)
+  let missing = half(7).map(fn(n) => "half is ${n}") or recover "none"
+  console.print(missing)
+}
+```
+
+```output
+half is 4
+none
+```
 
 Because `or` binds loosest, the idiom is one decision per line: `let v = f() or fail`, then use `v` (LR 1.1).
 
@@ -191,7 +224,7 @@ today: the checkers accept `fail Name(…)`, but refuse a constructor call where
 (`Outcome.failure(Name(…))`, a binding annotated `Failure`), which LR 10.3 allows (D-52).
 
 A test or an adapter that needs to build an outcome by hand uses `Outcome.success(v)` and `Outcome.failure(move f)`
-(LR 10.1):
+(LR 10.1). Until D-52 is fixed, obtain the `Failure` from a failing call, as this example does:
 
 ```fortis
 // accept
@@ -202,11 +235,18 @@ export error Missing {
   payload { key: Int }
 }
 
-pure func fake(key: Int) Outcome[Int] {
+pure try func requireKey(key: Int) Int {
   if key > 3 {
-    return Outcome.failure(Missing(key: key))
+    fail Missing(key: key)
   }
-  return Outcome.success(key)
+  return key
+}
+
+pure func fake(key: Int) Outcome[Int] {
+  return match requireKey(key) {
+    success(value) => Outcome.success(value)
+    failure(f) => Outcome.failure(move f)
+  }
 }
 
 recovers func main(console: Console) {
@@ -590,8 +630,6 @@ the code (`parse.not_a_digit`, and `text.index` for the empty input) and the not
 
 ## Linear containers
 
-> Preview: linear containers (LR 10.7) arrive in v0.1. The example below is checked and runs today; the rules it shows belong to v0.1.
-
 A collection of outcomes, such as `List[Outcome[T]]`, is linear too: every element must be consumed (LR 10.7).
 The library says in each signature what happens to linear elements: `push(move item)` transfers one in, `pop()`
 transfers one out as a `T?` that must itself be consumed, and `consumeEach(owned self, fn mut(owned T) Void)`
@@ -643,9 +681,51 @@ try func main(console: Console) {
 collected 3
 ```
 
-Clearing or dropping a collection of linear elements is rejected, while `count()` and `isEmpty()` only borrow it
-(LR 10.7). A generic function may hold values of a type parameter in linear positions only if it declares
-`T: linear`, and must then consume them (LR 10.7, LR 6.12).
+`List.clear()` empties a list, and is rejected for a linear element type, as is dropping the collection with
+one held: both would drop the elements (LR 10.7, X-522), while `count()` and `isEmpty()` only borrow it
+(LR 10.7).
+
+```fortis
+// reject: E-OBL-001
+func main() {
+  let mut xs: List[Outcome[Int]] = List.default()   // reject: E-OBL-001 — the list drops with its elements held
+  xs.push(Outcome.success(1))
+  xs.clear()                                        // reject: E-OBL-001 — clear would drop the linear elements
+}
+```
+
+A generic function may hold values of a type parameter in linear positions only if it declares
+`T: linear`, and must then consume them (LR 10.7, LR 6.12). A user generic class or enum follows the same
+declaration rule for a linear type argument: without `where T: linear` its instantiation is `E-OBL-003`, and
+with that bound its owned contents must be consumed, and dropping the linear instance is `E-OBL-001`. Inference
+cannot bypass either rule (LR 10.7, X-611).
+
+A consuming loop (`for item in move xs`) transfers an obligation to its item on each iteration, including
+for a bounded `T: linear` (LR 5.3, LR 10.7). Consume it before the body's end or `continue`; `_` cannot discard
+it (`E-OBL-001`). The hidden cursor owns the unvisited remainder, which v0.1 has no operation to extract.
+Consequently `break`, `return`, or `give`/`recover` leaving the loop are `E-OBL-001` even after consuming the
+current item. `fail`, `or fail`, `await` and `checkpoint` are `E-OBL-005` while the remainder is live; the
+hidden cursor has no `Abandonable` exemption. An ordinary `continue` keeps the remainder, but a labelled exit
+crossing an inner consuming loop must also respect that loop's obligations.
+
+These rules cover standard collections, collection newtypes and user `Consumable` implementations. Moving a
+`ListView` does not make it consuming: the view only lends elements. A user consuming cursor that is itself
+linear is `E-OBL-003`, because returning `null` from `next()` never consumes the cursor; transfer a bounded
+class's contents to a standard collection first (LR 5.3, LR 10.7, X-622).
+
+Reading methods such as `each`, `map`, `tryMap`, `fold`, `filter` and searches borrow the list and its items.
+Their callbacks leave the items' obligations in the owner. A `move` marker does not change a reading
+signature; bind a fresh linear list before borrowing it, then consume it afterwards. Borrowing such a
+temporary and dropping its owner after the statement is `E-OBL-001` (LR 10.7).
+
+`filter` needs `Copyable` elements. `fold` and `tryFold` need a non-linear accumulator; `tryMap` needs a
+non-linear result because a later failure drops earlier results; `Outcome.map` and `Outcome.collect` reject
+a linear input payload `T` (`E-OBL-003`). `Outcome.map` permits a linear result `U`, whose returned outcome
+must still be consumed. A non-failing `List.map` can produce linear results, all owned by its returned
+list. Use a consuming loop when each linear payload must be handled (LR 10.7, X-621). `consumeEach` also
+transfers an obligation to its owned callback parameter. Returning from that callback stays within the
+traversal, but still requires consuming the parameter; its repeatable, synchronous, non-failing function
+type cannot propagate a failure or suspend.
 
 ## Defects
 
@@ -663,3 +743,71 @@ Ordinary Fortis code cannot cause a defect: there is no `unwrap`, no unchecked i
 (LR 10.8). Expected conditions, such as a bound, a parse error, I/O or arithmetic overflow, are always outcomes. A
 defect is never a `Failure`, is never caught by `catch`, and produces no value; only the supervisor of a task that
 ended with one sees it, as `TaskCompletion.Defect` (LR 10.8, LR 12.6).
+
+## Consuming every loop item
+
+Leaving a consuming loop would drop its unvisited linear elements (LR 5.3, LR 10.7):
+
+```fortis
+// reject: E-OBL-001
+recovers func stop(items: owned List[Outcome[Int]]) {
+  for item in move items {
+    discard item or recover 0
+    break                                 // reject: E-OBL-001
+  }
+}
+```
+
+Finish the traversal, consuming every item. `continue` is allowed once that iteration's item is consumed:
+
+```fortis
+// accept
+import fortis.host { Console }
+
+recovers func main(console: Console) {
+  let items = List[Outcome[Int]].of(Outcome.success(1), Outcome.success(2))
+  for item in move items {
+    let n = item or recover 0
+    if n == 1 {
+      continue
+    }
+    console.print("${n}")
+  }
+}
+```
+
+```output
+2
+```
+
+Propagating a failure also abandons the remainder, so handle each failure inside the loop instead
+(LR 5.3, LR 10.7):
+
+```fortis
+// reject: E-OBL-005
+try func propagate(items: owned List[Outcome[Int]]) {
+  for item in move items {
+    discard item or fail                   // reject: E-OBL-005
+  }
+}
+```
+
+```fortis
+// accept
+func drain(items: owned List[Outcome[Int]]) {
+  for item in move items {
+    match move item {
+      success(n) => {
+        discard n
+      }
+      failure(f) => {
+        report f
+      }
+    }
+  }
+}
+
+test "drain every outcome" {
+  drain(List[Outcome[Int]].of(Outcome.success(1), Outcome.success(2)))
+}
+```

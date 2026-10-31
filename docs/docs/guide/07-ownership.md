@@ -230,7 +230,9 @@ customer now 0
 **Loans through loans.** A binding that holds a loan (a plain or `editable` parameter, or `let r = alias p`) is a
 path to the owner, and every loan is recorded against the owner (LR 7.3). Reading through an exclusive parent
 creates a read child that *freezes* the parent; taking an exclusive child *suspends* the parent entirely until
-the child ends. A loan-holding binding can never be reassigned.
+the child ends. A loan-holding binding can never be reassigned, except a `let mut` binding of a standard
+cursor, which owns the cursor value (LR 7.7): the reassignment destroys the old cursor, the loan it stored ends
+(LR 7.9), and the binding holds the new cursor's loan to the end of its block (D-401).
 
 ```fortis
 // reject: E-OWN-011
@@ -550,11 +552,11 @@ is destroyed. A value moved to a new owner is cleaned up there, once (LR 7.9).
 
 The ownership rules were chosen so that every accepted program has a lowering to safe Rust, listed shape by shape
 in LR Appendix C (LR 7.10). A situation the checker can describe but that has no such shape, for example a loan
-stored inside a `Shared`, is rejected with `E-OWN-090` and a pointer to the nearest supported pattern; it is
+stored inside a `Shared`, is rejected with `E-OWN-053` and a pointer to the nearest supported pattern; it is
 never lowered with `unsafe` (LR 7.10, LR C.2).
 
 ```fortis
-// reject: E-OWN-090
+// reject: E-OWN-053
 class User {
   export name: String
 }
@@ -563,7 +565,7 @@ pure func displayName(user: User) StringView from user => alias user.name
 
 func run(user: User) Int {
   let seen = displayName(alias user)
-  let shared = Shared.create(move seen)    // reject: E-OWN-090
+  let shared = Shared.create(move seen)    // reject: E-OWN-053
   return shared.scalarCount()
 }
 
@@ -573,3 +575,59 @@ func main() {
 
 Widening the subset is a language change with a recorded decision, never an implementation shortcut, and the
 checker never inserts a clone, a reference count or hidden sharing to rescue a rejected program (LR 7.10).
+
+## Collections store values (LR 7.7)
+
+An owned collection cannot store a non-static loan, even when the collection itself is local
+(`E-OWN-053`). The rule covers elements, keys and values, optional and aggregate contents, outcomes,
+newtype representations and storing generic arguments. `List[T]` is valid generic code only when every
+instantiation meets that rule. An explicit `StringView from static` is exempt, but the source must prove
+that origin; an annotation cannot turn a local view into a static one. A plain `StringView` is not the
+exception even if its initial value is a literal (LR 7.7).
+
+```fortis
+// reject: E-OWN-053
+func main() {
+  let text: String = " tea "
+  let pieces = List.of(text.trim())          // reject: E-OWN-053
+}
+```
+
+```fortis
+// accept
+func size() Int {
+  let text: String = " tea "
+  let pieces = List.of(text.trim() as String)
+  return pieces.count()
+}
+test "store owned text" {
+  expect size() == 1
+}
+```
+
+A view of an owned temporary cannot survive its statement (`E-OWN-051`, LR 7.6, LR 7.9).
+This includes a receiver that owns a value on only one branch of `??`, `if`, `match` or recovery.
+Bind the owner first, then take the view; a view used only within the statement is allowed.
+
+```fortis
+// reject: E-OWN-051
+func main() {
+  let trimmed = (" tea " as String).trim()   // reject: E-OWN-051
+}
+```
+
+```fortis
+// accept
+func size() Int {
+  let text: String = " tea "
+  let trimmed = text.trim()
+  return trimmed.scalarCount()
+}
+test "the owner outlives its view" {
+  expect size() == 3
+}
+```
+
+A scalar result carries no loan from its operands (LR 7.6; X-714). Returning `a.trim().scalarCount()` gives an
+`Int` without a loan of `a`, and comparing trimmed views gives a `Bool` without one. Returning `a.trim()` still
+lends from `a` and needs the declared origin. Other operands of an enclosing expression keep their own loans.

@@ -121,7 +121,7 @@
   "id": "patterns",
   "title": "Patterns that take ownership",
   "file": "parcel.ft",
-  "source": "docs/guide/09-classes.md#24",
+  "source": "docs/guide/09-classes.md#28",
   "program": "import fortis.host { Console }\n\nclass Parcel {\n  export label: String\n  export grams: Int\n}\n\npure func heavy(p: owned Parcel) Bool {\n  return match move p {\n    Parcel(label: _, grams: g) => g > 1000\n  }\n}\n\nfunc main(console: Console) {\n  let parcel = Parcel(label: \"books\", grams: 2500)\n  let Parcel(label: label, grams: grams) = move parcel\n  console.print(\"${label}: ${grams} g\")\n  console.print(\"${heavy(Parcel(label: \"feather\", grams: 1))}\")\n}",
   "output": "books: 2500 g\nfalse",
   "notes": [
@@ -168,7 +168,7 @@
   "id": "outcomes",
   "title": "Recover, report or pass on",
   "file": "half.ft",
-  "source": "docs/guide/10-outcomes.md#3",
+  "source": "docs/guide/10-outcomes.md#4",
   "program": "import fortis.host { Console }\n\nexport error NotEven {\n  code: \"demo.not_even\"\n  payload { value: Int }\n}\n\npure try func half(n: Int) Int {\n  if n % 2 != 0 {\n    fail NotEven(value: n)\n  }\n  return n / 2\n}\n\npure recovers func halfOrZero(n: Int) Int => half(n) or recover 0\n\nrecovers func describe(n: Int) String {\n  return match half(n) {\n    success(v) => \"half of ${n} is ${v}\"\n    failure(f) => {\n      report f\n      give \"${n} has no half\"\n    }\n  }\n}\n\nrecovers func main(console: Console) {\n  console.print(\"${halfOrZero(7)} ${halfOrZero(8)}\")\n  console.print(describe(6))\n  console.print(describe(3))\n}",
   "output": "0 4\nhalf of 6 is 3\n3 has no half",
   "notes": [

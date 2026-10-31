@@ -1,6 +1,6 @@
 # Recover, report or pass on
 
-The complete program `half.ft`, from the `docs/guide/10-outcomes.md#3` example of the Fortis documentation.
+The complete program `half.ft`, from the `docs/guide/10-outcomes.md#4` example of the Fortis documentation.
 
 ```fortis
 import fortis.host { Console }

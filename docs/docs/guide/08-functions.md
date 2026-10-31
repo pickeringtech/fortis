@@ -23,7 +23,7 @@ parameters, parameters, the success type and an optional `from` or `where` claus
 The modifiers always appear in that order (LR 8.1). Every parameter has a type, and the success type is written
 unless it is `Void`: `func greet(console: Console) { … }` returns nothing (LR 8.1). Older code writes `Void` there
 too; it is still accepted, and `fortis fmt` drops it. A function type keeps its result, `fn(Int) Void`, and so does
-a lambda with a block body (LR 8.2, LR 8.4). What each modifier means:
+a lambda whose block returns a non-`Void` value; a `Void` block may omit it (LR 8.2, LR 8.4). What each modifier means:
 
 - `try`: the function may fail; a caller receives an `Outcome` it must deal with (LR 8.1, LR 10.1).
 - `async`: the function may suspend; a caller receives a `Future` (LR 8.1, LR 12.3).
@@ -56,8 +56,9 @@ func main(console: Console) {
 12 squared is 144
 ```
 
-A named function is not a value you can store, but you can pass its name wherever a callable is expected: the
-compiler makes a non-capturing `fn` of the matching type for you (LR 8.1).
+A named function used as an expression becomes a non-capturing `fn` with its declared signature. You can bind
+it with `let` or pass its name wherever a callable is expected (LR 8.1). Written owner arguments or a complete
+expected function type fix generic parameters; if any remain unresolved, call it directly or wrap a typed lambda.
 
 ```fortis
 // accept
@@ -107,8 +108,9 @@ The second lambda leaves out its parameter's type, because `map`'s parameter alr
 
 ### Three kinds of closure
 
-Every lambda is one of three kinds, and the kind is always written, because it tells the reader how often the
-closure may run and whether it changes anything (LR 8.2):
+Every lambda is one of three kinds. A literal written directly into a call can infer its kind; stored and
+returned lambdas write it. The kind says how often the closure may run and whether it changes its captures
+(LR 8.2):
 
 | Kind | It may | Called | A call looks like |
 |---|---|---|---|
@@ -134,7 +136,7 @@ func main(console: Console) {
     add(6)
   }
   console.print("total ${total}")
-  let name = String.from("ada")
+  let name = "ada" as String
   let takeName = fn once[move name]() String {
     return move name
   }
@@ -188,7 +190,7 @@ And a `fn once` really runs once: after `move finish()` the closure is gone, and
 ```fortis
 // reject: E-OWN-020
 func main() {
-  let name = String.from("ada")
+  let name = "ada" as String
   let finish = fn once[move name]() String {
     return move name
   }
@@ -199,7 +201,7 @@ func main() {
 
 ## Capture lists
 
-A lambda sees only the outside names it lists, each with a marker that says how: `copy x`, `alias x`,
+A stored or returned lambda lists the outside locals and parameters it uses, each with a marker that says how: `copy x`, `alias x`,
 `editable x` or `move x`. A trivial value such as an `Int` may be listed bare (`[threshold]`), which copies it
 (LR 8.3). The list is written only when it is not empty: a lambda with no captures has no brackets (LR 8.2).
 
@@ -209,10 +211,10 @@ import fortis.host { Console }
 
 func main(console: Console) {
   let threshold = 4
-  let prefix = String.from("item")
+  let prefix = "item" as String
   let numbers = List.of(1, 5, 2, 8)
-  let above = numbers.countWhere(fn[threshold](n: Int) Bool => n > threshold)
-  let labels = numbers.map(fn[alias prefix](n: Int) String => "${prefix} ${n}")
+  let above = numbers.countWhere(fn(n: Int) Bool => n > threshold)
+  let labels = numbers.map(fn(n: Int) String => "${prefix} ${n}")
   console.print("${above} above ${threshold}; ${labels.first() ?? "none"}")
 }
 ```
@@ -221,15 +223,24 @@ func main(console: Console) {
 2 above 4; item 1
 ```
 
-A name that is not in the list is not visible in the body: `E-FUN-011` (LR 8.3). Module-level constants,
-functions and types are never captures and need no entry.
+These two lambdas are written directly as arguments to non-`owned` callback parameters, with no capture
+list or `mut`/`once`, so their captures and kind are inferred (LR 8.2, LR 8.3). Reading a trivial local
+copies it; reading another place takes an `alias`; assigning or passing it editable takes an `editable`
+capture and infers `fn mut`. Parentheses around the literal make no difference. Field paths loan their
+owner, and the ordinary loan, authority and region checks still apply. A move out is never inferred: write
+`fn once[move value]`.
+
+A stored, returned or field lambda, one passed to an `owned` parameter, or one with a written capture list
+or kind still lists every capture. A missing name is `E-FUN-011`. Module-level constants, functions, types
+and module aliases are never captures and need no entry (LR 8.3).
 
 ```fortis
 // reject: E-FUN-011
 func main() {
   let limit = 3
   let numbers = List.of(1, 5, 2, 8)
-  let over = numbers.countWhere(fn(n: Int) Bool => n > limit)    // reject: E-FUN-011
+  let above = fn(n: Int) Bool => n > limit     // reject: E-FUN-011
+  let over = numbers.countWhere(above)
 }
 ```
 
@@ -392,4 +403,29 @@ func main(console: Console) {
 
 ```output
 20
+```
+
+## Callback parameter modes (LR 8.4)
+
+Callback modes match exactly, for a lambda, named function or stored callable (`E-TYP-040`).
+An untyped lambda parameter inherits its type and mode from the expected function type; a written type
+uses read mode unless it says `editable` or `owned`. Inferred captures do not change this rule.
+
+```fortis
+// reject: E-TYP-040
+func apply(value: owned String, f: fn(owned String) Int) Int => f(move value)
+func count() Int {
+  return apply("tea", fn(s: String) => s.scalarCount())   // reject: E-TYP-040
+}
+```
+
+```fortis
+// accept
+func apply(value: owned String, f: fn(owned String) Int) Int => f(move value)
+func count() Int {
+  return apply("tea", fn(s) => s.scalarCount())
+}
+test "the untyped parameter inherits owned mode" {
+  expect count() == 3
+}
 ```

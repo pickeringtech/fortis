@@ -13,6 +13,8 @@
 | LANG-14-02 | `expect e` takes a `Bool`, records a typed actual/expected pair, and fails the test when false. | LR 14 |
 | LANG-14-03 | In `test` and `property` bodies `or fail` is implied: a call of a fallible function that is not the left operand of `or` or `catch` or a `match` scrutinee has its success type, and its failure fails the test with the failure's record. `let o = f()` keeps the outcome when the body later consumes `o` with `or`, `catch` or `match`, or annotates it `Outcome[…]`. Integer arithmetic the checker cannot prove safe is a checked region with the same implied `or fail` (LR 6.4): write `expect a * b == c`. A lambda in the body keeps its own rules; outside tests nothing changes (X-345). | LR 14 |
 
+| LANG-14-04 | `expect` appears only in test, property and cases bodies and lambdas written there; elsewhere `E-TYP-120`. | LR 14 |
+
 Further statements of LR 14:
 
 - Tests are core declarations; no kit is needed to test a package (LR 14).
@@ -44,6 +46,7 @@ Exit status 1 when any test fails.
 
 | Code | Trigger | Correction | LR |
 |---|---|---|---|
+| E-TYP-120 | `expect` outside test code (also in a production function called by a test) | move the assertion into a `test`, `property` or `cases` body | LR 14 |
 | E-TYP-010 | `expect` of a non-`Bool` | compare: `expect f() == v` | LR 14, LR 5.2 |
 | E-SYN-000 | a `cases` table without `as name` | add `as row` and use `row.field` | LR 14, LR 3.2 |
 | E-REF-001 | a row literal outside the refinement of the position its field reaches | fix the row, or widen the parameter's type | LR 14, LR 3.5 |
@@ -189,3 +192,21 @@ property "clamp never exceeds the bound" forall (n: Int<0..1000>, high: Int<0..1
 - Replay a failing property: run the `replay` command of its `property-failure` record (`--test`, `--seed`,
   `--case`) with `fortisc test` (X-131).
 - Never change an expected value, remove an `expect` or weaken a property to make a test pass.
+
+## `expect` belongs in the test (LR 14)
+
+```fortis
+// reject: E-TYP-120
+pure func double(n: Int<0..100>) Int {
+  expect n >= 0                     // reject: E-TYP-120
+  return n * 2
+}
+```
+
+```fortis
+// accept
+pure func double(n: Int<0..100>) Int => n * 2
+test "double a non-negative input" {
+  expect double(3) == 6
+}
+```

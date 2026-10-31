@@ -41,7 +41,7 @@ rule text in the LR is the rule.
 | LANG-05-09 | Named arguments follow positional ones, bind each parameter once, and are part of the exported signature; a pun `name` binds the parameter of its name. | LR 5.8 | [Statements and expressions](05-statements.md) |
 | LANG-06-01 | A nominal type keeps its identity through calls, storage, serialisation and FFI. | LR 6.1, LR 6.9 | [Types](06-types.md) |
 | LANG-06-02 | A refinement is a subtype of any wider refinement, and the interval domain is exactly as listed, with no extra inference. | LR 6.3 | [Types](06-types.md), [Proving arithmetic and indexing](06-proofs.md) |
-| LANG-06-03 | An untrusted value passes `validate` before it can hold a refined or nominal type. | LR 6.3 | [Types](06-types.md) |
+| LANG-06-03 | An untrusted value passes the checked `as` conversion before it can hold a refined or nominal type. | LR 6.3 | [Types](06-types.md) |
 | LANG-06-04 | Integer, `Decimal` and the listed float operations give bit-identical results on the VM and native code; a checked operator fails as its checked function does, at the same operation. | LR 6.4, LR 6.5 | [Types](06-types.md) |
 | LANG-06-05 | Float operators are total, strict IEEE 754; float refinements are rejected. | LR 6.5 | [Types](06-types.md) |
 | LANG-06-06 | `Map` and `Set` iterate in an order fixed per build. | LR 6.7 | [Types](06-types.md) |
@@ -50,6 +50,11 @@ rule text in the LR is the rule.
 | LANG-06-09 | A linear value is consumed exactly once. | LR 6.12 | [Types](06-types.md) |
 | LANG-06-10 | An interface is implemented for a type only in the package that defines one of them, and never twice. | LR 6.10, LR 9.5 | [Types](06-types.md) |
 | LANG-06-11 | A call whose type arguments nothing fixes is rejected. | LR 6.10 | [Types](06-types.md) |
+| LANG-06-12 | Associated calls on a type parameter are rejected; methods of its interface bounds are callable. | LR 6.10 | [Types](06-types.md) |
+| LANG-06-13 | An implement block targets a non-generic program class or enum. | LR 9.5 | [Types](06-types.md) |
+| LANG-06-14 | Each as resolves to one conversion; identity is rejected and a newtype unwrap stays in its declaring module. | LR 6.13 | [Types](06-types.md) |
+| LANG-06-15 | Conversions are declared or explicitly derived, with one conversion per pair and the stated ownership mode. | LR 6.13 | [Types](06-types.md) |
+| LANG-06-16 | Collection and optional/outcome callbacks obey their signature modes, effects and copying bounds on every backend. | LR 6.7, LR 6.8, LR 10.2 | [Types](06-types.md) |
 
 ## Ownership, functions and classes
 
@@ -65,15 +70,16 @@ rule text in the LR is the rule.
 | LANG-07-08 | Sharing is explicit (`retain`), and `copy` of a `Shared` is rejected. | LR 7.8 | [Ownership](07-ownership.md) |
 | LANG-07-09 | An ownership shape with no safe lowering is rejected, never lowered unsafely. | LR 7.10 | [Lowering to Rust](appendix-c-lowering.md) |
 | LANG-08-01 | Every function states its parameter types and success type (a lambda's may be inferred as LR 8.2 allows), with modifiers in the fixed order. | LR 8.1 | [Functions and closures](08-functions.md) |
-| LANG-08-02 | A lambda lists its captures and declares its kind; a body needing a stronger kind is rejected. | LR 8.2, LR 8.3 | [Functions and closures](08-functions.md) |
-| LANG-08-03 | A lambda body cannot use a name that is not in its capture list. | LR 8.3 | [Functions and closures](08-functions.md) |
+| LANG-08-02 | Written captures and kind, except inferred captures and kind on directly loaned literals. | LR 8.2, LR 8.3 | [Functions and closures](08-functions.md) |
+| LANG-08-03 | Names outside the written or inferred capture list are inaccessible. | LR 8.3 | [Functions and closures](08-functions.md) |
 | LANG-08-04 | Callables are assignable as LR 8.4 says, and closures are boxed only when `dynamic fn` is written. | LR 8.4 | [Functions and closures](08-functions.md) |
 | LANG-09-01 | There is no inheritance, runtime member lookup or reflection-based construction. | LR 9.1 | [Classes, interfaces, mixins and enums](09-classes.md) |
 | LANG-09-02 | The generated constructor is callable only where every field is visible. | LR 9.2 | [Classes, interfaces, mixins and enums](09-classes.md) |
 | LANG-09-03 | An implementation never strengthens a precondition or weakens a guarantee, and coherence holds. | LR 9.5 | [Classes, interfaces, mixins and enums](09-classes.md) |
-| LANG-09-04 | A mixin requires methods only, adds no state, and conflicting mixins are rejected. | LR 9.6 | [Classes, interfaces, mixins and enums](09-classes.md) |
+| LANG-09-04 | Mixins require methods only; compatible signatures, bodies checked at each application, no state, no unresolved conflicts. | LR 9.6 | [Classes, interfaces, mixins and enums](09-classes.md) |
 | LANG-09-05 | A `match` on a closed type is exhaustive without `otherwise`, naming each missing variant; or-pattern alternatives each count, bind nothing, and take no guard. | LR 9.8 | [Classes, interfaces, mixins and enums](09-classes.md) |
 | LANG-09-06 | Pattern bindings own or borrow as LR 9.8 says. | LR 9.8 | [Classes, interfaces, mixins and enums](09-classes.md) |
+| LANG-09-07 | `dynamic I` requires dynamic eligibility and an implementing source type. | LR 9.5 | [Classes and interfaces](09-classes.md) |
 
 ## Failures, effects, concurrency, observation and tests
 
@@ -90,7 +96,7 @@ rule text in the LR is the rule.
 | LANG-11-03 | `noalloc` is checked against the allocation whitelist for the actual target and telemetry plan. | LR 11.4 | [Effects and contracts](11-effects.md), [Lowering to Rust](appendix-c-lowering.md) |
 | LANG-11-04 | A trusted summary is labelled `trusted`, never `proved`. | LR 11.3 | [Effects and contracts](11-effects.md) |
 | LANG-11-05 | `async`, `try` and `recovers` are always written; across modules only written `pure`/`noalloc` count; weakening an exported function's modifiers is a reported API change. | LR 11.3 | [Effects and contracts](11-effects.md) |
-| LANG-11-06 | A contract is a conjunction of the LR 11.5 elements, and configuration adds no predicate. | LR 11.5 | [Effects and contracts](11-effects.md) |
+| LANG-11-06 | Contracts contain only the listed elements; contradictions are rejected and capability clauses name Authority types. | LR 11.5 | [Effects and contracts](11-effects.md) |
 | LANG-11-07 | An `io` effect other than `report` and a log statement needs an `Authority` value in the signature; only the entry `main` receives the capabilities, as parameters (or creates them once with `Host.capabilities()`). | LR 11.6 | [Effects and contracts](11-effects.md) |
 | LANG-11-08 | Contracts sit in the modifier position without arguments; `@` applies aspects only. | LR 11.5, LR 11.8 | [Effects and contracts](11-effects.md) |
 | LANG-11-09 | Aspects have only the listed parts and elaborate before checking into a function that passes every ordinary check. | LR 11.8 | [Effects and contracts](11-effects.md) |
@@ -107,6 +113,7 @@ rule text in the LR is the rule.
 | LANG-14-01 | Table rows are bound explicitly with `as`. | LR 14 | [Tests](14-tests.md) |
 | LANG-14-02 | `expect` takes a `Bool` and records typed evidence. | LR 14 | [Tests](14-tests.md) |
 | LANG-14-03 | In a test or property body a failing call that nothing else consumes, and unproved integer arithmetic, have an implied `or fail`. | LR 14, LR 6.4 | [Tests](14-tests.md) |
+| LANG-14-04 | `expect` occurs only in test, property and cases bodies and lambdas written there. | LR 14 | [Tests](14-tests.md) |
 
 ## Old requirement IDs
 

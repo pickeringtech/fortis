@@ -2,12 +2,12 @@
 
 > !The Fortis emblem: a fortress tower set in a shield
 
-Status: v0.0.2 release candidate. Developed by Pickering Technologies Ltd. MIT licence.
+Latest: Model a domain (v0.1.0). Developed by Pickering Technologies Ltd. MIT licence.
 Markdown of every page is published beside its HTML; the full agent-mode documentation is concatenated in /llms-full.txt.
 
 ## Agent documentation
 - [Fortis for agents](/docs/docs/agent/README.md): Fortis is a statically checked, compiled, library-first language built so that code written mostly by agents can be reviewed and trusted by people: every ownership operation, mutation permission, fail
-- [Known limitations of v0.0.2](/docs/docs/agent/known-limitations.md): Open, non-blocking defects in v0.0.2's scope, plus loud refusals (X-343): a checked program, a non-zero exit, another backend correct.
+- [Known limitations of v0.1.0](/docs/docs/agent/known-limitations.md): Open, non-blocking defects in v0.1.0's scope, plus loud refusals (X-343): a checked program, a non-zero exit, another backend correct.
 - [Records](/docs/docs/agent/records.md): Every finding, runtime failure report, test result and observation the toolchain produces is a record first: a JSON object of a known kind, from which the text a person sees is rendered.
 - [Diagnostic codes](/docs/docs/agent/codes.md): Every diagnostic code the Language Reference names, grouped by class.
 - [Overview: design invariants and notation (LR 1, LR 2)](/docs/docs/agent/01-overview.md): LR 1 and LR 2 state no numbered rules; they fix the invariants every later rule serves.
@@ -16,7 +16,7 @@ Markdown of every page is published beside its HTML; the full agent-mode documen
 - [Statements and expressions (LR 5)](/docs/docs/agent/05-statements.md): The statement and expression rules of LR 5 by rule ID, with codes and corrections.
 - [Types (LR 6)](/docs/docs/agent/06-types.md): Void Never Bool; Int8 Int16 Int32 Int64 UInt8 UInt16 UInt32 UInt64 (Int = Int64, UInt = UInt64, Byte = UInt8); Float32 Float; Decimal BigInt; String StringView Bytes BytesView; Duration Instant Timest
 - [Proofs for arithmetic and indexing (LR 6.3, 6.4, 6.7)](/docs/docs/agent/06-proofs.md): Language 1.0's interval domain is exactly the rules below; nothing else is inferred (LANG-06-02, LR 6.3).
-- [Ownership (LR 7)](/docs/docs/agent/07-ownership.md): The receiver of an editable self method needs no marker on a let mut binding; on a let binding the call is rejected, marked or not.
+- [Ownership (LR 7)](/docs/docs/agent/07-ownership.md): A marker takes a place, optionally followed by a call on it; a function's name is not a place, so a marker on a call of a function marks nothing (D-382).
 - [Functions and closures (LR 8)](/docs/docs/agent/08-functions.md): Modifiers appear in exactly the order of LR 8.1; any other order is a canonicalisation error that the formatter fixes (LR 8.1).
 - [Classes, interfaces, mixins and enums (LR 9)](/docs/docs/agent/09-classes.md): The class, interface, mixin and enum rules of LR 9 by rule ID, with codes and corrections.
 - [Outcomes and failures (LR 10)](/docs/docs/agent/10-outcomes.md): The outcome and failure rules of LR 10 by rule ID: declared errors, obligations and recovery, with codes and corrections.
@@ -32,6 +32,7 @@ Markdown of every page is published beside its HTML; the full agent-mode documen
 - [Lowering reference and the Rust-expressible subset (LR C)](/docs/docs/agent/appendix-c-lowering.md): Generated application crates carry #![forbid(unsafe_code)]; a rustc rejection of frontend-accepted code is a compiler defect only inside the Rust-checked fragment (LR 7.10, LR C.1).
 - [Rule index (LR D)](/docs/docs/agent/appendix-d-rules.md): Every LANG- rule, its section, a condensed statement and the agent page that carries its codes and correction patterns.
 - [Glossary (agent mode)](/docs/docs/agent/glossary.md): One meaning per term; where a word has two meanings both rows are listed.
+- [Coffee shop: checked domain model](/docs/docs/agent/worked-example.md): The complete v0.1.0 showcase and its expected stdout are pinned.
 - [The core library](/docs/docs/agent/library.md): The signatures of the core library package, generated from the declarations of library/fortis.
 - [fortis-code](/docs/skills/fortis-code/SKILL.md): Fortis source is read through the language's tools, never through text tools.
 
@@ -64,18 +65,21 @@ Markdown of every page is published beside its HTML; the full agent-mode documen
 - [Appendix B: Closed decisions](/docs/docs/guide/appendix-b-decisions.md): Some questions come up whenever someone meets Fortis: why no semicolons, why give and not yield, why there is no ? operator.
 - [Appendix C: Lowering to Rust](/docs/docs/guide/appendix-c-lowering.md): Fortis has two execution paths that share one semantics: the development VM runs the checked intermediate representation directly, and the production backend turns it into safe Rust, a crate marked #!
 - [Appendix D: Rule index](/docs/docs/guide/appendix-d-rules.md): Every normative rule of the core has an ID of the form LANG-<section>-<nn>, and each LR section ends with a table of its rules and the evidence that tests them (LR 0).
+- [Model a domain: a coffee shop](/docs/docs/guide/worked-example.md): This v0.1 program reads orders such as large, 2, rejects bad lines, prices the accepted drinks and prints a summary.
 - [Worked examples](/docs/docs/guide/worked-examples.md): The chapters each show one construct at a time.
 - [Notes for readers coming from Rust](/docs/docs/guide/from-rust.md): Fortis will feel familiar to a Rust programmer: values have one owner, moves are real, shared mutation is not allowed, failures are values, and the native backend emits safe Rust (LR 1).
 - [Notes for readers coming from TypeScript](/docs/docs/guide/from-typescript.md): TypeScript adds static types to a dynamic language and leaves the runtime alone.
 - [Notes for readers coming from Python](/docs/docs/guide/from-python.md): Python checks a program while it runs; Fortis checks it before anything runs.
 - [Glossary](/docs/docs/guide/glossary.md): The words this guide uses with a precise meaning, each with the section that defines it.
-- [Known limitations of v0.0.2](/docs/docs/guide/known-limitations.md): v0.0.2 is a subset of the language (the ladder in the delivery plan).
+- [Known limitations of v0.1.0](/docs/docs/guide/known-limitations.md): v0.1.0 is a subset of the language (the ladder in the delivery plan).
+- [The core library](/docs/docs/guide/library.md): This is the reference for the standard library that ships with the compiler: every type and function of the core package fortis, with its signature, what it promises and the effects it has.
 
 ## Release
+- [Latest: Model a domain (v0.1.0)](/docs/docs/releases/v0.1.0.md): The v0.1.0 release: domain modelling, conversions, collections and text.
 - [v0.0.2 release notes](/docs/docs/releases/v0.0.2.md): The v0.0.2 release notes: the reading release's seventeen changes, the decisions for review, the defects fixed and how to migrate with fortis fmt.
 - [v0.0.1 release notes](/docs/docs/releases/v0.0.1.md): The v0.0.1 release notes: what the release ships, how it was checked and reviewed, and what happens next.
-- [Known limitations (human guide)](/docs/docs/guide/known-limitations.md): v0.0.2 is a subset of the language (the ladder in the delivery plan).
-- [Known limitations (agent mode)](/docs/docs/agent/known-limitations.md): Open, non-blocking defects in v0.0.2's scope, plus loud refusals (X-343): a checked program, a non-zero exit, another backend correct.
+- [Known limitations (human guide)](/docs/docs/guide/known-limitations.md): v0.1.0 is a subset of the language (the ladder in the delivery plan).
+- [Known limitations (agent mode)](/docs/docs/agent/known-limitations.md): Open, non-blocking defects in v0.1.0's scope, plus loud refusals (X-343): a checked program, a non-zero exit, another backend correct.
 
 ## Examples
 - [Examples (JSON)](/examples.json): the four example programs with their review notes, line mappings and expected output.

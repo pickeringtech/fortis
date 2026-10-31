@@ -77,8 +77,8 @@ observed only by the supervisor of a detached task; linear when `T` is; consumed
   capturing only `copy`/`move` of shareables; capability values.
 - Not shareable: loans and views, `MutexGuard`, `fn mut` closures, `Future`, `Task`, thread-bound resources.
 
-`List.of("a", "b")` is a `List[StringView]` (views of static text), which is not `Shareable`; annotate
-`let words: List[String] = …` to make owned strings (LR 3.5, LR 12.7).
+`List.of("a", "b")` would infer `List[StringView]`, a stored loan rejected with `E-OWN-053`; annotate
+`let words: List[String] = …` to make owned, shareable strings (LR 3.5, LR 7.7, LR 12.7).
 
 Mutation between tasks: `Mutex[T]`. Async: `await m.lock()`; sync: `m.lockBlocking()` (`block`). Both return
 `Outcome[MutexGuard[T]] from mutex`; the guard is an exclusive loan of `T`, not `Shareable`, unlocks when
@@ -399,9 +399,9 @@ async try func main() {
 ```fortis
 // reject: E-ASY-003
 async func pools() Int {
-  let words = List.of("a", "b", "c")
+  let words: StringView = "abc"
   scope tasks {
-    let blocking = tasks.launchBlocking(fn once[move words]() Int => words.count())   // reject: E-ASY-003
+    let blocking = tasks.launchBlocking(fn once[move words]() Int => words.scalarCount())   // reject: E-ASY-003
     return await blocking
   }
 }

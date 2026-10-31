@@ -4,8 +4,6 @@
 *Agent mode. Human mode: [Proving arithmetic and indexing](../guide/06-proofs.md). Source of truth: LR 6.3,
 LR 6.4 and LR 6.7.*
 
-> Preview: predicate refinements (LR 6.3) arrive in v0.1. The interval rules for arithmetic and indexing (LR 6.4, 6.7) are in v0.0.1.
-
 Language 1.0's interval domain is exactly the rules below; nothing else is inferred (LANG-06-02, LR 6.3). SP-18's
 wider rules are a later edition (X-146).
 
@@ -14,7 +12,7 @@ wider rules are a later edition (X-146).
 | Rule | Statement | LR |
 |---|---|---|
 | LANG-06-02 | Refinement subtyping is structural; the interval domain is exactly the rules of LR 6.3, with no further inference. | LR 6.3 |
-| LANG-06-03 | An untrusted value reaches a refined or nominal type only through `validate` (or a literal the checker proves). | LR 6.3, 6.9 |
+| LANG-06-03 | An untrusted value reaches a refined or nominal type only through the checked `as` conversion (also spelled `validate` in v0.1); a proved value already meets its refinement, and `Name(value)` constructs a newtype over it. | LR 6.3, 6.9, 6.13 |
 | LANG-05-04 | `for i in a..<b` / `a..b` gives the index the range's interval; the index is immutable. | LR 5.3, 6.3 |
 
 ## The domain (LR 6.3)
@@ -64,8 +62,8 @@ wider rules are a later edition (X-146).
 | Code | Trigger | Correction | LR |
 |---|---|---|---|
 | E-REF-002 | an integer operator not proved safe (overflow, zero divisor, shift amount, `MIN / -1`) outside a checked region; an index not proved in bounds | refine the operands' types or test them first; else the checked operator, `a + b or fail`; for an index, `if i >= 0 && i < xs.count()`, or `get`/`at` | LR 6.4, 6.7 |
-| E-REF-001 | a value whose interval is not within the target's refinement (assignment, return, argument, literal) | widen the target type, narrow first (a guard), or `T.validate(x) or fail` | LR 6.3, 3.5 |
-| E-REF-003 | a length-refined collection loaned `editable` or mutated | mutate an unrefined collection, then `T.validate(move c)` | LR 6.3 |
+| E-REF-001 | a value whose interval is not within the target's refinement (assignment, return, argument, literal) | widen the target type, narrow first (a guard), or `x as T or fail` (the retired spelling `T.validate(x) or fail` still accepted) | LR 6.3, 3.5, 6.13 |
+| E-REF-003 | a length-refined collection loaned `editable` or mutated | mutate an unrefined collection, then convert with `move c as T` | LR 6.3, 6.13 |
 
 The records carry `required_range`, `proved_interval` and `widening_point`. Read the `status`
 field before correcting ([records](records.md)): `violated` means the checker proved the rule
@@ -136,7 +134,7 @@ pure try func sumTo(n: Int<0..1000>) Int<0..500500> {
   for i in 0..n {
     total = total + i or fail
   }
-  return Int<0..500500>.validate(total) or fail
+  return total as Int<0..500500> or fail
 }
 
 test "sum" {

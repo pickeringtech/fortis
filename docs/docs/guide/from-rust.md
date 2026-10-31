@@ -3,7 +3,7 @@
 <!-- covers: LR 1 -->
 *Human mode. Source of truth: the LR; each note cites the section that states the rule.*
 
-> Preview: interfaces, mixins and generics (LR 6.10, 9.5, 9.6) arrive in v0.1, effects and claims as a whole (LR 11.1 to 11.4, 11.6) are completed in v0.2, and async with scopes (LR 12.3, 12.5, 12.7) arrives in v0.3; the examples under "Traits are interfaces" and "Async is structured" are checked and run today. The rest of these notes is in v0.0.2.
+> Preview: effects and claims as a whole (LR 11.1 to 11.4, LR 11.6) are completed in v0.2, and async with scopes (LR 12.3, LR 12.5, LR 12.7) arrives in v0.3. Interfaces, mixins and generics (LR 6.10, LR 9.5, LR 9.6) are in v0.1.
 
 Fortis will feel familiar to a Rust programmer: values have one owner, moves are real, shared mutation is not
 allowed, failures are values, and the native backend emits safe Rust (LR 1). The differences come from one
@@ -294,10 +294,11 @@ There is no operator overloading: `==` and the comparisons dispatch to the built
 interfaces, and a sum of two `Money` values is `Money.add(a, b)` (LR 6.10). Coherence works like Rust's orphan
 rule: an implementation lives in the package that defines the interface or the type (LR 9.5).
 
-## Closures declare their kind and their captures
+## Stored closures declare their kind and captures
 
-Rust infers `Fn`, `FnMut` and `FnOnce` and infers what a closure captures. Fortis writes both: the kind is `fn`,
-`fn mut` or `fn once`, and the capture list names every captured variable with its marker (LR 8.2, LR 8.3). A
+Rust infers `Fn`, `FnMut` and `FnOnce` and what a closure captures. Fortis also infers captures and kind for a
+lambda written directly into a non-`owned` callback argument. A stored or returned lambda writes its kind
+(`fn`, `fn mut` or `fn once`) and names each capture with its marker (LR 8.2, LR 8.3). A
 `move` capture is Rust's `move` closure for one variable; a closure that moves a captured value out is
 `fn once` and is called as `move f()` (LR 8.2).
 
@@ -314,7 +315,7 @@ test "closure kinds" {
     count(4)
     count(5)
   }
-  let message = String.from("done")
+  let message = "done" as String
   let finish = fn once[move message]() String => move message
   expect small(2)
   expect seen == 9

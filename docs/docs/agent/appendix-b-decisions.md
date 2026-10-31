@@ -27,7 +27,8 @@ cited (LR B).
 | Transparent type aliases | none; `type` is always nominal | LR 6.9 |
 | Operator overloading | none; `Type.add(a, b)` | LR 6.10 |
 | Or-patterns | narrow: `A \| B => v`, whole patterns of an arm, no bindings, no guard | LR 9.8 |
-| Not in v1 | range patterns, generic lambdas, generic functions over `N`, associated types, explicit type arguments at calls (annotate the binding) | LR 6.2, LR 6.10, LR 8.2, LR 9.5, LR 9.8 |
+| Range patterns | in v0.1: `a..b`, `a..<b`, one-sided `a..` and `..<b` over the integer types; bounds fold as a refinement's; intervals count for exhaustiveness over a refined scrutinee and narrow the arm | LR 9.8 |
+| Not in v1 | generic lambdas, generic functions over `N`, associated types, explicit type arguments at calls (annotate the binding) | LR 6.2, LR 6.10, LR 8.2, LR 9.5 |
 | Standard package | `fortis`; no `std` | LR 4.3 |
 | Negative example marker | `// reject: E-XXX-NNN` | LR 0 |
 | Test rows | `cases { … } as row { … }` | LR 14 |
@@ -65,7 +66,7 @@ cited (LR B).
 | Observation attachment | `@observe(Schema)`, a core aspect | LR 11.8, LR 13 |
 | Interfaces | nominal; `requires` for sub-interfaces; bundles satisfied automatically; no method bodies | LR 9.5 |
 | Serialisation | `derive Codec` = `Encodable` + `Decodable`; canonical `toBytes`/`toText`; formats as packages with `…Serialised` mixins; hand-written `encode` and `derive` never coexist | LR 6.10 |
-| Projection | `...copy p` copies taken fields; `...move p` consumes the whole source; `derive From[S]`; `to()` on every type | LR 6.10, LR 9.2 |
+| Projection | `...copy p` copies taken fields; `...move p` consumes the whole source; `derive convert from S`; explicit `x as T` conversions | LR 6.10, LR 6.13, LR 9.2 |
 | Constants | include record and variant-map literals, declaration names, `Type.of(…)` intrinsics | LR 5.1 |
 | Variant maps | `VariantMap[E, V]` written `{ Variant: value }`; optional callable `(fn(…) R)?` | LR 6.9 |
 | Entry point | `main` in the manifest's entry module, `export` implied; its parameters are the capabilities and arguments it needs, supplied by type | LR 4.6 |

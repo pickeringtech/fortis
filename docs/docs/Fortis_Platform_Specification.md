@@ -501,7 +501,7 @@ Published migrations are ordered, checksummed and immutable. The diff tool class
 
 ### 5.4 Transactions
 
-A transaction is a linear handle: the generated `Tx` holds a private field of the core witness type `Must` (Language Reference 6.12), so it is linear by the ordinary rule, and it implements `Abandonable` (Language Reference 12.4), so it may be live across the `await` of the queries it carries and across an `or fail`: on cancellation or failure the unwind calls `abandon`, which marks the transaction abandoned and the pool rolls it back when the connection is returned, so `await Customer.find(tx, id) or fail` inside a transaction is the ordinary spelling and a failure always rolls back. `db.transaction()` returns it and it MUST be consumed by `move tx.commit()` (fallible) or `move tx.rollback()`, which discharge the witness. Falling off a block with a live `Tx` is `E-OBL-001`, so a forgotten commit is a compile error rather than an implicit rollback. Nested transactions use savepoints explicitly. Rollback failure preserves the primary failure and is reported with `report` from the cleanup path; the supervisor labels it as raised during cleanup. Isolation level is a parameter. External effects (payments, mail) inside a database-only transaction are excluded by the `DatabaseOnly` contract (`excludes capability Network`, `excludes capability Mail`); outbox and saga helpers are the supported pattern.
+A transaction is a linear handle: the generated `Tx` holds a private field of the core witness type `Must` (Language Reference 6.12), so it is linear by the ordinary rule, and it implements `Abandonable` (Language Reference 12.4), so it may be live across the `await` of the queries it carries and across an `or fail`: on cancellation or failure the unwind calls `abandon`, which marks the transaction abandoned and the pool rolls it back when the connection is returned, so `await Customer.find(tx, id) or fail` inside a transaction is the ordinary spelling and a failure always rolls back. `db.transaction()` returns it and it MUST be consumed by `move tx.commit()` (fallible) or `move tx.rollback()`, which discharge the witness. Falling off a block with a live `Tx` is `E-OBL-001`, so a forgotten commit is a compile error rather than an implicit rollback. Nested transactions use savepoints explicitly. Rollback failure preserves the primary failure and is reported with `report` from the cleanup path; the supervisor labels it as raised during cleanup. Isolation level is a parameter. External effects (payments, mail) inside a database-only transaction are excluded by the `DatabaseOnly` contract (`excludes capability Network`, `excludes capability Process`); outbox and saga helpers are the supported pattern.
 
 ### 5.5 Jobs, schedules, cache, mail
 
@@ -1075,7 +1075,7 @@ The dashboard shows routes and OpenAPI, component and resource state, DI provena
 Named contracts are conjunctions of exactly these elements, and nothing else: the modifiers `pure`, `noalloc`, `async`, `try`, `recovers`; `forbids <effect>` over the eight core effects; `requires capability X`; and `excludes capability X` (the function may not take a parameter of that capability type and may not call, directly or through callees, a function that requires it; the check is transitive over summaries). A contract subtracts; anything a kit wants to *do* around a function (check authorisation, map failures, attach a schema, enforce limits) is an aspect, and anything it wants to check about a declaration that is not function-shaped is a head validator. Contracts are declared with the `contract` head and applied by name in the modifier position of a function head (`export PublicApi async try func …`). Carrying a contract's name does not satisfy it; the checker verifies every predicate.
 
 ```fortis
-// illustrative
+// accept
 contract FastCalculation {
   pure
   noalloc
@@ -1088,7 +1088,7 @@ contract PublicApi {
 
 contract DatabaseOnly {
   excludes capability Network
-  excludes capability Mail
+  excludes capability Process
 }
 ```
 
@@ -1099,7 +1099,7 @@ contract DatabaseOnly {
 | `PublicApi` | `excludes capability RawSql`, `forbids recovers`; the `http` aspects `needs PublicApi` and themselves supply authorisation, limits, the status map and the `HttpRequest` observation |
 | `BusinessOperation` | `excludes capability RawSql`, `forbids recovers`; the observation schema is attached with `@observe(Schema)`, whose required fields include the business outcome and denominator |
 | `BackgroundJob` | contract part: `requires capability TaskContext`, `forbids recovers`; the policy (payload schema, deadline, idempotency/retry/ack, dead letter, observation) is the `@job(...)` aspect, which `needs BackgroundJob` |
-| `DatabaseOnly` | `excludes capability Network`, `excludes capability Mail` |
+| `DatabaseOnly` | `excludes capability Network`, `excludes capability Process` |
 | `DurableAudit` | not a contract: `@audit(Schema)` is a Telemetry aspect whose `after` hook performs an acknowledged persisted write and whose `on failure` re-fails; it `needs` no contract but is rejected on `pure` targets by the ordinary effect rule |
 | `NativeAdapter` | not a contract: the `trusted` modifier (Language Reference, Effects and contracts) plus the package validator for adapter metadata (ownership, layout, allocation, cancellation, VM parity adapter) |
 | `BrowserAction` | `forbids recovers`; the `action` aspect of the Web UI kit supplies validation, per-action authorisation, revision/idempotency, safe response and resource invalidation |

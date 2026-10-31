@@ -25,7 +25,7 @@ Where each command writes, as the toolchain does today:
 | `fortis run`, a native executable | the program's output | runtime records |
 | `fortis test` (interpreter) | the `test-summary` record | `test-result` and other runtime records |
 | `fortisc test` (VM) | the `test-summary` record | `test-result` and other runtime records, as `fortis test` writes them |
-| `fortis build`, `fortisc build` | the `build` record | diagnostic records if the check fails |
+| `fortis build`, `fortisc build` | the `build` record (with `--emit-only`, the `emit` record) | diagnostic records if the check fails |
 | `fortisc vm` | the conformance format: `=== FILE`, `observed: …` (output lines joined by `\|`), `trace: …`, `record: …` | — |
 
 A finding has one identity: `fortis check`, the daemon and the agent protocol produce byte-equal records for the
@@ -170,6 +170,7 @@ Written while a program or its tests run (see Streams above for where each comma
 | `buffer-overflow` | the task reporter's buffer overflowed: one record, its `dropped` count growing | `bound`, `dropped`, `rule` | LR 15 |
 | `executor-trace` | a native program run with `FORTIS_TRACE=1` | `events` (`launch`, `start`, `suspend`, `resume`, `complete`, `join`, `loans-end`) | LR 12.5 |
 | `build` | `fortis build` / `fortisc build` finishes | `binary`, `manifest` | LR 1 |
+| `emit` | `fortis build --emit-only` has written the generated crate, building nothing | `program`, `crate` | LR 1 |
 
 The backends do not yet agree on every field (D-57): the interpreter counts each property case as a test, native
 code writes `evidence` as a string, and a failure's `origin` has no line on any backend; `fortis test` and

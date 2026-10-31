@@ -74,7 +74,7 @@ class Query {
 
 func main(console: Console) {
   let q = Query.from(5)
-  let text = String.from("view")
+  let text = "view" as String
   console.print("${q.where(3)} ${q.limit} ${text}")
 }
 ```

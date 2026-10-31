@@ -1,6 +1,6 @@
 # Patterns that take ownership
 
-The complete program `parcel.ft`, from the `docs/guide/09-classes.md#24` example of the Fortis documentation.
+The complete program `parcel.ft`, from the `docs/guide/09-classes.md#28` example of the Fortis documentation.
 
 ```fortis
 import fortis.host { Console }

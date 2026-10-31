@@ -70,7 +70,7 @@ other value.
 import fortis.host { Console }
 
 const limit = 3
-const names = List.of("ada", "brian", "carla")
+const names: List[String] = List.of("ada", "brian", "carla")
 
 func main(console: Console) {
   console.print("limit ${limit}, ${names.count()} names")
@@ -132,7 +132,7 @@ func main(console: Console) {
   for i in 0..<2 {
     console.print("exclusive ${i}")
   }
-  let words = List.of("red", "green")
+  let words: List[String] = List.of("red", "green")
   for word in words {
     console.print(word)
   }
@@ -284,6 +284,7 @@ All binary operators are left-associative unless the table says otherwise; highe
 |---|---|---|
 | 1 | `a.b` `a.b(…)` `a[i]` `a(…)` `a?.b` | member access, calls, indexing, optional chaining |
 | 2 | `-a` `!a` `await a` and the markers `copy` `alias` `editable` `move` | unary, right-associative |
+| 3 | `a as T` | conversion (LR 6.13); `a as Decimal * b` is `(a as Decimal) * b` and `n as Int as Decimal` converts left to right; a `<` directly after `T` opens a refinement, so a converted value is compared in parentheses, `(a as Decimal) < b` |
 | 4 | `*` `/` `%` | integer operands need proof |
 | 5 | `+` `-` | |
 | 6 | `<<` `>>` | the shift amount must be proved in range |
@@ -503,3 +504,10 @@ test "remembering twice keeps one" {
 
 Every other result still needs its `discard` (see [Expression statements and `discard`](#expression-statements-and-discard)),
 and a function whose result is linear cannot be `@ignorable` (`E-TYP-150`, LR 5.5).
+
+## Linear consuming loops in v0.1
+
+`for item in move items` owns each item. If its type is linear, consume it on every path before body end or
+`continue`. Early exits cannot drop the hidden unvisited remainder, and unwind or cancellation points cannot
+leave it live (LR 5.3). See [Outcomes and failures](10-outcomes.md#consuming-every-loop-item) for the
+`E-OBL-001` and `E-OBL-005` correction pairs. Moving a `ListView` still only lends elements.

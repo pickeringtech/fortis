@@ -59,6 +59,14 @@ fails `sql.unavailable`.
 | `fortis.time` | `Duration.days/hours/minutes/seconds/milliseconds`, fallible `Duration.add/sub/multiply`, `d.nanoseconds()`, comparisons on `Duration`, display in the largest exact unit (`150s`, `1h`, `250ms`, `0s`); `Timestamp.epoch()`, fallible `Timestamp.add(t, d)`, `Timestamp.after`, `Timestamp.before` | LR 15 |
 | `fortis.host` | capabilities, `Path`, `Secret[T]`, `reveal` | LR 15 |
 
+## Text and collections in v0.1
+
+`String`/`StringView`: `lines`, `trim`/`trimStart`/`trimEnd`, `split`, `find`, `contains`, `startsWith`,
+`endsWith`, `replace`, `asciiUpper`/`asciiLower`, `repeat`; `String.join` (LR 6.6). Parse with `as`
+(LR 6.13). `List`/`ListView`: loops and functional methods; `Map.each/keys/values`;
+`Set.each/union/intersection/difference`; import `Deque` and `SortedSet` from `fortis.collections`;
+`Array.get/asView` (LR 6.7). Full signatures and effects: [generated library reference](library.md).
+
 ## Diagnostics
 
 | Code | Trigger | Correction | LR |

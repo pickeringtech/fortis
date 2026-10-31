@@ -14,6 +14,7 @@
 <url><loc>https://fortis.picktech.co.uk/docs/docs/Fortis_Specification.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/releases/v0.0.1.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/releases/v0.0.2.html</loc></url>
+<url><loc>https://fortis.picktech.co.uk/docs/docs/releases/v0.1.0.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/guide/03-lexical.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/guide/04-modules.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/guide/05-statements.html</loc></url>
@@ -40,7 +41,9 @@
 <url><loc>https://fortis.picktech.co.uk/docs/docs/guide/from-typescript.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/guide/glossary.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/guide/known-limitations.html</loc></url>
+<url><loc>https://fortis.picktech.co.uk/docs/docs/guide/library.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/guide/tour.html</loc></url>
+<url><loc>https://fortis.picktech.co.uk/docs/docs/guide/worked-example.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/guide/worked-examples.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/agent/01-overview.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/agent/03-lexical.html</loc></url>
@@ -69,5 +72,7 @@
 <url><loc>https://fortis.picktech.co.uk/docs/docs/agent/known-limitations.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/agent/library.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/docs/agent/records.html</loc></url>
+<url><loc>https://fortis.picktech.co.uk/docs/docs/agent/worked-example.html</loc></url>
 <url><loc>https://fortis.picktech.co.uk/docs/skills/fortis-code/SKILL.html</loc></url>
+<url><loc>https://fortis.picktech.co.uk/docs/examples/showcase/index.html</loc></url>
 </urlset>
