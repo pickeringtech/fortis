@@ -15,6 +15,6 @@ export error Bare {
 
 export error Fine {
   code: "demo.fine"
-  payload { n: Int, who: String<scalars: ..8> }
+  payload { n: Int, who: String<scalars:..8> }
   message: "${who} is ${n} late"
 }

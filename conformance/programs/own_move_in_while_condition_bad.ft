@@ -1,0 +1,79 @@
+// reject: E-OWN-020 (at the marked lines)
+// covers: LANG-07-04, LANG-05-03
+// D-448, 5.3, 7.4: a `while` condition is evaluated on every iteration, and the body returns to it at its normal
+// end or at a `continue`, so a `move` in the condition is a use after the move on the next evaluation: the place
+// is moved where the loop returns to the header. A body that always breaks does not help: the lowering keeps the
+// loop's back edge and the IR validator charges the condition on every iteration, so both backends refused the
+// program the checkers accepted. Bind the value before the loop (`let n = label(move d)`, then `while n == 5`), or
+// re-assign the place in the body on every path back, as exec_move_in_once_condition.ft runs. A `match move o`
+// scrutinee in the condition moves `o` on every evaluation as a written marker does (9.8). The same moves in an
+// `if` condition, which is evaluated once, are accepted (exec_move_in_once_condition.ft).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+class Slot {
+  token: Token
+}
+
+func make(console: Shared[Console], label: StringView) Slot {
+  return Slot(token: Token(label: String.from(label), console: console.retain()))
+}
+
+func label(s: owned Slot) Int {
+  return s.token.label.byteCount()
+}
+
+func reenters(console: Shared[Console]) {
+  let d = make(console, "while")
+  while label(move d) == 5 {                                   // reject: E-OWN-020 — the body returns to the condition
+    console.print("loop")
+  }
+  console.print("end while")
+}
+
+func continues(console: Shared[Console]) {
+  let d = make(console, "cont")
+  let mut i = 0
+  while label(move d) == 4 && i < 10 {                         // reject: E-OWN-020 — the `continue` returns to the condition
+    i = i + 1
+    if i < 2 {
+      continue
+    }
+    break
+  }
+  console.print("end cont")
+}
+
+func alwaysBreaks(console: Shared[Console]) {
+  let d = make(console, "once")
+  while label(move d) == 4 {                                   // reject: E-OWN-020 — the lowering keeps the loop's back edge
+    console.print("body")
+    break
+  }
+  console.print("end break")
+}
+
+func matchScrutinee(console: Shared[Console]) {
+  let o: Slot? = make(console, "match")
+  while (match move o {                                        // reject: E-OWN-020 — the scrutinee moves on every evaluation
+    present(v) => v.token.label.byteCount() > 0
+    null => false
+  }) {
+    console.print("loop")
+    break
+  }
+  console.print("end match")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  reenters(console)
+}

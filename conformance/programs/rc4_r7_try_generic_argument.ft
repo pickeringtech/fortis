@@ -1,0 +1,9 @@
+// reject: E-TYP-040
+// covers: LANG-08-04
+try func work() Int => 3
+class Holder[F] { work: F }
+func take(holder: Holder[async try fn() Int]) {}
+func main() {
+  let holder = Holder[try fn() Int](work: move work)
+  take(holder)
+}

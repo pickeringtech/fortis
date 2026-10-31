@@ -1,0 +1,17 @@
+// accept
+// A to() without a written target stays accepted and is left with a formatter note.
+class Source {
+  export n: Int
+}
+class Target derive convert from Source {
+  export n: Int
+}
+func unresolved(s: Source) {
+  let inferred = s.to()
+}
+
+func generic[T](a: T, b: T) {}
+
+func inferredGeneric(s: Source, t: Target) {
+  generic(t, s.to())
+}

@@ -1,0 +1,23 @@
+// execute: ok|function|value
+// requires: runtime
+// covers: LANG-06-01, LANG-08-02, LANG-10-02
+// D-420: the correction uses the one result of an empty block.
+import fortis.host { Console }
+pure func nothing(n: Int) {}
+func main(console: Console) {
+  let o = ("21" as Int).map(fn(n) {})
+  match move o {
+    success(v) => console.print("ok")
+    failure(f) => { report f }
+  }
+  let p = ("21" as Int).map(nothing)
+  match move p {
+    success(v) => console.print("function")
+    failure(f) => { report f }
+  }
+  let bare: Outcome[Void] = ("21" as Int).map(fn(n) => Void)
+  match move bare {
+    success(v) => console.print("value")
+    failure(f) => { report f }
+  }
+}

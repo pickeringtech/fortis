@@ -1,0 +1,23 @@
+// execute: read 1|edit 1|drop x|own 1|end
+// requires: runtime
+// covers: LANG-08-04, LANG-07-07
+import fortis.host { Console }
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) { self.console.print("drop ${self.label}") }
+}
+func read(t: Token, f: fn(Token) Int) Int => f(t)
+func edit(t: editable Token, f: fn(editable Token) Int) Int => f(editable t)
+func own(t: owned Token, f: fn(owned Token) Int) Int => f(move t)
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut t = Token(label: "x" as String, console: console.retain())
+  let a = read(t, fn(t) => t.label.byteCount())
+  console.print("read ${a}")
+  let b = edit(editable t, fn(t) => t.label.byteCount())
+  console.print("edit ${b}")
+  let c = own(move t, fn(t) => t.label.byteCount())
+  console.print("own ${c}")
+  console.print("end")
+}

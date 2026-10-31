@@ -17,8 +17,9 @@
 //!                                         elaboration (SP-08); `--plan` prints each context's resolved plan
 //!   fortisc syntax FILE...                the syntax runner's judgement per file
 //!   fortisc parse FILE...                 each module's concrete syntax tree
-//!   fortisc vm FILE...                    run main on the development VM (DEL-35). Exit is the program's:
+//!   fortisc vm FILE... [--stdout]         run main on the development VM (DEL-35). Exit is the program's:
 //!                                         0 success, 1 a failing main or a refusal, 2 a dynamic check, 101 a defect.
+//!                                         --stdout prints console output verbatim, with harness metadata on stderr.
 //!                                         A file under a package's src/ runs that package's program (D-327).
 //!   fortisc mir [--json] FILE...           the typed IR every backend consumes (Programme 5.2)
 //!   fortisc ir FILE...                    the function IR (CFG, loans, obligations, effects, observation, cleanup)
@@ -43,14 +44,68 @@ macro_rules! outln {
 
 /// A module as the core reads it: elaborated when it uses the Dependency injection kit's heads (fortis-di).
 fn read_module(path: impl AsRef<Path>) -> String {
-    fortis_di::source(path.as_ref()).unwrap_or_default()
+    let path = path.as_ref();
+    // Package callers load their module set separately; there is no standalone source text.
+    if path.is_dir() {
+        return String::new();
+    }
+    fortis_di::source_text(path, read_source(path))
+}
+
+/// One immutable input snapshot per command, including pipes and device files (D-714).
+/// Diagnostic recovery, plan checking and execution must all see the same bytes.
+fn source_inputs() -> &'static std::sync::Mutex<std::collections::HashMap<PathBuf, String>> {
+    use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
+    static SOURCES: OnceLock<Mutex<HashMap<PathBuf, String>>> = OnceLock::new();
+    SOURCES.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn read_source(path: &Path) -> String {
+    let mut sources = source_inputs().lock().unwrap();
+    let key = python_abspath(path);
+    sources.entry(key).or_insert_with(|| std::fs::read_to_string(path).unwrap_or_else(|e| {
+        eprintln!("{}: {e}", path.display());
+        std::process::exit(2);
+    })).clone()
+}
+
+#[cfg(test)]
+mod source_tests {
+    use super::*;
+
+    #[test]
+    fn package_directory_has_no_standalone_source() {
+        assert_eq!(read_module(std::env::temp_dir()), "");
+    }
+
+    #[test]
+    fn a_snapshot_is_retained_until_the_next_compilation() {
+        let path = std::env::temp_dir().join(format!("fortisc-input-{}.ft", std::process::id()));
+        std::fs::write(&path, "first").unwrap();
+        assert_eq!(read_source(&path), "first");
+        std::fs::write(&path, "second").unwrap();
+        assert_eq!(read_source(&path), "first");
+        source_inputs().lock().unwrap().remove(&python_abspath(&path));
+        assert_eq!(read_source(&path), "second");
+        source_inputs().lock().unwrap().remove(&python_abspath(&path));
+        std::fs::remove_file(path).unwrap();
+    }
+}
+
+fn plan_records(path: &Path) -> Vec<Record> {
+    if path.is_dir() {
+        fortis_types::plans::check_path(path)
+    } else {
+        fortis_syntax::parse_module(&read_module(path)).map(|parsed| fortis_types::plans::check(&parsed, &path.display().to_string())).unwrap_or_default()
+    }
 }
 
 /// The kit's records joined to the core's (fortis_di::report), for a module or every module of a package.
 fn with_di_records(recs: &mut Vec<Record>, p: &Path) {
     let files = di_files(p);
     for f in &files {
-        let _ = fortis_di::source(f);
+        let _ = read_module(f);
     }
     // the kit's records name a file as the core's do: a package's modules relative to the repository
     // (fortis_names::resolve::rel), a single module as the command named it (D-139)
@@ -86,7 +141,7 @@ fn di_files(p: &Path) -> Vec<std::path::PathBuf> {
 fn di_records(p: &Path) -> Vec<Record> {
     let mut out = Vec::new();
     for f in di_files(p) {
-        let _ = fortis_di::source(&f);
+        let _ = read_module(&f);
         out.extend(fortis_di::records(&f));
     }
     out
@@ -96,7 +151,7 @@ fn di_records(p: &Path) -> Vec<Record> {
 /// with a minimised reproduction, never a crash of the batch command.
 fn check_file(path: &str) -> Vec<Record> {
     let src = read_module(path);
-    match contained(|| check_file_raw(path)) {
+    match contained(|| check_source(path, &src)) {
         Ok(r) => r,
         Err(message) => vec![internal_fault(path, &src, &message)],
     }
@@ -232,15 +287,8 @@ fn internal_fault(path: &str, src: &str, message: &str) -> Record {
     internal_defect(path, 1, &format!("the checker failed ({failure}); minimal reproduction: {} lines of {}", lines.len(), src.lines().count()), &dir.display().to_string())
 }
 
-fn check_file_raw(path: &str) -> Vec<Record> {
-    let src = match fortis_di::source(Path::new(path)) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("{path}: {e}");
-            return vec![];
-        }
-    };
-    let o = fortis_syntax::check::judge(path, &src);
+fn check_source(path: &str, src: &str) -> Vec<Record> {
+    let o = fortis_syntax::check::judge(path, src);
     if !o.ok {
         return o.records;
     }
@@ -478,8 +526,9 @@ fn write_changed(path: &Path, content: &str) -> bool {
     }
 }
 
-/// `fortisc build` (DEL-43): see build.rs.
-fn run_build(files: &[&String], flag: &dyn Fn(&str) -> Option<String>, as_json: bool) -> ExitCode {
+/// `fortisc build` (DEL-43): see build.rs. `--emit-only` (v0.1 R17, X-541) writes each program's generated crate
+/// where the build would compile it and builds nothing: no runtime prebuild, no rustc, no executable, no manifest.
+fn run_build(files: &[&String], flag: &dyn Fn(&str) -> Option<String>, as_json: bool, emit_only: bool) -> ExitCode {
     use std::time::Instant;
     let root = fortis_names::library::repo_root();
     let host = fortis_names::features::host_target();
@@ -500,7 +549,7 @@ fn run_build(files: &[&String], flag: &dyn Fn(&str) -> Option<String>, as_json: 
         recs.extend(target_records(p, &target));
         // plan compatibility (E-EFF-030), the build-time step check does not run (PROG-VM-04)
         if !recs.iter().any(|r| r.severity == "error") {
-            recs.extend(fortis_types::plans::check_path(p));
+            recs.extend(plan_records(p));
         }
         // 2. a package that ships a build script is refused (PROG-CMP-06)
         if p.is_dir() {
@@ -589,6 +638,16 @@ fn run_build(files: &[&String], flag: &dyn Fn(&str) -> Option<String>, as_json: 
             if write_changed(&dir.join(name), content) {
                 rewritten.push(name.to_string());
             }
+        }
+        // `--emit-only` (R17, X-541): the crate is written where the build would compile it, and the build stops:
+        // no runtime prebuild, no rustc, no executable, no build manifest (there is no build to record)
+        if emit_only {
+            if as_json {
+                outln!("{}", fortis_diag::Json::obj([("kind", fortis_diag::Json::str("emit")), ("program", fortis_diag::Json::str(f.as_str())), ("crate", fortis_diag::Json::str(&dir.display().to_string()))]).to_line());
+            } else {
+                outln!("emitted the crate for {f}: {}", dir.display());
+            }
+            continue;
         }
         // 4. the runtime crates, vendored and prebuilt (their graph holds no build script and no registry crate)
         let (rlib, deps) = match build::prebuilt_runtime(&root) {
@@ -710,7 +769,7 @@ fn run_build(files: &[&String], flag: &dyn Fn(&str) -> Option<String>, as_json: 
             sources.push(p.to_path_buf());
         }
         for s in &sources {
-            inputs.push((fortis_names::resolve::rel(s), sha_file(s)));
+            inputs.push((fortis_names::resolve::rel(s), fortis_names::sha256::sha256(read_source(s).as_bytes())));
         }
         let mut effects = std::collections::BTreeMap::new();
         for func in prog.functions.iter().filter(|x| fortis_mir::model::is_user_module(&x.module) && x.body.is_some()) {
@@ -952,6 +1011,10 @@ fn main() -> ExitCode {
         return ExitCode::from(code as u8);
     }
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args == ["--version"] {
+        outln!("fortisc {}", env!("CARGO_PKG_VERSION"));
+        return ExitCode::SUCCESS;
+    }
     let json = args.iter().any(|a| a == "--json");
     // flags that take a value: their value is not a file
     let valued = ["--corrupt", "--runs", "--query", "--symbol", "--search", "--api-baseline", "--format", "--test", "--case", "--seed", "--cases", "--budget", "--corpus", "--replay", "--target", "--out", "--script", "--events", "--metrics", "--frames"];
@@ -1001,7 +1064,7 @@ fn main() -> ExitCode {
                 ExitCode::SUCCESS
             }
         }
-        Some("build") => run_build(&files, &flag, as_json),
+        Some("build") => run_build(&files, &flag, as_json, args.iter().any(|a| a == "--emit-only")),
         // `daemon DIR`: the incremental daemon over a package (SP-12), JSON lines on standard input and output
         Some("daemon") => {
             // the daemon is its own executable beside this one, so that only it runs on the counting allocator (X-141)
@@ -1054,7 +1117,7 @@ fn main() -> ExitCode {
                     bad = true;
                     continue;
                 }
-                let plan = fortis_types::plans::check_path(pkg_dir.unwrap_or(p));
+                let plan = plan_records(pkg_dir.unwrap_or(p));
                 if !plan.is_empty() {
                     emit_records(&plan, as_json);
                     bad = true;
@@ -1131,7 +1194,7 @@ fn main() -> ExitCode {
         }
         Some("syntax") => {
             for f in files {
-                let src = std::fs::read_to_string(f).unwrap_or_default();
+                let src = read_source(Path::new(f));
                 let o = fortis_syntax::check::judge(f, &src);
                 match &o.code {
                     None => println!("{f}\tok\t{}", o.form),
@@ -1277,7 +1340,7 @@ fn main() -> ExitCode {
                 let unit = run_unit(f);
                 let module = if tests { unit.module.clone() } else { None };
                 let check_at = unit.root.as_path();
-                if let Some(r) = di_records(check_at).first().or(fortis_types::plans::check_path(check_at).first()) {
+                if let Some(r) = di_records(check_at).first().or(plan_records(check_at).first()) {
                     println!("observed: refused:{}", r.code);
                     continue;
                 }
@@ -1434,8 +1497,10 @@ fn main() -> ExitCode {
             let compile_source = |path: &Path| -> Result<fortis_vm::session::Compiled, Vec<String>> {
                 let f = path.to_string_lossy().to_string();
                 let raw = std::fs::read(path).map_err(|e| vec![format!("E-INT-002 {f}: {e}")])?;
+                let text = String::from_utf8(raw.clone()).map_err(|e| vec![format!("E-INT-002 {f}: {e}")])?;
+                source_inputs().lock().unwrap().insert(python_abspath(path), text);
                 let src = read_module(&f);
-                let kit_records: Vec<Record> = di_records(path).into_iter().chain(fortis_types::plans::check_path(path)).collect();
+                let kit_records: Vec<Record> = di_records(path).into_iter().chain(plan_records(path)).collect();
                 if !kit_records.is_empty() {
                     return Err(kit_records.iter().map(|r| format!("{} {}:{} {}", r.code, r.line, r.column, r.message)).collect());
                 }
@@ -1466,6 +1531,7 @@ fn main() -> ExitCode {
                 let r = compile_source(path);
                 // the session compiles many sources in one process: the DI registry keeps nothing of this one
                 fortis_di::forget(path);
+                source_inputs().lock().unwrap().clear();
                 r
             };
             let mut sink: Box<dyn std::io::Write + Send> = match flag("--events") {
@@ -1524,15 +1590,20 @@ fn main() -> ExitCode {
             let lib = fortis_mir::build::LibIndex::load(&root);
             let core = fortis_mir::library_program(&root, &lib);
             let tests = args.iter().any(|a| a == "--tests");
+            // Keep the conformance envelope, but let callers compare console output without its lossy `|` separator.
+            let raw_stdout = args.iter().any(|a| a == "--stdout") && !tests;
+            let metadata = |line: String| {
+                if raw_stdout { eprintln!("{line}"); } else { println!("{line}"); }
+            };
             let mut worst = 0;
             for f in files {
                 let src = read_module(f);
-                println!("=== {f}");
+                metadata(format!("=== {f}"));
                 let unit = run_unit(f);
                 let check_at = unit.root.as_path();
                 // the DI kit's findings, then plan compatibility, the build-time step check does not run (PROG-VM-04)
-                if let Some(r) = di_records(check_at).first().or(fortis_types::plans::check_path(check_at).first()) {
-                    println!("observed: refused:{}", r.code);
+                if let Some(r) = di_records(check_at).first().or(plan_records(check_at).first()) {
+                    metadata(format!("observed: refused:{}", r.code));
                     worst = worse_exit(worst, 1);
                     continue;
                 }
@@ -1557,7 +1628,7 @@ fn main() -> ExitCode {
                         // the VM consumes only validated IR (DEL-45): a program the validator rejects is refused
                         let violations: Vec<fortis_validate::Violation> = fortis_validate::validate(&p).into_iter().filter(|v| user_violation(v)).collect();
                         if let Some(v) = violations.first() {
-                            println!("observed: refused-ir:{} {}:{} {}", v.check, v.function, v.line, v.message);
+                            metadata(format!("observed: refused-ir:{} {}:{} {}", v.check, v.function, v.line, v.message));
                             worst = worse_exit(worst, 1);
                             continue;
                         }
@@ -1591,22 +1662,28 @@ fn main() -> ExitCode {
                             stop.store(true, std::sync::atomic::Ordering::Relaxed);
                             let _ = w.join();
                             let tasks = o.trace.iter().filter(|e| e.starts_with("launch ")).count();
-                            println!("probe: baseline {baseline} peak {} launches {tasks} threads {}", peak.load(std::sync::atomic::Ordering::Relaxed).max(baseline), o.threads);
+                            metadata(format!("probe: baseline {baseline} peak {} launches {tasks} threads {}", peak.load(std::sync::atomic::Ordering::Relaxed).max(baseline), o.threads));
                         }
-                        println!("observed: {}", o.text);
-                        println!("trace: {}", o.trace.join("|"));
+                        if raw_stdout {
+                            for line in &o.out { println!("{line}"); }
+                        }
+                        metadata(format!("observed: {}", o.text));
+                        metadata(format!("trace: {}", o.trace.join("|")));
                         for r in &o.reports {
-                            println!("record: {}", r.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("; "));
+                            metadata(format!("record: {}", r.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ")));
                         }
                         // one failure record on stderr, the same JSON the interpreter writes (LR 4.6)
                         for line in &o.failure_lines {
+                            if !raw_stdout {
+                                metadata(format!("failure-record: {line}"));
+                            }
                             eprintln!("{line}");
                         }
                         worst = worse_exit(worst, o.exit_code);
                     }
                     Err((recs, errs)) => {
                         let first = recs.first().map(|r| format!("refused:{}", r.code)).or_else(|| errs.first().map(|e| format!("unbuilt:line {}: {}", e.line, e.message))).unwrap_or_default();
-                        println!("observed: {first}");
+                        metadata(format!("observed: {first}"));
                         worst = worse_exit(worst, 1);
                     }
                 }
@@ -1693,7 +1770,7 @@ fn main() -> ExitCode {
         }
         Some("parse") => {
             for f in files {
-                let src = std::fs::read_to_string(f).unwrap_or_default();
+                let src = read_source(Path::new(f));
                 println!("=== {f}");
                 match fortis_syntax::parse_module(&src) {
                     Ok(p) => {
@@ -1792,7 +1869,7 @@ fn main() -> ExitCode {
                         None => fortis_fmt::Unit::Alone(&file),
                         Some((dir, _)) => fortis_fmt::Unit::Package { dir, file: p },
                     };
-                    fortis_fmt::format_migrating_in(&migrated, unit).map(|(t, _, n)| {
+                    fortis_fmt::format_migrating_options_in(&migrated, unit, !args.iter().any(|a| a == "--no-migrate")).map(|(t, _, n)| {
                         if n > 0 {
                             eprintln!("{}: {n} rewrite{} into the reading forms", p.display(), if n == 1 { "" } else { "s" });
                         }

@@ -1,0 +1,8 @@
+// reject: E-OWN-053
+// covers: LANG-07-06, LANG-08-02
+class Holder[T] { item: T }
+func bad() {
+  let s = "hello" as String
+  let f = fn[alias s]() Int => s.byteCount()
+  let h = Holder(item: move f)
+}

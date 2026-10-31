@@ -1,0 +1,43 @@
+// accept
+class Celsius {
+  degrees: Float
+
+  export convert to Fahrenheit {
+    return Fahrenheit(degrees: self.degrees * 9.0 / 5.0 + 32.0)
+  }
+  export convert from Fahrenheit(f) {
+    return Celsius(degrees: (f.degrees - 32.0) * 5.0 / 9.0)
+  }
+}
+
+class Fahrenheit {
+  degrees: Float
+}
+
+class Buffer {
+  bytes: Bytes
+
+  export try convert to Text(owned self) {
+    return Text(body: self.bytes as String or fail)
+  }
+}
+
+class Text {
+  body: String
+}
+
+class Score {
+  points: Int
+
+  export try convert to Int8 {
+    return self.points as Int8 or fail       // fallible: conversion.out_of_range beyond the type
+  }
+}
+
+try func showAll(c: Celsius, f: Fahrenheit, points: Int) String {
+  let hot = c as Fahrenheit                  // total: the member on Celsius; `c` is loaned for it
+  let cold = f as Celsius                    // total: the member `convert from Fahrenheit` on Celsius
+  let text = Buffer(bytes: "hi" as Bytes) as Text or fail   // consuming: the temporary is moved in
+  let small = Score(points: points) as Int8 or fail         // fallible: handled on the line
+  return "${hot.degrees}/${cold.degrees}/${text.body}/${small as String}"
+}

@@ -1,0 +1,13 @@
+// execute: hello|5
+// requires: runtime
+// covers: LANG-08-04
+// D-540: a generic callable keeps the owned mode of both parameter and result.
+import fortis.host { Console }
+func apply[A](a: owned A, f: fn(owned A) A) A => f(move a)
+func main(console: Console) {
+  let s = "hello" as String
+  let r = apply(move s, fn(x: owned String) String => move x)
+  console.print(r)
+  let n = apply(5, fn(x: owned Int) Int => x)
+  console.print("${n}")
+}

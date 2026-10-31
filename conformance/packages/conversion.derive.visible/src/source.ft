@@ -1,0 +1,7 @@
+export class Source {
+  export value: Int
+}
+
+export func make() Source {
+  return Source(value: 8)
+}

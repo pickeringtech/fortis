@@ -1,0 +1,15 @@
+// execute: 3 4
+// requires: runtime
+// covers: LANG-08-01, LANG-06-11
+import fortis.host { Console }
+async func value() Int => 3
+async try func parse(s: String) Int => s as Int or fail
+async try func main(console: Console) {
+  let f = value
+  let pending: Future[Int] = f()
+  let a = await pending
+  let g = parse
+  let pendingTry: Future[Outcome[Int]] = g("4")
+  let b = await pendingTry or fail
+  console.print("${a} ${b}")
+}

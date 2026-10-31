@@ -96,6 +96,18 @@ def main(argv):
             per_file[cur] = []
         elif line.startswith("{"):
             per_file[cur].append(json.loads(line))
+    # Contributed methods remain grouped under the applying class's module, but their text and fact locations
+    # belong to the declaring mixin. Index both ordinary and contributed bodies by their actual source file.
+    source_functions = {}
+    for module, fns in per_file.items():
+        for fn in fns:
+            source_functions.setdefault(fn.get("source_file", module), []).append(fn)
+    sources = {}
+    def source_text(path):
+        if path not in sources:
+            with open(os.path.join(ROOT, path), encoding="utf-8") as f:
+                sources[path] = f.read()
+        return sources[path]
     chk = subprocess.run([FORTISC, "check", "--json"] + paths + packages, capture_output=True, text=True, cwd=ROOT, timeout=3600).stdout
     findings, cur = {}, None
     for line in chk.splitlines():
@@ -111,19 +123,23 @@ def main(argv):
     fams = {"loans": 0, "obligations": 0, "effects": 0, "observation": 0, "cleanup": 0}
     pkg_modules = [{"path": p, "codes": []} for p in per_file if p not in paths]
     for r in fixtures + [{"path": p, "codes": []} for p in extra] + pkg_modules:
-        src = open(os.path.join(ROOT, r["path"]), encoding="utf-8").read()
+        src = source_text(r["path"])
         m = re.search(r"^// covers: (.*)$", src, re.M)
         covers = re.findall(r"LANG-\d\d-\d\d", m.group(1)) if m else []
         owners = [own["rules"].get(c, {}).get("completes") for c in covers] + [own["diagnostics"].get(c) for c in r.get("codes", [])]
         owners = [o for o in owners if o]
         cc = max((chunk_num(o) for o in owners), default=None) if owners else None
         fns = per_file.get(r["path"], [])
-        lines = src.split("\n")
-        starts = sorted(f["line"] for f in fns)
         for fn in fns:
             functions += 1
             e = []
             check(fn, SCHEMA, f"{r['path']}:{fn.get('function')}", e)
+            if ("source_file" in fn) != ("source_function" in fn):
+                e.append(f"{r['path']}:{fn.get('function')}: a contributed body must name both its source file and source function")
+            source = fn.get("source_file", r["path"])
+            body_src = source_text(source)
+            lines = body_src.split("\n")
+            starts = sorted(f["line"] for f in source_functions[source])
             # every name a fact cites occurs in the function's source (from its head to the next function's head) or on
             # the fact's own line (a woven aspect's before, after or handler block lies outside the function's text)
             later = [x for x in starts if x > fn["line"]]
@@ -134,7 +150,7 @@ def main(argv):
                 for f in fn[fam]:
                     if f["origin"] is not None:
                         asp = f["origin"].split("@", 1)[1]
-                        if not re.search(r"@" + re.escape(asp) + r"\b", src):
+                        if not re.search(r"@" + re.escape(asp) + r"\b", body_src):
                             e.append(f"{r['path']}:{fn['function']}: a fact woven from @{asp}, which this module does not apply")
             own_loans = [l for l in fn["loans"] if l["origin"] is None]
             cited = [(l["owner"], l["line"]) for l in own_loans] + [(l["holder"], l["line"]) for l in own_loans if l["holder"]] + [(o["place"], o["opened"]) for o in fn["obligations"] if o["origin"] is None]
@@ -178,7 +194,7 @@ def main(argv):
             fns = []
             for key in dict.fromkeys([rec.get("file"), path]):
                 if key:
-                    fns.extend(per_file.get(key, []))
+                    fns.extend(source_functions.get(key, []))
             facts = [o for fn in fns for o in fn["obligations"] if o["place"] == place]
             cross += 1
             if not any(c["how"] == "unconsumed" and c["line"] == rec["line"] for o in facts for c in o["closes"]):
@@ -193,7 +209,7 @@ def main(argv):
                 continue
             held += 1
             mode = "alias" if m.group(1) == "alias" else "editable"
-            loans = [l for fn in per_file.get(path, []) for l in fn["loans"]]
+            loans = [l for fn in source_functions.get(rec.get("file", path), []) for l in fn["loans"]]
             if not any(l["holder"] == m.group(2) and l["mode"] == mode for l in loans):
                 errors.append(f"{path}:{rec['line']}: {rec['code']} names a {mode} loan held by `{m.group(2)}`, which the IR does not record")
     print(f"loan-conflict findings matched to IR loans: {held}")

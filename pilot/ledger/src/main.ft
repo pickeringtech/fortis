@@ -87,7 +87,7 @@ try func run(console: Console, journal: Journal, diagnostics: Diagnostics, comma
 // Reads and checks the journal file. Only the file system can fail here; problems inside the journal are
 // diagnostics, and the failures behind them go to the sink.
 try func readJournal(fs: FileSystem, file: StringView, sink: editable List[Failure]) Loaded {
-  let path = Path.parse(String.from(file)) or fail
+  let path = Path.parse(file as String) or fail
   let text = fs.readText(path) or fail
   return loadJournal(text, editable sink) or fail
 }

@@ -1,0 +1,26 @@
+// reject: E-OBL-005, E-OBL-001
+// covers: LANG-10-01, LANG-10-02
+error Stopped {
+  code: "loop.stopped"
+}
+try func propagating(xs: owned List[Outcome[Int]]) {
+  for item in move xs { discard item or fail }
+}
+try recovers func failing(xs: owned List[Outcome[Int]]) {
+  for item in move xs {
+    discard item or recover 0
+    fail Stopped()
+  }
+}
+async func value() Int => 1
+async recovers func suspending(xs: owned List[Outcome[Int]]) {
+  for item in move xs {
+    discard item or recover 0
+    discard await value()
+  }
+}
+try recovers func handlerReturn(xs: owned List[Outcome[Int]]) {
+  for item in move xs {
+    discard item catch why { return }
+  }
+}

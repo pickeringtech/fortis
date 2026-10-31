@@ -1,0 +1,29 @@
+// execute: 3 7 9 -1 -1|[14, 18, 14]|23 true false|23|x 2|none 0
+// requires: runtime
+// covers: LANG-06-16
+// `Array[T, N]` (6.7, X-578, D-542): `get(i)` lends the element at `i` or is null outside [0, N), and `asView()` is the
+// array's elements as a `ListView`, which has `map`, `fold`, `any`, `each` and the rest of the view's methods. The view
+// reads the array itself, so a change made with `set` shows in it.
+import fortis.host { Console }
+
+func total(xs: ListView[Int]) Int {
+  return xs.fold(0, fn(sum, x) => Int.wrappingAdd(sum, x))
+}
+
+func main(console: Console) {
+  let mut a = Array[Int, 3].filled(7)
+  a.set(1, 9)
+  console.print("${a.count()} ${a.get(0) ?? -1} ${a.get(1) ?? -1} ${a.get(3) ?? -1} ${a.get(-1) ?? -1}")
+  let doubled = a.asView().map(fn(n: Int) Int => Int.wrappingMul(n, 2))
+  console.print("${doubled}")
+  console.print("${total(a.asView())} ${a.asView().any(fn(n: Int) Bool => n > 8)} ${a.asView().isEmpty()}")
+  let mut seen = 0
+  a.asView().each(fn mut[editable seen](n: Int) Void {
+    seen = Int.wrappingAdd(seen, n)
+  })
+  console.print("${seen}")
+  let words = Array[String, 2].filled("x" as String)
+  console.print("${words.get(1) ?? "none"} ${words.asView().count()}")
+  let empty = Array[String, 0].filled("x" as String)
+  console.print("${empty.get(0) ?? "none"} ${empty.asView().count()}")
+}

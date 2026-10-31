@@ -1,0 +1,6 @@
+// reject: E-TYP-040
+// covers: LANG-06-01, LANG-06-02
+func poke(s: editable { f: fn() Int }) {}
+func probe(s: editable { f: fn() Int<0..3> }) {
+  poke(editable s)
+}

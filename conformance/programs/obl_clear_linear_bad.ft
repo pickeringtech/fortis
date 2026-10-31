@@ -1,0 +1,13 @@
+// reject: E-OBL-001 (at the marked lines)
+// covers: LANG-10-01, LANG-06-07
+// X-522: `clear()` on a list of linear elements would drop them, so the call is rejected — `consumeEach` and
+// `pop` are the consuming ways — and the list itself, its element still unconsumed, reports its own drop at the
+// end of the body.
+import fortis.host { Console }
+
+recovers func main(console: Console) {
+  let mut xs: List[Outcome[Int<0..10>]] = List.default()   // reject: E-OBL-001 — the list drops with its element held
+  let r = Int<0..10>.validate(3)
+  editable xs.push(move r)
+  editable xs.clear()                           // reject: E-OBL-001 — clear would drop the linear elements
+}

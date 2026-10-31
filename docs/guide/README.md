@@ -40,11 +40,12 @@ Start with the tour, then read in order; each chapter follows one section of the
 
 Further reading:
 
+- [Model a domain](worked-example.md): the v0.1 coffee shop, from checked types to a receipt and tests.
 - [Worked examples](worked-examples.md): larger programs, each explained line by line.
 - Notes for readers coming from [Rust](from-rust.md), [TypeScript](from-typescript.md) and [Python](from-python.md).
 - The [glossary](glossary.md): kit, package, head, binding, verifier and the other terms.
-- [Known limitations of v0.0.2](known-limitations.md): what this release refuses or does not yet do, and the workaround for each.
-- The [core library](../agent/library.md): every operation of the standard modules, with its contract, generated
+- [Known limitations of v0.1.0](known-limitations.md): what this release refuses or does not yet do, and the workaround for each.
+- The [core library](library.md): every operation of the standard modules, with its signature, effects and contract, generated
   from the library's declarations.
 
 ## How the examples are checked

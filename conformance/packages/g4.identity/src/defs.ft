@@ -1,0 +1,10 @@
+// accept
+// D-592, X-640: an exported program type with a prelude spelling.
+import fortis.prelude
+export class Bool derive Equatable, Hashable { export n: Int }
+export func make() Map[Bool, Int] {
+  let mut m: Map[Bool, Int] = Map.default()
+  m.set(Bool(n: 7), 1)
+  return m
+}
+export func truth() prelude.Bool => true

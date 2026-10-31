@@ -46,7 +46,7 @@ try func failing(console: Shared[Console], xs: List[Token]) Int {
 
 func local(console: Shared[Console]) {
   let mut xs: List[Token] = List.default()
-  xs.push(Token(label: String.from("own"), console: console.retain()))
+  xs.push(Token(label: "own" as String, console: console.retain()))
   for t in xs {
     console.print("local ${t.label}")
   }
@@ -56,8 +56,8 @@ func local(console: Shared[Console]) {
 recovers func main(out: Console) {
   let console = Shared.create(move out)
   let mut toks: List[Token] = List.default()
-  toks.push(Token(label: String.from("a"), console: console.retain()))
-  toks.push(Token(label: String.from("b"), console: console.retain()))
+  toks.push(Token(label: "a" as String, console: console.retain()))
+  toks.push(Token(label: "b" as String, console: console.retain()))
   borrowed(console, toks)
   let n = failing(console, toks) or recover 1
   console.print("recovered ${n}")

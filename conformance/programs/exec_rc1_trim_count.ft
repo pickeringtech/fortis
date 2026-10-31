@@ -1,0 +1,10 @@
+// execute: 3 abc
+// requires: runtime
+// covers: LANG-06-02, LANG-07-06, LANG-10-01
+import fortis.host { Console }
+pure func count(a: String) Int { return a.trim().scalarCount() }
+pure func trimmed(a: String) StringView from a { return a.trim() }
+func main(console: Console) {
+  let s: String = " abc "
+  console.print("${count(s)} ${trimmed(alias s)}")
+}

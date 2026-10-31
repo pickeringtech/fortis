@@ -1,0 +1,4 @@
+[
+  {"name": "lr6_tuple_wrong", "input": {"have": ["tuple", "Int", "Bool"], "want": ["tuple", "Bool", "Int"]}, "expect": false},
+  {"name": "lr6_optional_widens", "input": {"have": ["opt", ["ref", "Int", 0, 3]], "want": ["opt", "Int"]}, "expect": true}
+]

@@ -1,0 +1,6 @@
+// reject: E-TYP-040
+// covers: LANG-10-02, LANG-06-16
+// A ListView lends its elements; moving the view cannot acquire their obligations.
+recovers func borrowed(xs: ListView[Outcome[Int]]) {
+  for item in move xs { discard item or recover 0 }
+}

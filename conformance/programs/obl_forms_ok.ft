@@ -1,12 +1,14 @@
 // accept
 // covers: LANG-10-01, LANG-10-02
-// Every consuming operation of 10.2 and the accepted shapes of storage.
+// Every consuming operation of 10.2 and the accepted shapes of storage. A sink consumes what it is given: a body
+// that lets a linear parameter drop at its end is E-OBL-001 (6.12, X-521).
 export error Odd {
   code: "demo.odd"
 }
 try func half(n: Int) Int => n
-func takeOutcome(o: owned Outcome[Int]) Int => 0
-func takeFailure(f: owned Failure) {
+recovers func takeOutcome(o: owned Outcome[Int]) Int => move o or recover 0
+recovers func takeFailure(f: owned Failure) {
+  report f
 }
 try recovers func forms(n: Int) Int {
   let a = half(n) or fail

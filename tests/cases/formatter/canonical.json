@@ -1,0 +1,38 @@
+[
+  {
+    "name": "canonical",
+    "input": {
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "expect": true
+  },
+  {
+    "name": "idempotent_but_changed",
+    "input": {
+      "code": 1,
+      "stdout": "example.ft\n",
+      "stderr": "1 rewrite\n"
+    },
+    "expect": false
+  },
+  {
+    "name": "refused",
+    "input": {
+      "code": 3,
+      "stdout": "",
+      "stderr": "not formatted"
+    },
+    "expect": false
+  },
+  {
+    "name": "defect",
+    "input": {
+      "code": 4,
+      "stdout": "",
+      "stderr": "formatter defect"
+    },
+    "expect": false
+  }
+]

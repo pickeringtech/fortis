@@ -1,0 +1,13 @@
+// reject: E-OWN-001
+// covers: LANG-07-01
+// D-518: the retired validator cannot create an owner from a borrowed non-Copyable representation.
+class Token {
+  handle: Shared[Int]
+  cleanup(editable self) {}
+}
+type Wrapped = Token
+try func bad() {
+  let token = Token(handle: Shared.create(1))
+  let wrapped = Wrapped.validate(token) or fail // reject: E-OWN-001
+  discard wrapped
+}

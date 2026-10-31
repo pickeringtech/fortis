@@ -44,6 +44,6 @@ func main(console: Console) {
   let one: Node? = Node(value: 3, next: null)
   let none: Node? = null
   console.print("head ${headOf(move one)} ${headOf(move none)}")
-  console.print("chain ${chainOf(Shape.Chain(node: Node(value: 5, next: null)))} ${chainOf(Shape.Leaf)}")
+  console.print("chain ${chainOf(Chain(node: Node(value: 5, next: null)))} ${chainOf(Leaf)}")
   console.print("pair ${pairOf(Pair(left: Node(value: 9, next: null), right: 7))}")
 }

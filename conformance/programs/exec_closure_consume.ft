@@ -29,7 +29,7 @@ async func main(out: Console) {
   let k = await future
   console.print("awaited ${k}")
   let oneShot = async fn once(s: String) Int => s.scalarCount()
-  let direct = await move oneShot(String.from("abc"))
+  let direct = await move oneShot("abc" as String)
   console.print("direct ${direct}")
   console.print("end")
 }

@@ -1,0 +1,9 @@
+// reject: E-REF-001
+// covers: LANG-06-02
+// D-708: rc.1 regression.
+class Box { export n: Int }
+func change(x: editable Box) Bool { x.n = 100
+  return true }
+func restricted(n: Int<0..3>) {}
+func f(x: editable Box) { match x.n { 0..3 when change(editable x) => restricted(x.n)
+  otherwise => {} } }

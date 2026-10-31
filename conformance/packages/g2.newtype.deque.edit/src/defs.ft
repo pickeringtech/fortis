@@ -1,0 +1,6 @@
+// accept
+import fortis.collections { Deque }
+export type Queue = Deque[Int]
+export func make() Queue {
+  return Queue(Deque.fromList(List.of(1, 2, 3)))
+}

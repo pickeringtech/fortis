@@ -119,7 +119,7 @@
   "id": "patterns",
   "title": "Patterns that take ownership",
   "file": "parcel.ft",
-  "source": "docs/guide/09-classes.md#24",
+  "source": "docs/guide/09-classes.md#28",
   "output": "books: 2500 g\nfalse",
   "notes": [
    {
@@ -165,7 +165,7 @@
   "id": "outcomes",
   "title": "Recover, report or pass on",
   "file": "half.ft",
-  "source": "docs/guide/10-outcomes.md#3",
+  "source": "docs/guide/10-outcomes.md#4",
   "output": "0 4\nhalf of 6 is 3\n3 has no half",
   "notes": [
    {

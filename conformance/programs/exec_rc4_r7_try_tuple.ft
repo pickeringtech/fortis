@@ -1,0 +1,12 @@
+// execute: 3
+// requires: runtime
+// covers: LANG-08-04
+import fortis.host { Console }
+try func parse(s: String) Int => s as Int or fail
+try func main(console: Console) {
+  let holder = (parse, 1)
+  let (f, tag) = move holder
+  discard tag
+  let n = f("3") or fail
+  console.print("${n}")
+}

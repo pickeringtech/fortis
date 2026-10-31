@@ -1,0 +1,22 @@
+// reject: E-TYP-090, E-REF-001 (at the marked lines)
+// covers: LANG-06-16
+// 6.7 (X-479): the methods that build a new list from the elements of an old one copy them, so they require
+// `T implements Copyable`, as `filter`, `reversed` and `concat` do; a list of a resource (a `Mutex` here) is searched
+// and visited but never copied. `chunked` needs a size of at least 1, which the checker proves from a literal.
+class Handle {
+  export guard: Mutex[Int]
+}
+
+func copies(handles: List[Handle], other: List[Handle]) {
+  let a = handles.take(1)                                  // reject: E-TYP-090: Handle is not Copyable
+  let b = handles.skip(1)                                  // reject: E-TYP-090: Handle is not Copyable
+  let c = handles.enumerate()                              // reject: E-TYP-090: Handle is not Copyable
+  let d = handles.zip(other)                               // reject: E-TYP-090: Handle is not Copyable
+  let e = handles.chunked(2)                               // reject: E-TYP-090: Handle is not Copyable
+  let f = handles.sortedBy(fn(h: Handle) Int => 0)         // reject: E-TYP-090: Handle is not Copyable
+  let g = handles.groupBy(fn(h: Handle) Int => 0)          // reject: E-TYP-090: Handle is not Copyable
+}
+
+func sizes(items: List[Int]) {
+  let none = items.chunked(0)                              // reject: E-REF-001: a chunk holds at least one element
+}

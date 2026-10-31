@@ -36,7 +36,7 @@ async func main(console: Console) {
     console.print("${x}")
     console.print("${y}")
   }
-  let s = String.from("abc")
+  let s = "abc" as String
   scope tasks {
     let t = tasks.launch(size(s))
     let n = await t

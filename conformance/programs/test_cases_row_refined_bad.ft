@@ -1,0 +1,13 @@
+// reject: E-REF-001 (at the marked line)
+// covers: LANG-14-01
+// A `cases` row literal is checked exactly as the literal would be where the body passes it (14; D-50.3): `part: 150`
+// reaches `percent(part: Int<0..100>)`, so the row is rejected, at the row, and the body is not.
+pure func percent(part: Int<0..100>) Int => part
+
+test "percent" cases {
+  "low":      { part: 0, expected: 0 }
+  "high":     { part: 100, expected: 100 }
+  "too high": { part: 150, expected: 150 }     // reject: E-REF-001
+} as row {
+  expect percent(row.part) == row.expected
+}

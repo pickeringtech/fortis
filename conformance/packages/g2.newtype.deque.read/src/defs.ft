@@ -1,0 +1,9 @@
+// accept
+import fortis.collections { Deque }
+export type Queue = Deque[Int]
+export func make() Queue {
+  let mut items = Deque.fromList(List.of(2, 3))
+  items.pushFront(1)
+  return Queue(move items)
+}
+export func append(queue: editable Queue) { queue.pushBack(4) }

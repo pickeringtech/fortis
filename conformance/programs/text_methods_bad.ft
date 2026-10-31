@@ -1,0 +1,14 @@
+// reject: E-TYP-040, E-TYP-130, E-REF-001 (at the marked lines)
+// covers: LANG-06-06, LANG-06-01
+// X-479, R19, 6.6: the signatures of the text methods are enforced. `find` answers an optional scalar offset, not an
+// `Int` (a missing needle is `null`, not a sentinel); `split` takes a text; `trim` takes no argument; `repeat` takes a
+// count that is not negative, a literal -1 being `E-REF-001`.
+import fortis.host { Console }
+
+func wrong(console: Console) {
+  let n: Int = "abc".find("b")                  // reject: E-TYP-040 — an optional offset is not an Int
+  let pieces = "a,b".split(1)                   // reject: E-TYP-040 — the separator is text
+  let padded = "a".trim(" ")                    // reject: E-TYP-130 — trim takes no argument
+  let none = "a".repeat(-1)                     // reject: E-REF-001 — a count cannot be negative
+  console.print("never runs")
+}

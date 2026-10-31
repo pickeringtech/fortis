@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// covers: LANG-08-04
+try func work() Int => 3
+try func make[T](value: owned T) T => move value
+func main() { let f: async try fn(owned Int) Int = make }

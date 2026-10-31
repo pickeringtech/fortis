@@ -167,7 +167,7 @@ impl<'a> Parser<'a> {
 
     pub fn leave(&mut self) {
         let f = self.stack.pop().expect("frame");
-        let node = Node { rule: f.rule, children: f.children };
+        let node = Node { inferred_head: Default::default(), rule: f.rule, children: f.children };
         if let Some(top) = self.stack.last_mut() {
             top.children.push(Child::Node(node));
         }
@@ -229,7 +229,7 @@ impl<'a> Parser<'a> {
     pub fn head_body(&mut self) -> PResult {
         match head_body_end(self.toks, self.pos) {
             Some(end) => {
-                let node = Node { rule: rule_id("headBody").unwrap_or(u16::MAX), children: (self.pos..end).map(Child::Tok).collect() };
+                let node = Node { inferred_head: Default::default(), rule: rule_id("headBody").unwrap_or(u16::MAX), children: (self.pos..end).map(Child::Tok).collect() };
                 if let Some(top) = self.stack.last_mut() {
                     top.children.push(Child::Node(node));
                 }

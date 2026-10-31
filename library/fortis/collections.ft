@@ -36,3 +36,484 @@ export pure func sorted(items: ListView[Int]) List[Int] {
   }
   return current
 }
+
+// ---- a double-ended queue (6.7; X-479, X-576) ----
+// `front` holds the items from the front end, the first item last, so popping the front is its `pop`; `back` holds the
+// rest, the last item last. An end that runs dry takes half of the other end's items over, which costs as many moves as
+// the pushes that filled that end, so both ends are amortised O(1) and no item is copied.
+export class Deque[T] implements Iterable[T, ListCursor[T]] {
+  front: List[T] = List.default()
+  back: List[T] = List.default()
+
+  // moves up to n items from the end of source to the end of target, one at a time, so their order reverses; O(n)
+  func moveItems(source: editable List[T], target: editable List[T], n: Int) {
+    let mut left = n
+    while left > 0 {
+      match source.pop() {
+        present(item) => {
+          target.push(move item)
+        }
+        null => {
+          return
+        }
+      }
+      left = Int.wrappingSub(left, 1)
+    }
+  }
+  // an empty deque; O(1)
+  export pure func default() Deque[T] => Deque(front: List.default(), back: List.default())
+  // a deque of the items of the list in order, the first at the front, taking the list's storage; O(1)
+  export pure func fromList(items: owned List[T]) Deque[T] => Deque(front: List.default(), back: move items)
+  // the number of items; O(1)
+  export pure func count(self) Int => Int.wrappingAdd(self.front.count(), self.back.count())
+  // whether the deque holds no item; O(1)
+  export pure func isEmpty(self) Bool => self.front.isEmpty() && self.back.isEmpty()
+  // adds item after the last one; amortised O(1)
+  export func pushBack(editable self, item: owned T) {
+    self.back.push(move item)
+  }
+  // adds item before the first one; amortised O(1)
+  export func pushFront(editable self, item: owned T) {
+    self.front.push(move item)
+  }
+  // removes and returns the first item, null when empty; amortised O(1), worst case O(count) for the rebalance
+  export func popFront(editable self) T? {
+    if self.front.isEmpty() {
+      let stay = self.back.count() / 2
+      let mut newer: List[T] = List.default()
+      Deque.moveItems(editable self.back, editable newer, stay)
+      Deque.moveItems(editable self.back, editable self.front, self.back.count())
+      Deque.moveItems(editable newer, editable self.back, newer.count())
+    }
+    return self.front.pop()
+  }
+  // removes and returns the last item, null when empty; amortised O(1), worst case O(count) for the rebalance
+  export func popBack(editable self) T? {
+    if self.back.isEmpty() {
+      let stay = self.front.count() / 2
+      let mut older: List[T] = List.default()
+      Deque.moveItems(editable self.front, editable older, stay)
+      Deque.moveItems(editable self.front, editable self.back, self.front.count())
+      Deque.moveItems(editable older, editable self.front, older.count())
+    }
+    return self.back.pop()
+  }
+  // a read loan of the item at index, counted from the front, null outside [0, count); O(1)
+  export pure func get(self, index: Int) (alias T from self)? {
+    let k = self.front.count()
+    if index < 0 {
+      return null
+    }
+    if index < k {
+      return self.front.get(Int.wrappingSub(Int.wrappingSub(k, 1), index))
+    }
+    return self.back.get(Int.wrappingSub(index, k))
+  }
+  // a read loan of the first item, null when empty; O(1)
+  export pure func peekFront(self) (alias T from self)? => self.get(0)
+  // a read loan of the last item, null when empty; O(1)
+  export pure func peekBack(self) (alias T from self)? => self.get(Int.wrappingSub(self.count(), 1))
+  // intrinsic: a cursor over read loans of the items from the front to the back, the items of `front` last to first and then those of `back`; the cursor lists them when it is made, O(count), and each step is O(1)
+  export trusted pure func iterate(self) ListCursor[T] from self
+  // calls visit with a read loan of every item from the front to the back; the callback may have effects, so `each` is not pure; O(n) plus the callback per item
+  export func each(self, visit: editable fn mut(T) Void) {
+    for item in self {
+      visit(item)
+    }
+  }
+  // as `each`, stopping at the first failure of the callback and returning it; O(n) plus the callback per item
+  export try func tryEach(self, visit: editable fn mut(T) Outcome[Void]) {
+    for item in self {
+      visit(item) or fail
+    }
+  }
+  // a deque of the results of f for every item, in order; allocates; O(n) plus the callback per item
+  export pure func map[U](self, f: pure fn(T) U) Deque[U] {
+    let mut out: List[U] = List.default()
+    for item in self {
+      out.push(f(item))
+    }
+    return Deque(front: List.default(), back: move out)
+  }
+  // as `map`, stopping at the first failure of the callback and returning it, with the new deque dropped; allocates; O(n) plus the callback per item
+  export pure try func tryMap[U](self, f: pure fn(T) Outcome[U]) Deque[U] {
+    let mut out: List[U] = List.default()
+    for item in self {
+      out.push(f(item) or fail)
+    }
+    return Deque(front: List.default(), back: move out)
+  }
+  // a deque of copies of the items keep is true for, in order; allocates; O(n) plus the callback per item
+  export pure func filter(self, keep: pure fn(T) Bool) Deque[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    for item in self {
+      if keep(item) {
+        out.push(copy item)
+      }
+    }
+    return Deque(front: List.default(), back: move out)
+  }
+  // step gets a read loan of the accumulator and an item, once per item from the front to the back, and returns the next accumulator; O(n) plus the callback per item
+  export pure func fold[A](self, initial: owned A, step: pure fn(A, T) A) A {
+    let mut acc = move initial
+    for item in self {
+      acc = step(acc, item)
+    }
+    return move acc
+  }
+  // as `fold`, stopping at the first failure of step and returning it; O(n) plus the callback per item
+  export pure try func tryFold[A](self, initial: owned A, step: pure fn(A, T) Outcome[A]) A {
+    let mut acc = move initial
+    for item in self {
+      acc = step(acc, item) or fail
+    }
+    return move acc
+  }
+  // whether holds is true for some item; stops at the first one that passes; O(n) plus the callback
+  export pure func any(self, holds: pure fn(T) Bool) Bool {
+    for item in self {
+      if holds(item) {
+        return true
+      }
+    }
+    return false
+  }
+  // whether holds is true for every item; stops at the first one that fails; O(n) plus the callback
+  export pure func all(self, holds: pure fn(T) Bool) Bool {
+    for item in self {
+      if !holds(item) {
+        return false
+      }
+    }
+    return true
+  }
+  // a read loan of the first item holds is true for, null when none does; O(n) plus the callback
+  export pure func find(self, holds: pure fn(T) Bool) (alias T from self)? {
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          if holds(item) {
+            return item
+          }
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return null
+  }
+  // the position, counted from the front, of the first item holds is true for, null when none does; O(n) plus the callback
+  export pure func indexWhere(self, holds: pure fn(T) Bool) Int? {
+    let mut i = 0
+    for item in self {
+      if holds(item) {
+        return i
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return null
+  }
+  // whether some item equals target; O(n)
+  export pure func contains(self, target: T) Bool where T implements Equatable {
+    for item in self {
+      if item == target {
+        return true
+      }
+    }
+    return false
+  }
+  // a list of copies of the items from the front to the back; allocates; O(n)
+  export pure func toList(self) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    for item in self {
+      out.push(copy item)
+    }
+    return move out
+  }
+}
+
+// ---- a set kept in ascending order (6.7; X-479, X-577) ----
+// `items` holds the members in ascending order, each once, so a lookup is a binary search over `get`, O(log n). Making
+// room for a member or closing the gap a removal leaves moves the members after it, one pop and one push each, so `add`
+// and `remove` are O(n) in the members after the one added or removed; the set operations merge two ascending lists in
+// one pass, O(n + m).
+export class SortedSet[T] implements Iterable[T, ListCursor[T]] {
+  items: List[T] = List.default()
+
+  // the index of the first member that is not less than target, count() when all are less; O(log count)
+  func lowerBound(self, target: T) Int where T implements Comparable {
+    let mut lo = 0
+    let mut hi = self.items.count()
+    while lo < hi {
+      let mid = Int.wrappingAdd(lo, Int.wrappingSub(hi, lo) / 2)
+      match self.items.get(mid) {
+        present(member) => {
+          if member < target {
+            lo = Int.wrappingAdd(mid, 1)
+          } else {
+            hi = mid
+          }
+        }
+        null => {
+          return lo
+        }
+      }
+    }
+    return lo
+  }
+  // moves up to n members from the end of source to the end of target, one at a time, so their order reverses; O(n)
+  func moveItems(source: editable List[T], target: editable List[T], n: Int) {
+    let mut left = n
+    while left > 0 {
+      match source.pop() {
+        present(item) => {
+          target.push(move item)
+        }
+        null => {
+          return
+        }
+      }
+      left = Int.wrappingSub(left, 1)
+    }
+  }
+
+  // an empty set; O(1)
+  export pure func default() SortedSet[T] where T implements Comparable => SortedSet(items: List.default())
+  // a set of the items of the list, each once; the list's duplicates are dropped; O(n) times the members each add moves
+  export pure func fromList(items: owned List[T]) SortedSet[T] where T implements Comparable {
+    let mut out: SortedSet[T] = SortedSet(items: List.default())
+    for item in move items {
+      discard out.add(move item)
+    }
+    return move out
+  }
+  // the number of members; O(1)
+  export pure func count(self) Int => self.items.count()
+  // whether the set has no member; O(1)
+  export pure func isEmpty(self) Bool => self.items.isEmpty()
+  // adds item, true when it was absent; O(log n) to find its place and O(n) in the members after it to make room
+  export func add(editable self, item: owned T) Bool where T implements Comparable {
+    let at = self.lowerBound(item)
+    match self.items.get(at) {
+      present(member) => {
+        if !(item < member) {
+          return false
+        }
+      }
+      null => {
+      }
+    }
+    let mut tail: List[T] = List.default()
+    SortedSet.moveItems(editable self.items, editable tail, Int.wrappingSub(self.items.count(), at))
+    self.items.push(move item)
+    SortedSet.moveItems(editable tail, editable self.items, tail.count())
+    return true
+  }
+  // whether item is a member; O(log n)
+  export pure func contains(self, item: T) Bool where T implements Comparable {
+    match self.items.get(self.lowerBound(item)) {
+      present(member) => {
+        return !(item < member)
+      }
+      null => {
+        return false
+      }
+    }
+  }
+  // removes item, true when it was a member; O(log n) to find it and O(n) in the members after it to close the gap
+  export func remove(editable self, item: T) Bool where T implements Comparable {
+    let at = self.lowerBound(item)
+    match self.items.get(at) {
+      present(member) => {
+        if item < member {
+          return false
+        }
+      }
+      null => {
+        return false
+      }
+    }
+    let mut tail: List[T] = List.default()
+    SortedSet.moveItems(editable self.items, editable tail, Int.wrappingSub(Int.wrappingSub(self.items.count(), at), 1))
+    discard self.items.pop()
+    SortedSet.moveItems(editable tail, editable self.items, tail.count())
+    return true
+  }
+  // a read loan of the smallest member, null when empty; O(1)
+  export pure func first(self) (alias T from self)? => self.items.get(0)
+  // a read loan of the largest member, null when empty; O(1)
+  export pure func last(self) (alias T from self)? => self.items.get(Int.wrappingSub(self.items.count(), 1))
+  // a read loan of the member at index in ascending order, null outside [0, count); O(1)
+  export pure func get(self, index: Int) (alias T from self)? => self.items.get(index)
+  // the cursor of the sorted list, so a `for` visits the members from the smallest to the largest; O(1) to make, O(1) per step
+  export pure func iterate(self) ListCursor[T] from self => self.items.iterate()
+  // calls visit with a read loan of every member in ascending order; the callback may have effects, so `each` is not pure; O(n) plus the callback per member
+  export func each(self, visit: editable fn mut(T) Void) {
+    for item in self {
+      visit(item)
+    }
+  }
+  // step gets a read loan of the accumulator and a member, once per member in ascending order, and returns the next accumulator; O(n) plus the callback per member
+  export pure func fold[A](self, initial: owned A, step: pure fn(A, T) A) A {
+    let mut acc = move initial
+    for item in self {
+      acc = step(acc, item)
+    }
+    return move acc
+  }
+  // whether holds is true for some member; stops at the first one that passes; O(n) plus the callback
+  export pure func any(self, holds: pure fn(T) Bool) Bool {
+    for item in self {
+      if holds(item) {
+        return true
+      }
+    }
+    return false
+  }
+  // whether holds is true for every member; stops at the first one that fails; O(n) plus the callback
+  export pure func all(self, holds: pure fn(T) Bool) Bool {
+    for item in self {
+      if !holds(item) {
+        return false
+      }
+    }
+    return true
+  }
+  // a read loan of the smallest member holds is true for, null when none does; O(n) plus the callback
+  export pure func find(self, holds: pure fn(T) Bool) (alias T from self)? => self.items.find(holds)
+  // a list of copies of the members in ascending order; allocates; O(n)
+  export pure func toList(self) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    for item in self {
+      out.push(copy item)
+    }
+    return move out
+  }
+  // a list of copies of the members from low up to, but not including, high, in ascending order; empty when high is not above low; allocates; O(log n) to find low and O(k) for the k members copied
+  export pure func between(self, low: T, high: T) List[T] where T implements Comparable, T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = self.lowerBound(low)
+    let mut going = true
+    while going {
+      match self.items.get(i) {
+        present(member) => {
+          if member < high {
+            out.push(copy member)
+            i = Int.wrappingAdd(i, 1)
+          } else {
+            going = false
+          }
+        }
+        null => {
+          going = false
+        }
+      }
+    }
+    return move out
+  }
+  // copies of the members of self and of other, each once, in ascending order; allocates; O(n + m)
+  export pure func union(self, other: SortedSet[T]) SortedSet[T] where T implements Comparable, T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = 0
+    let mut j = 0
+    while i < self.items.count() || j < other.items.count() {
+      match self.items.get(i) {
+        present(a) => {
+          match other.items.get(j) {
+            present(b) => {
+              if a < b {
+                out.push(copy a)
+                i = Int.wrappingAdd(i, 1)
+              } else if b < a {
+                out.push(copy b)
+                j = Int.wrappingAdd(j, 1)
+              } else {
+                out.push(copy a)
+                i = Int.wrappingAdd(i, 1)
+                j = Int.wrappingAdd(j, 1)
+              }
+            }
+            null => {
+              out.push(copy a)
+              i = Int.wrappingAdd(i, 1)
+            }
+          }
+        }
+        null => {
+          match other.items.get(j) {
+            present(b) => {
+              out.push(copy b)
+              j = Int.wrappingAdd(j, 1)
+            }
+            null => {
+            }
+          }
+        }
+      }
+    }
+    return SortedSet(items: move out)
+  }
+  // copies of the members both self and other hold, in ascending order; allocates; O(n + m)
+  export pure func intersection(self, other: SortedSet[T]) SortedSet[T] where T implements Comparable, T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = 0
+    let mut j = 0
+    while i < self.items.count() && j < other.items.count() {
+      match self.items.get(i) {
+        present(a) => {
+          match other.items.get(j) {
+            present(b) => {
+              if a < b {
+                i = Int.wrappingAdd(i, 1)
+              } else if b < a {
+                j = Int.wrappingAdd(j, 1)
+              } else {
+                out.push(copy a)
+                i = Int.wrappingAdd(i, 1)
+                j = Int.wrappingAdd(j, 1)
+              }
+            }
+            null => {
+            }
+          }
+        }
+        null => {
+        }
+      }
+    }
+    return SortedSet(items: move out)
+  }
+  // copies of the members of self that other lacks, in ascending order; allocates; O(n + m)
+  export pure func difference(self, other: SortedSet[T]) SortedSet[T] where T implements Comparable, T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut j = 0
+    for a in self {
+      let mut keep = true
+      let mut settled = false
+      while !settled {
+        match other.items.get(j) {
+          present(b) => {
+            if b < a {
+              j = Int.wrappingAdd(j, 1)
+            } else {
+              settled = true
+              if !(a < b) {
+                keep = false
+              }
+            }
+          }
+          null => {
+            settled = true
+          }
+        }
+      }
+      if keep {
+        out.push(copy a)
+      }
+    }
+    return SortedSet(items: move out)
+  }
+}

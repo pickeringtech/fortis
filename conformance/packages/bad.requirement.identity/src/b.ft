@@ -1,0 +1,3 @@
+// accept
+// D-67: the interface `Svc` requires (src/lib.ft).
+export interface Required {}

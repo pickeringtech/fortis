@@ -1,0 +1,44 @@
+// reject: E-TYP-070 (at the marked lines)
+// covers: LANG-06-13
+// An `implement` block is its target listing the interface with the block's methods (9.5, X-180), so a method the
+// target already has (its own, or one its mixin provides), or one another block for it adds, is a member declared twice.
+export interface Labelled {
+  pure func label(self) String
+}
+
+export interface Titled {
+  pure func label(self) String
+}
+
+export class Tag {
+  export name: String
+  export pure func label(self) String => "own"
+}
+
+export class Note {
+  export text: String
+}
+
+implement Labelled for Tag {
+  pure func label(self) String => "block"     // reject: E-TYP-070 — Tag already has `label`
+}
+
+implement Labelled for Note {
+  pure func label(self) String => "first"
+}
+
+implement Titled for Note {
+  pure func label(self) String => "second"    // reject: E-TYP-070 — the block for Labelled added `label`
+}
+
+export mixin Titling {
+  export pure func label(self) String => "mixed"
+}
+
+export class Card with Titling {
+  export text: String
+}
+
+implement Labelled for Card {
+  pure func label(self) String => "block"     // reject: E-TYP-070 — the mixin Titling provides `label`
+}

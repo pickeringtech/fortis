@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """The Fortis command (reference toolchain, Python).
 
+  fortis --version                print the toolchain version
   fortis check FILE.ft            static checks: syntax, names, types, ownership, obligations, effects, contracts, aspects
   fortis run   FILE.ft [args...]  check, then run `main` on the definitional interpreter
   fortis test  FILE.ft            check, then run the module's test and property declarations; a file that is a
@@ -8,11 +9,14 @@
                                   tested as that package's module: its imports resolve, and only its tests run
   fortis check|run|test DIR       the same for a package directory (project.yaml): run starts its `entry` module;
                                   `run DIR --inventory` also writes the runtime-inventory record (tasks, pools) to stderr
-  fortis build FILE.ft|DIR [--out OUT]   check, then build a native executable with the production compiler
-                                  (`fortisc build`: validated typed IR lowered to safe Rust; OUT defaults to build/bin/NAME)
+  fortis build FILE.ft|DIR [--out OUT] [--emit-only]
+                                  check, then build a native executable with the production compiler
+                                  (`fortisc build`: validated typed IR lowered to safe Rust; OUT defaults to
+                                  build/bin/NAME; `--emit-only` writes the generated crate where the build would
+                                  compile it, prints its directory, and builds nothing)
   fortis view [OPTIONS] PATH...   read Fortis source: files, directories, globs; --decls, --symbol NAME, --query Q,
                                   --queries, --json (the production tool; never writes)
-  fortis fmt [--check|--write] [--no-migrate] PATH...   the canonical layout, after the v0.0.2 migrations (X-345); refuses rather than change a program
+  fortis fmt [--check|--write] [--no-migrate] PATH...   the canonical layout, after the release migrations (X-345, X-677); refuses rather than change a program
   fortis skill install [--agent claude|codex|grok|all] [--scope project|user]
                                   install the fortis-code skill (skills/fortis-code) into agent CLIs
 
@@ -344,6 +348,12 @@ def skill(rest):
 
 
 def main(argv):
+    if argv == ["--version"]:
+        import tomllib
+        with open(os.path.join(ROOT, "compiler", "Cargo.toml"), "rb") as f:
+            version = tomllib.load(f)["workspace"]["package"]["version"]
+        print(f"fortis {version}")
+        return 0
     if not argv or argv[0] in ("-h", "--help"):
         print(__doc__.strip())
         return 0

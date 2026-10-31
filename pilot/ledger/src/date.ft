@@ -62,12 +62,12 @@ export trivial class Date derive Equatable, Hashable {
     if year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 {
       fail DateRange(year: year, month, day)
     }
-    let y = Int<1..9999>.validate(year) or fail
-    let m = Int<1..12>.validate(month) or fail
+    let y = year as Int<1..9999> or fail
+    let m = month as Int<1..12> or fail
     if day > daysInMonth(y, m) {
       fail DateRange(year: year, month, day)
     }
-    let d = Int<1..31>.validate(day) or fail
+    let d = day as Int<1..31> or fail
     return Date(year: y, month: m, day: d)
   }
 

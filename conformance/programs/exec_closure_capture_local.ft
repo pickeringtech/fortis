@@ -1,0 +1,16 @@
+// execute: 5|5
+// requires: runtime
+// covers: LANG-07-06, LANG-08-02
+import fortis.host { Console }
+func main(console: Console) {
+  let s = "hello" as String
+  let f = fn[alias s]() Int => s.byteCount()
+  let pair = (move f, 1)
+  console.print("${(pair.0)()}")
+  let g = fn[alias s]() Int => s.byteCount()
+  let result = Outcome.success(move g)
+  match move result {
+    success(work) => console.print("${work()}")
+    failure(problem) => { report problem }
+  }
+}

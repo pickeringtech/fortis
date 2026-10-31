@@ -1,0 +1,12 @@
+// execute: 65 0 65 66 true
+// requires: runtime
+// covers: LANG-06-01
+// D-560: byte getters retain Byte, including an explicitly typed binding and a literal fallback.
+import fortis.host { Console }
+func read(value: Byte) Byte { return value }
+func main(console: Console) {
+  let bytes = b"A"
+  let first: Byte = bytes.get(0) ?? 0
+  let missing: Byte = bytes.get(1) ?? 0
+  console.print("${first} ${missing} ${read(bytes.get(0) ?? 0)} ${Int.wrappingAdd(1, bytes.get(0) ?? 0)} ${first == 65}")
+}

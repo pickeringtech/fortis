@@ -1,0 +1,9 @@
+{
+  "verdict": "reject",
+  "codes": [
+    "E-NAM-001"
+  ],
+  "covers": [
+    "LANG-06-01"
+  ]
+}

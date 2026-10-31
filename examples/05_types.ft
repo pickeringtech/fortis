@@ -33,11 +33,9 @@ recovers func main(console: Console) {
   for s in shapes {
     console.print("${s.label()} has area ${s.area()}")
   }
-  let checked = Age.validate(42) catch e {
-    recover Age(0)
-  }
+  let checked = 42 as Age
   console.print("42 is a ${classify(checked)}")
-  match Age.validate(200) {
+  match 200 as Age {
     success(a) => console.print("accepted ${a}")
     failure(f) => {
       console.print("rejected 200")

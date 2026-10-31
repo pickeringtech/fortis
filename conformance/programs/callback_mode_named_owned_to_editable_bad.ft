@@ -1,0 +1,8 @@
+// reject: E-TYP-040
+// covers: LANG-08-04
+// D-541: callable parameter modes must match exactly.
+func use(f: pure fn(editable String) Int) {}
+pure func size(s: owned String) Int => s.byteCount()
+func exercise() {
+  use(size)
+}

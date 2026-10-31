@@ -1,0 +1,86 @@
+// accept
+// covers: LANG-06-16
+// 6.7 (X-576, X-577): the shapes a program gives the double-ended queue and the sorted set. A queue of resources needs
+// no `Copyable` to be filled, searched, folded and drained; a `peekFront` loan ends before the next change; a queue is
+// passed by read, by `editable` and by `move`, and returned; `tryEach` and `tryFold` are `try` methods handled on the
+// line; a generic function takes a `Deque[T]`; a sorted set holds text, numbers and a class that derives `Comparable`; and
+// the set operations return sets of their own.
+import fortis.collections { Deque, SortedSet }
+import fortis.host { Console }
+
+class Handle {
+  export guard: Mutex[Int]
+  export name: String
+}
+
+class Ticket derive Equatable, Comparable {
+  export priority: Int
+  export label: String
+}
+
+pure func depth[T](queue: Deque[T]) Int {
+  return queue.count()
+}
+
+func enqueue(queue: editable Deque[String], text: owned String) {
+  queue.pushBack(move text)
+}
+
+func firstOrNone(queue: Deque[String]) String {
+  let head = queue.peekFront() ?? "none"
+  return copy head
+}
+
+func drain(queue: owned Deque[Handle]) Int {
+  let mut q = move queue
+  let mut taken = 0
+  while !q.isEmpty() {
+    discard q.popFront()
+    taken = Int.wrappingAdd(taken, 1)
+  }
+  return taken
+}
+
+pure func named(queue: Deque[Handle], name: String) Bool {
+  return queue.any(fn[alias name](h: Handle) Bool => h.name == name)
+}
+
+func lengths(queue: Deque[String]) Int {
+  return queue.fold(0, fn(sum, text) => Int.wrappingAdd(sum, text.byteCount()))
+}
+
+try func parseAll(queue: Deque[String]) Deque[Int] {
+  let numbers = queue.tryMap(fn(text) => text as Int) or fail
+  return numbers
+}
+
+func tickets() SortedSet[Ticket] {
+  let mut set: SortedSet[Ticket] = SortedSet.default()
+  discard set.add(Ticket(priority: 2, label: "write"))
+  discard set.add(Ticket(priority: 1, label: "plan"))
+  return set
+}
+
+func merged(a: SortedSet[Int], b: SortedSet[Int]) SortedSet[Int] {
+  let both = a.union(b)
+  let common = a.intersection(b)
+  return both.difference(common)
+}
+
+func main(console: Console) {
+  let mut names: Deque[String] = Deque.default()
+  enqueue(editable names, "ada" as String)
+  enqueue(editable names, "bo" as String)
+  console.print("${depth(names)} ${firstOrNone(names)} ${lengths(names)}")
+  let mut handles: Deque[Handle] = Deque.default()
+  handles.pushBack(Handle(guard: Mutex.create(0), name: "db" as String))
+  console.print("${named(handles, "db")} ${named(handles, "cache")} ${handles.find(fn(h: Handle) Bool => true)?.name ?? "none"}")
+  console.print("${drain(move handles)}")
+  let first = names.popFront()
+  console.print("${first ?? "none"} ${names.count()}")
+  let pending = tickets()
+  console.print("${pending.first()?.label ?? "none"} ${pending.last()?.label ?? "none"}")
+  let words = SortedSet.fromList(List.of("pear" as String, "fig" as String))
+  console.print("${words.count()} ${words.contains("fig")} ${words.between("a", "g").count()}")
+  console.print("${merged(SortedSet.fromList(List.of(1, 2, 3)), SortedSet.fromList(List.of(3, 4))).count()}")
+}

@@ -21,7 +21,7 @@ class Token {
 }
 
 func make(console: Shared[Console], label: StringView) Token {
-  return Token(label: String.from(label), console: console.retain())
+  return Token(label: label as String, console: console.retain())
 }
 
 // a copyable class: a copy of a tuple holding a loan copies the loan, and makes no value to destroy
@@ -34,7 +34,7 @@ class Note {
 
 func copied(console: Shared[Console]) {
   let mut notes: List[Note] = List.default()
-  notes.push(Note(label: String.from("n")))
+  notes.push(Note(label: "n" as String))
   {
     let pair = (notes.get(0), 1)
     let c = copy pair

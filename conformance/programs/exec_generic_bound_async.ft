@@ -1,0 +1,55 @@
+// execute: noted|5|5|5
+// requires: runtime
+// covers: LANG-06-12
+// An async method of an interface, called through a `where` bound and through `dynamic`, and a generic function
+// woven with an aspect, which keeps its bound (D-82): natively an async trait method returns a boxed future, so the
+// trait stays usable as `dyn`.
+import fortis.host { Console }
+
+export interface Fetcher {
+  async func fetch(self, extra: Int) Int
+}
+
+export class Source implements Fetcher {
+  export base: Int
+  async func fetch(self, extra: Int) Int {
+    return Int.wrappingAdd(self.base, extra)
+  }
+}
+
+async func viaBound[T](x: T) Int where T implements Fetcher {
+  return await x.fetch(2)
+}
+
+async func viaDynamic(x: dynamic Fetcher) Int {
+  return await x.fetch(2)
+}
+
+export aspect noted(label: StringView) {
+  needs console: Console
+  before {
+    console.print(label)
+  }
+}
+
+export interface Weighed {
+  pure func weight(self) Int
+}
+
+export class Brick implements Weighed {
+  export w: Int
+  pure func weight(self) Int => self.w
+}
+
+@noted("noted")
+func weigh[T](console: Console, x: T) Int where T implements Weighed {
+  return x.weight()
+}
+
+async func main(console: Console) {
+  let s = Source(base: 3)
+  let w = weigh(console, Brick(w: 5))
+  let b = await viaBound(s)
+  let c = await viaDynamic(s)
+  console.print("${w}|${b}|${c}")
+}

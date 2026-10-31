@@ -181,15 +181,15 @@ function it came from. There is no `or die`: a program that wants to stop on a f
 ## The standard modules
 
 The core package `fortis` provides these modules; everything else under `fortis.…` belongs to a kit (LR 15,
-LR 4.3). The [core library](../agent/library.md) lists every operation they export, with its contract. The text
-and collection operations are few: there is no line splitting, trimming, searching or number parsing yet, and a
-program writes those itself (D-58):
+LR 4.3). The [core library](library.md) lists every operation they export, with its contract. In v0.1, `String` and `StringView` provide `lines`, `trim`, `split`, search, replacement, ASCII case mapping,
+`repeat` and `String.join`; parsing uses `as` (LR 6.6, LR 6.13). Lists support loops and functional callbacks,
+with `Deque` and `SortedSet` available by import (LR 6.7):
 
 | Module | Provides |
 |---|---|
 | `fortis.prelude` | the core types, the optional and outcome operators, the built-in interfaces; imported into every module |
-| `fortis.text` | `Builder`, `Scalar`, grapheme counts and `Text.words`; LR 6.6 also places normalisation and case mapping here, which the library does not have yet (D-58) |
-| `fortis.collections` | `sorted`, for a list of `Int` (LR 6.7) |
+| `fortis.text` | `Builder`, `Scalar`, grapheme counts and `Text.words`; LR 6.6 also places normalisation and full Unicode case mapping here, which the library does not have yet (D-58) |
+| `fortis.collections` | `sorted`, `Deque[T]` and `SortedSet[T]` (LR 6.7) |
 | `fortis.numeric` | `abs`, `min` and `max`; LR 6.5 places transcendental functions in `fortis.numeric.math`, which does not exist yet (D-58) |
 | `fortis.time` | `Duration` and `Timestamp` operations |
 | `fortis.money` | `Money`: a `Decimal` amount with a run-time `Currency`; arithmetic fails on a currency mismatch |

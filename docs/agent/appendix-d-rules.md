@@ -35,7 +35,7 @@ The LR rule text is authoritative; the statements here are condensed (LR 0).
 | LANG-05-09 | LR 5.8 | named after positional; each parameter once; names are exported signature; a pun `x` is `x: x` | [05](05-statements.md) |
 | LANG-06-01 | LR 6.1, LR 6.9 | nominal identity survives calls, storage, serialisation, FFI | [06](06-types.md) |
 | LANG-06-02 | LR 6.3 | structural refinement subtyping; interval domain exactly as listed | [06](06-types.md), [proofs](06-proofs.md) |
-| LANG-06-03 | LR 6.3 | untrusted values pass `validate` before holding a refined or nominal type | [06](06-types.md) |
+| LANG-06-03 | LR 6.3 | untrusted values pass the checked `as` conversion before holding a refined or nominal type | [06](06-types.md) |
 | LANG-06-04 | LR 6.4, LR 6.5 | integer, `Decimal`, listed float operations bit-exact across VM and native; a checked operator fails as its function, at the same operation | [06](06-types.md) |
 | LANG-06-05 | LR 6.5 | float operators total, strict IEEE; float refinements rejected | [06](06-types.md) |
 | LANG-06-06 | LR 6.7 | `Map`/`Set` iteration deterministic per build | [06](06-types.md) |
@@ -44,6 +44,11 @@ The LR rule text is authoritative; the statements here are condensed (LR 0).
 | LANG-06-09 | LR 6.12 | linear values consumed exactly once | [06](06-types.md) |
 | LANG-06-10 | LR 6.10, LR 9.5 | coherence: implementation in the package of the interface or the type; no overlap | [06](06-types.md) |
 | LANG-06-11 | LR 6.10 | type arguments unfixed by arguments and expected type: rejected | [06](06-types.md) |
+| LANG-06-12 | LR 6.10 | Associated calls on a type parameter are rejected; methods of its interface bounds are callable. | [06](06-types.md) |
+| LANG-06-13 | LR 9.5 | An implement block targets a non-generic program class or enum. | [06](06-types.md) |
+| LANG-06-14 | LR 6.13 | Each as resolves to one conversion; identity is rejected and a newtype unwrap stays in its declaring module. | [06](06-types.md) |
+| LANG-06-15 | LR 6.13 | Conversions are declared or explicitly derived, with one conversion per pair and the stated ownership mode. | [06](06-types.md) |
+| LANG-06-16 | LR 6.7, LR 6.8, LR 10.2 | Collection and optional/outcome callbacks obey their signature modes, effects and copying bounds on every backend. | [06](06-types.md) |
 
 ## LR 7-9
 
@@ -59,15 +64,16 @@ The LR rule text is authoritative; the statements here are condensed (LR 0).
 | LANG-07-08 | LR 7.8 | sharing explicit (`retain`); `copy` of `Shared` rejected | [07](07-ownership.md) |
 | LANG-07-09 | LR 7.10 | unsupported shapes rejected, never lowered with `unsafe` or erasure | [C](appendix-c-lowering.md) |
 | LANG-08-01 | LR 8.1 | parameter and success types stated (a head may leave out `Void`; a lambda's as 8.2 allows); modifiers in 8.1 order | [08](08-functions.md) |
-| LANG-08-02 | LR 8.2, LR 8.3 | lambdas list captures (no brackets when none) and declare kind; stronger-kind body rejected | [08](08-functions.md) |
-| LANG-08-03 | LR 8.3 | names outside the capture list inaccessible | [08](08-functions.md) |
+| LANG-08-02 | LR 8.2, LR 8.3 | Written captures and kind, except inferred captures and kind on directly loaned literals. | [08](08-functions.md) |
+| LANG-08-03 | LR 8.3 | Names outside the written or inferred capture list are inaccessible. | [08](08-functions.md) |
 | LANG-08-04 | LR 8.4 | callable assignability per 8.4; no boxing without `dynamic fn` | [08](08-functions.md) |
 | LANG-09-01 | LR 9.1 | no inheritance, runtime member lookup, reflection-based construction | [09](09-classes.md) |
 | LANG-09-02 | LR 9.2 | generated constructor only where every field is visible | [09](09-classes.md) |
 | LANG-09-03 | LR 9.5 | implementations never strengthen preconditions or weaken guarantees; coherence | [09](09-classes.md) |
-| LANG-09-04 | LR 9.6 | mixins require methods only, add no state; conflicts rejected | [09](09-classes.md) |
+| LANG-09-04 | LR 9.6 | Mixins require methods only; compatible signatures, bodies checked at each application, no state, no unresolved conflicts. | [09](09-classes.md) |
 | LANG-09-05 | LR 9.8 | closed-type `match` exhaustive without `otherwise`; each missing variant named; or-pattern alternatives count, bind nothing, take no guard | [09](09-classes.md) |
 | LANG-09-06 | LR 9.8 | pattern binding ownership per 9.8 | [09](09-classes.md) |
+| LANG-09-07 | LR 9.5 | `dynamic I` requires dynamic eligibility and an implementing source type. | [09](09-classes.md) |
 
 ## LR 10-14
 
@@ -84,7 +90,7 @@ The LR rule text is authoritative; the statements here are condensed (LR 0).
 | LANG-11-03 | LR 11.4 | `noalloc` against the whitelist for the target and telemetry plan | [11](11-effects.md), [C](appendix-c-lowering.md) |
 | LANG-11-04 | LR 11.3 | trusted summaries labelled `trusted`, never `proved` | [11](11-effects.md) |
 | LANG-11-05 | LR 11.3 | `async`/`try`/`recovers` written; only written `pure`/`noalloc` cross modules; weakening exported modifiers reported | [11](11-effects.md) |
-| LANG-11-06 | LR 11.5 | contracts are conjunctions of 11.5 elements; configuration adds none | [11](11-effects.md) |
+| LANG-11-06 | LR 11.5, LR 11.6 | Contracts contain only the listed elements; contradictions are rejected and capability clauses name Authority types. | [11](11-effects.md) |
 | LANG-11-07 | LR 11.6 | `io` (except `report` and the `log` statements) needs an `Authority`; only the entry `main` receives capabilities, as parameters, or creates them once with `Host.capabilities()` when it declares none; every other use of `Host.capabilities` and every reference to the entry `main` rejected | [11](11-effects.md) |
 | LANG-11-08 | LR 11.5, LR 11.8 | contracts in modifier position, no arguments; `@` for aspects only | [11](11-effects.md) |
 | LANG-11-09 | LR 11.8 | aspects have only the 11.8 parts, elaborate before checking, pass every check | [11](11-effects.md) |
@@ -101,6 +107,7 @@ The LR rule text is authoritative; the statements here are condensed (LR 0).
 | LANG-14-01 | LR 14 | table rows bound with `as` | [14](14-tests.md) |
 | LANG-14-02 | LR 14 | `expect` takes `Bool`, records typed evidence | [14](14-tests.md) |
 | LANG-14-03 | LR 14, LR 6.4 | in `test`/`property` bodies a fallible call nothing else consumes (`or`, `catch`, `match`, a `let` later consumed as an outcome or annotated `Outcome[…]`), and unproved `Int` arithmetic, behave as followed by `or fail`; outside them nothing changes | [14](14-tests.md) |
+| LANG-14-04 | LR 14 | `expect` is valid only in test, property and cases bodies. | [14](14-tests.md) |
 
 ## Old IDs (FSPEC-0.1)
 

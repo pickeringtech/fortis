@@ -83,13 +83,17 @@ pub fn members_of(node: N) -> BTreeSet<String> {
             }
         }
     }
-    // `derive Default` generates the associated `default()` (6.10, 9.2; D-170)
+    // Derivations generate associated entry points; the declaration checker judges their applicability and
+    // identity (6.10, 6.13). Both conversion spellings retain `from` for v0.1 compatibility (X-552).
     let kids = node.kids();
     for (i, k) in kids.iter().enumerate() {
         if k.text_is("derive") {
             if let Some(list) = kids.get(i + 1).and_then(|c| c.node()) {
                 if list.direct_tokens().iter().any(|t| t.text == "Default") {
                     out.insert("default".into());
+                }
+                if list.direct_tokens().iter().any(|t| t.text == "From" || t.text == "convert") {
+                    out.insert("from".into());
                 }
             }
         }

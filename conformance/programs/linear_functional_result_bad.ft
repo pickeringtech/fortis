@@ -1,0 +1,49 @@
+// reject: E-OBL-003
+// covers: LANG-10-01, LANG-10-02
+// D-596: short-circuiting may drop already produced linear values.
+recovers func tryMap(xs: List[Int]) {
+  let result = xs.tryMap(fn(n) => Outcome.success(Outcome.success(n)))
+  match move result {
+    success(items) => { move items.consumeEach(fn(item) { discard item or recover 0 }) }
+    failure(f) => { report f }
+  }
+}
+recovers func nestedMap() {
+  let r = Outcome.success(Outcome.success(1))
+  discard move r.map(fn(x) => 1) or recover 0
+}
+recovers func nestedCollect(xs: owned List[Outcome[Outcome[Int]]]) {
+  let result = Outcome.collect(move xs)
+  match move result {
+    success(items) => { move items.consumeEach(fn(item) { discard item or recover 0 }) }
+    failure(f) => { report f }
+  }
+}
+func fold(xs: List[Int], initial: owned Outcome[Int]) {
+  let result = xs.fold(move initial, fn(acc, n) => Outcome.success(n))
+  match move result { success(n) => {}
+    failure(f) => { report f } }
+}
+
+try func wrapped[U](xs: List[Int], f: pure fn(Int) Outcome[U]) List[U] => xs.tryMap(f) or fail
+recovers func wrapping(xs: List[Int]) {
+  let result = wrapped(xs, fn(n) => Outcome.success(Outcome.success(n)))
+  match move result {
+    success(items) => { move items.consumeEach(fn(item) { discard item or recover 0 }) }
+    failure(f) => { report f }
+  }
+}
+
+pure func hidden[U](xs: List[Int], f: pure fn(Int) Outcome[U]) Outcome[List[U]] => xs.tryMap(f)
+recovers func hiding(xs: List[Int]) {
+  let result = hidden(xs, fn(n) => Outcome.success(Outcome.success(n)))
+  match move result {
+    success(items) => { move items.consumeEach(fn(item) { discard item or recover 0 }) }
+    failure(f) => { report f }
+  }
+}
+
+recovers func tryFold(xs: List[Int], initial: owned Outcome[Int]) {
+  let result = xs.tryFold(move initial, fn(acc, n) => Outcome.success(Outcome.success(n))) or recover Outcome.success(0)
+  discard result or recover 0
+}

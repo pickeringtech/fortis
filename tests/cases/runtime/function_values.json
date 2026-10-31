@@ -1,0 +1,164 @@
+[
+  {
+    "name": "alias",
+    "input": {
+      "source": "// execute: 2\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nimport fortis.text as words\nfunc main(console: Console) {\n  let f = words.graphemes\n  console.print(\"${f(\"aé\")}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "array",
+    "input": {
+      "source": "// execute: 2\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\n\nfunc main(console: Console) {\n  let make = Array[Int, 2].filled\n  let a = make(1)\n  let n = a.get(0) ?? 0\n  console.print(\"${Int.wrappingAdd(n, 1)}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "array_lambda",
+    "input": {
+      "source": "// execute: 2\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\n\nfunc main(console: Console) {\n  let f = fn(n: Int) Array[Int, 2] => Array.filled(n)\n  let a = f(1)\n  console.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "braced",
+    "input": {
+      "source": "// execute: 2\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nimport fortis.text { graphemes }\nfunc main(console: Console) {\n  let f = graphemes\n  console.print(\"${f(\"aé\")}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "class",
+    "input": {
+      "source": "// execute: 1 1\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nclass Box[T] { export func size(value: T) Int => 1 }\nfunc main(console: Console) {\n  let f = Box[Int].size\n  let g = fn(n: Int) Int => Box.size(n)\n  console.print(\"${f(42)} ${g(42)}\")\n}\n"
+    },
+    "expect": [
+      "1 1"
+    ]
+  },
+  {
+    "name": "constructors",
+    "input": {
+      "source": "// execute: 2 3\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nclass Box { export n: Int }\ntype Count = Int\nfunc main(console: Console) {\n  let make = fn(n: Int) Box => Box(n)\n  let wrap = fn(n: Int) Count => Count(n)\n  let b = make(2)\n  console.print(\"${b.n} ${wrap(3) as Int}\")\n}\n"
+    },
+    "expect": [
+      "2 3"
+    ]
+  },
+  {
+    "name": "enum_constructor",
+    "input": {
+      "source": "// execute: 1 2 3\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nenum Choice[T] { Some(value: T) }\nfunc value(c: Choice[Int]) Int => match c { Some(n) => n }\nfunc main(console: Console) {\n  let a: pure fn(Int) Choice[Int] = Choice.Some\n  let b: pure fn(Int) Choice[Int] = Choice[Int].Some\n  let c: pure fn(Int) Choice[Int] = Some\n  console.print(\"${value(a(1))} ${value(b(2))} ${value(c(3))}\")\n}\n"
+    },
+    "expect": [
+      "1 2 3"
+    ]
+  },
+  {
+    "name": "free",
+    "input": {
+      "source": "// execute: 3\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nfunc size(n: Int) Int => n\nfunc main(console: Console) {\n  let f = size\n  console.print(\"${f(3)}\")\n}\n"
+    },
+    "expect": [
+      "3"
+    ]
+  },
+  {
+    "name": "generic",
+    "input": {
+      "source": "// execute: 1 1\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nfunc size[T](value: T) Int => 1\nclass Box { export func size[T](value: T) Int => 1 }\nfunc main(console: Console) {\n  let f = fn(n: Int) Int => size(n)\n  let g = fn(n: Int) Int => Box.size(n)\n  console.print(\"${f(42)} ${g(42)}\")\n}\n"
+    },
+    "expect": [
+      "1 1"
+    ]
+  },
+  {
+    "name": "method",
+    "input": {
+      "source": "// execute: 1\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nclass Box { export func size(self) Int => 1 }\nfunc main(console: Console) {\n  let b = Box()\n  let f = fn[alias b]() Int => b.size()\n  console.print(\"${f()}\")\n}\n"
+    },
+    "expect": [
+      "1"
+    ]
+  },
+  {
+    "name": "mode",
+    "input": {
+      "source": "// execute: 3\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nfunc size(s: owned String) Int => s.scalarCount()\nfunc main(console: Console) {\n  let f: fn(owned String) Int = size\n  console.print(\"${f(\"abc\" as String)}\")\n}\n"
+    },
+    "expect": [
+      "3"
+    ]
+  },
+  {
+    "name": "module",
+    "input": {
+      "source": "// execute: 2\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nimport fortis.text\nfunc main(console: Console) {\n  let f = text.graphemes\n  console.print(\"${f(\"aé\")}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "newtype_method",
+    "input": {
+      "source": "// execute: 2\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\ntype Bag = List[Int]\nfunc main(console: Console) {\n  let bag = Bag(List.of(1, 2))\n  let f = fn[alias bag]() Int => bag.count()\n  console.print(\"${f()}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "constrained",
+    "input": {
+      "source": "// execute: 1\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nfunc size[T](value: T) Int where T implements Copyable => 1\nfunc main(console: Console) {\n  let f = fn(n: Int) Int => size(n)\n  console.print(\"${f(42)}\")\n}\n"
+    },
+    "expect": [
+      "1"
+    ]
+  },
+  {
+    "name": "owned_intrinsic",
+    "input": {
+      "source": "// execute: 3\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\n\nfunc main(console: Console) {\nlet make = Shared[String].create\nlet s = make(\"abc\" as String)\nconsole.print(\"${s.scalarCount()}\")\n}\n"
+    },
+    "expect": [
+      "3"
+    ]
+  },
+  {
+    "name": "default",
+    "input": {
+      "source": "// execute: 7\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nclass Box[T] derive Default { export value: Int = 7 }\nfunc main(console: Console) {\nlet make = Box[Int].default\nlet b = make()\nconsole.print(\"${b.value}\")\n}\n"
+    },
+    "expect": [
+      "7"
+    ]
+  },
+  {
+    "name": "interface_methods",
+    "input": {
+      "source": "// execute: 7 7\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\ninterface I { func size(self) Int }\nclass Box implements I { export func size(self) Int => 7 }\nfunc dynamicSize(x: dynamic I) Int {\n let f = fn[alias x]() Int => x.size()\n return f()\n}\nfunc parameterSize[T](x: T) Int where T implements I {\n let f = fn[alias x]() Int => x.size()\n return f()\n}\nfunc main(console: Console) {\n let b = Box()\n console.print(\"${dynamicSize(b)} ${parameterSize(b)}\")\n}\n"
+    },
+    "expect": [
+      "7 7"
+    ]
+  },
+  {
+    "name": "context",
+    "input": {
+      "source": "// execute: 1 1 2 4\n// requires: runtime\n// covers: LANG-08-04\nimport fortis.host { Console }\nimport fortis.text as words\nfunc size[T](value: T) Int => 1\nfunc identity(n: Int) Int => n\nclass Box[T] { export func size(value: T) Int => 1 }\nfunc main(console: Console) {\n let f: fn(Int) Int = size\n let g: fn(Int) Int = Box.size\n let h = alias words.graphemes\n let i = move identity\n console.print(\"${f(1)} ${g(1)} ${h(\"aé\")} ${i(4)}\")\n}\n"
+    },
+    "expect": [
+      "1 1 2 4"
+    ]
+  }
+]

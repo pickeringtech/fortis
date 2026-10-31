@@ -1,0 +1,35 @@
+// execute: 3 true|3 true|3|4|4|6
+// requires: runtime
+// covers: LANG-06-01, LANG-06-02, LANG-06-08
+import fortis.host { Console }
+func pair(value: (Int<0..3>, Bool)) (Int, Bool) { return value }
+func recordValue(value: { count: Int<0..3>, flag: Bool }) { count: Int, flag: Bool } { return value }
+func optional(value: Int<0..3>?) Int? { return value }
+func bound(x: Int<0..9>) Int<1..3> {
+  if ((x >= 1) && (x < 4)) { return x }
+  return 1
+}
+func choose(x: Int<0..9>) Int<0..4> {
+  return if (x < 4) { give x } else { give 4 }
+}
+func chooseMatch(x: Int<0..9>) Int<0..4> {
+  return match x { 0..<4 => x
+    _ => 4 }
+}
+class Item {
+  const first = 1
+  const second = 2
+  value: Int
+  func total(self) Int { return Int.saturatingAdd(self.value, 3) }
+}
+func main(console: Console) {
+  let p = pair((3, true))
+  console.print("${p.0} ${p.1}")
+  let r = recordValue({ count: 3, flag: true })
+  console.print("${r.count} ${r.flag}")
+  console.print("${optional(bound(3)) ?? 0}")
+  console.print("${choose(9)}")
+  console.print("${chooseMatch(8)}")
+  let item = Item(value: 3)
+  console.print("${item.total()}")
+}

@@ -1,4 +1,4 @@
-// reject: E-OWN-002 (at the marked lines)
+// reject: E-OWN-002, E-OWN-053 (at the marked lines)
 // covers: LANG-07-01, LANG-07-08
 // D-341, 6.11, 7.5: a loan of a value that is not Copyable has no owned copy, so it is E-OWN-002 wherever an owned
 // value is expected: a return, an expression body, an annotated binding, an assignment, an `owned` argument, a
@@ -69,7 +69,7 @@ func stored(xs: List[Shared[Item]]) Holder {
 
 func pushed(xs: List[Shared[Item]]) {
   let mut ys: List[Shared[Item]?] = List.default()
-  ys.push(xs.get(0))                                // reject: E-OWN-002 — a pushed item
+  ys.push(xs.get(0))                                // reject: E-OWN-002, E-OWN-053 — a pushed item
 }
 
 func held(xs: List[Shared[Item]]) Shared[Item]? {

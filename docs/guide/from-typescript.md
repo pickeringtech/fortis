@@ -3,7 +3,7 @@
 <!-- covers: LR 1 -->
 *Human mode. Source of truth: the LR; each note cites the section that states the rule.*
 
-> Preview: newtypes (LR 6.9) arrive in v0.1 and async with `join` (LR 12.3, 12.5) in v0.3; the examples under "Types are nominal" and "Promises are futures, and concurrency is scoped" are checked today. The rest of these notes is in v0.0.2.
+> Preview: async with join (LR 12.3, LR 12.5) arrives in v0.3. Newtypes (LR 6.9) are in v0.1.
 
 TypeScript adds static types to a dynamic language and leaves the runtime alone. Fortis is statically checked
 and compiled all the way down: the checker's view is the program's behaviour, there is no `any`, and a type can
@@ -230,11 +230,12 @@ func main(console: Console) {
 Leaving a variant out is an error naming it (`E-MAT-001`), and a catch-all is not allowed as the last arm of a
 match over an enum, so adding a variant finds every place that must handle it (LR 9.8).
 
-## Arrow functions list their captures
+## Callbacks infer captures; stored functions list them
 
-A TypeScript arrow function captures whatever it mentions. A Fortis lambda lists what it captures and how, and
-names its kind: `fn` reads, `fn mut` may change what it captured, `fn once` runs once (LR 8.2, LR 8.3). A lambda
-with no captures has no brackets.
+A TypeScript arrow function captures whatever it mentions. A Fortis lambda written directly into a
+non-`owned` callback argument also infers captures and kind. A stored or returned lambda lists what it
+captures and how, and names its kind: `fn` reads, `fn mut` may change what it captured, `fn once` runs once
+(LR 8.2, LR 8.3). A lambda with no captures has no brackets.
 
 ```fortis
 // accept

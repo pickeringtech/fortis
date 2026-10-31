@@ -1,0 +1,31 @@
+// execute: show a|missing|done|drop a
+// execute-trace: loans-end|drop Token
+// requires: runtime
+// covers: LANG-07-07, LANG-10-01
+// D-445, D-450: the same diverging fallback through an optional read parameter.
+import fortis.host { Console }
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) { self.console.print("drop ${self.label}") }
+}
+error Missing {
+  code: "demo.missing"
+}
+try func first(t: Token?) alias Token from t {
+  return t ?? fail Missing()
+}
+recovers func show(console: Shared[Console], t: Token?) {
+  let found = first(alias t) catch e {
+    console.print("missing")
+    return
+  }
+  console.print("show ${found.label}")
+}
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let t = Token(label: "a", console: console.retain())
+  show(console, t)
+  show(console, null)
+  console.print("done")
+}

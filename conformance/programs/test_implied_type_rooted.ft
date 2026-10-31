@@ -18,7 +18,7 @@ class Name derive Equatable {
     if text.byteCount() == 0 {
       fail Empty()
     }
-    return Name(text: String.from(text))
+    return Name(text: text as String)
   }
 }
 
@@ -27,7 +27,7 @@ func keep(c: owned Code) Code => move c
 func size(n: Name) Int => n.text.byteCount()
 
 test "a validated binding is its success value" {
-  let c = Code.validate(String.from("GBP"))
+  let c = Code.validate("GBP" as String)
   let d = keep(copy c)
   expect d == c
 }
@@ -35,16 +35,16 @@ test "a validated binding is its success value" {
 test "an associated function's result is its success value" {
   let n = Name.parse("ledger")
   expect size(copy n) == 6
-  expect n == Name(text: String.from("ledger"))
+  expect n == Name(text: "ledger" as String)
 }
 
 property "a property body has the implied or fail too" forall (k: Int<1..10>) {
-  let c = Code.validate(String.from("GBP"))
+  let c = Code.validate("GBP" as String)
   expect keep(copy c) == c
   expect k > 0
 }
 
 test "a failing validation fails the test" {
-  let c = Code.validate(String.from(""))
+  let c = Code.validate("" as String)
   expect keep(copy c) == c
 }

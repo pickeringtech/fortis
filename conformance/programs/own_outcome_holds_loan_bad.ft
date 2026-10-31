@@ -1,0 +1,54 @@
+// reject: E-OWN-010 (at the marked lines)
+// covers: LANG-07-05, LANG-10-01
+// D-394, 7.3: the `Outcome` of a `try` function whose result is a loan (`try func pick(xs: List[Token]) (alias Token
+// from xs)?`) holds what its success value holds, so a binding that keeps the outcome keeps the loan until the end of
+// its block, as a binding of the optional alone does. Both checkers looked inside an optional, a tuple and a record
+// only, so a push to the list while a kept outcome still held the loan was accepted: the interpreter and the VM then
+// read the element through the outcome, and native code refused the program.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func pick(xs: List[Token], c: Bool) (alias Token from xs)? {
+  if c {
+    return xs.get(0)
+  }
+  fail Missing()
+}
+
+recovers func ownerChanges(console: Shared[Console]) {
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "x"))
+  let o = pick(alias xs, true)
+  xs.push(make(console, "y"))                                             // reject: E-OWN-010 — o holds the loan inside the outcome
+  match move o {
+    success(v) => {
+      console.print("v ${v?.label ?? "none"}")
+    }
+    failure(f) => {
+      report f
+      console.print("f")
+    }
+  }
+  console.print("end")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  ownerChanges(console)
+}

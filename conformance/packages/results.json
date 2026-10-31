@@ -15,7 +15,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "8842e42ccbc82a691eed94ff9cbbc8fc3976c5ce7ca3756dba9852311288952e",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -35,7 +35,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "f74c87a6486e1895a2def1aa70643a147e41f0336b1a1619fed21e56569e230a",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -54,7 +54,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "9f51d6a7f228fe89accba539e2166edc84aa55b9c19d4afd46f3ecf08a5f298d",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -74,7 +74,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "0125fa756e9b912080efb65a0794648a8408c53977436032fb5507afd518aca0",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -93,7 +93,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "74268dec729adadfa9a37b21bf88e5efde1dfed4e6d9067133635d8547cdb2d1",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -112,7 +112,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "476fca5138dab649c643924debca6cc2a746c5ec3974546f236d4720171c41b4",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -131,7 +131,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "7e67a019e28bd87e80a3339f9d113cbb0678e34824433592ee061b148a7775c0",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -150,8 +150,8 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
-      "sha256": "93b844272b8d8e0d5e1ae38c52401c5716a9ffb8f5446e981aa22a5ef87dd6de",
+      "commit": "1f5e39ce",
+      "sha256": "05d35c3b64e8db5f91894665c1e69c7f9bda3e51e117dc919e14e74c38603f93",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
       "observed": "accept",
@@ -169,8 +169,8 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
-      "sha256": "26bc90c116f3799873b67eaa6faa291361dd55cf3b32aab80383a0c091b820d2",
+      "commit": "1f5e39ce",
+      "sha256": "5fa90d743de7c9a3c5afb8984b136cae50df5582e30894842564c26caf318c85",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
       "observed": "accept",
@@ -188,7 +188,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "4dfc1a3c529a86cb7dfe3756a47d17e1847c777b6524ba6c2d48c92a5b042fbc",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -209,7 +209,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "9c7592e96e0010e2e27a97517973b5c607f65fd32cef2e2bdbac0707966a41f9",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -248,7 +248,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "e652b5fbbf0973edc5a0a4562c3e4f7606b8b30e6fb1f37967430cc51a815539",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-EFF-010 at caps.minter/src/lib.ft:5,caps.minter/src/lib.ft:6",
@@ -302,7 +302,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "d849a9197a199983e117544a8bdb40b86c5049e9e04662f7a26f40530a1ffb5a",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-EFF-010 at bad.caps.othermain/src/other.ft:4,bad.caps.othermain/src/other.ft:5",
@@ -357,7 +357,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "c367b8f77e0779701a5b9cf1ffb17ab54cae10a4167f79d59dcd84af4dc7eab9",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-FUN-011,E-NAM-001",
@@ -493,7 +493,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "7ae081b6c3993230e6f5e78c227648f1840e0635c4ed6d9e30b065eb1fa64410",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -533,7 +533,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "78bdfb506ed470b78858a7c12f3bb03c2e3fe71e0f415e1e611f6d736827b2dd",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-080 at bad.contract.import/src/app.ft:6",
@@ -571,7 +571,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "73be4afc35c0617bac98785af2ba5e084c2996dcfc4bf23de0f999e66ce735b1",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -610,7 +610,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "d4b9ec3ce5cc4d256e8197fa28d830757f95c5879a0fbc8c90061d410db186d9",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -652,7 +652,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "1a2bc35d4e639f021db53242deb796308fdc64defc1da6e18ed13982a63b83a6",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001,E-OWN-002,E-TYP-040 at bad.facts.core/src/use.ft:9,bad.facts.core/src/open.ft:5,bad.facts.core/src/shadow.ft:8",
@@ -700,7 +700,7 @@
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "function duplicate result has type FileSystem, expected FileSystem: FileSystem of fortis.host is not FileSystem of bad.facts.core@0.1.0/bad.facts.core.shadow",
+          "message": "function duplicate result has type host.FileSystem, expected bad.facts.core.shadow.FileSystem: host.FileSystem is not bad.facts.core.shadow.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.core/src/shadow.ft",
           "line": 8,
@@ -708,8 +708,8 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "FileSystem",
-            "actual_type": "FileSystem",
+            "expected_type": "bad.facts.core.shadow.FileSystem",
+            "actual_type": "host.FileSystem",
             "primary_span": "function duplicate result"
           }
         },
@@ -733,7 +733,7 @@
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "function duplicate result has type FileSystem, expected FileSystem: FileSystem of fortis.host is not FileSystem of bad.facts.core@0.1.0/bad.facts.core.use",
+          "message": "function duplicate result has type host.FileSystem, expected bad.facts.core.use.FileSystem: host.FileSystem is not bad.facts.core.use.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.core/src/use.ft",
           "line": 9,
@@ -741,8 +741,8 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "FileSystem",
-            "actual_type": "FileSystem",
+            "expected_type": "bad.facts.core.use.FileSystem",
+            "actual_type": "host.FileSystem",
             "primary_span": "function duplicate result"
           }
         }
@@ -763,7 +763,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "efab3b1249968f5748e4df2a73ab48712f0f0ba480a92b569823ad7c87a1b12e",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-040 at bad.facts.display/src/use.ft:11",
@@ -802,7 +802,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "c83836245f6d127d3b5388ae310e62aa45cf31294f6964ba7246d6fafde29e7e",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-OBL-001 at bad.facts.linear/src/use.ft:7",
@@ -841,7 +841,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "747569a2043ab7c2c0898f34041fa2147bfebb19118fc03ccb85bff049fa0096",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001,E-TYP-040 at bad.facts.member/src/use.ft:7,bad.facts.member/src/use.ft:8,bad.facts.member/src/use.ft:12",
@@ -915,7 +915,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "85127d0b8e34944862ff917486d553026f6a3f71748448077a77cd8146a056da",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-040 at bad.facts.nested/src/use.ft:13,bad.facts.nested/src/use.ft:14,bad.facts.nested/src/use.ft:15,bad.facts.nested/src/use.ft:16,bad.facts.nested/src/use.ft:17,bad.facts.nested/src/use.ft:18,bad.facts.nested/src/use.ft:19,bad.facts.nested/src/use.ft:20,bad.facts.nested/src/use.ft:21,bad.facts.nested/src/use.ft:22",
@@ -923,8 +923,40 @@
       "diagnostics": [
         {
           "class": "Type",
+          "code": "E-TYP-090",
+          "message": "Map[FileSystem, Int] needs a key that implements Hashable and Equatable; FileSystem does not (6.7)",
+          "rule": "LANG-06-06",
+          "file": "conformance/packages/bad.facts.nested/src/use.ft",
+          "line": 15,
+          "column": 1,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "Hashable and Equatable",
+            "actual_type": "FileSystem",
+            "primary_span": "Map[FileSystem, Int]"
+          }
+        },
+        {
+          "class": "Type",
+          "code": "E-TYP-090",
+          "message": "Set[FileSystem] needs a key that implements Hashable and Equatable; FileSystem does not (6.7)",
+          "rule": "LANG-06-06",
+          "file": "conformance/packages/bad.facts.nested/src/use.ft",
+          "line": 16,
+          "column": 1,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "Hashable and Equatable",
+            "actual_type": "FileSystem",
+            "primary_span": "Set[FileSystem]"
+          }
+        },
+        {
+          "class": "Type",
           "code": "E-TYP-040",
-          "message": "function wrong result has type List[FileSystem], expected List[FileSystem]: FileSystem of bad.facts.nested@0.1.0/bad.facts.nested.use is not FileSystem of fortis.host",
+          "message": "function wrong result has type List[bad.facts.nested.use.FileSystem], expected List[host.FileSystem]: bad.facts.nested.use.FileSystem is not host.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.nested/src/use.ft",
           "line": 13,
@@ -932,15 +964,15 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "List[FileSystem]",
-            "actual_type": "List[FileSystem]",
+            "expected_type": "List[host.FileSystem]",
+            "actual_type": "List[bad.facts.nested.use.FileSystem]",
             "primary_span": "function wrong result"
           }
         },
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "function mapWrong result has type Map[String, FileSystem], expected Map[String, FileSystem]: FileSystem of bad.facts.nested@0.1.0/bad.facts.nested.use is not FileSystem of fortis.host",
+          "message": "function mapWrong result has type Map[String, bad.facts.nested.use.FileSystem], expected Map[String, host.FileSystem]: bad.facts.nested.use.FileSystem is not host.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.nested/src/use.ft",
           "line": 14,
@@ -948,15 +980,15 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "Map[String, FileSystem]",
-            "actual_type": "Map[String, FileSystem]",
+            "expected_type": "Map[String, host.FileSystem]",
+            "actual_type": "Map[String, bad.facts.nested.use.FileSystem]",
             "primary_span": "function mapWrong result"
           }
         },
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "function keyWrong result has type Map[FileSystem, Int], expected Map[FileSystem, Int]: FileSystem of bad.facts.nested@0.1.0/bad.facts.nested.use is not FileSystem of fortis.host",
+          "message": "function keyWrong result has type Map[bad.facts.nested.use.FileSystem, Int], expected Map[host.FileSystem, Int]: bad.facts.nested.use.FileSystem is not host.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.nested/src/use.ft",
           "line": 15,
@@ -964,15 +996,15 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "Map[FileSystem, Int]",
-            "actual_type": "Map[FileSystem, Int]",
+            "expected_type": "Map[host.FileSystem, Int]",
+            "actual_type": "Map[bad.facts.nested.use.FileSystem, Int]",
             "primary_span": "function keyWrong result"
           }
         },
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "function setWrong result has type Set[FileSystem], expected Set[FileSystem]: FileSystem of bad.facts.nested@0.1.0/bad.facts.nested.use is not FileSystem of fortis.host",
+          "message": "function setWrong result has type Set[bad.facts.nested.use.FileSystem], expected Set[host.FileSystem]: bad.facts.nested.use.FileSystem is not host.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.nested/src/use.ft",
           "line": 16,
@@ -980,15 +1012,15 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "Set[FileSystem]",
-            "actual_type": "Set[FileSystem]",
+            "expected_type": "Set[host.FileSystem]",
+            "actual_type": "Set[bad.facts.nested.use.FileSystem]",
             "primary_span": "function setWrong result"
           }
         },
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "function nestWrong result has type List[List[FileSystem]], expected List[List[FileSystem]]: FileSystem of bad.facts.nested@0.1.0/bad.facts.nested.use is not FileSystem of fortis.host",
+          "message": "function nestWrong result has type List[List[bad.facts.nested.use.FileSystem]], expected List[List[host.FileSystem]]: bad.facts.nested.use.FileSystem is not host.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.nested/src/use.ft",
           "line": 17,
@@ -996,15 +1028,15 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "List[List[FileSystem]]",
-            "actual_type": "List[List[FileSystem]]",
+            "expected_type": "List[List[host.FileSystem]]",
+            "actual_type": "List[List[bad.facts.nested.use.FileSystem]]",
             "primary_span": "function nestWrong result"
           }
         },
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "function optWrong result has type List[FileSystem?], expected List[FileSystem?]: FileSystem of bad.facts.nested@0.1.0/bad.facts.nested.use is not FileSystem of fortis.host",
+          "message": "function optWrong result has type List[bad.facts.nested.use.FileSystem?], expected List[host.FileSystem?]: bad.facts.nested.use.FileSystem is not host.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.nested/src/use.ft",
           "line": 18,
@@ -1012,15 +1044,15 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "List[FileSystem?]",
-            "actual_type": "List[FileSystem?]",
+            "expected_type": "List[host.FileSystem?]",
+            "actual_type": "List[bad.facts.nested.use.FileSystem?]",
             "primary_span": "function optWrong result"
           }
         },
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "function ordWrong result has type OrderedMap[String, FileSystem], expected OrderedMap[String, FileSystem]: FileSystem of bad.facts.nested@0.1.0/bad.facts.nested.use is not FileSystem of fortis.host",
+          "message": "function ordWrong result has type OrderedMap[String, bad.facts.nested.use.FileSystem], expected OrderedMap[String, host.FileSystem]: bad.facts.nested.use.FileSystem is not host.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.nested/src/use.ft",
           "line": 19,
@@ -1028,15 +1060,15 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "OrderedMap[String, FileSystem]",
-            "actual_type": "OrderedMap[String, FileSystem]",
+            "expected_type": "OrderedMap[String, host.FileSystem]",
+            "actual_type": "OrderedMap[String, bad.facts.nested.use.FileSystem]",
             "primary_span": "function ordWrong result"
           }
         },
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "function arrWrong result has type Array[FileSystem, #4], expected Array[FileSystem, #4]: FileSystem of bad.facts.nested@0.1.0/bad.facts.nested.use is not FileSystem of fortis.host",
+          "message": "function arrWrong result has type Array[bad.facts.nested.use.FileSystem, #4], expected Array[host.FileSystem, #4]: bad.facts.nested.use.FileSystem is not host.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.nested/src/use.ft",
           "line": 20,
@@ -1044,15 +1076,15 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "Array[FileSystem, #4]",
-            "actual_type": "Array[FileSystem, #4]",
+            "expected_type": "Array[host.FileSystem, #4]",
+            "actual_type": "Array[bad.facts.nested.use.FileSystem, #4]",
             "primary_span": "function arrWrong result"
           }
         },
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "function fixWrong result has type FixedList[FileSystem, #4], expected FixedList[FileSystem, #4]: FileSystem of bad.facts.nested@0.1.0/bad.facts.nested.use is not FileSystem of fortis.host",
+          "message": "function fixWrong result has type FixedList[bad.facts.nested.use.FileSystem, #4], expected FixedList[host.FileSystem, #4]: bad.facts.nested.use.FileSystem is not host.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.nested/src/use.ft",
           "line": 21,
@@ -1060,15 +1092,15 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "FixedList[FileSystem, #4]",
-            "actual_type": "FixedList[FileSystem, #4]",
+            "expected_type": "FixedList[host.FileSystem, #4]",
+            "actual_type": "FixedList[bad.facts.nested.use.FileSystem, #4]",
             "primary_span": "function fixWrong result"
           }
         },
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "function fixMapWrong result has type FixedMap[String, FileSystem, #4], expected FixedMap[String, FileSystem, #4]: FileSystem of bad.facts.nested@0.1.0/bad.facts.nested.use is not FileSystem of fortis.host",
+          "message": "function fixMapWrong result has type FixedMap[String, bad.facts.nested.use.FileSystem, #4], expected FixedMap[String, host.FileSystem, #4]: bad.facts.nested.use.FileSystem is not host.FileSystem",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.facts.nested/src/use.ft",
           "line": 22,
@@ -1076,8 +1108,8 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "FixedMap[String, FileSystem, #4]",
-            "actual_type": "FixedMap[String, FileSystem, #4]",
+            "expected_type": "FixedMap[String, host.FileSystem, #4]",
+            "actual_type": "FixedMap[String, bad.facts.nested.use.FileSystem, #4]",
             "primary_span": "function fixMapWrong result"
           }
         }
@@ -1097,7 +1129,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "2cd656bd6371b43ae809489e7cf14fa52b72d764799d82e84cba32d721ab9fdb",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001 at bad.field.member/src/user.ft:8",
@@ -1123,6 +1155,61 @@
       ]
     },
     {
+      "id": "PKG-bad.g4.identity",
+      "path": "conformance/packages/bad.g4.identity",
+      "verdict": "reject",
+      "codes": [
+        "E-TYP-040"
+      ],
+      "covers": [
+        "LANG-04-04",
+        "LANG-06-01"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "3a58959fe9f5413436f7de5817cabc366cbc081435a985da7693b3bdf3adb30c",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-TYP-040",
+      "observed": "reject:E-TYP-040",
+      "diagnostics": [
+        {
+          "class": "Type",
+          "code": "E-TYP-040",
+          "message": "function wrong result has type List[bad.g4.identity.defs.Bool], expected List[prelude.Bool]: bad.g4.identity.defs.Bool is not prelude.Bool",
+          "rule": "LANG-06-01",
+          "file": "conformance/packages/bad.g4.identity/src/app.ft",
+          "line": 6,
+          "column": 61,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "List[prelude.Bool]",
+            "actual_type": "List[bad.g4.identity.defs.Bool]",
+            "primary_span": "function wrong result"
+          }
+        },
+        {
+          "class": "Type",
+          "code": "E-TYP-040",
+          "message": "function other result has type List[bad.g4.identity.defs.Bool], expected List[bad.g4.identity.app.Bool]: bad.g4.identity.defs.Bool is not bad.g4.identity.app.Bool",
+          "rule": "LANG-06-01",
+          "file": "conformance/packages/bad.g4.identity/src/app.ft",
+          "line": 7,
+          "column": 53,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "List[bad.g4.identity.app.Bool]",
+            "actual_type": "List[bad.g4.identity.defs.Bool]",
+            "primary_span": "function other result"
+          }
+        }
+      ]
+    },
+    {
       "id": "PKG-bad.iface.alias",
       "path": "conformance/packages/bad.iface.alias",
       "verdict": "reject",
@@ -1136,7 +1223,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "5ea8d65c6e1fd00c3b43f594de4ba916c2b5eacc9b7c0751a19e7e88c3ba23ee",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-040 at bad.iface.alias/src/app.ft:6,bad.iface.alias/src/shadow.ft:8,bad.iface.alias/src/shadow.ft:11",
@@ -1239,7 +1326,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "8193d83013bc3193aaf99d999af2317f91336979d6181f2ef97331e2cb81d6dc",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-140",
@@ -1264,6 +1351,44 @@
       ]
     },
     {
+      "id": "PKG-bad.implement.clash",
+      "path": "conformance/packages/bad.implement.clash",
+      "verdict": "reject",
+      "codes": [
+        "E-TYP-070"
+      ],
+      "covers": [
+        "LANG-06-13"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "a72706fad4eb83e71e6b888bdc58377e3ae1b30ae4306b3f3edd4d63a139860c",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-TYP-070",
+      "observed": "reject:E-TYP-070",
+      "diagnostics": [
+        {
+          "class": "Type",
+          "code": "E-TYP-070",
+          "message": "member `label` of Box is declared twice: `implement Titled for Box` adds a member that `implement Labelled for Box` also adds (module bad.implement.clash.one) (an `implement` block is its target listing the interface, X-180)",
+          "rule": "LANG-09-01",
+          "file": "conformance/packages/bad.implement.clash/src/two.ft",
+          "line": 8,
+          "column": 13,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "one member",
+            "actual_type": "two",
+            "primary_span": "label"
+          }
+        }
+      ]
+    },
+    {
       "id": "PKG-bad.import.thrice",
       "path": "conformance/packages/bad.import.thrice",
       "verdict": "reject",
@@ -1277,7 +1402,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "f4262704734be8e1074f79121cce5903d440199c5fc331eb82e824664755ddbf",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -1333,7 +1458,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "8ab2892dc95b02c88aa7120e438855446c7c0bedab7e83d28b22c56358035d7e",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-040 at bad.imported.const/src/braced.ft:7,bad.imported.const/src/aliased.ft:7",
@@ -1387,7 +1512,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "82c5d20c1aa80d934206d7066651c6587bc7de528a423236a335af90fdd4ba89",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-EFF-010 at bad.main.imported/src/again.ft:5",
@@ -1425,7 +1550,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "6aa3b3be13f696a91af5e32c5e83377a3164efa51a6987648b3e1b04307d2500",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -1464,7 +1589,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "d4700736d4621e25a906d262e2169f9751d031193866f74df30ec9f4eaaa8613",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-EFF-001 at bad.main.unrecovered/src/app.ft:11",
@@ -1489,6 +1614,176 @@
       ]
     },
     {
+      "id": "PKG-bad.mixin.application",
+      "path": "conformance/packages/bad.mixin.application",
+      "verdict": "reject",
+      "codes": [
+        "E-NAM-004",
+        "E-TYP-040"
+      ],
+      "covers": [
+        "LANG-09-04",
+        "LANG-09-02"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "7019a7684d52074fee19186cf3564fa58003143a64b09087c107a7724468bea4",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-NAM-004,E-TYP-040 at bad.mixin.application/src/shapes.ft:5,bad.mixin.application/src/shapes.ft:6",
+      "observed": "reject:E-NAM-004,E-TYP-040 at bad.mixin.application/src/shapes.ft:5,bad.mixin.application/src/shapes.ft:6",
+      "diagnostics": [
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "field `secret` of Vault is not exported; a mixin (Peeks) sees only the exported members of Vault (9.6) (mixin Peeks applied to bad.mixin.application.app.Vault)",
+          "rule": "LANG-09-02",
+          "file": "conformance/packages/bad.mixin.application/src/shapes.ft",
+          "line": 5,
+          "column": 43,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "secret",
+            "candidates": []
+          }
+        },
+        {
+          "class": "Type",
+          "code": "E-TYP-040",
+          "message": "argument `n` has type a string literal, expected Int: a string literal is a StringView (or a String where one is expected), not Int (mixin Peeks applied to bad.mixin.application.app.Vault)",
+          "rule": "LANG-06-01",
+          "file": "conformance/packages/bad.mixin.application/src/shapes.ft",
+          "line": 6,
+          "column": 44,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "Int",
+            "actual_type": "a string literal",
+            "primary_span": "argument `n`"
+          }
+        },
+        {
+          "class": "Type",
+          "code": "E-TYP-040",
+          "message": "argument `n` has type a string literal, expected Int: a string literal is a StringView (or a String where one is expected), not Int (mixin Peeks applied to bad.mixin.application.app.Open)",
+          "rule": "LANG-06-01",
+          "file": "conformance/packages/bad.mixin.application/src/shapes.ft",
+          "line": 6,
+          "column": 44,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "Int",
+            "actual_type": "a string literal",
+            "primary_span": "argument `n`"
+          }
+        },
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "field `secret` of Vault is not exported; a mixin (Peeks) sees only the exported members of Vault (9.6) (mixin Peeks applied to bad.mixin.application.other.Vault)",
+          "rule": "LANG-09-02",
+          "file": "conformance/packages/bad.mixin.application/src/shapes.ft",
+          "line": 5,
+          "column": 43,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "secret",
+            "candidates": []
+          }
+        },
+        {
+          "class": "Type",
+          "code": "E-TYP-040",
+          "message": "argument `n` has type a string literal, expected Int: a string literal is a StringView (or a String where one is expected), not Int (mixin Peeks applied to bad.mixin.application.other.Vault)",
+          "rule": "LANG-06-01",
+          "file": "conformance/packages/bad.mixin.application/src/shapes.ft",
+          "line": 6,
+          "column": 44,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "Int",
+            "actual_type": "a string literal",
+            "primary_span": "argument `n`"
+          }
+        }
+      ]
+    },
+    {
+      "id": "PKG-bad.mixin.visibility",
+      "path": "conformance/packages/bad.mixin.visibility",
+      "verdict": "reject",
+      "codes": [
+        "E-NAM-004"
+      ],
+      "covers": [
+        "LANG-04-05",
+        "LANG-09-04"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "6b9f2deb956765cc2fce6901218906e7e190b01bd44b199b33daf5568cac5dd8",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-NAM-004 at bad.mixin.visibility/src/shapes.ft:8,bad.mixin.visibility/src/app.ft:5,bad.mixin.visibility/src/app.ft:7",
+      "observed": "reject:E-NAM-004 at bad.mixin.visibility/src/shapes.ft:8,bad.mixin.visibility/src/app.ft:5,bad.mixin.visibility/src/app.ft:7",
+      "diagnostics": [
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "method `secret` of Vault is not exported; Vault is declared in bad.mixin.visibility.shapes",
+          "rule": "LANG-04-05",
+          "file": "conformance/packages/bad.mixin.visibility/src/app.ft",
+          "line": 5,
+          "column": 18,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "secret",
+            "candidates": []
+          }
+        },
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "method `hidden` of HiddenVault is not exported; HiddenVault is declared in bad.mixin.visibility.shapes",
+          "rule": "LANG-04-05",
+          "file": "conformance/packages/bad.mixin.visibility/src/app.ft",
+          "line": 7,
+          "column": 30,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "hidden",
+            "candidates": []
+          }
+        },
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "method `secret` of Vault is not exported; a mixin (Sneaks) sees only the exported members of Vault (9.6) (mixin Sneaks applied to bad.mixin.visibility.shapes.Vault)",
+          "rule": "LANG-04-05",
+          "file": "conformance/packages/bad.mixin.visibility/src/shapes.ft",
+          "line": 8,
+          "column": 43,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "secret",
+            "candidates": []
+          }
+        }
+      ]
+    },
+    {
       "id": "PKG-bad.module.member",
       "path": "conformance/packages/bad.module.member",
       "verdict": "reject",
@@ -1502,7 +1797,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "c3a9746742fc461bfccceba774b277dcb6d52a853ea5d4d183e20abb55b49057",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -1759,7 +2054,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "9a353c9aa108374dffcaf85e8e4604c53886204baacf8adadb463ddfa7e792fd",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-040",
@@ -1768,7 +2063,7 @@
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "argument `n` has type Node, expected Node: Node of bad.module.types@0.1.0/bad.module.types.one is not Node of bad.module.types@0.1.0/bad.module.types.two",
+          "message": "argument `n` has type bad.module.types.one.Node, expected bad.module.types.two.Node: bad.module.types.one.Node is not bad.module.types.two.Node",
           "rule": "LANG-06-01",
           "file": "conformance/packages/bad.module.types/src/app.ft",
           "line": 8,
@@ -1776,9 +2071,48 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "Node",
-            "actual_type": "Node",
+            "expected_type": "bad.module.types.two.Node",
+            "actual_type": "bad.module.types.one.Node",
             "primary_span": "argument `n`"
+          }
+        }
+      ]
+    },
+    {
+      "id": "PKG-bad.mopup.diagnostic",
+      "path": "conformance/packages/bad.mopup.diagnostic",
+      "verdict": "reject",
+      "codes": [
+        "E-TYP-040"
+      ],
+      "covers": [
+        "LANG-06-01",
+        "LANG-04-04"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "bbf2b09b7be1b0f35286114203bdc5f49692417327fd0604e985b02159fa0f8b",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-TYP-040",
+      "observed": "reject:E-TYP-040",
+      "diagnostics": [
+        {
+          "class": "Type",
+          "code": "E-TYP-040",
+          "message": "returned value has type Map[bad.mopup.diagnostic.main.Bool, Int], expected Map[prelude.Bool, Int]: bad.mopup.diagnostic.main.Bool is not prelude.Bool",
+          "rule": "LANG-06-01",
+          "file": "conformance/packages/bad.mopup.diagnostic/src/main.ft",
+          "line": 6,
+          "column": 10,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "Map[prelude.Bool, Int]",
+            "actual_type": "Map[bad.mopup.diagnostic.main.Bool, Int]",
+            "primary_span": "returned value"
           }
         }
       ]
@@ -1797,7 +2131,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "fcd58983d637d076bc4605fba628124ab2361c4ffeaba4b464117dbdfc6a7b92",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -1836,7 +2170,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "d61f962d408c2b449f4ba2be088d9608f01b261f9bba0c8aab22afc3f399e35e",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -1876,7 +2210,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "53313e9cd2be27a8062a7a998a11333dc8fcc6751220243fcb17c40212602758",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -1915,7 +2249,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "f44549d562ec66a03e51c10c1364c703339e52d5638a9cf800b09aedc9788adb",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-SYN-000",
@@ -1952,7 +2286,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "4f5d9afcb68ab844f42e277543f8dc3f1eb3c653d15a9792432f505f987215ed",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -1979,7 +2313,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "ce33545638d0e5968c73a18085961d649887acfb6933ef20b0ac7c5dd3f90c41",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-010",
@@ -2006,6 +2340,45 @@
       ]
     },
     {
+      "id": "PKG-bad.requirement.identity",
+      "path": "conformance/packages/bad.requirement.identity",
+      "verdict": "reject",
+      "codes": [
+        "E-TYP-080"
+      ],
+      "covers": [
+        "LANG-09-03",
+        "LANG-04-04"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "95b9816f399edc5dc3a59d6eb826992e28d1e9d6c0a27155188134b0a65fee87",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-TYP-080",
+      "observed": "reject:E-TYP-080",
+      "diagnostics": [
+        {
+          "class": "Type",
+          "code": "E-TYP-080",
+          "message": "Job implements Svc, which requires Required; Job does not implement it",
+          "rule": "LANG-09-03",
+          "file": "conformance/packages/bad.requirement.identity/src/client.ft",
+          "line": 8,
+          "column": 14,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "Required",
+            "actual_type": "Job",
+            "primary_span": "Job"
+          }
+        }
+      ]
+    },
+    {
       "id": "PKG-bad.runfile.member",
       "path": "conformance/packages/bad.runfile.member",
       "verdict": "reject",
@@ -2019,7 +2392,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "130badd4fa2cdc6f88ec05519c34add9eedf3aa252c5bd7ca44b379a5ec10b81",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -2058,7 +2431,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "03939bde872916145d2a7ec94080568c51887e827e8b1c73f0c6d94efc015be4",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -2097,7 +2470,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "6d86749e84b0585785e4988d3a9cedceca7dcaba384cc6964fe77f9849330dbe",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-SYN-000",
@@ -2134,7 +2507,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "6da482f69f1061e9ddfc6e99db236690d3e623ebcf09213660de5e628f910e91",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -2174,7 +2547,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "d7a371bfaec8e75e9c2407a363b67d4e679d98dd9e8d6835bc58c633bdb220f1",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-001",
@@ -2201,6 +2574,63 @@
       ]
     },
     {
+      "id": "PKG-conversion.derive.private",
+      "path": "conformance/packages/conversion.derive.private",
+      "verdict": "reject",
+      "codes": [
+        "E-TYP-090"
+      ],
+      "covers": [
+        "LANG-06-15"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "1dd88070419b88d386a8b74b9f119ee6e83cc92fa9d337ca8d3ae9422a9ca9ac",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-TYP-090",
+      "observed": "reject:E-TYP-090",
+      "diagnostics": [
+        {
+          "class": "Type",
+          "code": "E-TYP-090",
+          "message": "derive From[Source]: field `value` of the source is not visible",
+          "rule": "LANG-06-07",
+          "file": "conformance/packages/conversion.derive.private/src/app.ft",
+          "line": 4,
+          "column": 7,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "an exported field",
+            "actual_type": "value",
+            "primary_span": "value"
+          }
+        }
+      ]
+    },
+    {
+      "id": "PKG-conversion.derive.visible",
+      "path": "conformance/packages/conversion.derive.visible",
+      "verdict": "execute",
+      "codes": [],
+      "covers": [
+        "LANG-06-15"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "123ad9f456ecdca897f1aa28ad6780d3fe927f8a225dacda75f15fe5b236f299",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "accept",
+      "observed": "accept",
+      "diagnostics": []
+    },
+    {
       "id": "PKG-cycle.newtype",
       "path": "conformance/packages/cycle.newtype",
       "verdict": "execute",
@@ -2213,7 +2643,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "6e51e7a2830a685ecf133a800cfcca1849b952edd8aff77416f38308a214e9e0",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2235,7 +2665,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "40b5f7e09b4f8b90691a8e0734f8c2e5d1e15a7f54f4380217c69df8489dfbe3",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-040",
@@ -2244,7 +2674,7 @@
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "argument `x` has type Small, expected Small: Small of cycle.newtype.foreign@1.0.0/cycle.newtype.foreign.c is not Small of cycle.newtype.foreign@1.0.0/cycle.newtype.foreign.b",
+          "message": "argument `x` has type cycle.newtype.foreign.c.Small, expected cycle.newtype.foreign.b.Small: cycle.newtype.foreign.c.Small is not cycle.newtype.foreign.b.Small",
           "rule": "LANG-06-01",
           "file": "conformance/packages/cycle.newtype.foreign/src/c.ft",
           "line": 11,
@@ -2252,8 +2682,8 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "Small",
-            "actual_type": "Small",
+            "expected_type": "cycle.newtype.foreign.b.Small",
+            "actual_type": "cycle.newtype.foreign.c.Small",
             "primary_span": "argument `x`"
           }
         }
@@ -2274,7 +2704,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "0b6aa69c55d5c9c913974aeebef02d90ad1edc338ccedbc3a902b7aada60c8d3",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-040",
@@ -2329,7 +2759,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "875a2edb21fc2753ceca327181530fdb278554b69b4d609c0ca6d9c502b041c1",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-040",
@@ -2338,7 +2768,7 @@
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "argument `x` has type Small, expected Small: Small of cycle.newtype.pq@1.0.0/cycle.newtype.pq.c is not Small of cycle.newtype.pq@1.0.0/cycle.newtype.pq.q",
+          "message": "argument `x` has type cycle.newtype.pq.c.Small, expected cycle.newtype.pq.q.Small: cycle.newtype.pq.c.Small is not cycle.newtype.pq.q.Small",
           "rule": "LANG-06-01",
           "file": "conformance/packages/cycle.newtype.pq/src/c.ft",
           "line": 11,
@@ -2346,8 +2776,8 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "Small",
-            "actual_type": "Small",
+            "expected_type": "cycle.newtype.pq.q.Small",
+            "actual_type": "cycle.newtype.pq.c.Small",
             "primary_span": "argument `x`"
           }
         }
@@ -2368,7 +2798,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "c086c265b8f1f0b389c5e03bdf77748f3fe6302c7b61c2c1b9a9d0feb21708e6",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-040",
@@ -2377,7 +2807,7 @@
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "argument `x` has type Small, expected Small: Small of cycle.newtype.qp@1.0.0/cycle.newtype.qp.c is not Small of cycle.newtype.qp@1.0.0/cycle.newtype.qp.q",
+          "message": "argument `x` has type cycle.newtype.qp.c.Small, expected cycle.newtype.qp.q.Small: cycle.newtype.qp.c.Small is not cycle.newtype.qp.q.Small",
           "rule": "LANG-06-01",
           "file": "conformance/packages/cycle.newtype.qp/src/c.ft",
           "line": 11,
@@ -2385,8 +2815,8 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "Small",
-            "actual_type": "Small",
+            "expected_type": "cycle.newtype.qp.q.Small",
+            "actual_type": "cycle.newtype.qp.c.Small",
             "primary_span": "argument `x`"
           }
         }
@@ -2404,7 +2834,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "9368dc4832b527ea0db854b5fc7dcb199646c19ed1180fb07fa31f90c58fbcef",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2423,7 +2853,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "caab1a11055c2e83a4d7e819d72c88c5701b05243fa4626f43fa8bfd3d878f74",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2442,8 +2872,8 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
-      "sha256": "2187cbe824080ec84b674f838cb723c64d6a0e0b30617d1a6df13af97c1367b2",
+      "commit": "1f5e39ce",
+      "sha256": "88f1972a5b7d11a316841e07efe6da781f9eb80d211f04ef8b3582a4ce5352b5",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
       "observed": "accept",
@@ -2463,7 +2893,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "e2e2a411551c58b402be8cead5f50137fff7ff94a747e7bbf354d9fb8ddeca35",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-EFF-001",
@@ -2472,7 +2902,7 @@
         {
           "class": "Effect",
           "code": "E-EFF-001",
-          "message": "function viaAlias is declared `noalloc` but its body may allocate: a callback's type permits it, so it may happen (write the claim in the function type)",
+          "message": "function viaAlias is declared `noalloc` but its body may allocate at call `f`: a callback's type permits it, so it may happen (write the claim in the function type)",
           "rule": "LANG-11-03",
           "file": "conformance/packages/eff.module.callee/src/app.ft",
           "line": 20,
@@ -2488,7 +2918,7 @@
         {
           "class": "Effect",
           "code": "E-EFF-001",
-          "message": "function viaMethod is declared `noalloc` but its body may allocate: a callback's type permits it, so it may happen (write the claim in the function type)",
+          "message": "function viaMethod is declared `noalloc` but its body may allocate at call `m`: a callback's type permits it, so it may happen (write the claim in the function type)",
           "rule": "LANG-11-03",
           "file": "conformance/packages/eff.module.callee/src/app.ft",
           "line": 22,
@@ -2516,7 +2946,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "dc2341ea961e3be461585d23a03c76950ab589fc6441f732a7477bcbfaed58f0",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2536,8 +2966,27 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "e7eab2570e9c8208af9e94d3ed2fc35bb5173d80b8689cdd5513130257018a89",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "accept",
+      "observed": "accept",
+      "diagnostics": []
+    },
+    {
+      "id": "PKG-exec.conversion.derive.identity",
+      "path": "conformance/packages/exec.conversion.derive.identity",
+      "verdict": "execute",
+      "codes": [],
+      "covers": [
+        "LANG-06-15"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "d7ab638519ec2e6e8631a28b9a588ce3415b1aeb20561f232f979dd158bce0e9",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
       "observed": "accept",
@@ -2555,7 +3004,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "a9460fc08249712faf0dc7fd7705ce35c252aefe96135726f6fb016d3143aa50",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2575,8 +3024,28 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "f151329e65f224ccf9350a0c163eecd6e8db039ad182d26f78946db97b7a40e5",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "accept",
+      "observed": "accept",
+      "diagnostics": []
+    },
+    {
+      "id": "PKG-exec.implement.import",
+      "path": "conformance/packages/exec.implement.import",
+      "verdict": "execute",
+      "codes": [],
+      "covers": [
+        "LANG-06-13",
+        "LANG-06-10"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "f2c531530e2b796d20a39d1c55a6aa1f5d4039a5a9a9fd7cf3bf981222df379c",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
       "observed": "accept",
@@ -2595,8 +3064,8 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
-      "sha256": "10d1d63fce8573fdf16cec355afca0f97dcc969c8088e9d0194176eec5961458",
+      "commit": "1f5e39ce",
+      "sha256": "fd9c195d789004d1da1647ffd68073c701bc3d9d6a505fa4308ee3bd0b3902ab",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
       "observed": "accept",
@@ -2615,8 +3084,67 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
-      "sha256": "66af984baae4f8ada99d231ad9d28a2ee3c10d9c3d07ac5b53672285fadb125a",
+      "commit": "1f5e39ce",
+      "sha256": "972ac6bc00caa70babf50b9563d2766d191ea7cc7a44bf378ed041d039c26e76",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "accept",
+      "observed": "accept",
+      "diagnostics": []
+    },
+    {
+      "id": "PKG-exec.mixin.lexical",
+      "path": "conformance/packages/exec.mixin.lexical",
+      "verdict": "execute",
+      "codes": [],
+      "covers": [
+        "LANG-09-04",
+        "LANG-04-04"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "3e8cc002fb8819ecfd9459a8c5adaf247be30d81635ba92d381a7f94b20ea14f",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "accept",
+      "observed": "accept",
+      "diagnostics": []
+    },
+    {
+      "id": "PKG-exec.newtype.conversions",
+      "path": "conformance/packages/exec.newtype.conversions",
+      "verdict": "execute",
+      "codes": [],
+      "covers": [
+        "LANG-06-14"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "d0fc807435eaea02824a28821542f954f7965919067a33782c7d6b368c21fe2e",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "accept",
+      "observed": "accept",
+      "diagnostics": []
+    },
+    {
+      "id": "PKG-exec.newtype.mixin",
+      "path": "conformance/packages/exec.newtype.mixin",
+      "verdict": "execute",
+      "codes": [],
+      "covers": [
+        "LANG-06-14",
+        "LANG-09-04"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "87b8638b8aa623955b53f39ec6540834c2f1c2f22d2bf8ac7719609546de3370",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
       "observed": "accept",
@@ -2635,7 +3163,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "60e895b1267e482d7561d8264837a3cc5a0ef845a3ab71450d64f3dae7a79e70",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2655,7 +3183,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "2547d1c93cb6d95c9ea144fe9f9e42d0b6c3802069abefaa8da930685380716e",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2675,7 +3203,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "b62b84a8ee78ee33749bfd48bbd5793aa63591f9c0fa3b6e237af8a45f2b7035",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2695,7 +3223,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "2ae33753c6f84245d49ad247ae5b85a7ac26ba7d4a4aa1a2ffc3d00443cdc6b5",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2715,7 +3243,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "72cbc6074e04590c580b5311234c1f5f96e1d7f688ee0778d998ffee47db6c9e",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2734,7 +3262,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "2a2460e34019076b296c414e3ea68aa5070259ceecbfcd2cfc10b19e3c335bda",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2754,8 +3282,8 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
-      "sha256": "f59fcf430bafac81408d34158456fe4221ea726e0e62434298b148ab72764fd9",
+      "commit": "1f5e39ce",
+      "sha256": "5d8360dfbd20b273f52c9d503e98d16a72178d3693b928ebdedddc6f0ce377b6",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
       "observed": "accept",
@@ -2774,7 +3302,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "79ce1351427b6796beedf44960de4f4a3d8827db9e276cb71187839418ba40d6",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2793,7 +3321,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "c12828eeda33da0d9f959b7b5e9f22aa856d963a7e3b33af49dae1f3b8bcc5bf",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2814,7 +3342,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "c89f7aef4ad72ca7c28816b6730b53d3733dafaf10603224517c91c1cfb141d1",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-EFF-001 at fortis.unlisted/src/app.ft:4",
@@ -2852,7 +3380,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "94c4b055bea805f222d7d6300c92f7930bd055be8019e5efd0d70b5a28039c2e",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-EFF-001",
@@ -2861,7 +3389,7 @@
         {
           "class": "Effect",
           "code": "E-EFF-001",
-          "message": "function viaAlias is declared `noalloc` but its body may allocate: a callback's type permits it, so it may happen (write the claim in the function type)",
+          "message": "function viaAlias is declared `noalloc` but its body may allocate at call `f`: a callback's type permits it, so it may happen (write the claim in the function type)",
           "rule": "LANG-11-03",
           "file": "conformance/packages/fortissimo.callee/src/app.ft",
           "line": 19,
@@ -2877,7 +3405,7 @@
         {
           "class": "Effect",
           "code": "E-EFF-001",
-          "message": "function viaMethod is declared `noalloc` but its body may allocate: a callback's type permits it, so it may happen (write the claim in the function type)",
+          "message": "function viaMethod is declared `noalloc` but its body may allocate at call `m`: a callback's type permits it, so it may happen (write the claim in the function type)",
           "rule": "LANG-11-03",
           "file": "conformance/packages/fortissimo.callee/src/app.ft",
           "line": 21,
@@ -2906,7 +3434,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "5ba30e3874bd0ac62dbb365d0e39170accd7094344c5c5809cc52bc7ccc5cae4",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-040",
@@ -2915,7 +3443,7 @@
         {
           "class": "Type",
           "code": "E-TYP-040",
-          "message": "argument `n` has type Node, expected Node: Node of fortissimo.types@1.0.0/fortissimo.types.one is not Node of fortissimo.types@1.0.0/fortissimo.types.two",
+          "message": "argument `n` has type fortissimo.types.one.Node, expected fortissimo.types.two.Node: fortissimo.types.one.Node is not fortissimo.types.two.Node",
           "rule": "LANG-06-01",
           "file": "conformance/packages/fortissimo.types/src/app.ft",
           "line": 7,
@@ -2923,8 +3451,8 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "Node",
-            "actual_type": "Node",
+            "expected_type": "fortissimo.types.two.Node",
+            "actual_type": "fortissimo.types.one.Node",
             "primary_span": "argument `n`"
           }
         }
@@ -2942,7 +3470,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "00bda48a742f3cc9a7beb7ed5f811ff7dda09e90de609777560376cf1dddcfaa",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -2963,7 +3491,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "d816aeb5008ad8d44fb06946d1df8941150622a906d71cb611292f23cd6ca3c6",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-040 at fun.closure.field/src/steps.ft:6",
@@ -2988,6 +3516,371 @@
       ]
     },
     {
+      "id": "PKG-g2.newtype.deque.edit",
+      "path": "conformance/packages/g2.newtype.deque.edit",
+      "verdict": "reject",
+      "codes": [
+        "E-NAM-004"
+      ],
+      "covers": [
+        "LANG-06-01",
+        "LANG-06-16"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "7a1e09dc5d4deae67dd4bc61aa7ab9d76292780036edf38e1cc389101cf39e45",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-NAM-004",
+      "observed": "reject:E-NAM-004",
+      "diagnostics": [
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "`pushBack` of Queue is visible only in its declaring module g2.newtype.deque.edit.defs",
+          "rule": "LANG-04-05",
+          "file": "conformance/packages/g2.newtype.deque.edit/src/app.ft",
+          "line": 6,
+          "column": 9,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "pushBack",
+            "candidates": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "PKG-g2.newtype.deque.read",
+      "path": "conformance/packages/g2.newtype.deque.read",
+      "verdict": "execute",
+      "codes": [],
+      "covers": [
+        "LANG-06-01",
+        "LANG-06-16",
+        "LANG-08-02"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "1d87d122d506eb54c8f1fcc588241e2e6600430f2cc15c1e75a1f09ba92af768",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "accept",
+      "observed": "accept",
+      "diagnostics": []
+    },
+    {
+      "id": "PKG-g4.identity",
+      "path": "conformance/packages/g4.identity",
+      "verdict": "execute",
+      "codes": [],
+      "covers": [
+        "LANG-04-04",
+        "LANG-06-01"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "87b583414ae62704c30731c7ce7d379be3eba7b4ce382b93f11ac6a767322d74",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "accept",
+      "observed": "accept",
+      "diagnostics": []
+    },
+    {
+      "id": "PKG-h.newtype.consume",
+      "path": "conformance/packages/h.newtype.consume",
+      "verdict": "reject",
+      "codes": [
+        "E-NAM-004"
+      ],
+      "covers": [
+        "LANG-06-01",
+        "LANG-08-02"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "bd0e04f8454873d952b616818e2516936961e3d4aa3be4d1ed85d881ff5da0f2",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-NAM-004",
+      "observed": "reject:E-NAM-004",
+      "diagnostics": [
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "`consumeEach` of Basket is visible only in its declaring module h.newtype.consume.defs",
+          "rule": "LANG-04-05",
+          "file": "conformance/packages/h.newtype.consume/src/app.ft",
+          "line": 6,
+          "column": 10,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "consumeEach",
+            "candidates": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "PKG-h.newtype.edit",
+      "path": "conformance/packages/h.newtype.edit",
+      "verdict": "reject",
+      "codes": [
+        "E-NAM-004"
+      ],
+      "covers": [
+        "LANG-06-01",
+        "LANG-08-02"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "1f38d56115aeec8da619d557584dc441f4ca7f37b948ff6007eabdbdc7e1e2f0",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-NAM-004",
+      "observed": "reject:E-NAM-004",
+      "diagnostics": [
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "`push` of Basket is visible only in its declaring module h.newtype.edit.defs",
+          "rule": "LANG-04-05",
+          "file": "conformance/packages/h.newtype.edit/src/app.ft",
+          "line": 6,
+          "column": 5,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "push",
+            "candidates": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "PKG-h.newtype.movefor",
+      "path": "conformance/packages/h.newtype.movefor",
+      "verdict": "reject",
+      "codes": [
+        "E-NAM-004"
+      ],
+      "covers": [
+        "LANG-06-01",
+        "LANG-08-02"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "e9b8ad67068e09a2c99a811e2043987446cbe99ce64c7520b89afbc1ec3029f6",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-NAM-004",
+      "observed": "reject:E-NAM-004",
+      "diagnostics": [
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "consuming iteration of Basket is visible only in its declaring module h.newtype.movefor.defs",
+          "rule": "LANG-04-05",
+          "file": "conformance/packages/h.newtype.movefor/src/app.ft",
+          "line": 6,
+          "column": 17,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "consume",
+            "candidates": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "PKG-h.newtype.nested",
+      "path": "conformance/packages/h.newtype.nested",
+      "verdict": "reject",
+      "codes": [
+        "E-NAM-001"
+      ],
+      "covers": [
+        "LANG-06-01",
+        "LANG-08-02"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "7b7cdea14fe29a62259553594b950b58af607647c60c1a97bc4a41603d4d06f8",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-NAM-001",
+      "observed": "reject:E-NAM-001",
+      "diagnostics": [
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-001",
+          "message": "Nested has no method `count`",
+          "rule": "LANG-04-05",
+          "file": "conformance/packages/h.newtype.nested/src/app.ft",
+          "line": 6,
+          "column": 17,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "count",
+            "candidates": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "PKG-h.newtype.nominal",
+      "path": "conformance/packages/h.newtype.nominal",
+      "verdict": "reject",
+      "codes": [
+        "E-TYP-040"
+      ],
+      "covers": [
+        "LANG-06-01",
+        "LANG-08-02"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "ca11c1d861991ce19e0379d3a6ce13a212cdf44f7b0fd002f0b63bc473b25459",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-TYP-040",
+      "observed": "reject:E-TYP-040",
+      "diagnostics": [
+        {
+          "class": "Type",
+          "code": "E-TYP-040",
+          "message": "initialiser has type Basket, expected List[Int]: Basket is not List[Int]",
+          "rule": "LANG-06-01",
+          "file": "conformance/packages/h.newtype.nominal/src/app.ft",
+          "line": 6,
+          "column": 23,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "expected_type": "List[Int]",
+            "actual_type": "Basket",
+            "primary_span": "initialiser"
+          }
+        }
+      ]
+    },
+    {
+      "id": "PKG-h.newtype.read",
+      "path": "conformance/packages/h.newtype.read",
+      "verdict": "execute",
+      "codes": [],
+      "covers": [
+        "LANG-06-01",
+        "LANG-08-02"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "735132c2134e53056e9a861410f7faeaa00969b8917631d7d9512eb6ad7eacb9",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "accept",
+      "observed": "accept",
+      "diagnostics": []
+    },
+    {
+      "id": "PKG-h.newtype.shadow",
+      "path": "conformance/packages/h.newtype.shadow",
+      "verdict": "reject",
+      "codes": [
+        "E-NAM-001"
+      ],
+      "covers": [
+        "LANG-06-01"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "fa2b27b5a3fb5e7f95552a067d2b988a3d94a813cd459f7c33ee18fb8e3848d6",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-NAM-001",
+      "observed": "reject:E-NAM-001",
+      "diagnostics": [
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-001",
+          "message": "Basket has no method `count`",
+          "rule": "LANG-04-05",
+          "file": "conformance/packages/h.newtype.shadow/src/app.ft",
+          "line": 5,
+          "column": 37,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "count",
+            "candidates": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "PKG-h.newtype.unwrap",
+      "path": "conformance/packages/h.newtype.unwrap",
+      "verdict": "reject",
+      "codes": [
+        "E-NAM-004"
+      ],
+      "covers": [
+        "LANG-06-01",
+        "LANG-08-02"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "bc27ae795691ef1199260911cba543f2fc60552182bb8ff67036c5f2f9f5ed29",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-NAM-004",
+      "observed": "reject:E-NAM-004",
+      "diagnostics": [
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "representation of Basket is not visible outside its declaring module h.newtype.unwrap.defs",
+          "rule": "LANG-06-14",
+          "file": "conformance/packages/h.newtype.unwrap/src/app.ft",
+          "line": 6,
+          "column": 19,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "Basket",
+            "candidates": []
+          }
+        }
+      ]
+    },
+    {
       "id": "PKG-head.installed",
       "path": "conformance/packages/head.installed",
       "verdict": "accept",
@@ -2997,7 +3890,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "315a4f77635b24c841207baaa95af1e422eca5d247678b1d422a1579e96ddb75",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -3016,7 +3909,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "4f0f2eff0f1e3e13815ff7032d1c0a7a9ce86159499fa7882e73380b001ba7a6",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-034",
@@ -3119,7 +4012,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "a73d099a95324155163692b007e41614deec57eb0b92e09e5b0f5df02766e380",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-050",
@@ -3155,7 +4048,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "f59722230fee58da096a1f3543240d4fe0fa2bd16a2248a653466fc4275a79d8",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -3176,7 +4069,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "b8c5a9d24581937f4cca67007cc12ae373e6649403541512b18271eeb36bc80a",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-TYP-080",
@@ -3185,7 +4078,7 @@
         {
           "class": "Type",
           "code": "E-TYP-080",
-          "message": "Plain.print does not satisfy Printer.print: parameter `invoice` narrows Invoice to Invoice",
+          "message": "Plain.print does not satisfy Printer.print: parameter `invoice` narrows ver.lib@1.4.0/ver.lib.lib.Invoice to ver.lib@2.0.0/ver.lib.lib.Invoice",
           "rule": "LANG-09-03",
           "file": "conformance/packages/ver.mismatch/src/app.ft",
           "line": 5,
@@ -3193,8 +4086,8 @@
           "severity": "error",
           "status": "violated",
           "fields": {
-            "expected_type": "pure func print(self, invoice: Invoice) String",
-            "actual_type": "pure func print(self, invoice: Invoice) String",
+            "expected_type": "pure func print(self, invoice: ver.lib@1.4.0/ver.lib.lib.Invoice) String",
+            "actual_type": "pure func print(self, invoice: ver.lib@2.0.0/ver.lib.lib.Invoice) String",
             "primary_span": "print"
           }
         }
@@ -3212,7 +4105,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "5be8d6b07fec26cce4d2d1a49300ab72ba79b59452790f9c4f6aa2c96815c080",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -3233,7 +4126,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "9a54f38b427103a20c5014c389bb1537bfee61057d0d3d11e657496ccd93b8c1",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-004",
@@ -3270,7 +4163,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "402991f892da597d9e2c8366a8280ae800afa0e6f8921a26ad76fd487becc82b",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-004",
@@ -3309,7 +4202,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "e29a32d2552718f4cd54b0b5ebf713b1cedbfb33ee6c75113b70a0bfc86e397a",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-004",
@@ -3348,7 +4241,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "53fe6f7f619fe51071252925906d686ea22b14329ac411e005c53aa3615feace",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-004",
@@ -3389,7 +4282,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "7d06d43d40aafd2e1cf0296e75d598cf59fb4bae2f2ccdb6c88d33840d510101",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-NAM-004",
@@ -3493,6 +4386,58 @@
       ]
     },
     {
+      "id": "PKG-vis.newtype.unwrap",
+      "path": "conformance/packages/vis.newtype.unwrap",
+      "verdict": "reject",
+      "codes": [
+        "E-NAM-004"
+      ],
+      "covers": [
+        "LANG-06-14"
+      ],
+      "stage": "core",
+      "packages": [],
+      "status": "PASS",
+      "backend": "names",
+      "commit": "1f5e39ce",
+      "sha256": "61a7ed7da433642aaafcc9920697aa10b391221bbdbe619c6f6134533c4782de",
+      "command": "python3 -I conformance/tools/packages_check.py",
+      "expected": "reject:E-NAM-004",
+      "observed": "reject:E-NAM-004",
+      "diagnostics": [
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "representation of Pence is not visible outside its declaring module vis.newtype.unwrap.money",
+          "rule": "LANG-06-14",
+          "file": "conformance/packages/vis.newtype.unwrap/src/app.ft",
+          "line": 4,
+          "column": 12,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "Pence",
+            "candidates": []
+          }
+        },
+        {
+          "class": "Names and modules",
+          "code": "E-NAM-004",
+          "message": "representation of Pence is not visible outside its declaring module vis.newtype.unwrap.money",
+          "rule": "LANG-06-14",
+          "file": "conformance/packages/vis.newtype.unwrap/src/app.ft",
+          "line": 7,
+          "column": 12,
+          "severity": "error",
+          "status": "violated",
+          "fields": {
+            "name": "Pence",
+            "candidates": []
+          }
+        }
+      ]
+    },
+    {
       "id": "PKG-vis.ok",
       "path": "conformance/packages/vis.ok",
       "verdict": "accept",
@@ -3504,7 +4449,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "8d76fd3adb999b5c94117382d4da272cf0339b1ac62ebc4e32cfce0492ee7c33",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "accept",
@@ -3523,7 +4468,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "7a2d504afd5918aba236e5f49267281f8aa863c917d0bca1fec140629342f290",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-DI-010",
@@ -3559,7 +4504,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "4ee1c272ed3f85351021f3db32813c5956808af1b5a424a93196d149a56fbb8e",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-DI-010",
@@ -3595,7 +4540,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "16367a5a485f7395b31605acb827a531e22d06a18f96a2cab6e10cd3d12be864",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-DI-010",
@@ -3631,7 +4576,7 @@
       "packages": [],
       "status": "PASS",
       "backend": "names",
-      "commit": "06adde53",
+      "commit": "1f5e39ce",
       "sha256": "c3377d31021f6b86e677b2c5ce54caa59b3a79aad2e006750b160ca185b7d3c0",
       "command": "python3 -I conformance/tools/packages_check.py",
       "expected": "reject:E-DI-010",

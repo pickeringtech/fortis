@@ -1,0 +1,11 @@
+// reject: E-TYP-180
+// covers: LANG-06-14
+// Representation conversions take one step and do not chain through numeric widening or another newtype.
+type Pence = Int<0..100>
+type Outer = Pence
+func bad(n: Int8) {
+  let a = n as Pence // reject: E-TYP-180
+  let b = 3 as Outer // reject: E-TYP-180
+  let p = 3 as Pence
+  let c = p as Decimal // reject: E-TYP-180
+}

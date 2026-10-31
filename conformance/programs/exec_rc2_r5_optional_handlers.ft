@@ -1,0 +1,26 @@
+// execute: 0 2 0 3 0 4 0 6
+// requires: runtime
+// covers: LANG-06-09, LANG-10-01
+import fortis.host { Console }
+class Cell { export func take(self, n: Int) Int => n }
+recovers func exits(c: Cell?) Int {
+  let n = c?.take("bad" as Int catch e { return 6 }) ?? 0
+  return n
+}
+recovers func main(console: Console) {
+  let none: Cell? = null
+  let some: Cell? = Cell()
+  let a = none?.take("bad" as Int or recover 2) ?? 0
+  let b = some?.take("bad" as Int or recover 2) ?? 0
+  let c = none?.take(match ("3" as Int) { success(n) => n
+    failure(e) => { report e
+      give 0 } }) ?? 0
+  let d = some?.take(match ("3" as Int) { success(n) => n
+    failure(e) => { report e
+      give 0 } }) ?? 0
+  let e = none?.take(match 0 { _ => { discard ("bad" as Int or recover 0)
+    give 4 } }) ?? 0
+  let f = some?.take(match 0 { _ => { discard ("bad" as Int or recover 0)
+    give 4 } }) ?? 0
+  console.print("${a} ${b} ${c} ${d} ${e} ${f} ${exits(none)} ${exits(some)}")
+}

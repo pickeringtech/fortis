@@ -15,3 +15,8 @@ fortis-diag = { path = "../fortis-diag" }
 # the apparatus check of SP-07 (SP-07's design, section 13): fault switches read from FORTIS_RELOAD_FAULT; never in a
 # default build
 reload-faults = []
+
+[dev-dependencies]
+fortis-testkit = { path = "../fortis-testkit" }
+fortis-names = { path = "../fortis-names" }
+fortis-syntax = { path = "../fortis-syntax" }

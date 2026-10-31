@@ -1,0 +1,51 @@
+# Starts the release tier in the public repository when a release lands there (D-417). publish.yml pushes master and
+# the release's tag together with a deploy key, and the tag's creation started no workflow at v0.0.1 or v0.0.2, while
+# the master update in the same push did. So this workflow runs on that master push, reads the release's tag from the
+# pushed commit, and dispatches release.yml at the tag (a dispatch made with the workflow's own token starts a run).
+# If the tag push did start release.yml after all, nothing is dispatched, so the tier never runs twice. It runs only
+# in the public repository, pickeringtech/fortis. Actions are pinned to full commit SHAs, with the version they were
+# taken from in a comment.
+name: Release on publish
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: release-on-publish
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: github.repository == 'pickeringtech/fortis'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 1
+          fetch-tags: true
+          persist-credentials: false
+      - name: Dispatch the release tier at the pushed release's tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(git tag --points-at HEAD --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+          if [ -z "$tag" ]; then
+            echo "the pushed commit carries no release tag; nothing to do"
+            exit 0
+          fi
+          # Give a run started by the tag push itself time to appear, then dispatch only if there is none
+          sleep 60
+          existing="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow release.yml --branch "$tag" --limit 1 --json databaseId --jq 'length')"
+          if [ "$existing" != "0" ]; then
+            echo "release.yml already has a run at $tag; nothing to dispatch"
+            exit 0
+          fi
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$tag"
+          echo "dispatched release.yml at $tag"

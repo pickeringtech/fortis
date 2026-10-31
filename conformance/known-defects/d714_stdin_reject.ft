@@ -1,0 +1,2 @@
+// D-714: pipe this file to fortisc check /dev/stdin; it must reject the undeclared call.
+func main() { missing() }

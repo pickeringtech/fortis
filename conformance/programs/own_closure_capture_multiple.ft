@@ -1,0 +1,7 @@
+// reject: E-OWN-051
+// covers: LANG-07-06, LANG-08-02
+func keep(p: String) fn() Int from p {
+  let s = "hello" as String
+  let f = fn[alias p, alias s]() Int => s.byteCount()
+  return move f
+}

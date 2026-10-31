@@ -1,0 +1,9 @@
+// reject: E-TYP-180 (at the marked lines)
+// covers: LANG-06-14
+// LR 6.13 has no text-to-float, text-to-BigInt or implicit parse-and-refine chain.
+func unsupported(text: StringView) {
+  discard text as Float // reject: E-TYP-180
+  discard text as Float32 // reject: E-TYP-180
+  discard text as BigInt // reject: E-TYP-180
+  discard text as Int<0..10> // reject: E-TYP-180
+}

@@ -1,8 +1,9 @@
 """DEL-02 runner: the generated parser against the recogniser on every fixture (agreement on
 accept/reject, and on the tree itself where both accept: the generated parser derives exactly the recogniser's
 tree, so a checker can run on either), the ambiguity corpus (exactly one parse: no undocumented fallback, recogniser agrees),
-and the pinned timing run (warm process, median of 20 parses per fixture, every fixture under 50 ms;
-fixtures listed by hash). Writes conformance/generated/check.json."""
+and the pinned timing run (warm process, median of 20 parses per fixture, 50 ms budget;
+fixtures listed by hash). Timing is recorded but only judged when FORTIS_PARSER_TIMING=1,
+for the quiet-machine v1.0 release check (X-149, X-678). Writes conformance/generated/check.json."""
 import hashlib
 import json
 import os
@@ -39,9 +40,11 @@ def shape(t):
 
 
 def main(argv):
+    enforce_timing = os.environ.get("FORTIS_PARSER_TIMING") == "1"
     rec = parser.load_grammar(os.path.join(ROOT, "reference", "grammar", "fortis.ebnf"))
     syntax = json.load(open(os.path.join(ROOT, "conformance", "results.json"), encoding="utf-8"))["results"]
-    out = {"agreement": [], "ambiguity": [], "timing": [], "platform": platform.platform(), "python": platform.python_version()}
+    out = {"agreement": [], "ambiguity": [], "timing": [], "timing_enforced": enforce_timing,
+           "timing_budget_ms": 50, "platform": platform.platform(), "python": platform.python_version()}
     disagreements = tree_diffs = trees = 0
     for r in syntax:
         src = open(os.path.join(ROOT, r["path"]), encoding="utf-8").read()
@@ -112,8 +115,9 @@ def main(argv):
         slow += med >= 50
         out["timing"].append({"id": r["id"], "sha256": r["sha256"], "tokens": len(toks), "median_ms": round(med, 2), "p95_ms": round(sorted(samples)[18], 2)})
     print(f"timing: {len(out['timing'])} fixtures, slowest median {worst:.1f} ms, {slow} at or over 50 ms (conditions: warm process, median of 20, {out['platform']}, Python {out['python']})")
+    print("timing budget: enforced" if enforce_timing else "timing budget: recorded only; FORTIS_PARSER_TIMING=1 judges it for v1.0 (X-149)")
     json.dump(out, open(os.path.join(ROOT, "conformance", "generated", "check.json"), "w", encoding="utf-8"), indent=1)
-    return 1 if (disagreements or tree_diffs or amb_fail or slow) else 0
+    return 1 if (disagreements or tree_diffs or amb_fail or (enforce_timing and slow)) else 0
 
 
 if __name__ == "__main__":

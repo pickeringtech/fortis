@@ -1,0 +1,17 @@
+// reject: E-OWN-051
+// covers: LANG-07-06, LANG-07-07
+// D-562: a supplying expression may own a statement temporary.
+import fortis.host { Console }
+pure func fresh() String => " temp " as String
+export error Missing {
+  code: "demo.missing"
+}
+try func first(xs: List[String]) alias String from xs => xs.get(0) ?? fail Missing()
+recovers func main(console: Console) {
+  let empty: List[String] = List.default()
+  let named = " named " as String
+  let part = (first(alias empty) catch e {
+    recover " temp " as String
+  }).trim() // reject: E-OWN-051
+  console.print(part)
+}

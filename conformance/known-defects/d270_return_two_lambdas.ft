@@ -1,9 +1,17 @@
 // Two `return`s of different lambdas from one non-dynamic function type.
 // LR 8.4's first paragraph types each return by signature; the heterogeneous-collection
 // sentence does not mention returns. Recorded only if both checkers still accept it.
+import fortis.host { Console }
+
 func make(b: Bool) fn(Int) Int {
   if b {
     return pure noalloc fn(x: Int) Int => x
   }
   return pure noalloc fn(x: Int) Int => Int.saturatingAdd(x, 1)
+}
+
+func main(console: Console) {
+  let a = make(true)
+  let b = make(false)
+  console.print("${a(1)} ${b(1)}")
 }

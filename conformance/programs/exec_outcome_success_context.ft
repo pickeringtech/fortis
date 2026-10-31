@@ -1,0 +1,14 @@
+// execute: 42|43
+// requires: runtime
+// covers: LANG-10-01, LANG-06-14
+// D-519: native success constructors carry Failure even without an expected Outcome type.
+import fortis.host { Console }
+
+recovers func main(console: Console) {
+  let n = Outcome[Int].success(42) or recover 0
+  console.print("${n}")
+  match Outcome[Int].success(43) {
+    success(value) => console.print("${value}")
+    failure(f) => { report f }
+  }
+}

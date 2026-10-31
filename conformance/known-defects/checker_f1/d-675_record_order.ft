@@ -1,0 +1,8 @@
+// execute: 3 true
+// D-675: both checkers accept; interpreter and VM run; native record shape names depend on field order.
+import fortis.host { Console }
+func reorder(value: { flag: Bool, count: Int }) { count: Int, flag: Bool } { return value }
+func main(console: Console) {
+  let value = reorder({ flag: true, count: 3 })
+  console.print("${value.count} ${value.flag}")
+}

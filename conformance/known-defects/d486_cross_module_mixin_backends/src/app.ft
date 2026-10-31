@@ -1,0 +1,14 @@
+// D-486: applies the mixin of shapes.ft.
+import fortis.host { Console }
+import d486.mixin.shapes { Doubled }
+
+export class Box with Doubled {
+  export n: Int
+  export pure func base(self) Int => self.n
+}
+
+func main(console: Console) {
+  let b = Box(n: 4)
+  console.print("${b.twice()}")
+  console.print("${b.once()}")
+}

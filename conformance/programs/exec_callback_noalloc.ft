@@ -1,0 +1,15 @@
+// execute: 2 7
+// requires: runtime
+// covers: LANG-11-03
+import fortis.host { Console }
+pure noalloc func count(xs: List[Int]) Int {
+  let mut n = 0
+  for x in xs { if x > 0 { n = Int.saturatingAdd(n, 1) } }
+  return n
+}
+pure noalloc func invoke(f: pure noalloc fn(Int) Int) Int => f(7)
+func main(console: Console) {
+  let xs = List[Int].of(1, -2, 3)
+  let n = invoke(pure noalloc fn(x: Int) Int => x)
+  console.print("${count(xs)} ${n}")
+}

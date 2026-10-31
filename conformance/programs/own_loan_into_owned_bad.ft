@@ -1,4 +1,4 @@
-// reject: E-OWN-001 (at the marked lines)
+// reject: E-OWN-001, E-OWN-053 (at the marked lines)
 // covers: LANG-07-01
 // D-341, 7.5, 7.6, X-95: a loan stays a loan. `xs.get(0)` lends the list's element, and an owned value is made
 // from a loan only by `copy`, so a loan of a copyable, non-trivial value where an owned value is expected is
@@ -65,7 +65,7 @@ func stored(xs: List[Item]) Holder {
 
 func pushed(xs: List[Item]) {
   let mut ys: List[Item?] = List.default()
-  ys.push(xs.get(0))                                // reject: E-OWN-001 — a pushed item
+  ys.push(xs.get(0))                                // reject: E-OWN-001, E-OWN-053 — a pushed item
 }
 
 func held(xs: List[Item]) Item? {

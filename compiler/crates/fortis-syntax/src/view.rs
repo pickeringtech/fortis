@@ -69,14 +69,21 @@ impl<'a> N<'a> {
         std::ptr::eq(self.node, other.node)
     }
     pub fn kids(self) -> Vec<C<'a>> {
-        self.node
+        let mut kids: Vec<_> = self.node
             .children
             .iter()
             .map(|c| match c {
                 Child::Tok(i) => C::T(&self.toks[*i]),
                 Child::Node(n) => C::N(N { node: n, toks: self.toks }),
             })
-            .collect()
+            .collect();
+        if let Some(head) = self.node.inferred_head.get() {
+            let head = N::new(&head.root, &head.toks);
+            let at = kids.iter().position(|c| c.text_is("fn")).map(|i| i + 1).unwrap_or(0);
+            let extra = head.kids().into_iter().filter(|c| c.is("captureList") || c.text_is("mut") || c.text_is("once"));
+            kids.splice(at..at, extra);
+        }
+        kids
     }
     pub fn nkids(self) -> usize {
         self.node.children.len()
@@ -113,9 +120,9 @@ impl<'a> N<'a> {
             if n.name() == rule {
                 return Some(n);
             }
-            for c in &n.node.children {
-                if let Child::Node(m) = c {
-                    if let Some(r) = go(N { node: m, toks: n.toks }, rule) {
+            for c in n.kids() {
+                if let C::N(m) = c {
+                    if let Some(r) = go(m, rule) {
                         return Some(r);
                     }
                 }
@@ -141,7 +148,7 @@ impl<'a> N<'a> {
         out
     }
     pub fn direct_tokens(self) -> Vec<&'a Token> {
-        self.node.children.iter().filter_map(|c| if let Child::Tok(i) = c { Some(&self.toks[*i]) } else { None }).collect()
+        self.kids().into_iter().filter_map(|c| c.tok()).collect()
     }
     pub fn first_token(self) -> Option<&'a Token> {
         fn go<'a>(n: N<'a>) -> Option<&'a Token> {

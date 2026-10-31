@@ -1,0 +1,7 @@
+// accept
+// D-67: `Svc` requires module b's `Required`.
+import bad.requirement.identity.b { Required }
+
+export interface Svc requires Required {
+  func run(self) Int
+}

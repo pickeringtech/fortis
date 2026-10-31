@@ -1,0 +1,5 @@
+// reject: E-REF-001
+// covers: LANG-06-02
+// D-706: rc.1 regression.
+func f() { let mut xs: List[Int<0..3>] = List.of(1)
+  xs[0] = 9 }

@@ -1,0 +1,7 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-580, X-605: an owned container cannot retain a non-static loan.
+class Box[T] { value: T }
+enum Choice[T] { Some(value: T)
+  Empty }
+func use(a: Box[StringView], b: Choice[StringView]) {}

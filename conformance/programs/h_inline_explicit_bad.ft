@@ -1,0 +1,8 @@
+// reject: E-FUN-011
+// covers: LANG-08-02, LANG-08-03
+func call(f: fn() Int) {}
+func demo() {
+  let n = 1
+  let m = 2
+  call(fn[n]() => Int.wrappingAdd(n, m))
+}

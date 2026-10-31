@@ -36,15 +36,15 @@ func throughLoan(console: Shared[Console], o: Outer) {
 }
 
 func localOwner(console: Shared[Console]) {
-  let o = Outer(holder: Holder(tok: Token(label: String.from("local"), console: console.retain())))
+  let o = Outer(holder: Holder(tok: Token(label: "local" as String, console: console.retain())))
   let t = alias o.holder.tok
   console.print("local ${t.label}")
 }
 
 func main(out: Console) {
   let console = Shared.create(move out)
-  let h = Holder(tok: Token(label: String.from("held"), console: console.retain()))
-  let o = Outer(holder: Holder(tok: Token(label: String.from("deep"), console: console.retain())))
+  let h = Holder(tok: Token(label: "held" as String, console: console.retain()))
+  let o = Outer(holder: Holder(tok: Token(label: "deep" as String, console: console.retain())))
   throughParam(console, h)
   throughLoan(console, o)
   localOwner(console)

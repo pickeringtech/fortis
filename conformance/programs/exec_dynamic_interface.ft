@@ -1,0 +1,72 @@
+// execute: 7|7|7|7|10|10|7|seven|3
+// requires: runtime
+// covers: LANG-09-03
+// A class value where a `dynamic` interface is read: passed directly, held in a `dynamic` binding and passed on,
+// forwarded from one `dynamic` parameter to another, and collected in a `List[dynamic Measured]`, from class values
+// and from `dynamic` values of two classes (D-148); and a `dynamic` parameterized interface (`dynamic Part[Int]`).
+import fortis.host { Console }
+
+export interface Measured {
+  pure func size(self) Int
+}
+
+export class Pair implements Measured {
+  export a: Int
+  export b: Int
+  pure func size(self) Int => Int.wrappingAdd(self.a, self.b)
+}
+
+export class Single implements Measured {
+  export a: Int
+  pure func size(self) Int => self.a
+}
+
+// a trivial class, lent as `&dyn Measured` by value semantics
+export trivial class Spot implements Measured {
+  export x: Int
+  export y: Int
+  pure func size(self) Int => Int.wrappingAdd(self.x, self.y)
+}
+
+pure func measure(s: dynamic Measured) Int => s.size()
+
+pure func forward(s: dynamic Measured) Int => measure(s)
+
+pure func measureBound[S](s: S) Int where S implements Measured => s.size()
+
+pure func total(items: List[dynamic Measured]) Int {
+  let mut sum = 0
+  for item in items {
+    sum = Int.wrappingAdd(sum, measure(item))
+  }
+  return sum
+}
+
+export interface Part[A] {
+  pure func item(self) A
+}
+
+export class IntBox implements Part[Int] {
+  export v: Int
+  pure func item(self) Int => self.v
+}
+
+export class TextBox implements Part[String] {
+  export v: String
+  pure func item(self) String => copy self.v
+}
+
+func intItem(x: dynamic Part[Int]) Int => x.item()
+
+func textItem(x: dynamic Part[String]) String => x.item()
+
+func main(console: Console) {
+  let p = Pair(a: 3, b: 4)
+  let d: dynamic Measured = Pair(a: 3, b: 4)
+  let items: List[dynamic Measured] = List.of(Pair(a: 3, b: 4), Pair(a: 1, b: 2))
+  let pair: dynamic Measured = Pair(a: 3, b: 4)
+  let single: dynamic Measured = Single(a: 3)
+  let mixed = List.of(move pair, move single)
+  let text = TextBox(v: "seven")
+  console.print("${measure(p)}|${measureBound(p)}|${measure(d)}|${forward(p)}|${total(items)}|${total(mixed)}|${intItem(IntBox(v: 7))}|${textItem(text)}|${measure(Spot(x: 1, y: 2))}")
+}

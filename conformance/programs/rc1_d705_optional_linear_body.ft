@@ -1,0 +1,5 @@
+// reject: E-OBL-001
+// covers: LANG-10-01
+// D-705: rc.1 regression.
+class Cell { export func take[T](self, x: owned T, use: fn(owned T) Int) Int where T: linear => use(move x) }
+func f[T](c: Cell?, x: owned T, use: fn(owned T) Int) where T: linear { let n = c?.take(move x, use) }

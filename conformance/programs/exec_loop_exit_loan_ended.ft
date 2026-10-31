@@ -1,0 +1,69 @@
+// execute: t none v item|drop item|t none v item|drop item|end
+// requires: runtime
+// covers: LANG-07-04, LANG-07-05
+// D-362, 7.3: a loan a `let mut` binding holds inside an optional is over at a loop's exit when it has ended on every
+// path that leaves the loop: ended before a `while` that may not run, or ended by the body of a `loop` that leaves
+// only through its `break`. The owner may then change, and the popped element is destroyed once, on every backend.
+// The tokens sit in slots without a cleanup of their own, so that no backend announces the drops in its trace
+// (native code announces none for an owned optional, D-344); the output shows every cleanup.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+class Slot {
+  token: Token
+}
+
+func make(console: Shared[Console], label: StringView) Slot {
+  return Slot(token: Token(label: label as String, console: console.retain()))
+}
+
+func endedBefore(console: Shared[Console]) {
+  let mut xs: List[Slot] = List.default()
+  xs.push(make(console, "item"))
+  let mut t = xs.get(0)
+  t = null
+  let go = false
+  while go {
+    t = xs.get(0)
+    t = null
+  }
+  let v = xs.pop() ?? make(console, "none")
+  let held = if t == null {
+    give "none"
+  } else {
+    give "some"
+  }
+  console.print("t ${held} v ${v.token.label}")
+}
+
+func endedByBreak(console: Shared[Console]) {
+  let mut xs: List[Slot] = List.default()
+  xs.push(make(console, "item"))
+  let mut t = xs.get(0)
+  loop {
+    t = null
+    break
+  }
+  let v = xs.pop() ?? make(console, "none")
+  let held = if t == null {
+    give "none"
+  } else {
+    give "some"
+  }
+  console.print("t ${held} v ${v.token.label}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  endedBefore(console)
+  endedByBreak(console)
+  console.print("end")
+}

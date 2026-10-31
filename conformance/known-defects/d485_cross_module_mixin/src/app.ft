@@ -1,0 +1,12 @@
+// D-485: applies the mixin of shapes.ft; both checkers accept the package.
+import fortis.host { Console }
+import d485.mixin.shapes { Peeks }
+
+export class Vault with Peeks {
+  export name: String
+  secret: Int
+}
+
+func main(console: Console) {
+  console.print("${Vault(name: "v", secret: 1).name}")
+}

@@ -1,0 +1,3 @@
+[
+  {"name": "lr45_in_memory_signatures", "input": {"fortis.prelude": "export class Int {}\nexport class Bool {}\nexport class Void {}\nexport class String {}\nexport class StringView {}\nexport class List {}\nexport class Map {}\nexport class Decimal {}\nexport class Duration {}", "acme.items": "export class Item { export func make() Item\nfunc hidden() Item }\nexport func public() {}\nfunc private() {}\nexport const count = 1", "acme.other": "export func public() {}\nexport class Other {}", "acme.interfaces": "export interface I {}"}, "expect": ["Bool", "Decimal", "Duration", "Int", "List", "Map", "String", "StringView", "Void"]}
+]

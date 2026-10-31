@@ -1,0 +1,4 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+class Box { export func size[T](value: T) Int => 1 }
+func main() { let f = Box.size }

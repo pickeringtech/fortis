@@ -1,0 +1,282 @@
+[
+  {
+    "name": "delivery",
+    "input": {"paths": ["docs/delivery/releases.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "reviews",
+    "input": {"paths": ["docs/reviews/new.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "next_release",
+    "input": {"paths": ["docs/releases/v0.1.0.md"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "register",
+    "input": {"paths": ["docs/Fortis_Specification_Review.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "agents",
+    "input": {"paths": ["AGENTS.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "contributing",
+    "input": {"paths": ["CONTRIBUTING.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "security",
+    "input": {"paths": ["SECURITY.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "readme",
+    "input": {"paths": ["README.md"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "guide",
+    "input": {"paths": ["docs/guide/tour.md"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "agent",
+    "input": {"paths": ["docs/agent/records.md"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "platform",
+    "input": {"paths": ["docs/Fortis_Platform_Specification.md"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "language",
+    "input": {"paths": ["docs/Fortis_Language_Reference.md"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "overview",
+    "input": {"paths": ["docs/Fortis_Specification.md"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "programme_rendered",
+    "input": {"paths": ["docs/Fortis_Delivery_Programme.md"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "published_release",
+    "input": {"paths": ["docs/releases/v0.0.2.md"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "skill",
+    "input": {"paths": ["skills/fortis-code/SKILL.md"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "limitations_input",
+    "input": {"paths": ["docs/delivery/triage.json"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "known_defects",
+    "input": {"paths": ["docs/delivery/defects.json"]},
+    "expect": {"classes": ["documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "python",
+    "input": {"paths": ["tests/python/area/test_new.py"]},
+    "expect": {"classes": ["tests"], "steps": ["unit", "cargo-test"], "build": false, "rust_tests": true, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "shared_cases",
+    "input": {"paths": ["tests/cases/area/new.json"]},
+    "expect": {"classes": ["tests"], "steps": ["unit", "cargo-test"], "build": false, "rust_tests": true, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "rust_integration",
+    "input": {"paths": ["compiler/crates/fortis-types/tests/new.rs"]},
+    "expect": {"classes": ["tests"], "steps": ["unit", "cargo-test"], "build": false, "rust_tests": true, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "testkit",
+    "input": {"paths": ["compiler/crates/fortis-testkit/src/lib.rs"]},
+    "expect": {"classes": ["tests"], "steps": ["unit", "cargo-test"], "build": false, "rust_tests": true, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "testkit_manifest",
+    "input": {"paths": ["compiler/crates/fortis-testkit/Cargo.toml"]},
+    "expect": {"classes": ["tests"], "steps": ["unit", "cargo-test"], "build": false, "rust_tests": true, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "compiler",
+    "input": {"paths": ["compiler/crates/fortis-types/src/lib.rs"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "unknown",
+    "input": {"paths": ["new-area/input.dat"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "unknown_markdown",
+    "input": {"paths": ["new-area/README.md"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "workflow",
+    "input": {"paths": [".github/workflows/ci.yml"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "github_markdown",
+    "input": {"paths": [".github/README.md"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "cargo",
+    "input": {"paths": ["compiler/Cargo.toml"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "tool_in_delivery",
+    "input": {"paths": ["docs/delivery/tools/plan_check.py"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "process_data",
+    "input": {"paths": ["docs/delivery/status.json"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "grammar",
+    "input": {"paths": ["reference/grammar/fortis.ebnf"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "corpus",
+    "input": {"paths": ["conformance/corpus/manifest.json"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "project",
+    "input": {"paths": ["project.yaml"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "rust_query_db",
+    "input": {"paths": ["compiler/query-db/tests/alloc.rs"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "website",
+    "input": {"paths": ["website/src/index.html"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "process_and_docs",
+    "input": {"paths": ["AGENTS.md", "README.md"]},
+    "expect": {"classes": ["process", "documentation"], "steps": ["unit", "hygiene", "cargo-build-release", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": false, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "process_and_tests",
+    "input": {"paths": ["AGENTS.md", "tests/new.py"]},
+    "expect": {"classes": ["process", "tests"], "steps": ["unit", "hygiene", "cargo-test", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": true, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "docs_and_tests",
+    "input": {"paths": ["README.md", "tests/new.py"]},
+    "expect": {"classes": ["documentation", "tests"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "checker", "shapes", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "plan"], "build": true, "rust_tests": true, "shards": 4, "py_shards": 1}
+  },
+  {
+    "name": "all_classes",
+    "input": {"paths": ["AGENTS.md", "README.md", "tests/new.py", "new.dat"]},
+    "expect": {"classes": ["process", "documentation", "tests", "full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "unknown_widens",
+    "input": {"paths": ["AGENTS.md", "new.dat"]},
+    "expect": {"classes": ["process", "full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "cited_test",
+    "input": {"paths": ["tests/cases/new.json"], "cited": ["tests/cases/new.json"]},
+    "expect": {"classes": ["tests"], "steps": ["unit", "hygiene", "cargo-test", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": true, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "rename_docs_to_tests",
+    "input": {"paths": ["docs/reviews/old.md", "tests/new.py"]},
+    "expect": {"classes": ["process", "tests"], "steps": ["unit", "hygiene", "cargo-test", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": true, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "rename_unknown_to_docs",
+    "input": {"paths": ["old.rs", "docs/reviews/new.md"]},
+    "expect": {"classes": ["process", "full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "delete_document",
+    "input": {"paths": ["docs/reviews/deleted.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "delete_unknown",
+    "input": {"paths": ["deleted.rs"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "empty_diff",
+    "input": {"paths": []},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "manual",
+    "input": {"paths": [], "full": true},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "tool_in_guide",
+    "input": {"paths": ["docs/guide/tools/check.py"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "tool_in_skill",
+    "input": {"paths": ["skills/fortis-code/scripts/check.py"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  },
+  {
+    "name": "test_readme",
+    "input": {"paths": ["tests/README.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "corpus_readme",
+    "input": {"paths": ["conformance/README.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "interpreter_notes",
+    "input": {"paths": ["interpreter/ARCHITECTURE.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "spike_design",
+    "input": {"paths": ["spikes/SP-12b/design.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "website_readme",
+    "input": {"paths": ["website/README.md"]},
+    "expect": {"classes": ["process"], "steps": ["hygiene", "syntax", "cite", "terms", "plan"], "build": false, "rust_tests": false, "shards": 1, "py_shards": 1}
+  },
+  {
+    "name": "parity_corpus_markdown",
+    "input": {"paths": ["spikes/SP-01/README.md"]},
+    "expect": {"classes": ["full"], "steps": ["unit", "hygiene", "cargo-build-release", "cargo-test", "syntax", "names", "checker", "packages", "execute", "cfg", "aspects", "diagnostics", "library", "ir", "corrections", "vm", "validator", "native", "parity", "shapes", "adapters", "fmt", "tests", "docs", "website", "docset", "showcase", "cite", "site", "terms", "libref", "limitations", "pilot", "api", "limits", "build", "acceptance-a", "acceptance-a2", "plan"], "build": true, "rust_tests": true, "shards": 14, "py_shards": 3}
+  }
+]

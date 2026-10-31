@@ -1,0 +1,29 @@
+// reject: E-TYP-020 (at the marked lines)
+// covers: LANG-06-02
+// A refinement is well formed only in the forms 6.3 lists (X-510, X-512): each bound is an integer literal or a `const`
+// of the base type resolved at compile time, the range is not empty and lies within the base's own range, and each
+// measure refines the bases named for it. Anything else is not a refinement of this base, and is rejected rather than
+// read as a wider type (D-135: `Int<0..nothere>` was accepted and `Int<0..top>` was `Int<0..>`).
+const top: Int = 10
+const text: String = "ten"
+const cycle: Int = cycle
+
+type Small = Int<0..10>
+
+pure func a(n: Int<0..nothere>) Int => n                   // reject: E-TYP-020
+pure func b(n: UInt8<0..top>) Int => 1                     // reject: E-TYP-020
+pure func b2(n: Int<0..text>) Int => n                     // reject: E-TYP-020
+pure func b3(n: Int<0..cycle>) Int => n                    // reject: E-TYP-020
+pure func b4(n: Int<0..top / 0>) Int => n                  // reject: E-TYP-020
+pure func c(n: Int<5..1>) Int => n                         // reject: E-TYP-020
+pure func d(n: Int<0..<0>) Int => n                        // reject: E-TYP-020
+pure func e(n: UInt8<0..300>) Int => 1                     // reject: E-TYP-020
+pure func f(n: Bool<0..1>) Int => 1                        // reject: E-TYP-020
+pure func g(n: Int<scalars: 1..2>) Int => n                // reject: E-TYP-020
+pure func h(n: Int<exact: 1..2>) Int => n                  // reject: E-TYP-020
+pure func i(n: String<length: 0..3>) Int => 1              // reject: E-TYP-020
+pure func j(n: Map[String, Int]<length: 0..3>) Int => 1    // reject: E-TYP-020
+pure func k(n: Set[Int]<length: 0..3>) Int => 1            // reject: E-TYP-020
+pure func l(n: List[Int]<length: -1..3>) Int => 1          // reject: E-TYP-020
+pure func m(n: Small<0..5>) Int => 1                       // reject: E-TYP-020
+pure func o[T](n: T<0..5>) Int => 1                        // reject: E-TYP-020

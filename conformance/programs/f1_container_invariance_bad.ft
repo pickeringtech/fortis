@@ -1,0 +1,6 @@
+// reject: E-TYP-040
+// covers: LANG-06-01, LANG-06-02, LANG-06-08
+func plain(xs: List[Int<0..3>]) { let ys: List[Int] = copy xs }
+func optional(xs: List[Int<0..3>?]) { let ys: List[Int?] = copy xs }
+func tuple(xs: List[(Int<0..3>, Bool)]) { let ys: List[(Int, Bool)] = copy xs }
+func recordValue(xs: List[{ value: Int<0..3> }]) { let ys: List[{ value: Int }] = copy xs }

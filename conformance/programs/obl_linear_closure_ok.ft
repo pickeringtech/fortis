@@ -1,8 +1,10 @@
 // accept
 // covers: LANG-10-02, LANG-06-09
+// The sink consumes what it is given (6.12, X-521), so the closure that captures the outcome calls a `recovers`
+// function and the function that runs the closure is `recovers` too.
 try func half(n: Int) Int => n
-func takeOutcome(o: owned Outcome[Int]) Int => 0
-func run(n: Int) Int {
+recovers func takeOutcome(o: owned Outcome[Int]) Int => move o or recover 0
+recovers func run(n: Int) Int {
   let o = half(n)
   let later = fn once[move o]() Int => takeOutcome(move o)
   return move later()

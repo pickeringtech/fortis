@@ -1,0 +1,35 @@
+// execute: moved|plain|aliased|copied|field
+// covers: LANG-06-14, LANG-11-01
+// D-719: String.from copies even when its owned place is passed with move.
+// tests/cases/formatter/string_copy.json also rejects noalloc callers before and after.
+import fortis.host { Console }
+
+func fromMove(s: owned String) String {
+  return String.from(move s)
+}
+
+func fromPlace(s: owned String) String {
+  return String.from(s)
+}
+
+func fromAlias(s: owned String) String {
+  return String.from(alias s)
+}
+
+func fromCopy(s: owned String) String {
+  return String.from(copy s)
+}
+
+class Holder { text: String }
+
+func fromField(holder: owned Holder) String {
+  return String.from(holder.text)
+}
+
+func main(console: Console) {
+  console.print(fromMove("moved" as String))
+  console.print(fromPlace("plain" as String))
+  console.print(fromAlias("aliased" as String))
+  console.print(fromCopy("copied" as String))
+  console.print(fromField(Holder(text: "field")))
+}

@@ -32,7 +32,7 @@ export class Boxed {
 async func main(out: Console) {
   let console = Shared.create(move out)
   scope tasks {
-    let words = List.of(String.from("abc"), String.from("de"))
+    let words = List.of("abc" as String, "de" as String)
     for w in words {
       let t = tasks.launch(size(w))
       let n = await t
@@ -49,12 +49,12 @@ async func main(out: Console) {
   }
   scope tasks {
     let a = Res(console: console.retain(), label: "a")
-    let t = tasks.launch(make(console.retain(), String.from("b")))
+    let t = tasks.launch(make(console.retain(), "b" as String))
     let b = await t
     let c = Res(console: console.retain(), label: "c")
   }
   scope tasks {
-    let boxed = Boxed(text: String.from("abc"), guard: Res(console: console.retain(), label: "boxed"))
+    let boxed = Boxed(text: "abc" as String, guard: Res(console: console.retain(), label: "boxed"))
     let Boxed(text: word, guard: g) = move boxed
     let t = tasks.launch(size(word))
     let n = await t
@@ -69,7 +69,7 @@ async func main(out: Console) {
   }
   scope tasks {
     let s = alias tasks
-    let word = String.from("a")
+    let word = "a" as String
     let t = s.launch(size(word))
     let n = await t
     console.print("alias ${n}")

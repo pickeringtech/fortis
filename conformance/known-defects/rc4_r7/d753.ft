@@ -1,0 +1,7 @@
+import fortis.host { Console }
+func parse(s: String) Int => 3
+func main(console: Console) {
+  let holder = { work: parse }
+  let f = alias holder.work
+  console.print("${f("3")}")
+}

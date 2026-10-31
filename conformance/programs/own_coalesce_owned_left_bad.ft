@@ -1,0 +1,72 @@
+// reject: E-OWN-001, E-OWN-020 (at the marked lines)
+// covers: LANG-07-01, LANG-07-02
+// D-357, 7.5: the left operand of a `??` is a position that takes ownership of what it reads whenever the result is
+// owned and goes to one: `let p: Token? = some ?? move d`, with `some` a binding that owns its value, would leave
+// `p` and `some` each owning the token (the interpreter ran its cleanup twice, native code did not build). An
+// existing ownership-bearing place there needs the marker `let x = p` needs: `move some` or `copy some`. Lent for a
+// call or an interpolation, a bare `some ?? …` is a read loan of `some`, as `some` is (exec_coalesce_owned_left.ft).
+// A `move` on the left moves on every path: the place is unusable afterwards (both checkers lost the marker).
+import fortis.host { Console }
+
+class Token {
+  label: String
+
+  cleanup(editable self) {
+    log.info("drop ${self.label}")
+  }
+}
+
+func make(label: StringView) Token {
+  return Token(label: String.from(label))
+}
+
+func bound(console: Console) {
+  let some: Token? = make("s")
+  let d = make("d")
+  let p: Token? = some ?? move d                                          // reject: E-OWN-001 — some owns its value: move or copy it
+  console.print("${p?.label ?? "none"} ${some?.label ?? "none"}")
+}
+
+func assigned(console: Console) {
+  let some: Token? = make("s")
+  let mut p: Token? = null
+  p = some ?? make("z")                                                   // reject: E-OWN-001 — the assigned value would be some's
+  console.print("${p?.label ?? "none"} ${some?.label ?? "none"}")
+}
+
+func returned(some: owned Token?) Token {
+  return some ?? make("z")                                                // reject: E-OWN-001 — the result would be some's value
+}
+
+func given(console: Console, flag: Bool) {
+  let some: Token? = make("s")
+  let p = if flag {
+    give some ?? make("z")                                                // reject: E-OWN-001 — handed on to p
+  } else {
+    give make("y")
+  }
+  console.print("${p.label} ${some?.label ?? "none"}")
+}
+
+func stored(console: Console) {
+  let some: Token? = make("s")
+  let xs = List.of(some ?? make("z"))                                     // reject: E-OWN-001 — the list would own some's value
+  console.print("${xs.count()} ${some?.label ?? "none"}")
+}
+
+func movedLeft(console: Console) {
+  let some: Token? = make("s")
+  let d = make("d")
+  let p: Token? = move some ?? move d
+  console.print("${p?.label ?? "none"} ${some?.label ?? "none"}")        // reject: E-OWN-020 — some was moved by the `??`
+}
+
+func main(console: Console) {
+  bound(console)
+  assigned(console)
+  let r = returned(make("r"))
+  console.print(r.label)
+  given(console, true)
+  stored(console)
+  movedLeft(console)
+}

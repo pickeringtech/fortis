@@ -1,0 +1,37 @@
+// execute: 12/12/12|13/13
+// requires: runtime
+// covers: LANG-06-15
+// X-552: a legacy From implementation supplies exactly the same as pair.
+import fortis.host { Console }
+
+trivial class Source {
+  value: Int
+}
+
+class Target implements From[Source] {
+  value: Int
+  export pure func from(source: Source) Target {
+    return Target(value: source.value)
+  }
+}
+
+class Other {
+  value: Int
+}
+
+implement From[Source] for Other {
+  pure func from(source: Source) Other {
+    return Other(value: source.value)
+  }
+}
+
+func main(console: Console) {
+  let source = Source(value: 12)
+  let a = Target.from(source)
+  let b: Target = source.to()
+  let c = source as Target
+  console.print("${a.value}/${b.value}/${c.value}")
+  let d = Source(value: 13) as Other
+  let e = Other.from(Source(value: 13))
+  console.print("${d.value}/${e.value}")
+}

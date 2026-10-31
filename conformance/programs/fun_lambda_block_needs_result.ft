@@ -1,9 +1,9 @@
-// reject: E-SYN-000 (at the marked line)
-// covers: LANG-08-01
-// 8.2 (X-345): only an expression body may leave out the return type; a block body writes it.
+// reject: E-TYP-040
+// covers: LANG-08-01, LANG-08-02
+// 8.2 (X-580): a block without a result type returns Void, so returning an Int still needs a written result.
 func use(xs: List[Int]) Int {
-  let f = fn(x: Int) {                      // a block-bodied lambda names its result type: `{` starts one
-    return x                                // reject: E-SYN-000 — `{ return` is not a record type
+  let f = fn(x: Int) {
+    return x // reject: E-TYP-040
   }
-  return f(1)
+  return 1
 }

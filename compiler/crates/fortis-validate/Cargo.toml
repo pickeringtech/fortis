@@ -9,3 +9,6 @@ license.workspace = true
 fortis-mir = { path = "../fortis-mir" }
 fortis-types = { path = "../fortis-types" }
 fortis-diag = { path = "../fortis-diag" }
+
+[dev-dependencies]
+fortis-testkit = { path = "../fortis-testkit" }

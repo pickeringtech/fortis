@@ -1,0 +1,8 @@
+// reject: E-OWN-051
+// covers: LANG-08-03, LANG-07-06
+// D-553: a borrowed callback temporary cannot be the returned closure's origin.
+func keep(f: fn() Int) fn() Int from f { return fn[alias f]() Int => f() }
+func demo() fn() Int {
+  let n = 1
+  return keep(fn[n]() Int => n)
+}

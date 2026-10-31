@@ -1,0 +1,11 @@
+// reject: E-EFF-001
+// covers: LANG-06-15
+class Source {
+  value: String
+}
+class Target derive convert from Source {
+  value: String
+}
+noalloc func translate(source: Source) Target {
+  return source as Target
+}

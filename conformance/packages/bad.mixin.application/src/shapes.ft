@@ -1,0 +1,7 @@
+// A body is judged for each application, at its own source location (D-485).
+pure func helper(n: Int) Int => n
+
+export mixin Peeks {
+  export pure func peek(self) Int => self.secret // reject: E-NAM-004
+  export pure func sum(self) Int => helper("x") // reject: E-TYP-040
+}

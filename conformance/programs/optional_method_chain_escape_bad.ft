@@ -1,0 +1,11 @@
+// reject: E-OWN-051
+// covers: LANG-07-06, LANG-06-08
+class Cell {
+  text: String
+  func child(self) (alias Cell from self)? => alias self
+  func textView(self, n: Int) StringView from self => alias self.text
+}
+recovers func bad() (StringView from static)? {
+  let cells = List.of(Cell(text: "gone"))
+  return cells.first()?.child()?.textView(" 1 ".trim() as Int or recover 0)
+}

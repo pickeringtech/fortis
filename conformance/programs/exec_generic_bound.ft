@@ -1,0 +1,41 @@
+// execute: 13|square 3|circle
+// requires: runtime
+// covers: LANG-06-12
+// A generic body calls the methods of its bound's interface, natively too (D-82): everything it does with a `T`
+// goes through values of `T` its caller passes, as Language 1.0 has no associated call on a type parameter (6.10,
+// X-180).
+import fortis.host { Console }
+
+export interface Shape {
+  pure func area(self) Int
+  pure func name(self) String
+}
+
+export class Square implements Shape {
+  export side: Int
+  export pure func area(self) Int => Int.wrappingMul(self.side, self.side)
+  export pure func name(self) String => "square ${self.side}"
+}
+
+export class Circle implements Shape {
+  export r: Int
+  export pure func area(self) Int => Int.wrappingMul(Int.wrappingMul(self.r, self.r), 3)
+  export pure func name(self) String => "circle"
+}
+
+func sumAreas[T](a: T, b: T) Int where T implements Shape {
+  return Int.wrappingAdd(a.area(), b.area())
+}
+
+func larger[T](a: T, b: T) String where T implements Shape {
+  if a.area() >= b.area() {
+    return a.name()
+  }
+  return b.name()
+}
+
+func main(console: Console) {
+  console.print("${sumAreas(Square(side: 3), Square(side: 2))}")
+  console.print(larger(Square(side: 3), Square(side: 1)))
+  console.print(larger(Circle(r: 1), Circle(r: 1)))
+}

@@ -3,7 +3,7 @@
 <!-- covers: LR 11 -->
 *Agent mode. Human mode: [Effects and contracts](../guide/11-effects.md). Source of truth: LR 11.*
 
-> Preview: contracts (LR 11.5) arrive in v0.1. Effects, claims, noalloc and capabilities (LR 11.1, 11.2, 11.3, 11.4 and 11.6) arrive in v0.2. The observation plane and aspects (LR 11.7, 11.8) arrive in v0.5, except the diagnostic plane that `report` and the `log` statements write to (LR 11.7, LR 13), which is in v0.0.2. `main`'s capability parameters (LR 4.6, 11.6) and the core aspect `@ignorable` (LR 5.5, 11.8) are in v0.0.2.
+> Preview: effects, claims, noalloc and capabilities (LR 11.1, 11.2, 11.3, 11.4 and 11.6) arrive in v0.2. The observation plane and aspects (LR 11.7, 11.8) arrive in v0.5, except the diagnostic plane that `report` and the `log` statements write to (LR 11.7, LR 13), which is in v0.0.2. Contracts (LR 11.5) are in v0.1 over the modifiers already checked. `main`'s capability parameters (LR 4.6, 11.6) and the core aspect `@ignorable` (LR 5.5, 11.8) are in v0.0.2.
 
 ## Rules
 
@@ -44,8 +44,10 @@ Source: LR 11.2. Order in a head: `[export] [Contract …] [pure] [noalloc] [asy
   result is a path to the loan's owner.
 - `async` call: builds a future, imports only argument evaluation; `await` (or `launch` into the awaiting scope)
   imports the future's summary; `launchParallel`/`launchBlocking` import the work's summary minus `block`.
-- Callback parameter: contributes what its function type permits. A lambda literal with no `pure`-excluded effect
-  has a `pure` type.
+- Callback parameter: contributes what its function type permits, irrespective of the particular argument.
+  Non-`pure` permits `io`, `mutate`, `nondet`; lacking `noalloc` permits `alloc`, including `pure fn`.
+  Thus `each`/`tryEach` prevent `pure`, and `map`/`fold`/`any` prevent `noalloc`; use a `for` loop when
+  its body can meet the stronger claim (X-610, LR 11.3). A lambda with no `pure`-excluded effect has a `pure` type.
 - `cleanup` effects join every function that may drop the type.
 - `report` and `log.info`/`log.warn`/`log.error` are `io` but need no capability (LR 11.6, LR 13); a `pure`
   function cannot report or log.
@@ -60,8 +62,13 @@ Source: LR 11.2. Order in a head: `[export] [Contract …] [pure] [noalloc] [asy
 | `requires capability A` | the function takes a parameter of `Authority` type `A` |
 | `excludes capability A` | the function neither takes `A` nor calls, transitively, a function that requires `A` |
 
-Contracts compose by conjunction; contradictions are rejected; `pure` with `requires capability` is a
-contradiction because a `pure` function takes no capability parameter (LR 11.5). The formatter keeps the name
+Contracts compose by conjunction. Contradictions are `E-EFF-050`: `pure` with a required capability,
+`try` with `forbids fail`, `async` with `forbids suspend`, `recovers` with `forbids recovers`, or one
+authority both required and excluded. The record is at the contract for an internal contradiction, or
+at the function for conflicting applied contracts or written modifiers; a broken claim is also
+`E-EFF-001` (LR 11.5). A `capability` clause must name an `Authority` type (`E-TYP-040` otherwise).
+An in-scope declaration is resolved by identity; an out-of-scope core capability such as `Network`
+is recognised from LR 11.6, but a kit authority needs its import (LR 11.5). The formatter keeps the name
 and prints the expansion after it: `export FastCalculation pure noalloc func square` (LR 11.5).
 
 ## Authorities (LR 11.6)
@@ -100,6 +107,8 @@ function's non-linear result without `discard` (LR 5.5).
 | Code | Trigger | Correction | LR |
 |---|---|---|---|
 | E-EFF-001 | summary exceeds the modifiers or contract: an effect `pure` excludes, `alloc` under `noalloc`, `suspend` without `async`, `fail` without `try`, `recovers` without `recovers`, a forbidden effect, a missing required or a present excluded authority | remove the effect; or, when the effect is intended, write the modifier its type needs (`async`, `try`, `recovers`). Dropping a written `pure`, `noalloc` or contract is an API change for whoever owns the claim, never a correction (LR 11.3) | LR 11.1, 11.3, 11.5 |
+| E-EFF-050 | contradictory contract clauses or modifiers | keep a consistent contract and implement its claims | LR 11.5 |
+| E-TYP-040 | a `capability` clause names a non-Authority type | name the intended Authority declaration and import it if needed | LR 11.5, LR 11.6 |
 | E-EFF-010 | `io` reached through a capability without an `Authority` parameter (`report` and `log` need none); `Host.capabilities()` outside `main`, called twice, or in a `main` that takes a capability parameter | take the authority (`console: Console`) as a parameter; declare the capabilities `main` needs as its parameters and pass them down | LR 11.6 |
 | E-EFF-020 | `block` inside an `async` function (or anything it calls), such as `lockBlocking` | `await m.lock()`, or move the blocking work into `launchBlocking` | LR 11.1 |
 | E-EFF-030 | the application's telemetry policy attaches an allocating record to a `noalloc` function | change the policy at the reported site | LR 11.4 |
@@ -494,3 +503,88 @@ test "produce" {
   allocations do not count against the native claim (LR 11.4).
 - Target feature sets (`core`, `alloc`, `host`, `async`, `web`, `browser`) are not effects and not capabilities
   (LR 11.6).
+
+## Contract clauses and callback effects in v0.1
+
+A contract's clauses must agree before a body is checked (LR 11.5). A clause naming a capability must
+resolve to an Authority type, not merely a class with a plausible name (LR 11.6).
+
+```fortis
+// reject: E-EFF-050
+contract Impossible {                      // reject: E-EFF-050
+  try
+  forbids fail
+}
+```
+
+A calculation that promises not to fail can name that promise consistently:
+
+```fortis
+// accept
+contract Infallible {
+  forbids fail
+}
+Infallible pure func identity(n: Int) Int => n
+
+test "identity" {
+  expect identity(7) == 7
+}
+```
+
+```fortis
+// reject: E-TYP-040
+class Configuration {}
+contract Configured {
+  requires capability Configuration       // reject: E-TYP-040
+}
+```
+
+Name the authority used by the operation:
+
+```fortis
+// accept
+import fortis.host { Console }
+contract WritesConsole {
+  requires capability Console
+}
+WritesConsole func write(console: Console) {
+  console.print("ready")
+}
+func main(console: Console) {
+  write(console)
+}
+```
+
+```output
+ready
+```
+
+Callback effects come from the parameter's function type (LR 11.3, X-610). `pure fn` still permits
+allocation; only `pure noalloc fn` excludes it as well as I/O, mutation and nondeterminism. A particular
+argument with fewer effects does not narrow that signature. Consequently `countWhere`, `any` and `fold`
+prevent a caller from claiming `noalloc`, even when their callback does not allocate. Use a loop whose
+body's inferred effects meet the claim:
+
+```fortis
+// reject: E-EFF-001
+pure noalloc func countPositive(items: List[Int]) Int {
+  return items.countWhere(fn(n) => n > 0)  // reject: E-EFF-001
+}
+```
+
+```fortis
+// accept
+pure noalloc func countPositive(items: List[Int]) Int {
+  let mut total = 0
+  for n in items {
+    if n > 0 {
+      total = Int.saturatingAdd(total, 1)
+    }
+  }
+  return total
+}
+
+test "two positive values" {
+  expect countPositive(List.of(1, -2, 3)) == 2
+}
+```

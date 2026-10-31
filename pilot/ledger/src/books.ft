@@ -132,7 +132,7 @@ account equity:opening
 
 // The balance of one account in one commodity, in minor units, as the tests read it.
 pure try func minorOf(balances: Balances, account: StringView, code: StringView) Int {
-  let c = CommodityCode.validate(String.from(code)) or fail
+  let c = code as String as CommodityCode or fail
   return balances.of(account).amountOf(c)
 }
 
@@ -191,7 +191,7 @@ test "a period selects transactions by date" {
 property "every roll-up keeps the grand total" forall (a: Int<1..1000000>, b: Int<1..1000000>) {
   let first = Date.of(2026, 1, 1)
   let mut balances = Balances.empty()
-  let gbp = CommodityCode.validate(String.from("GBP"))
+  let gbp = CommodityCode.validate("GBP" as String)
   let food = AccountName.parse("expenses:food:lunch")
   let cash = AccountName.parse("assets:cash")
   balances.credit(food, copy gbp, a)

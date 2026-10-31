@@ -32,7 +32,7 @@ recovers func main(console: Console) {
   let name: String? = null
   console.print(name
     ?? "fallback")
-  let words = List.of("ok", "no")
+  let words: List[String] = List.of("ok", "no")
   console.print(words
     .get(0) ?? "")
   let sum = 1 +

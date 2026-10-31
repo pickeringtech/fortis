@@ -1,0 +1,8 @@
+// reject: E-OWN-053
+// covers: LANG-07-06, LANG-08-03
+// D-580: the callback captures own implicitly; storing it would outlive own.
+pure func store(f: pure fn() Int) List[pure fn() Int] => List.of(alias f) // reject: E-OWN-053
+pure func keep() List[pure fn() Int] {
+  let own = "hello" as String
+  return store(fn() => own.scalarCount())
+}

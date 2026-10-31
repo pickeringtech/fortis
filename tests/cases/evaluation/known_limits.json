@@ -1,0 +1,27 @@
+[
+  {
+    "name": "lr6_3_refined_list_index_d656",
+    "input": {
+      "kind": "expr",
+      "source": "xs[1]",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": [
+        {
+          "name": "xs",
+          "type": "List[Int]<length: 3..3>",
+          "value": [
+            3,
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    "expect": {
+      "value": 1,
+      "ir": "index"
+    }
+  }
+]

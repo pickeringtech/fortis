@@ -1,0 +1,25 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-04-04
+// D-592: a program Bool cannot become the prelude Bool through a map key.
+import fortis.host { Console }
+import fortis.prelude
+
+class Bool derive Equatable, Hashable {
+  export n: Int
+}
+
+func wrong(xs: owned Map[Bool, Int]) Map[prelude.Bool, Int] => move xs // reject: E-TYP-040
+
+func main(console: Console) {
+  let mut m: Map[Bool, Int] = Map.default()
+  m.set(Bool(n: 7), 1)
+  let flipped = wrong(move m)
+  let keys = flipped.keys()
+  for k in keys {
+    if k {
+      console.print("true key")
+    } else {
+      console.print("false key")
+    }
+  }
+}

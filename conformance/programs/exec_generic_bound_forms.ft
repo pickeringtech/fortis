@@ -1,0 +1,137 @@
+// execute: 4|hi ada|ada|7|seven|5|copied 3|6|1|3|ada
+// requires: runtime
+// covers: LANG-06-12
+// A generic body calls its bounds' methods in every form a bound takes, natively too (D-82): a method returning
+// `Self`, a method of an interface the bound requires, a parameterized interface (`Part[Int]`), two bounds that
+// declare the same method, an interface named like a Rust trait (`Clone`), a bound a method puts on its class's
+// parameter, a generic class as the type argument, and a copy of a `T` returned from a read parameter, which needs
+// `T implements Copyable` (6.10, X-513; D-352).
+import fortis.host { Console }
+
+export interface Doubling {
+  pure func doubled(self) Self
+  pure func value(self) Int
+}
+
+export class Num implements Doubling {
+  export n: Int
+  pure func doubled(self) Num => Num(n: Int.wrappingAdd(self.n, self.n))
+  pure func value(self) Int => self.n
+}
+
+func quadrupled[T](x: T) Int where T implements Doubling {
+  return x.doubled().doubled().value()
+}
+
+export interface Named {
+  pure func name(self) String
+}
+
+export interface Greeter requires Named {
+  pure func greet(self) String
+}
+
+export class Person implements Named, Greeter {
+  export who: String
+  pure func name(self) String => copy self.who
+  pure func greet(self) String => "hi ${self.who}"
+}
+
+func greeting[T](x: T) String where T implements Greeter {
+  return "${x.greet()}|${x.name()}"
+}
+
+export interface Part[A] {
+  pure func item(self) A
+}
+
+export class IntBox implements Part[Int] {
+  export v: Int
+  pure func item(self) Int => self.v
+}
+
+export class TextBox implements Part[String] {
+  export v: String
+  pure func item(self) String => copy self.v
+}
+
+func intItem[T](x: T) Int where T implements Part[Int] {
+  return x.item()
+}
+
+func textItem[T](x: T) String where T implements Part[String] {
+  return x.item()
+}
+
+export interface First {
+  pure func amount(self) Int
+}
+
+export interface Second {
+  pure func amount(self) Int
+}
+
+export class Both implements First, Second {
+  export v: Int
+  pure func amount(self) Int => self.v
+}
+
+func viaBoth[T](x: T) Int where T implements First, T implements Second {
+  return x.amount()
+}
+
+export interface Clone {
+  pure func label(self) String
+}
+
+export class Sheep implements Clone {
+  export n: Int
+  pure func label(self) String => "copied ${self.n}"
+}
+
+func labelled[T](x: T) String where T implements Clone {
+  let y = alias x
+  return y.label()
+}
+
+export interface Weighed {
+  pure func weight(self) Int
+}
+
+export class Brick implements Weighed {
+  export w: Int
+  pure func weight(self) Int => self.w
+}
+
+export class Holder[T] {
+  export a: T
+  export b: T
+  pure func total(self) Int where T implements Weighed => Int.wrappingAdd(self.a.weight(), self.b.weight())
+  pure func count(self) Int => 1
+}
+
+export interface Sized {
+  pure func size(self) Int
+}
+
+export class Bag[T] implements Sized {
+  export items: List[T]
+  pure func size(self) Int => self.items.count()
+}
+
+func sizeOf[S](s: S) Int where S implements Sized {
+  return s.size()
+}
+
+func same[T](x: T) T where T implements Copyable {
+  return copy x
+}
+
+func main(console: Console) {
+  let text = TextBox(v: "seven")
+  let held: Holder[Brick] = Holder(a: Brick(w: 2), b: Brick(w: 4))
+  let words: Holder[String] = Holder(a: "x", b: "y")
+  let bag: Bag[Int] = Bag(items: List.of(1, 2, 3))
+  let name: String = "ada"
+  console.print("${quadrupled(Num(n: 1))}|${greeting(Person(who: "ada"))}|${intItem(IntBox(v: 7))}|${textItem(text)}|${viaBoth(Both(v: 5))}|${labelled(Sheep(n: 3))}|${held.total()}|${words.count()}|${sizeOf(bag)}|${same(name)}")
+}

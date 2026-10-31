@@ -1,0 +1,13 @@
+// execute: 3 4 5
+// requires: runtime
+// covers: LANG-08-01, LANG-06-11
+import fortis.host { Console }
+try func parse(s: String) Int => s as Int or fail
+try func main(console: Console) {
+  let f: try fn(String) Int = parse
+  let g = try fn(s: String) Int => s as Int or fail
+  let a = f("3") or fail
+  let b = g("4") or fail
+  let c = parse("5") or fail
+  console.print("${a} ${b} ${c}")
+}

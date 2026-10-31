@@ -1,0 +1,7 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-580: a callback's loan result cannot become an owned type argument by inference.
+pure func size(xs: List[String]) Int {
+  let ys = xs.map(fn(item: String) alias String from item => alias item)
+  return ys.count()
+}

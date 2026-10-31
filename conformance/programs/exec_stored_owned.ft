@@ -1,0 +1,41 @@
+// execute: hello|hello|hello|hello|2|hello|2|1|1|2
+// requires: runtime
+// covers: LANG-07-06, LANG-06-06
+// D-580: local wrappers still carry loans; collections own their elements.
+import fortis.host { Console }
+pure func viewed(xs: List[String]) ListView[String] from xs => alias xs
+pure func first(xs: List[String]) (alias String from xs)? => xs.get(0)
+pure func read(text: StringView) Int => text.scalarCount()
+pure func local[T](value: T) Int => 2
+pure func store[T](value: owned T) Int {
+  let xs = List.of(move value)
+  return xs.count()
+}
+pure func apply(f: pure fn(owned Int) Int) Int => f(4)
+pure func copied[T](value: T) List[T] where T implements Copyable => List.of(copy value)
+func main(console: Console) {
+  let words: List[String] = List.of("hello", "world")
+  {
+    let v = viewed(alias words)
+    console.print(v.get(0) ?? "missing")
+  }
+  {
+    let mut c = words.iterate()
+    console.print(c.next() ?? "missing")
+  }
+  let maybe = first(words)
+  console.print(maybe ?? "missing")
+  let text: StringView? = "hello"
+  console.print(text ?? "missing")
+  let pair = (first(words), 2)
+  console.print("${pair.1}")
+  console.print(first(words) ?? "missing")
+  discard read("hello")
+  console.print("${local("v")}")
+  console.print("${apply(store)}")
+  let own = "owned" as String
+  let copies = copied(alias own)
+  console.print("${copies.count()}")
+  let mapped = words.map(fn(item: String) => copy item)
+  console.print("${mapped.count()}")
+}

@@ -1,0 +1,31 @@
+// illustrative
+// List[T] and ListView[T]
+func each(self, visit: editable fn mut(T) Void)
+try func tryEach(self, visit: editable fn mut(T) Outcome[Void])
+pure func map[U](self, f: pure fn(T) U) List[U] where U: linear
+pure try func tryMap[U](self, f: pure fn(T) Outcome[U]) List[U]
+pure func filter(self, keep: pure fn(T) Bool) List[T] where T implements Copyable
+pure func fold[A](self, initial: owned A, step: pure fn(A, T) A) A
+pure try func tryFold[A](self, initial: owned A, step: pure fn(A, T) Outcome[A]) A
+pure func any(self, holds: pure fn(T) Bool) Bool
+pure func all(self, holds: pure fn(T) Bool) Bool
+pure func find(self, holds: pure fn(T) Bool) (alias T from self)?
+pure func indexWhere(self, holds: pure fn(T) Bool) Int?
+pure func contains(self, target: T) Bool where T implements Equatable
+pure func sortedBy[K](self, key: pure fn(T) K) List[T] where T implements Copyable, K implements Comparable
+pure func enumerate(self) List[(Int, T)] where T implements Copyable
+pure func zip[U](self, other: ListView[U]) List[(T, U)] where T implements Copyable, U implements Copyable
+pure func take(self, n: Int) List[T] where T implements Copyable
+pure func skip(self, n: Int) List[T] where T implements Copyable
+pure func flatMap[U](self, f: pure fn(T) List[U]) List[U] where U: linear
+pure func chunked(self, size: Int<1..>) List[List[T]] where T implements Copyable
+pure func groupBy[K](self, key: pure fn(T) K) Map[K, List[T]] where T implements Copyable, K implements Copyable, K implements Hashable, K implements Equatable
+// Map[K, V]
+func each(self, visit: editable fn mut(K, V) Void) where K implements Hashable
+pure func keys(self) List[K] where K implements Hashable, K implements Copyable
+pure func values(self) List[V] where K implements Hashable, V implements Copyable
+// Set[T]
+func each(self, visit: editable fn mut(T) Void) where T implements Hashable
+pure func union(self, other: Set[T]) Set[T] where T implements Hashable, T implements Copyable
+pure func intersection(self, other: Set[T]) Set[T] where T implements Hashable, T implements Copyable
+pure func difference(self, other: Set[T]) Set[T] where T implements Hashable, T implements Copyable

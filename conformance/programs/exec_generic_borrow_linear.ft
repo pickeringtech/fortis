@@ -1,0 +1,13 @@
+// execute: borrowed
+// requires: runtime
+// covers: LANG-07-06, LANG-10-02
+import fortis.host { Console }
+func borrow[T](x: T) T from x => alias x
+func main(console: Console) {
+  let m = Must.create()
+  {
+    let v = borrow(alias m)
+    console.print("borrowed")
+  }
+  Must.discharge(move m)
+}

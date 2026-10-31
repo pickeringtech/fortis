@@ -1,0 +1,10 @@
+// execute: abc
+// requires: runtime
+// D-667: retired validation copies text; its owned result keeps no source loan.
+// covers: LANG-06-03, LANG-07-06
+import fortis.host { Console }
+type Code = String<scalars: 1..10>
+func read(s: String) alias String from s { return alias s }
+try func f(s: String) Code { return Code.validate(read(alias s)) or fail }
+try func main(console: Console) { let value = f("abc") or fail
+  console.print("${value}") }

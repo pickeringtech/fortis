@@ -1,0 +1,1307 @@
+[
+  {
+    "name": "lr3_5_zero",
+    "input": {
+      "kind": "expr",
+      "source": "0",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 0,
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_max",
+    "input": {
+      "kind": "expr",
+      "source": "9223372036854775807",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 9223372036854775807,
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_hex",
+    "input": {
+      "kind": "expr",
+      "source": "0xff",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 255,
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_binary",
+    "input": {
+      "kind": "expr",
+      "source": "0b101",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 5,
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_separated",
+    "input": {
+      "kind": "expr",
+      "source": "1_234",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 1234,
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_true",
+    "input": {
+      "kind": "expr",
+      "source": "true",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": true,
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_false",
+    "input": {
+      "kind": "expr",
+      "source": "false",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": false,
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_text",
+    "input": {
+      "kind": "expr",
+      "source": "\"é🙂\"",
+      "type": "String",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": "é🙂",
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_escaped",
+    "input": {
+      "kind": "expr",
+      "source": "\"a\\nb\\t\"",
+      "type": "String",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": "a\nb\t",
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_empty_text",
+    "input": {
+      "kind": "expr",
+      "source": "\"\"",
+      "type": "String",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": "",
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_decimal",
+    "input": {
+      "kind": "expr",
+      "source": "12.50d",
+      "type": "Decimal",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": {
+        "decimal": "12.50"
+      },
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_duration",
+    "input": {
+      "kind": "expr",
+      "source": "2s",
+      "type": "Duration",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": {
+        "duration": 2000000000
+      },
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_null",
+    "input": {
+      "kind": "expr",
+      "source": "null",
+      "type": "Int?",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": null,
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr3_5_float",
+    "input": {
+      "kind": "expr",
+      "source": "1.5",
+      "type": "Float",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": {
+        "float": "1.5"
+      },
+      "ir": "const"
+    }
+  },
+  {
+    "name": "lr5_6_neg",
+    "input": {
+      "kind": "expr",
+      "source": "-3",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": -3,
+      "ir": "unary"
+    }
+  },
+  {
+    "name": "lr5_6_not_true",
+    "input": {
+      "kind": "expr",
+      "source": "!true",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": false,
+      "ir": "unary"
+    }
+  },
+  {
+    "name": "lr5_6_not_false",
+    "input": {
+      "kind": "expr",
+      "source": "!false",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": true,
+      "ir": "unary"
+    }
+  },
+  {
+    "name": "lr5_6_double_neg",
+    "input": {
+      "kind": "expr",
+      "source": "-(-3)",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 3,
+      "ir": "unary"
+    }
+  },
+  {
+    "name": "lr5_6_add",
+    "input": {
+      "kind": "expr",
+      "source": "2 + 3",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 5,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_sub",
+    "input": {
+      "kind": "expr",
+      "source": "2 - 3",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": -1,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_mul",
+    "input": {
+      "kind": "expr",
+      "source": "2 * 3",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 6,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_div",
+    "input": {
+      "kind": "expr",
+      "source": "-7 / 3",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": -2,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_rem",
+    "input": {
+      "kind": "expr",
+      "source": "-7 % 3",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": -1,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_shl",
+    "input": {
+      "kind": "expr",
+      "source": "2 << 3",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 16,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_shr",
+    "input": {
+      "kind": "expr",
+      "source": "-8 >> 2",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": -2,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_and",
+    "input": {
+      "kind": "expr",
+      "source": "5 & 3",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 1,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_or",
+    "input": {
+      "kind": "expr",
+      "source": "5 | 3",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 7,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_xor",
+    "input": {
+      "kind": "expr",
+      "source": "5 ^ 3",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 6,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_eq",
+    "input": {
+      "kind": "expr",
+      "source": "2 == 3",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": false,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_ne",
+    "input": {
+      "kind": "expr",
+      "source": "2 != 3",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": true,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_lt",
+    "input": {
+      "kind": "expr",
+      "source": "2 < 3",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": true,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_le",
+    "input": {
+      "kind": "expr",
+      "source": "3 <= 3",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": true,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_gt",
+    "input": {
+      "kind": "expr",
+      "source": "3 > 2",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": true,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_ge",
+    "input": {
+      "kind": "expr",
+      "source": "3 >= 3",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": true,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_6_precedence",
+    "input": {
+      "kind": "expr",
+      "source": "2 + 3 * 4",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 14,
+      "ir": "binary"
+    }
+  },
+  {
+    "name": "lr5_7_and_0",
+    "input": {
+      "kind": "expr",
+      "source": "false && false",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": false,
+      "ir": "and"
+    }
+  },
+  {
+    "name": "lr5_7_or_0",
+    "input": {
+      "kind": "expr",
+      "source": "false || false",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": false,
+      "ir": "or"
+    }
+  },
+  {
+    "name": "lr5_7_and_1",
+    "input": {
+      "kind": "expr",
+      "source": "false && true",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": false,
+      "ir": "and"
+    }
+  },
+  {
+    "name": "lr5_7_or_1",
+    "input": {
+      "kind": "expr",
+      "source": "false || true",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": true,
+      "ir": "or"
+    }
+  },
+  {
+    "name": "lr5_7_and_2",
+    "input": {
+      "kind": "expr",
+      "source": "true && false",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": false,
+      "ir": "and"
+    }
+  },
+  {
+    "name": "lr5_7_or_2",
+    "input": {
+      "kind": "expr",
+      "source": "true || false",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": true,
+      "ir": "or"
+    }
+  },
+  {
+    "name": "lr5_7_and_3",
+    "input": {
+      "kind": "expr",
+      "source": "true && true",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": true,
+      "ir": "and"
+    }
+  },
+  {
+    "name": "lr5_7_or_3",
+    "input": {
+      "kind": "expr",
+      "source": "true || true",
+      "type": "Bool",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": true,
+      "ir": "or"
+    }
+  },
+  {
+    "name": "lr6_tuple",
+    "input": {
+      "kind": "expr",
+      "source": "(1, true)",
+      "type": "(Int, Bool)",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": [
+        1,
+        true
+      ],
+      "ir": "tuple"
+    }
+  },
+  {
+    "name": "lr6_tuple_field",
+    "input": {
+      "kind": "expr",
+      "source": "(1, 2).1",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 2,
+      "ir": "tuple_field"
+    }
+  },
+  {
+    "name": "lr6_record",
+    "input": {
+      "kind": "expr",
+      "source": "{a: 1, b: true}",
+      "type": "{a: Int, b: Bool}",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": {
+        "a": 1,
+        "b": true
+      },
+      "ir": "record"
+    }
+  },
+  {
+    "name": "lr6_record_field",
+    "input": {
+      "kind": "expr",
+      "source": "{a: 1, b: 2}.b",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 2,
+      "ir": "field"
+    }
+  },
+  {
+    "name": "lr6_coalesce_null",
+    "input": {
+      "kind": "expr",
+      "source": "x ?? 4",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": [
+        {
+          "name": "x",
+          "type": "Int?",
+          "value": null
+        }
+      ]
+    },
+    "expect": {
+      "value": 4,
+      "ir": "coalesce"
+    }
+  },
+  {
+    "name": "lr6_coalesce_value",
+    "input": {
+      "kind": "expr",
+      "source": "x ?? 4",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": [
+        {
+          "name": "x",
+          "type": "Int?",
+          "value": 3
+        }
+      ]
+    },
+    "expect": {
+      "value": 3,
+      "ir": "coalesce"
+    }
+  },
+  {
+    "name": "lr6_present",
+    "input": {
+      "kind": "expr",
+      "source": "present(7)",
+      "type": "Int?",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 7,
+      "ir": "present"
+    }
+  },
+  {
+    "name": "lr6_list",
+    "input": {
+      "kind": "expr",
+      "source": "List.of(3, 1, 2)",
+      "type": "List[Int]",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": [
+        3,
+        1,
+        2
+      ],
+      "ir": "call"
+    }
+  },
+  {
+    "name": "lr6_index",
+    "input": {
+      "kind": "expr",
+      "source": "if i < xs.count() { give xs[i] } else { give 0 }",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": [
+        {
+          "name": "xs",
+          "type": "List[Int]",
+          "value": [
+            3,
+            1,
+            2
+          ]
+        },
+        {
+          "name": "i",
+          "type": "Int<0..>",
+          "value": 1
+        }
+      ]
+    },
+    "expect": {
+      "value": 1,
+      "ir": "if"
+    }
+  },
+  {
+    "name": "lr6_interpolation",
+    "input": {
+      "kind": "expr",
+      "source": "\"value ${2 + 3}\"",
+      "type": "String",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": "value 5",
+      "ir": "interpolate"
+    }
+  },
+  {
+    "name": "lr5_2_true",
+    "input": {
+      "kind": "expr",
+      "source": "if true { give 1 } else { give 2 }",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 1,
+      "ir": "if"
+    }
+  },
+  {
+    "name": "lr5_2_false",
+    "input": {
+      "kind": "expr",
+      "source": "if false { give 1 } else { give 2 }",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 2,
+      "ir": "if"
+    }
+  },
+  {
+    "name": "lr5_2_nested",
+    "input": {
+      "kind": "expr",
+      "source": "if true { give if false { give 1 } else { give 3 } } else { give 2 }",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 3,
+      "ir": "if"
+    }
+  },
+  {
+    "name": "lr9_8_match_literal",
+    "input": {
+      "kind": "expr",
+      "source": "match 2 {\n  1 => 7\n  otherwise => 9\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 9,
+      "ir": "match"
+    }
+  },
+  {
+    "name": "lr9_8_match_range",
+    "input": {
+      "kind": "expr",
+      "source": "match 3 {\n  1..4 => 7\n  otherwise => 9\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 7,
+      "ir": "match"
+    }
+  },
+  {
+    "name": "lr10_2_success",
+    "input": {
+      "kind": "expr",
+      "source": "Int.add(1, 2) or recover 9",
+      "type": "Int",
+      "modifiers": "recovers ",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 3,
+      "ir": "or_recover"
+    }
+  },
+  {
+    "name": "lr10_2_overflow",
+    "input": {
+      "kind": "expr",
+      "source": "Int.add(9223372036854775807, 1) or recover 9",
+      "type": "Int",
+      "modifiers": "recovers ",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 9,
+      "ir": "or_recover"
+    }
+  },
+  {
+    "name": "lr10_2_division_zero",
+    "input": {
+      "kind": "expr",
+      "source": "Int.div(1, 0) or recover 8",
+      "type": "Int",
+      "modifiers": "recovers ",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 8,
+      "ir": "or_recover"
+    }
+  },
+  {
+    "name": "lr10_2_checked_region",
+    "input": {
+      "kind": "expr",
+      "source": "(9223372036854775807 + 1) or recover 7",
+      "type": "Int",
+      "modifiers": "recovers ",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 7,
+      "ir": "or_recover"
+    }
+  },
+  {
+    "name": "lr6_13_total_decimal",
+    "input": {
+      "kind": "expr",
+      "source": "3 as Decimal",
+      "type": "Decimal",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": {
+        "decimal": "3"
+      },
+      "ir": "call"
+    }
+  },
+  {
+    "name": "lr6_13_parse_ok",
+    "input": {
+      "kind": "expr",
+      "source": "\"3\" as Int or recover 9",
+      "type": "Int",
+      "modifiers": "recovers ",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 3,
+      "ir": "or_recover"
+    }
+  },
+  {
+    "name": "lr6_13_parse_failure",
+    "input": {
+      "kind": "expr",
+      "source": "\"bad\" as Int or recover 9",
+      "type": "Int",
+      "modifiers": "recovers ",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 9,
+      "ir": "or_recover"
+    }
+  },
+  {
+    "name": "lr10_4_catch_recover",
+    "input": {
+      "kind": "expr",
+      "source": "Int.div(1, 0) catch e {\n  recover 8\n}",
+      "type": "Int",
+      "modifiers": "recovers ",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 8,
+      "ir": "catch"
+    }
+  },
+  {
+    "name": "lr5_binding",
+    "input": {
+      "kind": "block",
+      "source": "{\n let n = 4\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 4,
+      "ir": "let"
+    }
+  },
+  {
+    "name": "lr5_mutable",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 4\n n = 7\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 7,
+      "ir": "assign"
+    }
+  },
+  {
+    "name": "lr5_compound",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n: Int<0..10> = 4\n n += 1\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 5,
+      "ir": "compound"
+    }
+  },
+  {
+    "name": "lr5_if_then",
+    "input": {
+      "kind": "block",
+      "source": "{\n if true { return 4 } else { return 7 }\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 4,
+      "ir": "if"
+    }
+  },
+  {
+    "name": "lr5_if_else",
+    "input": {
+      "kind": "block",
+      "source": "{\n if false { return 4 } else { return 7 }\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 7,
+      "ir": "if"
+    }
+  },
+  {
+    "name": "lr5_while_skip",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 0\n while false { n = 5 }\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 0,
+      "ir": "loop"
+    }
+  },
+  {
+    "name": "lr5_while_once",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 0\n while n == 0 { n = 5 }\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 5,
+      "ir": "loop"
+    }
+  },
+  {
+    "name": "lr5_loop_break",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 0\n loop { n = 3\n break }\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 3,
+      "ir": "loop"
+    }
+  },
+  {
+    "name": "lr5_range_inclusive",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 0\n for i in 1..3 { n = Int.wrappingAdd(n, i) }\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 6,
+      "ir": "for"
+    }
+  },
+  {
+    "name": "lr5_range_exclusive",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 0\n for i in 1..<3 { n = Int.wrappingAdd(n, i) }\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 3,
+      "ir": "for"
+    }
+  },
+  {
+    "name": "lr5_range_empty",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 0\n for i in 3..<3 { n = Int.wrappingAdd(n, i) }\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 0,
+      "ir": "for"
+    }
+  },
+  {
+    "name": "lr5_for_list",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 0\n let xs = List.of(2, 3)\n for i in xs { n = Int.wrappingAdd(n, i) }\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 5,
+      "ir": "for"
+    }
+  },
+  {
+    "name": "lr5_for_continue",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 0\n for i in 1..3 { if i == 2 { continue }\n n = Int.wrappingAdd(n, i) }\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 4,
+      "ir": "for"
+    }
+  },
+  {
+    "name": "lr5_for_break",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 0\n for i in 1..3 { if i == 2 { break }\n n = Int.wrappingAdd(n, i) }\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 1,
+      "ir": "for"
+    }
+  },
+  {
+    "name": "lr5_destructure",
+    "input": {
+      "kind": "block",
+      "source": "{\n let pair = (2, 3)\n let (a, b) = move pair\n return a + b\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 5,
+      "ir": "let_pattern"
+    }
+  },
+  {
+    "name": "lr5_discard",
+    "input": {
+      "kind": "block",
+      "source": "{\n discard List.of(1, 2)\n return 4\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 4,
+      "ir": "discard"
+    }
+  },
+  {
+    "name": "lr5_defer",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 2\n defer { n = 9 }\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 2,
+      "ir": "defer"
+    }
+  },
+  {
+    "name": "lr5_nested_block",
+    "input": {
+      "kind": "block",
+      "source": "{\n let mut n = 2\n { n = 9 }\n return n\n}",
+      "type": "Int",
+      "modifiers": "",
+      "prelude": "",
+      "params": []
+    },
+    "expect": {
+      "value": 9,
+      "ir": "block"
+    }
+  }
+]

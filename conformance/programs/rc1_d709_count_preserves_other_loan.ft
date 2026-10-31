@@ -1,0 +1,4 @@
+// reject: E-OWN-002, E-OWN-053
+// covers: LANG-07-06
+// D-709: rc.1 regression.
+func f(a: String, b: String) (StringView, Int) { return (a.trim(), b.trim().scalarCount()) }

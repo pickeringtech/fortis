@@ -1,0 +1,6 @@
+// reject: E-REF-002 (at the marked lines)
+// covers: LANG-06-02
+// D-656: a maximum length is not a guaranteed element count.
+func maybeEmpty(xs: List[Int]<length: 0..3>) Int => xs[0] // reject: E-REF-002
+func shorter(xs: ListView[Int]<length: 1..3>) Int => xs[1] // reject: E-REF-002
+func pastEnd(xs: List[Int]<length: 3..3>) Int => xs[3] // reject: E-REF-002

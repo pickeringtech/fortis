@@ -26,14 +26,14 @@ export class Tag {
 }
 
 func copyCapture(console: Console) {
-  let t = Tag(label: String.from("tag"))
+  let t = Tag(label: "tag" as String)
   let f = fn[copy t]() Int => t.label.scalarCount()
   console.print("copy ${f()}")
 }
 
 func bareCapture(console: Console) {
   let n = 7
-  let t = Tag(label: String.from("bare"))
+  let t = Tag(label: "bare" as String)
   let f = fn[n]() Int => n
   console.print("bare ${f()}")
 }

@@ -1,0 +1,14 @@
+// reject: E-TYP-090
+// covers: LANG-06-15
+trivial class Item {
+  convert to TargetItem(owned self) {
+    return TargetItem()
+  }
+}
+class TargetItem {}
+class Source {
+  value: Item
+}
+class Target derive convert from Source {
+  value: TargetItem
+}

@@ -8,7 +8,7 @@ import fortis.host { Console }
 class Journal {
   export lines: List[String]
   func info(editable self, text: StringView) {
-    self.lines.push(String.from(text))
+    self.lines.push(text as String)
   }
 }
 

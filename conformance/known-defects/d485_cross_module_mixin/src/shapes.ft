@@ -1,0 +1,9 @@
+// D-485: the mixin `Peeks` reads a private field of the class that applies it and adds a string to an Int (9.6:
+// E-NAM-004 and E-TYP-040 at the body, for each class that applies it). Both checkers type a mixin's bodies only at an
+// application in the mixin's own module, so applied from app.ft they are never typed and the package is accepted.
+// Typing them at that application in the importer's scope would resolve their names in the wrong module, which is
+// why the v0.1 stream left them untyped rather than check them there.
+export mixin Peeks {
+  export pure func peek(self) Int => self.secret
+  export pure func sum(self) Int => Int.wrappingAdd(self.secret, "x")
+}

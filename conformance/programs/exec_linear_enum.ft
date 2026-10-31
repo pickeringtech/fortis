@@ -1,0 +1,18 @@
+// execute: 4
+// requires: runtime
+// covers: LANG-10-02
+import fortis.host { Console }
+enum Holder[T] where T: linear {
+  Only(value: T)
+}
+func main(console: Console) {
+  let h = Holder.Only(Outcome.success(4))
+  match move h {
+    Only(value) => {
+      match move value {
+        success(n) => console.print("${n}")
+        failure(f) => { report f }
+      }
+    }
+  }
+}

@@ -10,6 +10,10 @@ Every package can be tested without any kit, and the same runner handles example
 fuzzing (LR 14). Test declarations are compiled only in test builds, so they cost a production binary nothing,
 and they may import modules meant only for tests (LR 14).
 
+`expect` is test code only: a `test` or `property` body, its `cases` body, or a lambda written there.
+A function, method, deferred block or lambda outside a test cannot contain it (`E-TYP-120`, LANG-14-04,
+LR 14). A test-only module does not widen this rule in v0.1.
+
 ## A first test
 
 A `test` has a name and a body. The body behaves like the body of a `try` function, and a failure that escapes
@@ -265,5 +269,23 @@ test "square roots, with or fail implied" {
   expect root(16) == 4
   let zero = root(0)
   expect zero == 0
+}
+```
+
+## `expect` belongs in the test (LR 14)
+
+```fortis
+// reject: E-TYP-120
+pure func double(n: Int<0..100>) Int {
+  expect n >= 0                     // reject: E-TYP-120
+  return n * 2
+}
+```
+
+```fortis
+// accept
+pure func double(n: Int<0..100>) Int => n * 2
+test "double a non-negative input" {
+  expect double(3) == 6
 }
 ```

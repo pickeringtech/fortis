@@ -9,8 +9,8 @@
   "inputs": {
    "acceptance/a2/project.yaml": "6e6f3efdf407ba1d843b9ab4ab253e3b1b58466e0451abf32072fa4bd1dfca19",
    "acceptance/a2/spec.json": "c6cd2eda77e28516fdd721925c4a4c253bdf3615f55091982293479bfadcdf2e",
-   "acceptance/a2/src/count.ft": "913b6641d4402d367d88dcb5265295832b3da25bda91e81f88065a132d895de4",
-   "acceptance/a2/src/main.ft": "db7813a2f90822e575cc6c936f37f8bc63b069ca64730ede3625d7cf0786da28",
+   "acceptance/a2/src/count.ft": "6492c6c9b263f3e6092f9f7c29c9ee14e6b45105e4b7d9a3bfea70ff12892da4",
+   "acceptance/a2/src/main.ft": "009b0375fc701868bc2c16cb2b8c79cd42f2cdcd0283c383b9cc1f9760673943",
    "acceptance/a2/data/alpha.txt": "1153a4080f1fcb04425aa0b841c2b14606fe6df25d9076d2a1face2d5af57129",
    "acceptance/a2/data/beta.txt": "39431da50cc51adb9b8199f914924db9702d120f7105a8fe50a5636949ccc0ed",
    "acceptance/a2/data/gamma.txt": "7ec4c8300dc48e14e95e184cea8d23a6f193a6c074f35e772f635664b3ee6c0d",
@@ -19,16 +19,16 @@
    "acceptance/a2/expected/run.out": "c76f501a742ec8159b1c6facc8157e28adf0197a2c807fa15105a2a644ead32b"
   },
   "toolchain": {
-   "bin/fortis": "d1f79f696d35c826a39807c3c29e8b5175da0f080d8541cf061a5b9c8b8a144a",
-   "reference/grammar/fortis.ebnf": "92246869e741341209aa1a55156eb9cb1dedec9eccc73c8802789cdae27f0167",
-   "reference/library/collections.ft": "c82c455a1f0f272ebde557d64653b4e35deadf9709a36b0884364b8830418aa6",
+   "bin/fortis": "ec93e97a25a2e10d11378d863d01b3a51df3b8665e9ba5e5cc08f62d2dc8e34f",
+   "reference/grammar/fortis.ebnf": "690e39fe67dca91ac6ac3dfbfc3d96a2bcd7726353592e2181fc4ce8f5ba41b5",
+   "reference/library/collections.ft": "8bce157dc358eb89b07f83b9fbf4c67bfa657be6f6a53891de30d80badb26a91",
    "reference/library/host.ft": "3676551fca222347641813f3e23167b03d6a6639832f9a30cc56ca994f6ea71a",
    "reference/library/money.ft": "298a4d676d3aea3c9aa19bcd765a1435c9155a9a76b2a07e05d5deb5112d7c32",
    "reference/library/numeric.ft": "bb10b04dd00f13577c6b040821dc33c2d1182935e0dd7a1140c433aa6b0cd006",
-   "reference/library/prelude.ft": "45ae9d67ff647b11dde99deae3726911526d5a8b26d27b0d2f025e5d2f04347b",
+   "reference/library/prelude.ft": "c3de1e6cc55496675cc50055371b3f955f78bcb557470e6b19057e92a0302fd1",
    "reference/library/text.ft": "b1d99c33f212a87c9dd519cfd9366dc5b96181c60edfcdd0d00999138537c057",
    "reference/library/time.ft": "92a71fe2a9cc17a65e977ec8e222ddf53807402c9136cce4fd0ab51e8d1f806f",
-   "reference/library/effects/fortis.json": "9caf0e859d8e0edb73b779141d176618269a383b6ce767bfed9cf21cc6f1b9cc",
+   "reference/library/effects/fortis.json": "2005cb1a51201df644c977cafa305357d3987ed40df4b1dacb07a5157259c485",
    "reference/library/examples/acme.accounts.ft": "aa55e7d9ccf0cf87d5ae2cca744d268e259f0af46b2f9bf0940127f96ba39a54",
    "reference/library/examples/acme.orders.ft": "6c784fd1d3a15f0e08ff03438a5d6e52457f4c2ab08ef51dc935030a58a74127",
    "reference/library/kits/fortis.codec.json.ft": "1b0ea3399ed0aa11b9cb077d3266c8c30414f710d637beebfc74efe236650612",
@@ -43,45 +43,47 @@
    "reference/library/kits/fortis.web.ssr.ft": "134fae6980df7b88110ee9073b0c40306a4387c0f31af00dac09686830eaf3a0",
    "checker/__init__.py": "900fbe73a08a67a16307be6b0e9b1b9a1d2e5c267573781c87b4ef997753cb0b",
    "checker/cfg.py": "7ab30dbf9cad3dd432904e383bbd09ac40ada7678a83aa12c4a8dcaf291fba7b",
-   "checker/check.py": "47ac1b5ff150317451ef666162f411a774cc6d0f34e4d77fde066f5d6fa181ae",
+   "checker/check.py": "dd1b8feb19ece83ffce75e005abe749ab5ea9a2de9ffdbc13eb3ba3e020e1e87",
+   "checker/conversions.py": "d1d97212225c448a9f47db5e63331cf7dfc1e1cd13e548813b2d5368ee8724a9",
    "checker/decl_ir.py": "6d71211838b837084d892bbc290d28a50dbee1e2402b104e6a5c9acfde81af11",
-   "checker/decls.py": "edcff22ebe12a65d9931fa1b35dbe96a700f7961562cec53ecbf56edfb524652",
-   "checker/effects.py": "642ce78e08d74bc62744df8b8b301bf70ac6de6134b670809f6f4ae0377d6891",
+   "checker/decls.py": "b59f8ca4af0e25395cf05fdf6ce065ea770f0c08b550ef0cbb412d7e21cfa78b",
+   "checker/effects.py": "cb64f1f5c5709196d023f3ca964e1e644762bcdc8a4b12b518e19e0e891bc3f5",
    "checker/intervals.py": "f3a28b514c2845158ae369ecdbddc6aba0dfecd81c9001257e983e1023023f81",
-   "checker/literals.py": "1bfbd61d153e92fb3a6ca0310adbdd740f4345fe804952df908ed8f4d39d2bf9",
-   "checker/owners.py": "1432245e1adced3c7c449f8616b83cd6aaa1dabd590ad9385666eb7cc30cdd62",
+   "checker/literals.py": "dbad00385c1dce154492d5830cce28a252691d2966982a918f0a97d95fc84c5d",
+   "checker/owners.py": "757c54afd47d0c3c80b63f4e13df0b949693bb1c0c5316522a435af7a88f37c4",
    "checker/plans.py": "bf8dd2c9193e9b572821bcba87ecd722727f17f28855cf30582e79a876b3893e",
    "checker/sets_report.py": "bb44cb770881fc3f806d83931875d18949fad2333a1aaa556bffde4163d87c78",
-   "checker/typer.py": "e447495513bd9aefcb7cb0a6d28234970a211d144013faf1f2eec8e50f5cf15d",
-   "checker/types.py": "2b405f69cd2c6e315f645be6b2b1e4b6c0369f05def1aa82d960732115e6f752",
+   "checker/typer.py": "0909fa236ea25d93437055fd720c89063c1d92c7b20453ea6d92bb08ee7ea6f0",
+   "checker/types.py": "90646e8f4d532966749f272bf5880a05b04b4ff771f1991f821887b9a1ad30f4",
    "interpreter/ARCHITECTURE.md": "c6e079cbfd9171a93e30db1cb89425d7d7092fbe17ee3c6b3eb0a122f938c5a9",
    "interpreter/INTRINSICS.md": "5129221f72ce36869b320d12934f468d5d7ed7661d46b8673646a6367a3c8d9d",
    "interpreter/__init__.py": "f7e8c21ebc20a380e124902d33257569293f3d564d237417fc3ecc79d1559881",
    "interpreter/codec.py": "8ab907a5f405fa4477bc4c23f1e7c41ff8605ed96b4724997b9440fa69983272",
-   "interpreter/eval.py": "a7a51e0b7626d8e6a52f6f553019d53b2dac798cf5e9ec53fd14588e8a2356a3",
+   "interpreter/convert.py": "c5cf3efd731461a4db7b48001e2753ffc2fdf2dce32a89dae104c9490bb6049d",
+   "interpreter/eval.py": "3c13bb3c909d43d4178176222b79d1ef311c410ba31577228a6ca01668d4fce2",
    "interpreter/executor.py": "1d79465e09c91fb069ce604dcd7273f6e0c982d1127fd0879291794e358d8370",
-   "interpreter/intrinsics.py": "5ab9c23eb8d799f2d8f6ae2d5a83fed4d275fec35d49bd8a59ff5aba740f088b",
-   "interpreter/link.py": "c2d70463f9efb748058ecdcbf8bd2bc10c2583bc2c373a4a1b6c2f411070bff3",
+   "interpreter/intrinsics.py": "f9674de89283990b5d2e06ffdf2deaf5e4ad525b2e78a0496865311bd81a707a",
+   "interpreter/link.py": "b161143976d23596e031c92673808f972701cac466ff8f2b7bd5f3978fbf1888",
    "interpreter/numeric.py": "ffe884bb3a712855385f95f58103bcbba3e85a11399b25fd70d0a7d41fbfebcf",
    "interpreter/probe_threads.py": "d61da049ba465e78ee629a107bbb7a08ba9ff7343e20e6cc1a5c365df90d472c",
    "interpreter/records.py": "745b275682bd50df326fc6bae1856cbf1b4432cb945064b25e57830b4d5f4a24",
    "interpreter/run.py": "dae938daf032e54d6b77734f1a3625e979592667786e70d691b273dcab0db4e8",
    "interpreter/telemetry.py": "e869bd34033a4a24519a02adb318ca33ee29a6e25389997d755807b3958e3fb2",
-   "interpreter/values.py": "4258531dfca04fdda872d479b3625164a3b7b3f548546bda73bacb9358c54691",
-   "library/fortis/collections.ft": "4377fbbfe8cb0124a0a3ac78c1857c5182c796bca5777aa937ccc365c5fd6234",
+   "interpreter/values.py": "008cdbd7c02e2f54b8a103e2d1748102c45302aac2d29b0e919677385a986328",
+   "library/fortis/collections.ft": "893616c575430ce6a6b0d6afa00aa34e06d70d1fadea7267d3867bbb66fcd5ea",
    "library/fortis/compatibility.yaml": "01f0777bc5a36559b9cad1444a90e4aa4eccf09db9a190c199ccd96f60487adf",
    "library/fortis/host.ft": "5f459dd3e6b1475e3ee969b352f34790dcdeaea9041646b28596b8ca9ebf104a",
    "library/fortis/money.ft": "3bab6fac383123cc718f182b5edcd7562893d4bd6bd7ad4688a34c1835f6925b",
    "library/fortis/numeric.ft": "424551b3caa9c9f8af3d23a268b95596575bb56f0794a7ac8cedaafb000e9bcc",
-   "library/fortis/prelude.ft": "16b38a3b6beb19efe756f2525423eecd06dac052b34304debe6d714f8cc42604",
+   "library/fortis/prelude.ft": "7f8374b1338bcdecade75a8ed06c9adbd660f79ea6022986310bbbea411cf4d8",
    "library/fortis/text.ft": "a1f38fd99aba693c89e2be786dba12bbdce3ecf6724f8030a52d682baa9017c5",
    "library/fortis/time.ft": "1b3b31179ea033326ac0d2a5e3d71517e235d686ad89b9e77868ba45c50b4024",
-   "conformance/tools/names.py": "3536f95f359483cd8b0e454625d89d93aefad168752cd6c06370195d8fbeafb4",
+   "conformance/tools/names.py": "5ae5f46c9eb7e285cbfeb21a5a37b26e12ff8f2e5edeec25c4449e48278c9197",
    "conformance/tools/parser.py": "534c046d465202d42c4d91364bd8bbcd8dc1e6fe4c400c8c72fbbc6d1288321f",
    "conformance/tools/lexer.py": "baa321c0be1e9381294192d4bef63a58812e3ed5afe3af91e73aabf2727864fc",
    "conformance/tools/resolve.py": "2ea9df79cc57de9a35927bd5f42a172c54ccce660a45d233cec1b6e736be36e5",
    "conformance/tools/project.py": "81c1dedbec42b425cad620050f1f88aff75643d69b5a3b5d318a2743dedf63cc",
-   "conformance/tools/tree.py": "43722aad6b94da84a9f03a49ec657ea9b7b7f3edc9c0379f99bdcbaa34e363f8",
+   "conformance/tools/tree.py": "9dc8e97d86e748450818a2b929f25f21d40187679e126d063eca2d8a4fa08de8",
    "conformance/tools/diagnostics.py": "d22044ec6118620dc492bc03d94e4fc4f13fd823bb73e129c4a862a449a057b6",
    "acceptance/run.py": "6a5169260baaf8fe6703b1e109ac4188e92e65623f08fa69a7cf053d0d28ffc3"
   },
@@ -92,10 +94,10 @@
    "test.stdout": "dadcf1ab1e1076d6cde5d50d202d4c1a8fbb907b45babd457cff3f18c65c0ff2",
    "test.stderr": "60da922d0fd20f7aa3ddd9e5718cecd9697ccd6f13803719d1a3ac2afa52a448"
   },
-  "digest": "5a5ea216b394045b07c300ea97f58783476baf200382e99cfaf9c24f0b261b2d"
+  "digest": "1ae1cf5dc2d1228677205d453c14647906da86eddd1abaab415fb69a6f847157"
  },
  "execution_attestation": {
-  "commit": "06adde53ef7597a95a14e9e865ebb7584f2da673",
+  "commit": "1f5e39cec5fa944575568558c802b5a878a70844",
   "worktree_clean": true,
   "platform": "Linux-7.2.5-3-omarchy-x86_64-with-glibc2.44",
   "python": "3.12.12",
@@ -114,8 +116,8 @@
     ],
     "cwd": ".",
     "env": {},
-    "started": "2026-10-29T00:32:09.490+00:00",
-    "duration_ms": 291,
+    "started": "2026-10-30T19:01:55.939+00:00",
+    "duration_ms": 638,
     "exit": 0
    },
    {
@@ -134,8 +136,8 @@
     "env": {
      "FORTIS_DEV_ROOT": "<fresh copy of acceptance/a2/data>"
     },
-    "started": "2026-10-29T00:32:09.783+00:00",
-    "duration_ms": 808,
+    "started": "2026-10-30T19:01:56.578+00:00",
+    "duration_ms": 2720,
     "exit": 0
    },
    {
@@ -146,13 +148,13 @@
      "--format",
      "json",
      "--out",
-     "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-bin-lwz50jrb/a2",
+     "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-bin-unxsp6__/a2",
      "acceptance/a2"
     ],
     "cwd": ".",
     "env": {},
-    "started": "2026-10-29T00:32:10.592+00:00",
-    "duration_ms": 144,
+    "started": "2026-10-30T19:01:59.299+00:00",
+    "duration_ms": 325,
     "exit": 0
    },
    {
@@ -168,11 +170,11 @@
     ],
     "cwd": ".",
     "env": {
-     "FORTIS_DEV_ROOT": "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-interpreter-rby5ehj_",
+     "FORTIS_DEV_ROOT": "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-interpreter-ibm7y99q",
      "TALLY_MIN": "4"
     },
-    "started": "2026-10-29T00:32:10.737+00:00",
-    "duration_ms": 809,
+    "started": "2026-10-30T19:01:59.626+00:00",
+    "duration_ms": 2717,
     "exit": 0
    },
    {
@@ -188,10 +190,10 @@
     ],
     "cwd": ".",
     "env": {
-     "FORTIS_DEV_ROOT": "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-interpreter-mi6wdhoz"
+     "FORTIS_DEV_ROOT": "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-interpreter-7ur5e30l"
     },
-    "started": "2026-10-29T00:32:11.548+00:00",
-    "duration_ms": 835,
+    "started": "2026-10-30T19:02:02.344+00:00",
+    "duration_ms": 2690,
     "exit": 1
    },
    {
@@ -203,11 +205,11 @@
     ],
     "cwd": ".",
     "env": {
-     "FORTIS_DEV_ROOT": "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-vm-wruretp2",
+     "FORTIS_DEV_ROOT": "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-vm-rx9yrfgy",
      "TALLY_MIN": "4"
     },
-    "started": "2026-10-29T00:32:12.384+00:00",
-    "duration_ms": 41,
+    "started": "2026-10-30T19:02:05.035+00:00",
+    "duration_ms": 211,
     "exit": 0
    },
    {
@@ -219,39 +221,39 @@
     ],
     "cwd": ".",
     "env": {
-     "FORTIS_DEV_ROOT": "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-vm-i_g5xy7a"
+     "FORTIS_DEV_ROOT": "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-vm-2r0mlg13"
     },
-    "started": "2026-10-29T00:32:12.426+00:00",
-    "duration_ms": 44,
+    "started": "2026-10-30T19:02:05.247+00:00",
+    "duration_ms": 208,
     "exit": 1
    },
    {
     "step": "main natively",
     "argv": [
-     "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-bin-lwz50jrb/a2"
+     "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-bin-unxsp6__/a2"
     ],
     "cwd": ".",
     "env": {
-     "FORTIS_DEV_ROOT": "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-native-86694pye",
+     "FORTIS_DEV_ROOT": "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-native-b7e9vvhg",
      "TALLY_MIN": "4",
      "FORTIS_TRACE": "1"
     },
-    "started": "2026-10-29T00:32:12.471+00:00",
+    "started": "2026-10-30T19:02:05.456+00:00",
     "duration_ms": 1,
     "exit": 0
    },
    {
     "step": "missing input natively",
     "argv": [
-     "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-bin-lwz50jrb/a2"
+     "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-bin-unxsp6__/a2"
     ],
     "cwd": ".",
     "env": {
-     "FORTIS_DEV_ROOT": "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-native-3augrxue",
+     "FORTIS_DEV_ROOT": "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-native-3w8vbclv",
      "FORTIS_TRACE": "1"
     },
-    "started": "2026-10-29T00:32:12.472+00:00",
-    "duration_ms": 1,
+    "started": "2026-10-30T19:02:05.458+00:00",
+    "duration_ms": 0,
     "exit": 1
    },
    {
@@ -267,8 +269,8 @@
     ],
     "cwd": ".",
     "env": {},
-    "started": "2026-10-29T00:32:12.474+00:00",
-    "duration_ms": 895,
+    "started": "2026-10-30T19:02:05.459+00:00",
+    "duration_ms": 2810,
     "exit": 0
    },
    {
@@ -282,8 +284,8 @@
     ],
     "cwd": ".",
     "env": {},
-    "started": "2026-10-29T00:32:13.369+00:00",
-    "duration_ms": 48,
+    "started": "2026-10-30T19:02:08.270+00:00",
+    "duration_ms": 222,
     "exit": 0
    },
    {
@@ -293,14 +295,14 @@
      "-I",
      "bin/fortis",
      "check",
-     "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-variant-gprdbx_p/acme.tally",
+     "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-variant-zfv9ll5h/acme.tally",
      "--format",
      "json"
     ],
     "cwd": ".",
     "env": {},
-    "started": "2026-10-29T00:32:13.420+00:00",
-    "duration_ms": 294,
+    "started": "2026-10-30T19:02:08.494+00:00",
+    "duration_ms": 639,
     "exit": 0
    },
    {
@@ -310,14 +312,14 @@
      "-I",
      "bin/fortis",
      "test",
-     "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-variant-gprdbx_p/acme.tally",
+     "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-variant-zfv9ll5h/acme.tally",
      "--format",
      "json"
     ],
     "cwd": ".",
     "env": {},
-    "started": "2026-10-29T00:32:13.714+00:00",
-    "duration_ms": 905,
+    "started": "2026-10-30T19:02:09.133+00:00",
+    "duration_ms": 2823,
     "exit": 1
    },
    {
@@ -327,14 +329,14 @@
      "-I",
      "bin/fortis",
      "check",
-     "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-variant-vh5ta1w8/acme.tally",
+     "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-variant-_jw62628/acme.tally",
      "--format",
      "json"
     ],
     "cwd": ".",
     "env": {},
-    "started": "2026-10-29T00:32:14.621+00:00",
-    "duration_ms": 291,
+    "started": "2026-10-30T19:02:11.958+00:00",
+    "duration_ms": 655,
     "exit": 0
    },
    {
@@ -344,14 +346,14 @@
      "-I",
      "bin/fortis",
      "test",
-     "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-variant-vh5ta1w8/acme.tally",
+     "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-variant-_jw62628/acme.tally",
      "--format",
      "json"
     ],
     "cwd": ".",
     "env": {},
-    "started": "2026-10-29T00:32:14.913+00:00",
-    "duration_ms": 905,
+    "started": "2026-10-30T19:02:12.613+00:00",
+    "duration_ms": 2823,
     "exit": 1
    },
    {
@@ -361,14 +363,14 @@
      "-I",
      "bin/fortis",
      "check",
-     "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-variant-itw16rs7/acme.tally",
+     "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-variant-u4cjcp6q/acme.tally",
      "--format",
      "json"
     ],
     "cwd": ".",
     "env": {},
-    "started": "2026-10-29T00:32:15.819+00:00",
-    "duration_ms": 299,
+    "started": "2026-10-30T19:02:15.438+00:00",
+    "duration_ms": 642,
     "exit": 0
    },
    {
@@ -378,7 +380,7 @@
      "-I",
      "bin/fortis",
      "run",
-     "build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-variant-itw16rs7/acme.tally",
+     "build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-variant-u4cjcp6q/acme.tally",
      "--format",
      "json"
     ],
@@ -386,8 +388,8 @@
     "env": {
      "FORTIS_DEV_ROOT": "<fresh copy of acceptance/a2/data>"
     },
-    "started": "2026-10-29T00:32:16.119+00:00",
-    "duration_ms": 836,
+    "started": "2026-10-30T19:02:16.081+00:00",
+    "duration_ms": 2727,
     "exit": 0
    }
   ]
@@ -469,7 +471,7 @@
     "passed": true,
     "detail": {
      "exit": 0,
-     "tail": "gent-a14005d552c08ac21/build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-bin-lwz50jrb/a2\", \"kind\": \"build\", \"manifest\": \"build/tmp/gate-72km4qhv/acceptance-a2-0_f0wbip/acceptance-a2-bin-lwz50jrb/a2.build.json\"}\n"
+     "tail": "OSS/lang/.claude/worktrees/v01-mopup/build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-bin-unxsp6__/a2\", \"kind\": \"build\", \"manifest\": \"build/tmp/gate-nbfch0ec/acceptance-a2-lb26e1vy/acceptance-a2-bin-unxsp6__/a2.build.json\"}\n"
     }
    },
    {
@@ -478,7 +480,7 @@
     "detail": {
      "exit": 0,
      "failures": {},
-     "seconds": 0.809,
+     "seconds": 2.717,
      "diff": []
     }
    },
@@ -490,7 +492,7 @@
      "failures": {
       "fs.not_found": 1
      },
-     "seconds": 0.835,
+     "seconds": 2.69,
      "diff": []
     }
    },
@@ -500,7 +502,7 @@
     "detail": {
      "exit": 0,
      "failures": {},
-     "seconds": 0.041,
+     "seconds": 0.211,
      "diff": []
     }
    },
@@ -512,7 +514,7 @@
      "failures": {
       "fs.not_found": 1
      },
-     "seconds": 0.044,
+     "seconds": 0.208,
      "diff": []
     }
    },
@@ -534,7 +536,7 @@
      "failures": {
       "fs.not_found": 1
      },
-     "seconds": 0.001,
+     "seconds": 0.0,
      "diff": []
     }
    },

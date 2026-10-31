@@ -1,0 +1,95 @@
+{
+  "verdict": "reject",
+  "codes": [
+    "E-NAM-004",
+    "E-TYP-040"
+  ],
+  "covers": [
+    "LANG-09-04",
+    "LANG-09-02"
+  ],
+  "at": [
+    "bad.mixin.application/src/shapes.ft:5",
+    "bad.mixin.application/src/shapes.ft:6"
+  ],
+  "records": [
+    {
+      "class": "Names and modules",
+      "code": "E-NAM-004",
+      "column": 43,
+      "fields": {
+        "candidates": [],
+        "name": "secret"
+      },
+      "file": "shapes.ft",
+      "line": 5,
+      "message": "field `secret` of Vault is not exported; a mixin (Peeks) sees only the exported members of Vault (9.6) (mixin Peeks applied to bad.mixin.application.app.Vault)",
+      "rule": "LANG-09-02",
+      "severity": "error",
+      "status": "violated"
+    },
+    {
+      "class": "Type",
+      "code": "E-TYP-040",
+      "column": 44,
+      "fields": {
+        "actual_type": "a string literal",
+        "expected_type": "Int",
+        "primary_span": "argument `n`"
+      },
+      "file": "shapes.ft",
+      "line": 6,
+      "message": "argument `n` has type a string literal, expected Int: a string literal is a StringView (or a String where one is expected), not Int (mixin Peeks applied to bad.mixin.application.app.Vault)",
+      "rule": "LANG-06-01",
+      "severity": "error",
+      "status": "violated"
+    },
+    {
+      "class": "Type",
+      "code": "E-TYP-040",
+      "column": 44,
+      "fields": {
+        "actual_type": "a string literal",
+        "expected_type": "Int",
+        "primary_span": "argument `n`"
+      },
+      "file": "shapes.ft",
+      "line": 6,
+      "message": "argument `n` has type a string literal, expected Int: a string literal is a StringView (or a String where one is expected), not Int (mixin Peeks applied to bad.mixin.application.app.Open)",
+      "rule": "LANG-06-01",
+      "severity": "error",
+      "status": "violated"
+    },
+    {
+      "class": "Names and modules",
+      "code": "E-NAM-004",
+      "column": 43,
+      "fields": {
+        "candidates": [],
+        "name": "secret"
+      },
+      "file": "shapes.ft",
+      "line": 5,
+      "message": "field `secret` of Vault is not exported; a mixin (Peeks) sees only the exported members of Vault (9.6) (mixin Peeks applied to bad.mixin.application.other.Vault)",
+      "rule": "LANG-09-02",
+      "severity": "error",
+      "status": "violated"
+    },
+    {
+      "class": "Type",
+      "code": "E-TYP-040",
+      "column": 44,
+      "fields": {
+        "actual_type": "a string literal",
+        "expected_type": "Int",
+        "primary_span": "argument `n`"
+      },
+      "file": "shapes.ft",
+      "line": 6,
+      "message": "argument `n` has type a string literal, expected Int: a string literal is a StringView (or a String where one is expected), not Int (mixin Peeks applied to bad.mixin.application.other.Vault)",
+      "rule": "LANG-06-01",
+      "severity": "error",
+      "status": "violated"
+    }
+  ]
+}

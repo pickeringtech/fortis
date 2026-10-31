@@ -47,6 +47,29 @@ impl<K: Hash + Eq + Clone, V> OrderedMap<K, V> {
             }
         }
     }
+    /// `containsKey`: whether the key has an entry, by any borrowed form of the key.
+    #[inline]
+    pub fn contains_key<Q: ?Sized + Hash + Eq>(&self, k: &Q) -> bool
+    where
+        K: std::borrow::Borrow<Q>,
+    {
+        self.index.contains_key(k)
+    }
+    /// `remove`: the value of the entry, now the caller's, or null when there is none. The entries after it keep
+    /// their order and move up one place, so the cost is O(n) in them (6.7).
+    pub fn remove<Q: ?Sized + Hash + Eq>(&mut self, k: &Q) -> Option<V>
+    where
+        K: std::borrow::Borrow<Q>,
+    {
+        let at = self.index.remove(k)?;
+        let (_, v) = self.entries.remove(at);
+        for (later, (key, _)) in self.entries.iter().enumerate().skip(at) {
+            if let Some(slot) = self.index.get_mut::<K>(key) {
+                *slot = later;
+            }
+        }
+        Some(v)
+    }
     #[inline]
     pub fn count(&self) -> i64 {
         self.entries.len() as i64
@@ -103,6 +126,14 @@ impl<T: Hash + Eq + Clone> OrderedSet<T> {
         T: std::borrow::Borrow<Q>,
     {
         self.map.get(v).is_some()
+    }
+    /// `remove`: true when the item was present. The items after it keep their order (6.7).
+    #[inline]
+    pub fn remove<Q: ?Sized + Hash + Eq>(&mut self, v: &Q) -> bool
+    where
+        T: std::borrow::Borrow<Q>,
+    {
+        self.map.remove(v).is_some()
     }
     #[inline]
     pub fn count(&self) -> i64 {
@@ -197,22 +228,41 @@ pub fn index<T: Clone>(xs: &[T], i: i64) -> T {
 /// `List.iterate()`: a cursor over read loans of the items (`ListCursor[T] from self`). It copies nothing: a copy
 /// of an item would be a second owner, and its drop would run the item's `cleanup` again (12.2; D-338).
 pub struct Cursor<'a, T> {
-    items: &'a [T],
+    /// the items walked first, last to first when `reversed`
+    first: &'a [T],
+    reversed: bool,
+    /// the items walked after `first`, first to last
+    second: &'a [T],
     pos: usize,
 }
 impl<'a, T> Cursor<'a, T> {
     #[inline]
     pub fn new(items: &'a [T]) -> Cursor<'a, T> {
-        Cursor { items, pos: 0 }
+        Cursor { first: items, reversed: false, second: &[], pos: 0 }
+    }
+    /// `Deque.iterate()` (X-576): the items of `front` from the last to the first, then those of `back`.
+    #[inline]
+    pub fn joined(front: &'a [T], back: &'a [T]) -> Cursor<'a, T> {
+        Cursor { first: front, reversed: true, second: back, pos: 0 }
     }
     /// `next()`: a read loan of the next item, `(alias T from self)?`.
     #[inline]
     pub fn next(&mut self) -> Option<&'a T> {
-        let v = self.items.get(self.pos);
+        let n = self.first.len();
+        let v = if self.pos < n { self.first.get(if self.reversed { n - 1 - self.pos } else { self.pos }) } else { self.second.get(self.pos - n) };
         if v.is_some() {
             self.pos += 1;
         }
         v
+    }
+}
+
+/// A `for` over a class that implements `Iterable` walks the cursor its `iterate()` gives (5.3; D-545).
+impl<'a, T> Iterator for Cursor<'a, T> {
+    type Item = &'a T;
+    #[inline]
+    fn next(&mut self) -> Option<&'a T> {
+        Cursor::next(self)
     }
 }
 

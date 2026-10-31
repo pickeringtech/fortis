@@ -1,0 +1,30 @@
+// execute: 2|2|2|2|true false|true|2|1|2
+// requires: runtime
+// covers: LANG-10-02, LANG-06-16
+// Read callbacks keep the items in xs, whose obligation is discharged at the end.
+import fortis.host { Console }
+pure func nothing() {}
+recovers func main(console: Console) {
+  let xs = List[Outcome[Int]].of(Outcome.success(1), Outcome.success(2))
+  xs.each(fn(item) {})
+  xs.tryEach(fn(item) => Outcome.success(nothing())) or recover nothing()
+  let mapped = xs.map(fn(item) => 1)
+  console.print("${mapped.count()}")
+  let tried = xs.tryMap(fn(item) => Outcome.success(1)) or recover List[Int].default()
+  console.print("${tried.count()}")
+  console.print("${xs.fold(0, fn(acc, item) => Int.wrappingAdd(acc, 1))}")
+  let total = xs.tryFold(0, fn(acc, item) => Outcome.success(Int.wrappingAdd(acc, 1))) or recover 0
+  console.print("${total}")
+  console.print("${xs.any(fn(item) => true)} ${xs.all(fn(item) => false)}")
+  {
+    let found = xs.find(fn(item) => true)
+    console.print("${found != null}")
+  }
+  let created = mapped.map(fn(n) => Outcome.success(n))
+  move created.consumeEach(fn(item) { discard item or recover 0 })
+  console.print("${xs.count()}")
+  move xs.consumeEach(fn(item) {
+    let n = item or recover 0
+    console.print("${n}")
+  })
+}

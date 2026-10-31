@@ -26,7 +26,7 @@ func viaFirst(console: Console, xs: List[Token]) {
 
 func main(console: Console) {
   let mut toks: List[Token] = List.default()
-  toks.push(Token(label: String.from("item")))
+  toks.push(Token(label: "item" as String))
   viaFirst(console, toks)
   console.print("end")
 }

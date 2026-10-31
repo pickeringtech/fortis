@@ -1,0 +1,67 @@
+// execute: count 4|found c|front a|back d|popped a|cleanup a|popped d|cleanup d|popped b|cleanup b|popped c|cleanup c|empty
+// requires: runtime
+// covers: LANG-06-16
+// A deque of resources (6.7, X-576): a class with a `cleanup` needs no `Copyable`, so it is queued, searched (`find`
+// lends the item it finds), peeked at and taken out from both ends; an item that `popFront` or `popBack` hands to its
+// binding is cleaned up once, when the binding ends, and nothing is cleaned up while the deque still holds it.
+import fortis.collections { Deque }
+import fortis.host { Console }
+
+class Res {
+  export name: String
+  export console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("cleanup ${self.name}")
+  }
+}
+
+func make(name: owned String, console: Shared[Console]) Res {
+  return Res(name: move name, console: console.retain())
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut q: Deque[Res] = Deque.default()
+  q.pushBack(make("b" as String, console))
+  q.pushBack(make("c" as String, console))
+  q.pushFront(make("a" as String, console))
+  q.pushBack(make("d" as String, console))
+  console.print("count ${q.count()}")
+  match q.find(fn(r: Res) Bool => r.name == "c") {
+    present(r) => {
+      console.print("found ${r.name}")
+    }
+    null => {
+      console.print("missing")
+    }
+  }
+  console.print("front ${q.peekFront()?.name ?? "none"}")
+  console.print("back ${q.peekBack()?.name ?? "none"}")
+  match q.popFront() {
+    present(r) => {
+      console.print("popped ${r.name}")
+    }
+    null => {
+      console.print("none")
+    }
+  }
+  match q.popBack() {
+    present(r) => {
+      console.print("popped ${r.name}")
+    }
+    null => {
+      console.print("none")
+    }
+  }
+  while !q.isEmpty() {
+    match q.popFront() {
+      present(r) => {
+        console.print("popped ${r.name}")
+      }
+      null => {
+        console.print("none")
+      }
+    }
+  }
+  console.print("empty")
+}

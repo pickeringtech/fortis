@@ -18,6 +18,8 @@ pub struct LoanData {
     pub nested: bool,
     /// the read path it was drawn through (a cursor, a read loan): its own uses keep it (7.6)
     pub via: Option<String>,
+    /// The loan through which this reborrow was made, distinct from the root owner.
+    pub parent: Option<String>,
 }
 
 pub type Loan = Rc<RefCell<LoanData>>;
@@ -186,7 +188,7 @@ impl Owners {
     pub fn add_loan(&mut self, path: &str, mode: &str, holder: Option<&str>, depth: i64, line: usize) -> Loan {
         let owner = self.owner_path(path);
         crate::journal::loan(&owner, mode, holder, depth, line);
-        let l = Rc::new(RefCell::new(LoanData { owner, mode: mode.into(), holder: holder.map(|s| s.to_string()), depth, line, nested: false, via: None }));
+        let l = Rc::new(RefCell::new(LoanData { owner, mode: mode.into(), holder: holder.map(|s| s.to_string()), depth, line, nested: false, via: None, parent: self.holders.get(&root_of(path)).map(|_| root_of(path)) }));
         self.loans.push(l.clone());
         if let Some(h) = holder {
             self.holders.insert(h, l.clone());
@@ -206,8 +208,10 @@ impl Owners {
 
     pub fn move_(&mut self, path: &str) {
         self.moved.insert(path.to_string());
-        if self.obligations.remove(path).is_some() {
-            crate::journal::close_obligation(path, 0, "move");
+        for p in self.obligations.keys() {
+            if p == path || p.starts_with(&format!("{path}.")) {
+                self.close_obligation(&p, 0, "move");
+            }
         }
     }
 

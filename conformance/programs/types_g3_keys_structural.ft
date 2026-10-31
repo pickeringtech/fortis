@@ -1,0 +1,5 @@
+// reject: E-TYP-090
+// covers: LANG-06-06
+// D-549: structural conveniences do not satisfy interfaces (6.9).
+func pair() { let bad: Map[(Int, Int), Int]? = null }
+func recordKey() { let bad: Set[{ n: Int }]? = null }

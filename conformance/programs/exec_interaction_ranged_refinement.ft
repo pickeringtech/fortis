@@ -18,7 +18,7 @@ try func capped(xs: List[Int<0..50>]) Int<0..100> {
   if t > 100 {
     return 100
   }
-  return Int<0..100>.validate(t) or fail
+  return t as Int<0..100> or fail
 }
 
 recovers func main(console: Console) {

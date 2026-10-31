@@ -23,7 +23,7 @@ os.environ.setdefault("FORTIS_TELEMETRY", "permit-all")
 sys.path.insert(0, HERE)
 FORTISC = os.path.join(ROOT, "compiler", "target", "release", "fortisc")
 
-from vm_check import features, g1_subset, run_split  # noqa: E402
+from vm_check import features, g1_subset, run_split, failures  # noqa: E402
 
 
 def parse(out):
@@ -108,6 +108,8 @@ def main(argv):
         nr = [key(x) for x in n["records"] if x.get("kind") in kinds and x.get("kind") != "buffer-overflow"]
         if ir != nr and n["observed"] == r["observed"]:
             problems.append(f"records: interpreter {ir[:6]}, native {nr[:6]}")
+        if "// failure-records: exact" in src_of(p) and failures(r.get("reports", [])) != failures(n["records"]):
+            problems.append(f"whole failures: interpreter {failures(r.get('reports', []))}, native {failures(n['records'])}")
         # the executor's schedule: a fixture that fixes one (`execute-trace`) gets the same trace natively (12.3)
         want = re.search(r"^//\s*execute-trace:\s*(.*)$", src_of(p), re.M)
         if want and not problems:

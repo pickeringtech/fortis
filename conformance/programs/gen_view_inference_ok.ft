@@ -1,0 +1,18 @@
+// accept
+// covers: LANG-06-11
+// An owned value fixes the type parameters of the view taken of it (6.6, 6.7, 6.10; D-52.8): a `List[Int]` argument
+// fixes `T` of a `ListView[T]` parameter, so the call needs no annotation.
+pure func copied[T](items: ListView[T]) List[T] where T implements Copyable {
+  let mut out: List[T] = List.default()
+  for item in items {
+    out.push(copy item)
+  }
+  return out
+}
+
+test "view inference" {
+  let source = List.of(1, 2)
+  let annotated: List[Int] = copied(source)
+  let inferred = copied(source)
+  expect annotated.count() == inferred.count()
+}

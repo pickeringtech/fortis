@@ -1,0 +1,5 @@
+// LANG-06-13 (X-180): `one` and `two` each add `label` to `Box` through an `implement` block and neither imports the
+// other; `Box` would have the member twice, so the later block (module `two`) is E-TYP-070.
+export class Box {
+  export v: Int
+}

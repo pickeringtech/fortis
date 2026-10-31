@@ -1,0 +1,12 @@
+// execute: 0
+// requires: runtime
+// covers: LANG-06-07
+// X-522: `clear()` empties a list of non-linear elements on every backend: each element is dropped as `set`
+// drops the value it replaces, the list stays usable, and the count after is 0.
+import fortis.host { Console }
+
+recovers func main(console: Console) {
+  let mut xs: List[Int] = List.of(1, 2, 3)
+  xs.clear()
+  console.print("${xs.count()}")
+}

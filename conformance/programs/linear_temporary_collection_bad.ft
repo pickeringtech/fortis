@@ -1,0 +1,15 @@
+// reject: E-OBL-001
+// covers: LANG-10-01, LANG-10-02
+// D-595: a read call or read loop does not consume its temporary owner.
+pure func nothing() {}
+func count() { discard List[Outcome[Int]].of(Outcome.success(1)).count() }
+func reading() { for item in List[Outcome[Int]].of(Outcome.success(1)) {} }
+func each() { List[Outcome[Int]].of(Outcome.success(1)).each(fn(item) {}) }
+func map() { discard List[Outcome[Int]].of(Outcome.success(1)).map(fn(item) => 1) }
+recovers func tryMap() { discard List[Outcome[Int]].of(Outcome.success(1)).tryMap(fn(item) => Outcome.success(1)) or recover List[Int].default() }
+func fold() { discard List[Outcome[Int]].of(Outcome.success(1)).fold(0, fn(acc, item) => acc) }
+recovers func tryFold() { discard List[Outcome[Int]].of(Outcome.success(1)).tryFold(0, fn(acc, item) => Outcome.success(acc)) or recover 0 }
+recovers func tryEach() { List[Outcome[Int]].of(Outcome.success(1)).tryEach(fn(item) => Outcome.success(nothing())) or recover nothing() }
+func any() { discard List[Outcome[Int]].of(Outcome.success(1)).any(fn(item) => true) }
+func all() { discard List[Outcome[Int]].of(Outcome.success(1)).all(fn(item) => false) }
+func find() { discard List[Outcome[Int]].of(Outcome.success(1)).find(fn(item) => true) }

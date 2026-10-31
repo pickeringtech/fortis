@@ -1,0 +1,64 @@
+// execute: box 5|tag ada|colour red|5|sum 9
+// requires: runtime
+// covers: LANG-06-13
+// An `implement` block for a class or an enum the program declares is that type listing the interface: its methods
+// dispatch through a `where` bound on every backend, beside a class that lists the interface itself (9.5, X-180).
+import fortis.host { Console }
+
+export interface Labelled {
+  pure func label(self) String
+}
+
+export interface Measured {
+  pure func size(self) Int
+}
+
+export class Box implements Labelled, Measured {
+  export v: Int
+  export pure func label(self) String => "box ${self.v}"
+  export pure func size(self) Int => self.v
+}
+
+export class Tag {
+  export name: String
+}
+
+export enum Colour {
+  Red
+  Green
+}
+
+implement Labelled for Tag {
+  pure func label(self) String => "tag ${self.name}"
+}
+
+implement Measured for Tag {
+  pure func size(self) Int => 3
+}
+
+implement Labelled for Colour {
+  pure func label(self) String {
+    return match self {
+      Red => "colour red"
+      Green => "colour green"
+    }
+  }
+}
+
+func describe[T](value: T) String where T implements Labelled {
+  return value.label()
+}
+
+func twice[T](value: T) Int where T implements Measured {
+  return Int.wrappingAdd(value.size(), value.size())
+}
+
+func main(console: Console) {
+  let b = Box(v: 5)
+  let t = Tag(name: "ada")
+  console.print(describe(b))
+  console.print(describe(t))
+  console.print(describe(Colour.Red))
+  console.print("${twice(b) / 2}")
+  console.print("sum ${Int.wrappingAdd(twice(t), 3)}")
+}

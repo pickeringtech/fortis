@@ -1,0 +1,184 @@
+[
+  {
+    "name": "optional_fail",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\nfunc id(n: Int) Int => n\ntry func f(c: Cell?) { let out = \"1x\" as Int\n let n = c?.take(out or fail) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ],
+      "message": "an argument of `?.` must not consume an existing obligation",
+      "at": [
+        4,
+        18
+      ]
+    }
+  },
+  {
+    "name": "optional_recover",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\nfunc id(n: Int) Int => n\nrecovers func f(c: Cell?) { let out = \"1x\" as Int\n let n = c?.take(out or recover 0) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ],
+      "message": "an argument of `?.` must not consume an existing obligation"
+    }
+  },
+  {
+    "name": "optional_return",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\nfunc id(n: Int) Int => n\nfunc f(c: Cell?) { let out = \"1x\" as Int\n let n = c?.take(out catch e { report e\n return }) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ],
+      "message": "an argument of `?.` must not consume an existing obligation"
+    }
+  },
+  {
+    "name": "optional_nested",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\nfunc id(n: Int) Int => n\ntry func f(c: Cell?) { let out = \"1x\" as Int\n let n = c?.take(id(out or fail)) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ],
+      "message": "an argument of `?.` must not consume an existing obligation",
+      "at": [
+        4,
+        18
+      ]
+    }
+  },
+  {
+    "name": "optional_match",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\nfunc id(n: Int) Int => n\nfunc f(c: Cell?) { let out = \"1x\" as Int\n let n = c?.take(match move out { success(n) => n\n failure(e) => { report e\n give 0 } }) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ],
+      "message": "an argument of `?.` must not consume an existing obligation"
+    }
+  },
+  {
+    "name": "optional_discard",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\nfunc id(n: Int) Int => n\nrecovers func f(c: Cell?) { let out = \"1x\" as Int\n let n = c?.take(match 0 { _ => { discard (out or recover 0)\n give 1 } }) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ],
+      "message": "an argument of `?.` must not consume an existing obligation"
+    }
+  },
+  {
+    "name": "optional_chain",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\nclass Link { export func cell(self) Cell? => null }\ntry func f(c: Link?) { let out = \"1x\" as Int\n let n = c?.cell()?.take(out or fail) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ],
+      "message": "an argument of `?.` must not consume an existing obligation"
+    }
+  },
+  {
+    "name": "optional_must_outcome",
+    "input": {
+      "source": "class Cell { export func take(self, m: owned Must) { Must.discharge(move m) } }\ntry func get() Must => Must.create()\ntry func f(c: Cell?) { let out = get()\n let n = c?.take(out or fail) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ],
+      "message": "an argument of `?.` must not consume an existing obligation"
+    }
+  },
+  {
+    "name": "optional_pass_on",
+    "input": {
+      "source": "class Cell { export func take(self, out: owned Outcome[Int]) Int => out catch e { report e\n return 0 } }\nfunc f(c: Cell?) { let out = \"1x\" as Int\n let n = c?.take(move out) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ],
+      "message": "an argument of `?.` must not consume an existing obligation"
+    }
+  },
+  {
+    "name": "fresh_outcome",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\ntry func f(c: Cell?) { let n = c?.take(\"1\" as Int or fail) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "fresh_local",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\ntry func f(c: Cell?) { let n = c?.take(match 0 { _ => { let out = \"1\" as Int\n give out or fail } }) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "fresh_must",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\nfunc f(c: Cell?) { let n = c?.take(match 0 { _ => { let m = Must.create()\n Must.discharge(move m)\n give 1 } }) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "read_record_write",
+    "input": {
+      "source": "func f(s: { n: Int }) { let t = alias s\n t.n = 9 }"
+    },
+    "expect": {
+      "codes": [
+        "E-NAM-002"
+      ]
+    }
+  },
+  {
+    "name": "optional_nested_branch",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\ntry func f(c: Cell?, flag: Bool) { let out = \"1x\" as Int\n let n = c?.take(if flag { give out or fail } else { give out or fail }) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ],
+      "message": "an argument of `?.` must not consume an existing obligation",
+      "at": [
+        3,
+        18
+      ]
+    }
+  },
+  {
+    "name": "fresh_nested_optional_rejected",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\ntry func f(c: Cell?) { let n = c?.take(match 0 { _ => { let out = \"1x\" as Int\n give c?.take(out or fail) ?? 0 } }) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ],
+      "message": "an argument of `?.` must not consume an existing obligation"
+    }
+  }
+]

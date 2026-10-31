@@ -1,0 +1,8 @@
+// reject: E-TYP-090
+// covers: LANG-06-15
+class Source {
+  value: Int
+}
+class Target derive convert from Source {
+  value: Int8
+}

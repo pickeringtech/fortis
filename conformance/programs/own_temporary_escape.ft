@@ -1,0 +1,15 @@
+// reject: E-OWN-051
+// covers: LANG-07-06, LANG-07-07
+// D-562: assignment, expression return, optional and tuple wrappers retain the temporary loan.
+import fortis.host { Console }
+pure func fresh() String => " temp " as String
+pure func returned() StringView from static => fresh().trim() // reject: E-OWN-051
+func main(console: Console) {
+  let mut part: StringView = ""
+  part = fresh().trim() // reject: E-OWN-051
+  console.print(part)
+  let maybe = present(fresh().trim()) // reject: E-OWN-051
+  console.print(maybe ?? "")
+  let pair = (fresh().trim(), 1) // reject: E-OWN-051
+  console.print(pair.0)
+}

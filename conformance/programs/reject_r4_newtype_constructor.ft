@@ -1,0 +1,4 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+type Count = Int
+func main() { let f = Count }

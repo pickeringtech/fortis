@@ -96,16 +96,18 @@ pub fn ty(t: &Type) -> Json {
         Type::Optional(i) => obj("optional", vec![("inner", ty(i))]),
         Type::Tuple(ts) => obj("tuple", vec![("items", arr(ts, ty))]),
         Type::Record(fs) => obj("record", vec![("fields", Json::Arr(fs.iter().map(|(n, t)| Json::Arr(vec![s(n), ty(t)])).collect()))]),
-        Type::Fn { params, ret, kind: k, modifiers, origin, dynamic, identity } => obj(
+        Type::Fn { capture_origins, param_modes, params, ret, kind: k, modifiers, origin, dynamic, identity } => obj(
             "fn",
             vec![
                 ("params", arr(params, ty)),
+                ("param_modes", strs(param_modes)),
                 ("ret", ty(ret)),
                 ("kind", s(k)),
                 ("modifiers", strs(modifiers)),
                 ("origin", s(origin)),
                 ("dynamic", Json::Bool(*dynamic)),
                 ("identity", s(identity)),
+                ("capture_origins", Json::Arr(capture_origins.iter().map(|(o, m)| Json::Arr(vec![s(o), s(m)])).collect())),
             ],
         ),
         Type::Loan { inner, mode, origin } => obj("loan", vec![("inner", ty(inner)), ("mode", s(mode)), ("origin", s(origin))]),
@@ -141,6 +143,11 @@ pub fn de_ty(j: &Json) -> R<Type> {
             Ok((a.first().and_then(|x| x.as_str()).ok_or("record field name")?.to_string(), de_ty(a.get(1).ok_or("record field type")?)?))
         })?),
         "fn" => Type::Fn {
+            capture_origins: if j.get("capture_origins").is_some() { gvec(j, "capture_origins", |p| {
+                let a = p.as_arr().ok_or("capture origin is not a pair")?;
+                Ok((a.first().and_then(|x| x.as_str()).ok_or("capture place")?.to_string(), a.get(1).and_then(|x| x.as_str()).ok_or("capture mode")?.to_string()))
+            })? } else { vec![] },
+            param_modes: if j.get("param_modes").is_some() { gstrs(j, "param_modes")? } else { vec![String::new(); gvec(j, "params", de_ty)?.len()] },
             params: gvec(j, "params", de_ty)?,
             ret: Box::new(de_ty(get(j, "ret")?)?),
             kind: gs(j, "kind")?,
@@ -160,8 +167,32 @@ pub fn de_ty(j: &Json) -> R<Type> {
 // ---- program -------------------------------------------------------------------------------------------------
 
 pub fn program(p: &Program) -> Json {
+    let mut j = program_fields(p);
+    // pending `implement` blocks appear only while a module waits for its package (an assembled program has none)
+    if !p.impls.is_empty() {
+        j.push(("impls", arr(&p.impls, impl_def)));
+    }
+    obj("program", j)
+}
+
+fn impl_def(i: &ImplDef) -> Json {
     obj(
-        "program",
+        "impl",
+        vec![
+            ("iface", s(&i.iface)),
+            ("args", arr(&i.args, ty)),
+            ("target", s(&i.target)),
+            ("methods", Json::Arr(i.methods.iter().map(|(m, f)| Json::Arr(vec![s(m), s(f)])).collect())),
+        ],
+    )
+}
+
+fn de_impl_def(j: &Json) -> R<ImplDef> {
+    Ok(ImplDef { iface: gs(j, "iface")?, args: gvec(j, "args", de_ty)?, target: gs(j, "target")?, methods: gvec(j, "methods", pair_str)? })
+}
+
+fn program_fields(p: &Program) -> Vec<(&'static str, Json)> {
+    {
         vec![
             ("types", arr(&p.types, type_def)),
             ("functions", arr(&p.functions, function)),
@@ -184,8 +215,8 @@ pub fn program(p: &Program) -> Json {
                 }),
             ),
             ("unbuilt_tests", Json::Arr(p.unbuilt_tests.iter().map(|(t, r)| Json::Arr(vec![s(t), s(r)])).collect())),
-        ],
-    )
+        ]
+    }
 }
 
 pub fn de_program(j: &Json) -> R<Program> {
@@ -213,6 +244,10 @@ pub fn de_program(j: &Json) -> R<Program> {
                 })
                 .collect::<R<Vec<_>>>()?,
             _ => vec![],
+        },
+        impls: match j.get("impls") {
+            None | Some(Json::Null) => vec![],
+            Some(_) => gvec(j, "impls", de_impl_def)?,
         },
     })
 }
@@ -243,6 +278,7 @@ fn type_def(t: &TypeDef) -> Json {
             ("name", s(&t.name)),
             ("module", s(&t.module)),
             ("type_params", strs(&t.type_params)),
+            ("bounds", arr(&t.bounds, bound)),
             ("def", k),
             ("trivial", Json::Bool(t.trivial)),
             ("copyable", Json::Bool(t.copyable)),
@@ -251,8 +287,60 @@ fn type_def(t: &TypeDef) -> Json {
             ("lifetimes", strs(&t.lifetimes)),
             ("cleanup", opt(&t.cleanup, |c| s(c))),
             ("methods", Json::Arr(t.methods.iter().map(|(m, f)| Json::Arr(vec![s(m), s(f)])).collect())),
+        ]
+        .into_iter()
+        .chain((!t.derives.is_empty()).then(|| ("derives", strs(&t.derives))))
+        .chain((!t.iface_args.is_empty()).then(|| ("iface_args", Json::Arr(t.iface_args.iter().map(|(i, a)| Json::Arr(vec![s(i), arr(a, ty)])).collect()))))
+        .chain((!t.requires.is_empty()).then(|| ("requires", strs(&t.requires))))
+        .chain((!t.sigs.is_empty()).then(|| ("sigs", arr(&t.sigs, method_sig))))
+        .collect(),
+    )
+}
+
+fn method_sig(m: &MethodSig) -> Json {
+    obj(
+        "sig",
+        vec![
+            ("name", s(&m.name)),
+            ("receiver", opt(&m.receiver, |r| mode(*r))),
+            ("params", Json::Arr(m.params.iter().map(|(n, md, t)| Json::Arr(vec![s(n), mode(*md), ty(t)])).collect())),
+            ("ret", ty(&m.ret)),
+            ("modifiers", strs(&m.modifiers)),
+            ("type_params", strs(&m.type_params)),
+            ("bounds", arr(&m.bounds, bound)),
         ],
     )
+}
+
+fn de_method_sig(j: &Json) -> R<MethodSig> {
+    Ok(MethodSig {
+        name: gs(j, "name")?,
+        receiver: gopt(j, "receiver", de_mode)?,
+        params: gvec(j, "params", |p| {
+            let a = p.as_arr().ok_or("signature parameter")?;
+            Ok((a.first().and_then(|x| x.as_str()).ok_or("parameter name")?.to_string(), de_mode(a.get(1).ok_or("parameter mode")?)?, de_ty(a.get(2).ok_or("parameter type")?)?))
+        })?,
+        ret: de_ty(get(j, "ret")?)?,
+        modifiers: gstrs(j, "modifiers")?,
+        type_params: gstrs(j, "type_params")?,
+        bounds: match j.get("bounds") {
+            None | Some(Json::Null) => vec![],
+            Some(_) => gvec(j, "bounds", de_bound)?,
+        },
+    })
+}
+
+fn bound(b: &(String, String, Vec<Type>)) -> Json {
+    Json::Arr(vec![s(&b.0), s(&b.1), arr(&b.2, ty)])
+}
+
+fn de_bound(j: &Json) -> R<(String, String, Vec<Type>)> {
+    let a = j.as_arr().ok_or("expected a bound")?;
+    let args = match a.get(2) {
+        Some(Json::Arr(xs)) => xs.iter().map(de_ty).collect::<R<Vec<_>>>()?,
+        _ => vec![],
+    };
+    Ok((a.first().and_then(|x| x.as_str()).ok_or("bound[0]")?.to_string(), a.get(1).and_then(|x| x.as_str()).ok_or("bound[1]")?.to_string(), args))
 }
 
 fn pair_str(p: &Json) -> R<(String, String)> {
@@ -292,14 +380,41 @@ fn de_type_def(j: &Json) -> R<TypeDef> {
         name: gs(j, "name")?,
         module: gs(j, "module")?,
         type_params: gstrs(j, "type_params")?,
+        bounds: match j.get("bounds") {
+            None | Some(Json::Null) => vec![],
+            Some(_) => gvec(j, "bounds", de_bound)?,
+        },
         kind,
         trivial: gb(j, "trivial")?,
         copyable: gb(j, "copyable")?,
         implements: gstrs(j, "implements")?,
+        derives: match j.get("derives") {
+            None | Some(Json::Null) => vec![],
+            Some(_) => gstrs(j, "derives")?,
+        },
         mixins: gstrs(j, "mixins")?,
         lifetimes: gstrs(j, "lifetimes")?,
         cleanup: gopt(j, "cleanup", |c| c.as_str().map(|x| x.to_string()).ok_or("cleanup".to_string()))?,
         methods: gvec(j, "methods", pair_str)?,
+        iface_args: match j.get("iface_args") {
+            None | Some(Json::Null) => vec![],
+            Some(_) => gvec(j, "iface_args", |p| {
+                let a = p.as_arr().ok_or("interface arguments")?;
+                let args = match a.get(1) {
+                    Some(Json::Arr(xs)) => xs.iter().map(de_ty).collect::<R<Vec<_>>>()?,
+                    _ => vec![],
+                };
+                Ok((a.first().and_then(|x| x.as_str()).ok_or("interface")?.to_string(), args))
+            })?,
+        },
+        requires: match j.get("requires") {
+            None | Some(Json::Null) => vec![],
+            Some(_) => gstrs(j, "requires")?,
+        },
+        sigs: match j.get("sigs") {
+            None | Some(Json::Null) => vec![],
+            Some(_) => gvec(j, "sigs", de_method_sig)?,
+        },
     })
 }
 
@@ -352,8 +467,19 @@ fn de_capture_mode(x: &str) -> R<CaptureMode> {
 }
 
 pub fn function(f: &Function) -> Json {
-    obj(
-        "function",
+    let mut fields = function_fields(f);
+    if let Some(module) = &f.body_module {
+        fields.push(("body_module", s(module)));
+    }
+    // the `where` bounds appear only on a generic function that has them, so other functions' JSON is unchanged
+    if !f.bounds.is_empty() {
+        fields.push(("bounds", arr(&f.bounds, bound)));
+    }
+    obj("function", fields)
+}
+
+fn function_fields(f: &Function) -> Vec<(&'static str, Json)> {
+    {
         vec![
             ("name", s(&f.name)),
             ("label", s(&f.label)),
@@ -382,8 +508,8 @@ pub fn function(f: &Function) -> Json {
                     obj("closure", vec![("kind", s(&c.kind)), ("captures", arr(&c.captures, |c| obj("capture", vec![("local", int(c.local)), ("name", s(&c.name)), ("mode", capture_mode(c.mode))])))])
                 }),
             ),
-        ],
-    )
+        ]
+    }
 }
 
 pub fn de_function(j: &Json) -> R<Function> {
@@ -392,6 +518,10 @@ pub fn de_function(j: &Json) -> R<Function> {
         name: gs(j, "name")?,
         label: gs(j, "label")?,
         module: gs(j, "module")?,
+        body_module: match j.get("body_module") {
+            None | Some(Json::Null) => None,
+            Some(_) => Some(gs(j, "body_module")?),
+        },
         line: u32_of(j, "line")?,
         params: gvec(j, "params", |p| Ok(Param { local: u32_of(p, "local")?, name: gs(p, "name")?, mode: de_mode(get(p, "mode")?)?, default: gopt(p, "default", de_expr)? }))?,
         ret: de_ty(get(j, "ret")?)?,
@@ -408,6 +538,10 @@ pub fn de_function(j: &Json) -> R<Function> {
                 captures: gvec(c, "captures", |x| Ok(CaptureDef { local: u32_of(x, "local")?, name: gs(x, "name")?, mode: de_capture_mode(&gs(x, "mode")?)? }))?,
             })
         })?,
+        bounds: match j.get("bounds") {
+            None | Some(Json::Null) => vec![],
+            Some(_) => gvec(j, "bounds", de_bound)?,
+        },
     })
 }
 
@@ -591,6 +725,7 @@ pub fn pattern(p: &Pattern) -> Json {
         Pattern::Tuple(ps) => obj("tuple", vec![("items", arr(ps, pattern))]),
         Pattern::Record(fs) => obj("record", vec![("fields", named_pats(fs))]),
         Pattern::Otherwise(b) => obj("otherwise", vec![("bind", opt(b, |b| int(*b)))]),
+        Pattern::Range { lo, hi } => obj("range", vec![("lo", opt(lo, |n| s(&n.to_string()))), ("hi", opt(hi, |n| s(&n.to_string())))]),
     }
 }
 
@@ -609,6 +744,10 @@ pub fn de_pattern(j: &Json) -> R<Pattern> {
         "tuple" => Pattern::Tuple(gvec(j, "items", de_pattern)?),
         "record" => Pattern::Record(de_named_pats(get(j, "fields")?)?),
         "otherwise" => Pattern::Otherwise(opt_local(j, "bind")?),
+        "range" => Pattern::Range {
+            lo: gopt(j, "lo", |x| x.as_str().and_then(|v| v.parse::<i128>().ok()).ok_or_else(|| "`lo` is not an integer".to_string()))?,
+            hi: gopt(j, "hi", |x| x.as_str().and_then(|v| v.parse::<i128>().ok()).ok_or_else(|| "`hi` is not an integer".to_string()))?,
+        },
         k => return Err(format!("unknown pattern kind `{k}`")),
     })
 }
@@ -987,3 +1126,22 @@ pub fn parse_program(text: &str) -> R<Program> {
 
 #[allow(dead_code)]
 fn _unused(_: BTreeMap<String, Json>) {}
+
+#[cfg(test)]
+mod capture_tests {
+    use super::*;
+
+    #[test]
+    fn captured_places_survive_a_serialised_aggregate() {
+        let closure = Type::Fn {
+            params: vec![], ret: Box::new(fortis_types::types::named("Int")), kind: "fn".into(),
+            modifiers: vec![], origin: String::new(), dynamic: true, identity: "unit:1:1".into(),
+            param_modes: vec![], capture_origins: vec![("owner.field".into(), "alias".into()), ("other".into(), "editable".into())],
+        };
+        let aggregate = Type::Tuple(vec![Type::Optional(Box::new(closure))]);
+        let restored = de_ty(&ty(&aggregate)).unwrap();
+        let mut origins = Vec::new();
+        fortis_types::typer::Typer::captured_loans(&restored, &mut origins);
+        assert_eq!(origins, vec![("owner.field".into(), "alias".into()), ("other".into(), "editable".into())]);
+    }
+}

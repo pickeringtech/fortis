@@ -1,0 +1,36 @@
+// execute: Small|Medium|Large|Large|Medium|Small|Large|conversion.parse|Small|Medium
+// requires: runtime
+// covers: LANG-06-14, LANG-06-15
+import fortis.host { Console }
+export enum Size derive Equatable, Hashable, Displayable, convert from String {
+  Small
+  Medium
+  Large
+}
+try func pick(text: StringView) Size => text.trim() as Size or fail
+try func borrowed(text: String) Size => text as Size or fail
+try recovers func main(console: Console) {
+  let parsed1 = "small" as Size or fail
+  console.print("${parsed1}")
+  let parsed2 = "Medium" as Size or fail
+  console.print("${parsed2}")
+  let parsed3 = "LARGE" as Size or fail
+  console.print("${parsed3}")
+  let text: String = "large"
+  let parsed4 = borrowed(text) or fail
+  console.print("${parsed4}")
+  let textView: StringView = "mEDium"
+  let parsed5 = textView as Size or fail
+  console.print("${parsed5}")
+  let parsed6 = pick("  small  ") or fail
+  console.print("${parsed6}")
+  let parsed7 = " large ".trim() as Size or fail
+  console.print("${parsed7}")
+  let bad = " large" as Size catch e {
+    console.print(e.code)
+    recover Small
+  }
+  console.print("${bad}")
+  let parsed8 = "many" as Size or recover Medium
+  console.print("${parsed8}")
+}

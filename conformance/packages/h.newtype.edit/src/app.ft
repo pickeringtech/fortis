@@ -1,0 +1,7 @@
+// reject: E-NAM-004
+import fortis.host { Console }
+import h.newtype.edit.defs as defs
+func main(console: Console) {
+  let mut b = defs.make()
+  b.push(4)
+}

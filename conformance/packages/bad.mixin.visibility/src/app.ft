@@ -1,0 +1,8 @@
+import bad.mixin.visibility.shapes { Vault, HiddenVault }
+
+func main() {
+  let v = Vault()
+  let hidden = v.secret() // reject: E-NAM-004
+  let h = HiddenVault()
+  let privateMixinMethod = h.hidden() // reject: E-NAM-004
+}

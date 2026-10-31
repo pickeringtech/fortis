@@ -1,5 +1,5 @@
 {
- "about": "Seconds each gate step took on CI's standard runner (2 vCPU, ubuntu-24.04), by tier. gate.py --shard deals the steps out by these; refresh them from CI's shard reports with gate.py --timings-from REPORT... quick: the average over three cold CI runs (40598779503, 40600058111 and 40600846429: workflow_dispatch with cold, no cache, so the build and every native program compiled from scratch), so that the shards balance when CI is slowest; a split step is its parts added up. full: run 40544479676, one step at a time; build adds an estimate for its two clean clones, which the full tier runs.",
+ "about": "Seconds each gate step took on CI's standard runner (2 vCPU, ubuntu-24.04), by tier. gate.py --shard deals the steps out by these; refresh them from CI's shard reports with gate.py --timings-from REPORT... quick: the average over three cold CI runs (40598779503, 40600058111 and 40600846429: workflow_dispatch with cold, no cache, so the build and every native program compiled from scratch), so that the shards balance when CI is slowest; a split step is its parts added up. full: run 40544479676, one step at a time; build adds an estimate for its two clean clones, which the full tier runs. unit: one-second estimate in both tiers for the new Python suite (under 0.1 seconds locally), to be refreshed from CI.",
  "full": {
   "acceptance-a": 78,
   "acceptance-a2": 18,
@@ -45,6 +45,7 @@
   "syntax": 12,
   "terms": 0,
   "tests": 41,
+  "unit": 1,
   "validator": 13,
   "view": 39,
   "vm": 2,
@@ -90,6 +91,7 @@
   "syntax": 11,
   "terms": 0,
   "tests": 47,
+  "unit": 1,
   "validator": 14,
   "view": 32,
   "vm": 2,

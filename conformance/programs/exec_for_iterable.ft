@@ -1,0 +1,90 @@
+// execute: ints 1 2 3|texts a b|empty 0|nested 1a 1b 2a 2b 3a 3b|stopped 1 2|skipped 1 3|field 10 20|total 6
+// requires: runtime
+// covers: LANG-06-16
+// A `for` over a class that implements `Iterable[T, I]` (5.3, 7.7; D-545): the class returns the cursor of the standard
+// collection it holds (`func iterate(self) ListCursor[T] from self => self.items.iterate()`), and the loop binds each
+// item by read loan, as over that collection. Cases: trivial and text items, an empty class, nested loops, `break` and
+// `continue`, a loop over a field of a class, and a function that takes the class by read.
+import fortis.host { Console }
+
+export class Bag[T] implements Iterable[T, ListCursor[T]] {
+  items: List[T] = List.default()
+
+  export pure func default() Bag[T] => Bag(items: List.default())
+
+  export func add(editable self, item: owned T) {
+    self.items.push(move item)
+  }
+
+  export pure func iterate(self) ListCursor[T] from self => self.items.iterate()
+}
+
+export class Shelf {
+  export bag: Bag[Int]
+}
+
+func total(bag: Bag[Int]) Int {
+  let mut sum = 0
+  for n in bag {
+    sum = Int.wrappingAdd(sum, n)
+  }
+  return sum
+}
+
+func main(console: Console) {
+  let mut ints: Bag[Int] = Bag.default()
+  ints.add(1)
+  ints.add(2)
+  ints.add(3)
+  let mut line = "ints"
+  for n in ints {
+    line = "${line} ${n}"
+  }
+  console.print(line)
+  let mut texts: Bag[String] = Bag.default()
+  texts.add("a")
+  texts.add("b")
+  line = "texts"
+  for t in texts {
+    line = "${line} ${t}"
+  }
+  console.print(line)
+  let nothing: Bag[Int] = Bag.default()
+  let mut seen = 0
+  for n in nothing {
+    seen = Int.wrappingAdd(seen, n)
+  }
+  console.print("empty ${seen}")
+  line = "nested"
+  for n in ints {
+    for t in texts {
+      line = "${line} ${n}${t}"
+    }
+  }
+  console.print(line)
+  line = "stopped"
+  for n in ints {
+    if n == 3 {
+      break
+    }
+    line = "${line} ${n}"
+  }
+  console.print(line)
+  line = "skipped"
+  for n in ints {
+    if n == 2 {
+      continue
+    }
+    line = "${line} ${n}"
+  }
+  console.print(line)
+  let mut shelf = Shelf(bag: Bag.default())
+  shelf.bag.add(10)
+  shelf.bag.add(20)
+  line = "field"
+  for n in shelf.bag {
+    line = "${line} ${n}"
+  }
+  console.print(line)
+  console.print("total ${total(ints)}")
+}

@@ -33,6 +33,7 @@ class LinkedModule:
         self.key, self.file, self.tree, self.package = key, file, tree_, package
         self.scope: Dict[str, str] = {}       # name or alias.name -> program key
         self.aliases: Dict[str, str] = {}     # import alias -> module key
+        self.array_sizes: Dict[tuple, int] = {}
 
 
 class Link:
@@ -44,6 +45,24 @@ class Link:
         return f"{name}@{module_key}" if name in self.colliding else name
 
 
+def core_names():
+    from interpreter.eval import library
+    return {d["name"] for m in library().values() for d in tree.declarations(m["tree"]) if d["kind"] in ("class", "enum", "error", "type", "observation", "interface", "mixin") and d["name"]}
+
+
+def single(module, file, rec):
+    out = Link()
+    lm = LinkedModule("main", file, module, None)
+    declared = {d["name"] for d in tree.declarations(module) if d["kind"] in NAMED and d["name"]}
+    out.colliding = declared & core_names()
+    if not out.colliding:
+        return None, None
+    lm.scope = {n: out.key(lm.key, n) for n in declared}
+    out.modules[lm.key] = lm
+    rename_types(lm, rec)
+    return out, lm
+
+
 def link(ps, rec, entry_module: str) -> Tuple[Link, LinkedModule]:
     """Every module of the package set, freshly parsed, with its key, scope and renamed type names."""
     counts: Dict[str, int] = {}
@@ -51,6 +70,9 @@ def link(ps, rec, entry_module: str) -> Tuple[Link, LinkedModule]:
         counts[p.name] = counts.get(p.name, 0) + 1
     out = Link()
     by_package: Dict[int, Dict[str, LinkedModule]] = {}
+    from checker import check
+    from interpreter.type_facts import array_sizes
+    libs, session = check.package_libs(ps)
     entry: Optional[LinkedModule] = None
     declared: Dict[str, List[str]] = {}
     for p in ps.packages.values():
@@ -59,8 +81,10 @@ def link(ps, rec, entry_module: str) -> Tuple[Link, LinkedModule]:
             src = open(m.file, encoding="utf-8").read()
             if elaboration.uses_di(src):     # run as checked: elaborated (D-90; fortis-di `source`)
                 src = elaboration.elaborate(os.path.relpath(m.file, elaboration.ROOT))[0]
-            t = rec.parse(lexer.lex(src), "module")
+            from checker import check
+            t = check.elaborate_captures(rec.parse(lexer.lex(src), "module"), m.file)
             lm = LinkedModule(key, m.file, t, p)
+            lm.array_sizes = array_sizes(t, libs[p.identity], m.file, f"{p.name}.{mpath}", p.identity, session, check.entry_key(ps))
             out.modules[key] = lm
             by_package.setdefault(id(p), {})[mpath] = lm
             if p is ps.root and mpath == entry_module:
@@ -68,7 +92,7 @@ def link(ps, rec, entry_module: str) -> Tuple[Link, LinkedModule]:
             for d in tree.declarations(t):
                 if d["kind"] in NAMED and d["name"]:
                     declared.setdefault(d["name"], []).append(key)
-    out.colliding = {n for n, ks in declared.items() if len(ks) > 1}
+    out.colliding = {n for n, ks in declared.items() if len(ks) > 1 or n in core_names()}
     names_of = {k: [d["name"] for d in tree.declarations(lm.tree) if d["kind"] in NAMED and d["name"]] for k, lm in out.modules.items()}
     for lm in out.modules.values():
         for n in names_of[lm.key]:
@@ -120,8 +144,9 @@ def rename_types(lm: LinkedModule, rec):
                 t.text = k
         elif t.kind == "STR" and "${" in t.text:
             trees = {}
-            for src in segments(t.text[1:-1]):
-                node = rec.parse(lexer.lex(src), "expr")
+            from checker.typer import Typer
+            for hole, src in enumerate(segments(t.text[1:-1])):
+                node = rec.parse(Typer.hole_tokens(t, hole, src), "expr")
                 sts = tokens(node)
                 for n in range(len(sts)):
                     if sts[n].kind == "UPPER":

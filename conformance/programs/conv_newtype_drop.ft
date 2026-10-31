@@ -1,0 +1,7 @@
+// reject: E-OBL-001
+// covers: LANG-10-01
+// An unproved newtype conversion still yields a linear Outcome.
+type Pence = Int<0..100>
+func bad(n: Int) {
+  let unchecked = n as Pence // reject: E-OBL-001
+}

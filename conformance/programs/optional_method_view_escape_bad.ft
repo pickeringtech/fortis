@@ -1,0 +1,9 @@
+// reject: E-OWN-051
+// covers: LANG-07-06, LANG-06-08
+class Cell { text: String
+  func textView(self) StringView from self => alias self.text
+}
+func bad() (StringView from static)? {
+  let c: Cell? = Cell(text: "gone")
+  return c?.textView()
+}

@@ -1,0 +1,10 @@
+// execute: 3
+// requires: runtime
+// covers: LANG-08-04
+import fortis.host { Console }
+
+func main(console: Console) {
+  let make = Shared[String].create
+  let s = make("abc" as String)
+  console.print("${s.scalarCount()}")
+}

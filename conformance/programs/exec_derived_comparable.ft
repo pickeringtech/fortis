@@ -1,0 +1,32 @@
+// execute: true|less|true|true|true|true|less
+// requires: runtime
+// covers: LANG-06-10
+// 6.10 (X-516): a derived `Comparable` orders a class by its fields in declaration order and an enum by variant
+// declaration order first and, within one variant, by the payload's fields; `<`, `<=`, `>` and `>=`, and the type's
+// own `compare` called as a method, run on the interpreter, the VM and native (D-54.1).
+import fortis.host { Console }
+
+class Pair derive Equatable, Comparable, Displayable {
+  export a: Int
+  export b: Int
+}
+
+enum Size derive Equatable, Comparable {
+  Small
+  Medium(v: Int)
+  Large
+}
+
+func word(o: Ordering) String {
+  return match o {
+    Less => "less"
+    Equal => "equal"
+    Greater => "greater"
+  }
+}
+
+func main(console: Console) {
+  console.print("${Pair(a: 1, b: 2).equals(Pair(a: 1, b: 2))}|${word(Pair(a: 1, b: 2).compare(Pair(a: 2, b: 0)))}")
+  console.print("${Pair(a: 1, b: 2) < Pair(a: 2, b: 0)}|${Pair(a: 2, b: 0) >= Pair(a: 1, b: 9)}")
+  console.print("${Size.Small < Large}|${Size.Medium(v: 1) < Medium(v: 2)}|${word(Size.Medium(v: 2).compare(Size.Large))}")
+}

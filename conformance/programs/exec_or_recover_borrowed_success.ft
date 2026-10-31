@@ -1,0 +1,49 @@
+// execute: show a|after|drop held|drop a
+// execute-trace: loans-end|drop Token
+// requires: runtime
+// covers: LANG-07-07, LANG-05-07
+// D-451, 7.9: an `or recover` lent for a call, whose try side succeeds with a loan
+// (`show(console, find(alias xs) or recover move d)`): the statement's temporary holds the loan, owns nothing,
+// and destroys nothing when the statement ends; the borrowed element lives until the function's end destroys
+// the list. Only a replacement the failure moved in or made is a value the temporary destroys there (D-446,
+// D-375). The VM once destroyed the borrowed element when the statement ended, treating the temporary of the
+// loan result as the value's owner and destroying a value the list still held. Found by the v0.1 stream A fix
+// of D-446, in a success-path probe.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: label as String, console: console.retain())
+}
+
+func show(console: Shared[Console], t: Token) {
+  console.print("show ${t.label}")
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func find(xs: List[Token]) alias Token from xs {
+  match xs.get(0) {
+    present(t) => { return t }
+    null => { fail Missing() }
+  }
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  let d = make(console, "held")
+  show(console, find(alias xs) or recover move d)
+  console.print("after")
+}

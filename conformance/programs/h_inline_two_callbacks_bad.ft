@@ -1,0 +1,7 @@
+// reject: E-OWN-012
+// covers: LANG-08-02, LANG-07-05
+func call(a: editable fn mut() Void, b: editable fn mut() Void) {}
+func demo() {
+  let mut n = 0
+  call(fn() { n = 1 }, fn() { n = 2 })
+}

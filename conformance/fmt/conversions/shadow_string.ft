@@ -1,0 +1,12 @@
+// execute: 9
+// covers: LANG-06-14
+// A user's String.from has its own identity and stays a call.
+import fortis.host { Console }
+
+class String {
+  func from(value: Int) Int => value
+}
+
+func main(console: Console) {
+  console.print("${String.from(9)}")
+}

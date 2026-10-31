@@ -135,8 +135,8 @@ export pure try func splitLines(text: StringView) List[SourceLine] {
     if s == newline {
       let raw = text.slice(start, i) or fail
       let body = dropCarriageReturn(raw) or fail
-      let number = LineNo.validate(count) or fail
-      lines.push(SourceLine(number, text: String.from(body)))
+      let number = count as LineNo or fail
+      lines.push(SourceLine(number, text: body as String))
       count = count + 1 or fail
       start = i + 1
     }
@@ -144,8 +144,8 @@ export pure try func splitLines(text: StringView) List[SourceLine] {
   if start < n {
     let raw = text.slice(start, n) or fail
     let body = dropCarriageReturn(raw) or fail
-    let number = LineNo.validate(count) or fail
-    lines.push(SourceLine(number, text: String.from(body)))
+    let number = count as LineNo or fail
+    lines.push(SourceLine(number, text: body as String))
   }
   return lines
 }
@@ -173,12 +173,12 @@ export pure try func splitOn(text: StringView, separator: Scalar) List[String] {
     let s = text.scalarAt(i) or fail
     if s == separator {
       let piece = text.slice(start, i) or fail
-      pieces.push(String.from(piece))
+      pieces.push(piece as String)
       start = i + 1
     }
   }
   let rest = text.slice(start, n) or fail
-  pieces.push(String.from(rest))
+  pieces.push(rest as String)
   return pieces
 }
 
@@ -218,7 +218,7 @@ export pure try func parseNatural(text: StringView) Int<0..> {
     value = value * 10 or fail
     value = value + d or fail
   }
-  return Int<0..>.validate(value) or fail
+  return value as Int<0..> or fail
 }
 
 // A decimal integer with an optional leading `+` or `-`.

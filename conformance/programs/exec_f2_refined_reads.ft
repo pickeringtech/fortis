@@ -1,0 +1,82 @@
+// execute: -1 9.0|7|1 3 2|3 3 6|true true 2 1|3 3 3 2 2 3|6 6 6|3 2 1|1 3 2|3 3 6|true true 2 1|3 3 3 2 2 3|6 6 6|3 2 1
+// requires: runtime
+// covers: LANG-06-02 LANG-06-07 LANG-06-14
+// D-655's reproduction and D-656's refined List and ListView reads.
+import fortis.host { Console }
+
+try func value(text: StringView) Int<0..10> {
+  let n = text as Int or fail
+  return n as Int<0..10> or fail
+}
+
+try func visit(n: Int) { discard n }
+
+try func listReads(xs: List[Int]<length: 3..5>, console: Console) {
+  console.print("${xs[1]} ${xs.count()} ${xs.get(2) ?? 0}")
+  let mapped = xs.map(fn(n) => n)
+  let filtered = xs.filter(fn(n) => n > 0)
+  let total = xs.fold(0, fn(a, n) => Int.wrappingAdd(a, n))
+  console.print("${mapped.count()} ${filtered.count()} ${total}")
+  console.print("${xs.any(fn(n) => n > 2)} ${xs.all(fn(n) => n > 0)} ${xs.find(fn(n) => n == 2) ?? 0} ${xs.indexWhere(fn(n) => n == 1) ?? -1}")
+  let enumerated = xs.enumerate()
+  let zipped = xs.zip(xs)
+  let flat = xs.flatMap(fn(n) => List.of(n))
+  let chunks = xs.chunked(2)
+  let sorted = xs.sortedBy(fn(n) => n)
+  let groups = xs.groupBy(fn(n) => n)
+  console.print("${enumerated.count()} ${zipped.count()} ${flat.count()} ${chunks.count()} ${sorted.get(1) ?? 0} ${groups.count()}")
+  let mut loopSum = 0
+  for n in xs { loopSum = Int.wrappingAdd(loopSum, n) }
+  let mut eachSum = 0
+  xs.each(fn(n) { eachSum = Int.wrappingAdd(eachSum, n) })
+  xs.tryEach(fn(n) => visit(n)) or fail
+  let tried = xs.tryMap(fn(n) => Int.add(n, 0)) or fail
+  let folded = tried.tryFold(0, fn(a, n) => Int.add(a, n)) or fail
+  console.print("${loopSum} ${eachSum} ${folded}")
+  let taken = xs.take(2)
+  let skipped = xs.skip(1)
+  let backwards = xs.reversed()
+  console.print("${taken.get(0) ?? 0} ${skipped.count()} ${backwards.get(1) ?? 0}")
+}
+
+try func viewReads(xs: ListView[Int]<length: 3..5>, console: Console) {
+  console.print("${xs[1]} ${xs.count()} ${xs.get(2) ?? 0}")
+  let mapped = xs.map(fn(n) => n)
+  let filtered = xs.filter(fn(n) => n > 0)
+  let total = xs.fold(0, fn(a, n) => Int.wrappingAdd(a, n))
+  console.print("${mapped.count()} ${filtered.count()} ${total}")
+  console.print("${xs.any(fn(n) => n > 2)} ${xs.all(fn(n) => n > 0)} ${xs.find(fn(n) => n == 2) ?? 0} ${xs.indexWhere(fn(n) => n == 1) ?? -1}")
+  let enumerated = xs.enumerate()
+  let zipped = xs.zip(xs)
+  let flat = xs.flatMap(fn(n) => List.of(n))
+  let chunks = xs.chunked(2)
+  let sorted = xs.sortedBy(fn(n) => n)
+  let groups = xs.groupBy(fn(n) => n)
+  console.print("${enumerated.count()} ${zipped.count()} ${flat.count()} ${chunks.count()} ${sorted.get(1) ?? 0} ${groups.count()}")
+  let mut loopSum = 0
+  for n in xs { loopSum = Int.wrappingAdd(loopSum, n) }
+  let mut eachSum = 0
+  xs.each(fn(n) { eachSum = Int.wrappingAdd(eachSum, n) })
+  xs.tryEach(fn(n) => visit(n)) or fail
+  let tried = xs.tryMap(fn(n) => Int.add(n, 0)) or fail
+  let folded = tried.tryFold(0, fn(a, n) => Int.add(a, n)) or fail
+  console.print("${loopSum} ${eachSum} ${folded}")
+  let taken = xs.take(2)
+  let skipped = xs.skip(1)
+  let backwards = xs.reversed()
+  console.print("${taken.get(0) ?? 0} ${skipped.count()} ${backwards.get(1) ?? 0}")
+}
+
+try recovers func main(console: Console) {
+  let integer = "1\n" as Int or recover -1
+  let decimal = "1.0\n" as Decimal or recover 9.0d
+  console.print("${integer} ${decimal}")
+  let parsed = value("7") or fail
+  console.print("${parsed}")
+  let raw = List.of(3, 1, 2)
+  let xs = copy raw as List[Int]<length: 3..5> or fail
+  listReads(xs, console) or fail
+  let lent: ListView[Int] = alias raw
+  let refined = lent as ListView[Int]<length: 3..5> or fail
+  viewReads(refined, console) or fail
+}

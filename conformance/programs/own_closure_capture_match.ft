@@ -1,0 +1,11 @@
+// reject: E-OWN-051
+// covers: LANG-07-06, LANG-08-02
+func keep(flag: Bool) dynamic fn() Int {
+  let n = 1
+  let s = "hello" as String
+  let a: dynamic fn() Int = fn[move n]() Int => n
+  let b: dynamic fn() Int = fn[alias s]() Int => s.byteCount()
+  let f: dynamic fn() Int = match flag { true => move a
+    false => move b }
+  return move f
+}

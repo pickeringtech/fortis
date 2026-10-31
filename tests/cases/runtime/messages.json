@@ -1,0 +1,98 @@
+[
+  {
+    "name": "lr10_3_message_0",
+    "input": {
+      "template": "",
+      "payload": {}
+    },
+    "expect": ""
+  },
+  {
+    "name": "lr10_3_message_1",
+    "input": {
+      "template": "plain",
+      "payload": {}
+    },
+    "expect": "plain"
+  },
+  {
+    "name": "lr10_3_message_2",
+    "input": {
+      "template": "${n}",
+      "payload": {
+        "n": "3"
+      }
+    },
+    "expect": "3"
+  },
+  {
+    "name": "lr10_3_message_3",
+    "input": {
+      "template": "${n}/${n}",
+      "payload": {
+        "n": "3"
+      }
+    },
+    "expect": "3/3"
+  },
+  {
+    "name": "lr10_3_message_4",
+    "input": {
+      "template": "${missing}",
+      "payload": {}
+    },
+    "expect": "${missing}"
+  },
+  {
+    "name": "lr10_3_message_5",
+    "input": {
+      "template": "${n",
+      "payload": {
+        "n": "3"
+      }
+    },
+    "expect": "${n"
+  },
+  {
+    "name": "lr10_3_message_6",
+    "input": {
+      "template": "$n",
+      "payload": {
+        "n": "3"
+      }
+    },
+    "expect": "$n"
+  },
+  {
+    "name": "lr10_3_message_7",
+    "input": {
+      "template": "${x}",
+      "payload": {
+        "x": "${y}",
+        "y": "oops"
+      }
+    },
+    "expect": "${y}"
+  },
+  {
+    "name": "lr10_3_message_8",
+    "input": {
+      "template": "é ${n} 🙂",
+      "payload": {
+        "n": "四"
+      }
+    },
+    "expect": "é 四 🙂"
+  },
+  {
+    "name": "lr10_3_message_9",
+    "input": {
+      "template": "${a}${b}",
+      "payload": {
+        "a": "",
+        "b": "0"
+      }
+    },
+    "expect": "0"
+  }
+]

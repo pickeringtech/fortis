@@ -1,0 +1,8 @@
+// reject: E-OBL-001
+// covers: LANG-10-01
+// D-588: each owned outcome must be consumed by the loop body.
+// The diagnostic names item, whose obligation is new on each iteration.
+func drop() {
+  let xs = List[Outcome[Int]].of(Outcome.success(1))
+  for item in move xs {}
+}

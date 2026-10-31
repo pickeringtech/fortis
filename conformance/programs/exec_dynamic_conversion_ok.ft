@@ -1,0 +1,66 @@
+// execute: 3|3|3|7|seven|9
+// requires: runtime
+// covers: LANG-09-07, LANG-09-03
+// Conversions to `dynamic I` the checkers accept (9.5): a class that implements `I`, a type parameter whose bound
+// grants `I` directly or through an interface that requires it, a `dynamic J` where `J` requires `I`, a parameterized
+// interface with the written arguments, and an interface with an associated function and a constant, which stays
+// dynamic-eligible (only its receiver methods are reached through the `dynamic`).
+import fortis.host { Console }
+
+export interface Measured {
+  pure func size(self) Int
+}
+
+export interface Weighed requires Measured {
+  pure func weight(self) Int
+}
+
+export interface Part[A] {
+  pure func item(self) A
+}
+
+export interface Plain {
+  pure func size(self) Int
+  func create(n: Int) Self
+  const limit: Int
+}
+
+export class Brick implements Weighed, Measured {
+  export n: Int
+  pure func size(self) Int => self.n
+  pure func weight(self) Int => Int.wrappingMul(self.n, 3)
+}
+
+export class IntBox implements Part[Int] {
+  export v: Int
+  pure func item(self) Int => self.v
+}
+
+export class TextBox implements Part[String] {
+  export v: String
+  pure func item(self) String => copy self.v
+}
+
+export class Stone implements Plain {
+  export n: Int
+  const limit = 9
+  pure func size(self) Int => self.n
+  func create(n: Int) Stone => Stone(n)
+}
+
+func measure(m: dynamic Measured) Int => m.size()
+
+func viaRequires(w: dynamic Weighed) Int => measure(w)
+
+func viaBound[T](x: T) Int where T implements Weighed => measure(x)
+
+func intItem(x: dynamic Part[Int]) Int => x.item()
+
+func textItem(x: dynamic Part[String]) String => x.item()
+
+func plain(p: dynamic Plain) Int => p.size()
+
+func main(console: Console) {
+  let b = Brick(n: 3)
+  console.print("${measure(b)}|${viaRequires(b)}|${viaBound(b)}|${intItem(IntBox(v: 7))}|${textItem(TextBox(v: "seven"))}|${plain(Stone.create(9))}")
+}

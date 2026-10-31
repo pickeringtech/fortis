@@ -4,7 +4,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 use fortis_mir::model::*;
-use fortis_types::types::{strip, Type};
+use fortis_types::types::{core_name, strip, Type};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Violation {
@@ -34,7 +34,7 @@ pub fn type_name(t: &Type) -> Option<&str> {
 }
 
 fn is_outcome(t: &Type) -> bool {
-    type_name(t) == Some("Outcome")
+    core_name(strip(t)) == Some("Outcome")
 }
 fn is_optional(t: &Type) -> bool {
     matches!(strip(t), Type::Optional(_))
@@ -69,7 +69,7 @@ impl<'p> Ctx<'p> {
             Type::Record(fs) => fs.iter().all(|(_, x)| self.trivial_seen(x, seen)),
             Type::Named(_) | Type::Refined { .. } => {
                 let n = type_name(t).unwrap_or("").to_string();
-                if fortis_types::types::is_trivial_builtin(&n) || matches!(n.as_str(), "Void" | "Never" | "Bool" | "Float" | "Float32" | "Decimal" | "Duration" | "Timestamp" | "Ordering") {
+                if core_name(strip(t)).map_or(false, fortis_types::types::is_trivial_builtin) {
                     return true;
                 }
                 if seen.contains(&n) {
@@ -323,6 +323,11 @@ fn contains_break(b: &Block) -> bool {
 
 pub fn run(ctx: &mut Ctx) {
     let prog = ctx.prog;
+    // an `implement` block whose target the assembled program lacks: its methods could never be reached (9.5, X-180)
+    for imp in &prog.impls {
+        let anchor = Function { name: format!("type {}", imp.target), label: String::new(), module: String::new(), body_module: None, line: 0, params: vec![], ret: fortis_types::types::void(), modifiers: vec![], locals: vec![], body: None, effects: Effects::default(), observe: None, closure: None, bounds: vec![] };
+        ctx.v("implement-target", &anchor, 0, format!("`implement {} for {}`: the program has no type `{}` to fold the block into", imp.iface, imp.target, imp.target));
+    }
     types(ctx);
     for f in &prog.functions {
         function(ctx, f);
@@ -336,7 +341,7 @@ pub fn run(ctx: &mut Ctx) {
 fn types(ctx: &mut Ctx) {
     let prog = ctx.prog;
     for t in &prog.types {
-        let anchor = Function { name: format!("type {}::{}", t.module, t.name), label: String::new(), module: t.module.clone(), line: 0, params: vec![], ret: fortis_types::types::void(), modifiers: vec![], locals: vec![], body: None, effects: Effects::default(), observe: None, closure: None };
+        let anchor = Function { name: format!("type {}::{}", t.module, t.name), label: String::new(), module: t.module.clone(), body_module: None, line: 0, params: vec![], ret: fortis_types::types::void(), modifiers: vec![], locals: vec![], body: None, effects: Effects::default(), observe: None, closure: None, bounds: vec![] };
         if t.trivial {
             if let TypeKind::Class { fields } = &t.kind {
                 for fd in fields {
@@ -522,6 +527,7 @@ fn stmt(ctx: &mut Ctx, w: &mut Walk, s: &Stmt) {
     let f = w.f;
     match &s.kind {
         StmtKind::Let { local, init } => {
+            identity(ctx, f, &init.ty, &f.local(*local).ty, s.line);
             expr(ctx, w, init);
             // C1.read-loan: a local holding a loan of a place lives no longer than that place's block
             if let ExprKind::Place(p, Use::Alias | Use::Editable) = &init.kind {
@@ -541,7 +547,8 @@ fn stmt(ctx: &mut Ctx, w: &mut Walk, s: &Stmt) {
             expr(ctx, w, init);
             pattern_check(ctx, f, pattern, &init.ty, s.line);
         }
-        StmtKind::Assign { value, .. } => {
+        StmtKind::Assign { place, value, .. } => {
+            if place.proj.is_empty() { identity(ctx, f, &value.ty, &f.local(place.local).ty, s.line); }
             expr(ctx, w, value);
             shared_dup(ctx, f, value, s.line);
         }
@@ -597,6 +604,7 @@ fn stmt(ctx: &mut Ctx, w: &mut Walk, s: &Stmt) {
         StmtKind::Return(e) => {
             if let Some(e) = e {
                 expr(ctx, w, e);
+                identity(ctx, f, &e.ty, &f.ret, s.line);
                 from_return(ctx, f, e, s.line);
             }
         }
@@ -690,6 +698,13 @@ fn match_arms(ctx: &mut Ctx, w: &mut Walk, scrutinee: &Expr, arms: &[Arm], value
     }
 }
 
+// D-592: even a malformed typed IR cannot exchange two declarations of one spelling.
+// This is a nominal check, not a second inference pass over generics or refinements.
+fn identity(ctx: &mut Ctx, f: &Function, have: &Type, want: &Type, line: u32) {
+    let why = fortis_types::literals::origin_clash(have, want);
+    if !why.is_empty() { ctx.v("wf.calls", f, line, format!("type identity: {why}")); }
+}
+
 fn pattern_check(ctx: &mut Ctx, f: &Function, p: &Pattern, t: &Type, line: u32) {
     match p {
         Pattern::Null | Pattern::Present(_) if is_outcome(t) => ctx.v("C1.optional", f, line, format!("an absence pattern on an outcome ({})", t.show())),
@@ -715,7 +730,12 @@ fn expr(ctx: &mut Ctx, w: &mut Walk, e: &Expr) {
         ExprKind::Call { callee, args } => {
             match callee {
                 Callee::Func(n) => {
-                    if !ctx.funcs.contains_key(n.as_str()) {
+                    if let Some(callee) = ctx.funcs.get(n.as_str()).copied() {
+                        for (a, p) in args.iter().zip(&callee.params) {
+                            identity(ctx, f, &a.value.ty, &callee.local(p.local).ty, e.line);
+                        }
+                        identity(ctx, f, &callee.ret, &e.ty, e.line);
+                    } else {
                         ctx.v("wf.calls", f, e.line, format!("call of `{n}`, which the program does not define"));
                     }
                 }
@@ -735,7 +755,7 @@ fn expr(ctx: &mut Ctx, w: &mut Walk, e: &Expr) {
                 None => ctx.v("wf.calls", f, e.line, format!("construction of `{ty}`, which the program does not define")),
                 Some(d) => {
                     // C1.class: a class built outside its module has every field visible there
-                    if d.module != f.module {
+                    if d.module != f.lexical_module() {
                         if let TypeKind::Class { fields: fds } = &d.kind {
                             for fd in fds {
                                 if !fd.exported {
@@ -946,6 +966,10 @@ fn effects(ctx: &mut Ctx, f: &Function, body: &Block) {
             ExprKind::Place(p, _) => derived.contains(&p.local),
             ExprKind::OrFail(a) | ExprKind::OrRecover(a, _) | ExprKind::Catch { value: a, .. } | ExprKind::Present(a) | ExprKind::Field(a, _) => through(a, derived),
             ExprKind::Call { callee: Callee::Intrinsic(n), args } => n == "Host.capabilities" || args.first().map_or(false, |a| through(&a.value, derived)),
+            // a value a function call makes from a derived value is derived through it (D-397): the local of
+            // `let d = make(console, "x")` holds the retained authority as a parameter's value does, and I/O
+            // through its capability field is I/O through an authority (11.6)
+            ExprKind::Call { callee: Callee::Func(_), args } => args.iter().any(|a| through(&a.value, derived)),
             _ => false,
         }
     }
@@ -1509,11 +1533,31 @@ fn noalloc(ctx: &mut Ctx, f: &Function, body: &Block) {
 
 /// C1.cleanup: a function that destroys a value whose class has `cleanup` includes the cleanup's effects.
 fn cleanup_effects(ctx: &mut Ctx, f: &Function, body: &Block) {
+    // a local that holds a loan, whole (`let t = alias p`, a loan type) or inside an optional, is a path to the owner:
+    // its end destroys nothing it borrows (7.9; D-400)
+    let mut lent: HashSet<LocalId> = HashSet::new();
+    walk_block(body, &mut |n| {
+        if let Node::Stmt(s) = n {
+            if let StmtKind::Let { local, init } = &s.kind {
+                if matches!(&init.kind, ExprKind::Place(_, Use::Alias | Use::Editable)) {
+                    lent.insert(*local);
+                }
+            }
+        }
+    });
     let mut dropped: Vec<(LocalId, String)> = Vec::new();
     walk_block(body, &mut |n| {
         if let Node::Block(b) = n {
             for l in &b.locals {
-                if let Some(tn) = type_name(&f.local(*l).ty) {
+                let ty = &f.local(*l).ty;
+                let mut core = ty;
+                while let Type::Optional(i) = core {
+                    core = i;
+                }
+                if core.is_loan() || lent.contains(l) {
+                    continue;
+                }
+                if let Some(tn) = type_name(ty) {
                     dropped.push((*l, tn.to_string()));
                 }
             }

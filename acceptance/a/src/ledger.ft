@@ -112,9 +112,9 @@ export func pairTotal(a: Item, b: Item) Int<0..20000> => combined(a.quantity, b.
 
 func sample() Ledger {
   let mut ledger = Ledger.empty()
-  ledger.add(Item(sku: SkuId(1), name: String.from("widget"), quantity: 40))
-  ledger.add(Item(sku: SkuId(2), name: String.from("gear"), quantity: 0))
-  ledger.add(Item(sku: SkuId(3), name: String.from("bolt"), quantity: 10000))
+  ledger.add(Item(sku: SkuId(1), name: "widget" as String, quantity: 40))
+  ledger.add(Item(sku: SkuId(2), name: "gear" as String, quantity: 0))
+  ledger.add(Item(sku: SkuId(3), name: "bolt" as String, quantity: 10000))
   return ledger
 }
 

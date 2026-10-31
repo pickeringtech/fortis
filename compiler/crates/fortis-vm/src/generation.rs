@@ -272,7 +272,7 @@ fn draft(f: &Function, names: &HashMap<String, String>) -> Draft {
     let mut tps = Vec::new();
     each(&j, "param", &mut tps);
     let generic = tps.iter().any(|n| !has_key(n, "local"));
-    let parts: Vec<(&'static str, String)> = vec![
+    let mut parts: Vec<(&'static str, String)> = vec![
         ("parameters", format!("({shown_params})")),
         ("return", f.ret.to_string()),
         ("modifiers", mods.join(" ")),
@@ -280,6 +280,13 @@ fn draft(f: &Function, names: &HashMap<String, String>) -> Draft {
         ("observation", f.observe.clone().unwrap_or_default()),
         ("generic", generic.to_string()),
     ];
+    // a generic function's `where` bounds are part of its contract: changing one is not a compatible reload (only
+    // a function that has bounds carries the part, so other summaries are unchanged)
+    if !f.bounds.is_empty() {
+        let mut bs: Vec<String> = f.bounds.iter().map(|(p, i, a)| format!("{p}: {i}[{}]", a.iter().map(|t| t.to_string()).collect::<Vec<_>>().join(", "))).collect();
+        bs.sort();
+        parts.push(("bounds", bs.join(", ")));
+    }
     let parts: Vec<(&'static str, u64, String)> = parts.into_iter().map(|(k, s)| (k, fnv(&s), s)).collect();
     let summary = fnv(&parts.iter().map(|(k, h, _)| format!("{k}={h:x}")).collect::<Vec<_>>().join(";"));
     let (env_shown, captures) = match &f.closure {
@@ -890,7 +897,9 @@ fn subst(t: &Type, m: &HashMap<&str, &Type>) -> Type {
         Type::Optional(i) => Type::Optional(Box::new(subst(i, m))),
         Type::Tuple(xs) => Type::Tuple(xs.iter().map(|x| subst(x, m)).collect()),
         Type::Record(fs) => Type::Record(fs.iter().map(|(n, x)| (n.clone(), subst(x, m))).collect()),
-        Type::Fn { params, ret, kind, modifiers, origin, dynamic, identity } => Type::Fn {
+        Type::Fn { capture_origins, param_modes, params, ret, kind, modifiers, origin, dynamic, identity } => Type::Fn {
+            capture_origins: capture_origins.clone(),
+            param_modes: param_modes.clone(),
             params: params.iter().map(|x| subst(x, m)).collect(),
             ret: Box::new(subst(ret, m)),
             kind: kind.clone(),

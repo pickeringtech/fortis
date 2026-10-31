@@ -1,0 +1,6 @@
+// reject: E-TYP-090
+// covers: LANG-06-06
+// D-549, X-615: hash-container key requirements.
+class Plain { export n: Int }
+func of[K](key: K) Set[K] where K implements Hashable => Set.default()
+func probe() { let bad = of(Plain(n: 1)) }

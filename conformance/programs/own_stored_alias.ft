@@ -1,0 +1,4 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-580: ordinary inference erases this loan's wrapper, but storage must still reject it.
+pure func size(text: String) Int => List.of(alias text).count()

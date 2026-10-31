@@ -10,3 +10,6 @@ fortis-syntax = { path = "../fortis-syntax" }
 fortis-diag = { path = "../fortis-diag" }
 fortis-names = { path = "../fortis-names" }
 fortis-types = { path = "../fortis-types" }
+
+[dev-dependencies]
+fortis-testkit = { path = "../fortis-testkit" }

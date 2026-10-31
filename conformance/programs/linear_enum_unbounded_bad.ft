@@ -1,0 +1,8 @@
+// reject: E-OBL-003, E-OBL-001
+// covers: LANG-10-02
+enum Holder[T] {
+  Only(value: T)
+}
+func exercise() {
+  let value = Holder.Only(Outcome.success(4))
+}

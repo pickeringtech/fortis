@@ -1,0 +1,4 @@
+// reject: E-TYP-090
+// covers: LANG-06-06
+// D-549, X-615: hash-container key requirements.
+func probe() { let bad: Map[Float, Int]? = null }

@@ -14,5 +14,5 @@ pure func code(s: Status, v: Int?) Int {
     present(x) => x
     _ => 0                                  // reject: E-MAT-002 — `_` over an optional
   }
-  return a + b
+  return Int.saturatingAdd(a, b)
 }

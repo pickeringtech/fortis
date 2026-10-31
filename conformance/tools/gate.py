@@ -3,7 +3,10 @@
 verdict.
     python3 -I conformance/tools/gate.py [--tier quick|full] [--jobs N|auto] [--thorough] [--json OUT]
                                          [--tree DIR] [--from STEP] [--only STEP,...]
-It never stops early: every step runs, and the report lists each step's verdict, time and the tail of its output.
+With --tier quick --changed BASE, ci_plan.py selects the union of checks affected by
+the merge-base diff and prints why. Without --changed, the tier runs as before.
+The unit step runs first and stops the gate on failure. After it passes, every selected step runs, and the
+report lists each step's verdict, time and the tail of its output.
 
 Two tiers. `quick` is what a pull request must pass, locally before it is marked ready and then in CI (ci.yml):
 every behavioural step (programs run and compared on the interpreter, the VM and natively; every documentation
@@ -15,7 +18,7 @@ and a release need a full pass. The gate prints its tier first and every step it
 records `tier`, `skipped`, `reduced` and `thorough`: a quick pass never reads as a full one.
 
 `--jobs N` runs up to N steps at once where they share no writable state (PHASE_OF; `auto`, the default, is a
-quarter of the machine's cores, at most 4, and 1 in a CI shard). The builds come first and alone, then the syntax
+quarter of the machine's cores, at most 4, and 1 in a CI shard). Units run first and alone, then the builds, then the syntax
 run whose results most checks read, then the independent checks together, then the checks that read the
 checker's or the interpreter's results, then the steps that must run alone, then the plan, which reads every
 result. Every concurrent step writes only its own report (build/<step>.json or conformance/<step>/results.json)
@@ -54,6 +57,7 @@ import time
 # (name, command, deadline in minutes). The order is the runner order of the delivery plan: the reference toolchain,
 # then the Rust frontend and its harnesses, the backends, the tooling, acceptance, and the plan itself.
 STEPS = [
+    ("unit", "python3 -I conformance/tools/unit_check.py --json", 1),
     ("hygiene", "python3 -I conformance/tools/hygiene_check.py --json", 10),
     ("cargo-build-release", "cd compiler && cargo build --release && cargo build --release -p fortisc --features qdb-faults --target-dir target/faults", 60),
     ("cargo-build-debug", "cd compiler && cargo build", 60),
@@ -89,6 +93,7 @@ STEPS = [
     ("docs", "python3 -I conformance/tools/docs_check.py --json", 30),
     ("website", "python3 -I website/build.py --check", 30),
     ("docset", "python3 -I conformance/tools/docset_check.py --json", 90),
+    ("showcase", "python3 -I conformance/tools/showcase_check.py --json", 15),
     ("cite", "python3 -I conformance/tools/cite_check.py --json", 15),
     ("site", "python3 -I conformance/tools/site.py --json", 30),
     ("terms", "python3 -I conformance/tools/terms_check.py --json", 15),
@@ -143,6 +148,7 @@ THOROUGH = {
 # `--jobs`: the phases, in order; the steps of a phase run together, up to N at a time, except where a phase is
 # marked alone. A step not named here is independent: it reads the syntax run's results at most.
 PHASE_OF = {
+    "unit": -1,                                    # fail before any build or corpus work
     "hygiene": 0, "cargo-build-release": 0, "cargo-build-debug": 0, "cargo-test": 0,  # alone: everything uses the build
     "syntax": 1,                                    # conformance/results.json, which most checks read
     "vm": 3, "native": 3, "shapes": 3,              # the interpreter's and the reference checker's results
@@ -152,17 +158,17 @@ PHASE_OF = {
     "genparser": 4, "querydb": 4, "features": 4, "matrix": 4, "view": 4, "parity": 4,
     "plan": 5,                                      # every result
 }
-ALONE = {0, 1, 4, 5}
+ALONE = {-1, 0, 1, 4, 5}
 INDEPENDENT = 2
 # the steps that build programs natively (build/native-build, build/native-prod), run one after another
-NATIVE_LANE = {"packages", "codec", "di", "adapters", "tests", "batch", "docset", "pilot", "build", "limits",
+NATIVE_LANE = {"packages", "codec", "di", "adapters", "tests", "batch", "docset", "showcase", "pilot", "build", "limits", "fmt",
                "acceptance-a", "acceptance-a2"}
 
 
 # `--shard`: the steps CI's build jobs run instead (compiler/target comes from the build job's artifact)
 BUILD_STEPS = ("cargo-build-release", "cargo-build-debug", "cargo-test")
-# what a step reads that another step writes, so the shard that runs it runs those first; every shard also runs
-# syntax first, whose results (conformance/results.json) most checks read
+# what a step reads that another step writes, so the shard that runs it runs those first; every shard runs unit
+# before any other work, then syntax, whose results (conformance/results.json) most checks read
 PREREQS = {"vm": ["execute"], "native": ["execute"], "shapes": ["checker"], "parity": ["checker", "execute"],
            "matrix": ["execute"]}
 # steps that can be split across shards: (the tool in the step's command that takes the option, the option)
@@ -205,7 +211,7 @@ def tier_steps(tier):
 
 # steps that need no compiled toolchain (the reference tools in Python, and the pilot's interpreter parts): with
 # --py-shards P, they fill shards 1 to P, which CI starts at once, without waiting for its build job
-PYTHON_ONLY = {"hygiene", "syntax", "names", "checker", "execute", "cfg", "aspects", "diagnostics", "library", "cite",
+PYTHON_ONLY = {"unit", "hygiene", "syntax", "names", "checker", "execute", "cfg", "aspects", "diagnostics", "library", "cite",
                "terms", "limitations", "plan"}
 
 
@@ -216,7 +222,7 @@ def python_only(part):
     return base in PYTHON_ONLY
 
 
-def plan_shards(tier, n, py=0, build=0):
+def plan_shards(tier, n, py=0, build=0, selected=None):
     """The N shards of a tier: for each, its (name, command, minutes, role) in step order, role `own` or
     `prerequisite`. With py > 0, shards 1 to py take only steps that need no compiled toolchain. With build > 0,
     the toolchain arrives `build` seconds after a shard starts in a cold run (CI's build job; --toolchain), and
@@ -225,7 +231,7 @@ def plan_shards(tier, n, py=0, build=0):
     added, grow least, so a shard with long prerequisites takes less of the rest. Deterministic for a given table
     of timings."""
     timings = load_timings(tier)
-    steps = [st for st in tier_steps(tier) if st[0] not in BUILD_STEPS]
+    steps = [st for st in tier_steps(tier) if st[0] not in BUILD_STEPS and (selected is None or st[0] in selected)]
     cost = {name: float(timings.get(name, DEFAULT_SECONDS)) for name, _, _ in steps}
     share = sum(cost.values()) / n
     order = {name: i for i, (name, _, _) in enumerate(steps)}
@@ -245,7 +251,9 @@ def plan_shards(tier, n, py=0, build=0):
 
     def needs(name):
         base = name.split("[")[0]
-        return ["syntax"] + PREREQS.get(base, []) if base != "syntax" else []
+        if base == "unit":
+            return []
+        return [p for p in ["unit"] + (["syntax"] + PREREQS.get(base, []) if base != "syntax" else []) if p in by_name]
 
     def adds(k, part):
         """(python seconds, toolchain seconds) that `part` adds to shard k, with the prerequisites it brings (all of
@@ -279,12 +287,35 @@ def plan_shards(tier, n, py=0, build=0):
     return shards
 
 
-def combine(paths):
+def combine(paths, change_plan=None):
     """Check that the shards' reports cover their tier, each step once, and that every step passed."""
     reports = [json.load(open(x, encoding="utf-8")) for x in paths]
     tiers = {r.get("tier") for r in reports}
     shards = sorted(r.get("shard", "") for r in reports)
     problems = []
+    if change_plan:
+        expected = plan_shards("quick", change_plan["shards"], change_plan["py_shards"],
+                               change_plan["build_seconds"], change_plan["steps"])
+        by_shard = {f"{i}/{len(expected)}": {(nm, role) for nm, _, _, role in shard}
+                    for i, shard in enumerate(expected, 1)}
+        for report in reports:
+            if report.get("plan") != change_plan:
+                problems.append("a shard's plan differs from the requested plan")
+            if report.get("tier") != change_plan["tier"]:
+                problems.append("a shard's tier differs from the requested plan")
+            if report.get("verdict") != "PASS":
+                problems.append(f"shard {report.get('shard')} did not pass")
+            for st in report.get("steps", []):
+                need = NEEDS.get(st["step"])
+                if st.get("status") == "skipped" and (not need or os.path.exists(os.path.join(os.path.dirname(__file__), "..", "..", need))):
+                    problems.append(f"planned step {st['step']} was skipped")
+            got = [(s["step"], s.get("role")) for s in report.get("steps", [])]
+            if len(got) != len(set(got)) or set(got) != by_shard.get(report.get("shard")):
+                problems.append(f"shard {report.get('shard')} did not run exactly its planned steps and prerequisites")
+        if len(reports) != change_plan["shards"]:
+            problems.append(f"expected {change_plan['shards']} shard reports, got {len(reports)}")
+        if len({r.get("commit") for r in reports}) != 1:
+            problems.append("the reports are from different commits")
     if len(tiers) != 1:
         problems.append(f"the reports are of different tiers: {sorted(map(str, tiers))}")
     tier = reports[0].get("tier") if reports else "quick"
@@ -303,7 +334,8 @@ def combine(paths):
             rows.append((st["step"], r.get("shard"), st["status"], st["seconds"]))
             if st["status"] not in ("pass", "skipped"):
                 problems.append(f"{st['step']} (shard {r.get('shard')}) {st['status']}")
-    want = [name for name, _, _ in tier_steps(tier) if name not in BUILD_STEPS]
+    want = [name for name, _, _ in tier_steps(tier) if name not in BUILD_STEPS
+            and (change_plan is None or name in change_plan["steps"])]
     for name in want:
         if name not in owners:
             problems.append(f"{name} ran in no shard")
@@ -317,10 +349,14 @@ def combine(paths):
                 problems.append(f"{name} ran as {sorted(parts)}, not as parts 1 to {k}")
         elif len(parts) != 1:
             problems.append(f"{name} ran {len(parts)} times")
-    for step, shard, status, seconds in sorted(rows, key=lambda x: [nm for nm, _, _ in STEPS].index(x[0].split("[")[0])):
+    order = {nm: i for i, (nm, _, _) in enumerate(STEPS)}
+    for step, shard, status, seconds in sorted(rows, key=lambda x: order.get(x[0].split("[")[0], len(order))):
         print(f"{status:<22} {seconds:>6} s  {step}  (shard {shard})")
     left = [f"{x}: quick tier: {QUICK_SKIPS[x]}" for x in QUICK_SKIPS] if tier == "quick" else []
-    left += [f"{x}: run by CI's build and rust-tests jobs" for x in BUILD_STEPS]
+    if change_plan:
+        left += [f"{nm}: outside the change plan" for nm, _, _ in tier_steps(tier) if nm not in change_plan["steps"]]
+    left += [f"{x}: run by CI's build and rust-tests jobs" for x in BUILD_STEPS
+             if change_plan is None or x in change_plan["steps"]]
     print(f"not run in the shards ({tier} tier):")
     for x in left:
         print(f"    {x}")
@@ -432,6 +468,8 @@ def main(argv):
     ap.add_argument("--from", dest="start")
     ap.add_argument("--only")
     ap.add_argument("--tier", choices=TIERS, default="full")
+    ap.add_argument("--changed", metavar="BASE", help="quick tier: run what changes since BASE's merge base can affect")
+    ap.add_argument("--ci-plan", metavar="JSON", help="run/combine the exact JSON plan supplied by CI's plan job")
     ap.add_argument("--jobs", default="auto", help="steps at once: a number, or auto (a quarter of the cores, at most 4; 1 in a shard)")
     ap.add_argument("--thorough", action="store_true", help="larger budgets where a step takes one (THOROUGH; the release workflow)")
     ap.add_argument("--shard", help="I/N: run the I-th of N shards (CI)")
@@ -445,6 +483,16 @@ def main(argv):
                                                        f"{TOOLCHAIN_MINUTES}-minute deadline, before the first step that needs it")
     ap.add_argument("--timings-from", nargs="+", metavar="REPORT", help="refresh gate-timings.json from reports")
     a = ap.parse_args(argv)
+    change_plan = None
+    if a.changed or a.ci_plan:
+        if a.changed and a.ci_plan or a.start or a.only or a.thorough or a.tier != "quick":
+            ap.error("--changed/--ci-plan requires --tier quick, without --from, --only or --thorough")
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import ci_plan
+        change_plan = ci_plan.from_diff(a.tree, a.changed) if a.changed else json.loads(a.ci_plan)
+        ci_plan.describe(change_plan)
+        a.py_shards, a.build_seconds = change_plan["py_shards"], change_plan["build_seconds"]
+    selected = change_plan["steps"] if change_plan else None
     global THOROUGH_ON
     THOROUGH_ON = a.thorough
     if a.jobs == "auto":
@@ -455,14 +503,17 @@ def main(argv):
         timings_from(a.timings_from)
         return 0
     if a.combine:
-        verdict, tier, problems = combine(a.combine)
+        verdict, tier, problems = combine(a.combine, change_plan)
         if a.json:
             os.makedirs(os.path.dirname(os.path.abspath(a.json)), exist_ok=True)
-            json.dump({"tier": tier, "verdict": verdict, "problems": problems, "shards": a.combine}, open(a.json, "w"), indent=1)
+            report = {"tier": tier, "verdict": verdict, "problems": problems, "shards": a.combine}
+            if change_plan:
+                report["plan"] = change_plan
+            json.dump(report, open(a.json, "w"), indent=1)
         return 0 if verdict == "PASS" else 1
     if a.plan_shards:
         timings = load_timings(a.tier)
-        for i, shard in enumerate(plan_shards(a.tier, a.plan_shards, a.py_shards, a.build_seconds), 1):
+        for i, shard in enumerate(plan_shards(a.tier, a.plan_shards, a.py_shards, a.build_seconds, selected), 1):
             secs = {True: 0.0, False: 0.0}
             for nm, _, _, _ in shard:
                 secs[python_only(nm)] += float(timings.get(nm.split("[")[0], DEFAULT_SECONDS)) / (int(nm.split("/")[1][:-1]) if "[" in nm else 1)
@@ -471,13 +522,15 @@ def main(argv):
             print(f"shard {i}/{a.plan_shards} (about {end:.0f} s" + (f", {warm:.0f} s warm" if a.build_seconds else "") + "): "
                   + ", ".join(nm + (" (prerequisite)" if role != "own" else "") for nm, _, _, role in shard))
         return 0
-    steps = STEPS
+    steps = [st for st in STEPS if selected is None or st[0] in selected]
     roles = {}
     if a.shard:
         if a.start or a.only or not re.fullmatch(r"[1-9]\d*/[1-9]\d*", a.shard) or int(a.shard.split("/")[0]) > int(a.shard.split("/")[1]):
             ap.error("--shard takes I/N with 1 <= I <= N, and no --from or --only")
         i, n = (int(x) for x in a.shard.split("/"))
-        mine = plan_shards(a.tier, n, a.py_shards, a.build_seconds)[i - 1]
+        if change_plan and n != change_plan["shards"]:
+            ap.error("--shard denominator differs from the plan")
+        mine = plan_shards(a.tier, n, a.py_shards, a.build_seconds, selected)[i - 1]
         steps = [(nm, cmd, minutes) for nm, cmd, minutes, _ in mine]
         roles = {nm: role for nm, _, _, role in mine}
     if a.start:
@@ -493,6 +546,8 @@ def main(argv):
     if a.shard:
         print(f"gate: tier {a.tier}, shard {a.shard}: " + ", ".join(nm + (" (prerequisite)" if roles[nm] != "own" else "") for nm, _, _ in steps)
               + "; `--combine` over every shard's report gives the tier's verdict", flush=True)
+    elif change_plan:
+        print(f"gate: tier quick: {len(steps)} steps selected by the change plan; a release needs the full tier", flush=True)
     elif a.tier == "quick":
         print(f"gate: tier quick: {len(QUICK_SKIPS)} steps left out and {len(QUICK_FORMS)} reduced (listed at the end); "
               f"a release needs the full tier", flush=True)
@@ -568,6 +623,12 @@ def main(argv):
             if res["status"] not in ("pass", "skipped"):
                 for line in res["tail"]:
                     print(f"    {line}", flush=True)
+                if name == "unit":
+                    for pending, cmd, _ in planned:
+                        if pending not in by_name:
+                            by_name[pending] = {"step": pending, "command": cmd, "status": "not run (unit failed)",
+                                                "seconds": 0, "tail": ["unit tests failed; stopped before further work"]}
+                    break
     finally:
         shutil.rmtree(RUN_TMP, ignore_errors=True)
     results = [by_name[name] for name, _, _ in planned]
@@ -580,6 +641,8 @@ def main(argv):
               "reduced": reduced, "jobs": a.jobs, "thorough": THOROUGH_ON, "seconds": round(time.time() - started), "steps": results}
     if a.shard:
         report["shard"] = a.shard
+    if change_plan:
+        report["plan"] = change_plan
     if "seconds" in toolchain:
         report["toolchain_seconds"] = toolchain["seconds"]
     if a.json:

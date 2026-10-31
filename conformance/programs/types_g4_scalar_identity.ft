@@ -1,0 +1,16 @@
+// reject: E-TYP-040, E-TYP-010 (at the marked lines)
+// covers: LANG-04-04, LANG-06-01
+// D-592, X-640: spelling does not confer scalar operations or literal patterns.
+import fortis.prelude
+class Bool { export n: prelude.Int }
+class Int { export n: prelude.Int }
+class String { export n: prelude.Int }
+func condition(x: Bool) { if x {} } // reject: E-TYP-010
+func literal(x: Bool) {
+  match x {
+    true => {} // reject: E-TYP-040
+    otherwise => {}
+  }
+}
+func text(x: owned String) prelude.String => move x // reject: E-TYP-040
+func number(x: owned Int) prelude.Int => move x // reject: E-TYP-040

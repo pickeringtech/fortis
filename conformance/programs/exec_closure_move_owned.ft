@@ -23,7 +23,7 @@ class Token {
 }
 
 func make(console: Shared[Console], label: StringView) Token {
-  return Token(label: String.from(label), console: console.retain())
+  return Token(label: label as String, console: console.retain())
 }
 
 func capOnly(console: Shared[Console], empty: List[Token]) {
@@ -106,7 +106,7 @@ func madeFallback(console: Shared[Console], empty: List[Token]) {
   console.print("after made")
 }
 
-func consume(console: Shared[Console], f: owned fn once() Void) {
+func consume(console: Shared[Console], f: owned fn once() Void from console) {
   move f()
   console.print("consumed")
 }

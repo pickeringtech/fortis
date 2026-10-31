@@ -1,0 +1,9 @@
+import fortis.host { Console }
+func cast[T](x: owned T) Int {
+  return move x
+}
+func main(console: Console) {
+  let s: String = "hello"
+  let n = cast(move s)
+  console.print("${n}")
+}

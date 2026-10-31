@@ -1,0 +1,10 @@
+// execute: 9
+// requires: runtime
+// covers: LANG-06-07
+// D-244: a nominal type called String does not shadow Rust's string type.
+import fortis.host { Console }
+type String = Int
+func main(console: Console) {
+  let value = String(9)
+  console.print("${value}")
+}

@@ -1,0 +1,34 @@
+// execute: a x|drop x
+// requires: runtime
+// covers: LANG-07-07, LANG-10-01
+// D-445: native regression, R23.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func label(xs: List[Token]) String {
+  let t = xs.get(0) ?? fail Missing()
+  return copy t.label
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(Token(label: "x" as String, console: console.retain()))
+  let a = label(xs) catch e {
+    report e
+    recover "none"
+  }
+  console.print("a ${a}")
+}

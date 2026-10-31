@@ -1,0 +1,35 @@
+// D-445: a `??` whose left side is a loan and whose fallback fails (`let t = xs.get(0) ?? fail Missing()`, then
+// `copy t.label`) passes both checkers (D-400: the binding holds a loan and is charged no cleanup) and runs on the
+// interpreter and the VM (`a x|drop x`), and native code does not build it: rustc E0282, type annotations needed
+// for `&_`, at the lowering of the fallback's `fail`. A loud refusal of a program two backends run. Found by the
+// v0.1 stream A fix of D-400, when the record's reproduction became a fixture.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func label(xs: List[Token]) String {
+  let t = xs.get(0) ?? fail Missing()
+  return copy t.label
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(Token(label: String.from("x"), console: console.retain()))
+  let a = label(xs) catch e {
+    report e
+    recover "none"
+  }
+  console.print("a ${a}")
+}

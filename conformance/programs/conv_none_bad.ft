@@ -1,0 +1,32 @@
+// reject: E-TYP-180 (at the marked lines)
+// covers: LANG-06-14
+// 6.13 (X-475): a pair with no conversion is rejected at the `as`: no row of the built-in table, a Float into an
+// integer or a Decimal (rounding is a choice, Decimal.fromFloat writes it), and no path through a third type:
+// conversions never chain by search.
+import fortis.text { Scalar }
+
+func noRow(b: Bool, s: String) Int {
+  let n = b as Int                           // reject: E-TYP-180 — no row from Bool to Int
+  let f = s as Float                         // reject: E-TYP-180 — nothing parses a float
+  let v = s as StringView                    // reject: E-TYP-180 — a String is loaned as a view, not converted
+  discard n
+  discard f
+  discard v
+  return 0
+}
+
+func rounding(f: Float, g: Float32) Decimal {
+  let n = f as Int                           // reject: E-TYP-180 — a rounding choice: Decimal.fromFloat(f, 0, mode)
+  let m = g as Int8                          // reject: E-TYP-180 — the same for Float32
+  discard n
+  discard m
+  return f as Decimal                        // reject: E-TYP-180 — Decimal.fromFloat(f, scale, mode) writes the choice
+}
+
+func search(s: Scalar, n: Int8) Decimal {
+  let d = s as Decimal                       // reject: E-TYP-180 — Scalar to Int and Int to Decimal exist; the pair does not
+  let t = n as Scalar                        // reject: E-TYP-180 — Int8 to Int and Int to Scalar exist; the pair does not
+  discard d
+  discard t
+  return s as Int as Decimal                 // accepted: each step is a row
+}

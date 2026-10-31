@@ -1,0 +1,23 @@
+// accept
+// covers: LANG-11-04, LANG-06-06
+// X-479, R19, 6.6: the text methods that answer a view, a position or a `Bool` do not allocate, so a `noalloc`
+// function may call them: `trim`, `trimStart`, `trimEnd`, `find`, `contains`, `startsWith` and `endsWith`, on a view
+// and on a `String` alike. (The ones that build a string or a list carry `alloc`: text_noalloc_bad.ft.)
+import fortis.host { Console }
+
+noalloc func isFlag(arg: StringView) Bool {
+  let word = arg.trim()
+  return word.startsWith("--") && !word.endsWith("=") && word.contains("-")
+}
+
+noalloc func offsetOf(text: StringView, needle: StringView) Int<0..>? {
+  return text.trimStart().find(needle)
+}
+
+noalloc func tidy(text: String) StringView from text {
+  return text.trimEnd()
+}
+
+func main(console: Console) {
+  console.print("${isFlag(" --verbose ")} ${offsetOf("  key=value", "=") ?? 0}")
+}

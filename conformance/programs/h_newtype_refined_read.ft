@@ -1,0 +1,4 @@
+// accept
+// covers: LANG-06-01, LANG-06-02
+type Small = List[Int]<length: 1..3>
+func read(xs: Small) Int { return xs.count() }

@@ -1,15 +1,16 @@
-# The quick tier of the gate (conformance/tools/gate.py --tier quick) on every pull request that is ready for
-# review: exactly what `python3 -I conformance/tools/gate.py --tier quick` runs locally, split across machines.
+# The planned quick tier on every ready pull request, shared with gate.py --tier quick --changed BASE.
+# Unknown paths and manual runs keep the whole quick tier; release.yml is unchanged.
 # Pull requests open as drafts, and CI does not run on drafts: run the quick tier locally, then `gh pr ready`.
 # The full tier runs at release tags (release.yml).
 #
+#   plan           classifies the merge-base diff using conformance/tools/ci_plan.py
 #   build          compiles the toolchain once (Cargo's `ci` table: release semantics, quicker to compile) and
 #                  hands the binaries to the shards
 #   rust-tests     the Rust test suites, beside everything else
 #   checks-python  the shards that need no compiled toolchain, from the start
 #   checks         the other shards, also from the start: each runs the steps that need no toolchain (its
 #                  prerequisites, mostly) while the build runs, then fetches the binaries and runs the rest
-#   quick          one status for the run: every job passed, and the shards covered the tier exactly once
+#   quick          one status: every planned job passed, and the shards covered the plan exactly once
 #
 # Actions are pinned to full commit SHAs, with the version they were taken from in a comment.
 name: CI
@@ -32,24 +33,54 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # gate.py --tier quick --plan-shards 14 --py-shards 3 --build-seconds 100 shows the split, by a cold run's timings
-  # (when the build and the native programs compile from scratch): a toolchain shard's first 100 s or so go to the
-  # build job, and its steps that need no toolchain run meanwhile. The longest shard is about 3.5 minutes cold.
-  SHARDS: 14
-  PY_SHARDS: 3
-  BUILD_SECONDS: 100
   CARGO_INCREMENTAL: "0"
   CARGO_TERM_COLOR: never
 
 jobs:
-  build:
+  plan:
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      plan: ${{ steps.plan.outputs.plan }}
+      build: ${{ steps.plan.outputs.build }}
+      rust_tests: ${{ steps.plan.outputs.rust_tests }}
+      python_matrix: ${{ steps.plan.outputs.python_matrix }}
+      toolchain_matrix: ${{ steps.plan.outputs.toolchain_matrix }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Plan the changed paths
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            python3 -I conformance/tools/ci_plan.py --full --json build/ci-plan.json --github-output "$GITHUB_OUTPUT"
+          else
+            python3 -I conformance/tools/ci_plan.py --base "$BASE_SHA" --head "$HEAD_SHA" --json build/ci-plan.json --github-output "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-plan
+          path: build/ci-plan.json
+          retention-days: 7
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+      - name: Python unit tests (fail before compiling)
+        run: python3 -I conformance/tools/unit_check.py --json
       # the runner image's own stable Rust; its version keys the cache, because GitHub rolls new images out
       # gradually and a cache built by another rustc would be rebuilt in full
       - id: rust
@@ -87,13 +118,16 @@ jobs:
         run: python3 -I .github/scripts/cache_mtimes.py save
 
   rust-tests:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    needs: plan
+    if: needs.plan.outputs.rust_tests == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+      - name: Python unit tests (fail before compiling)
+        run: python3 -I conformance/tools/unit_check.py --json
       - id: rust
         run: rustc -V && cargo -V && echo "version=$(rustc -V | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -118,14 +152,18 @@ jobs:
         run: python3 -I .github/scripts/cache_mtimes.py save
 
   checks-python:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    needs: plan
+    if: needs.plan.outputs.python_matrix != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: ${{ fromJSON(needs.plan.outputs.python_matrix) }}
     name: checks (${{ matrix.shard }})
+    env:
+      CI_PLAN: ${{ needs.plan.outputs.plan }}
+      SHARDS: ${{ fromJSON(needs.plan.outputs.plan).shards }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -136,7 +174,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run the shard
-        run: python3 -I conformance/tools/gate.py --tier quick --shard "${{ matrix.shard }}/$SHARDS" --py-shards "$PY_SHARDS" --build-seconds "$BUILD_SECONDS" --json "build/gate-shard-${{ matrix.shard }}.json"
+        run: python3 -I conformance/tools/gate.py --tier quick --shard "${{ matrix.shard }}/$SHARDS" --ci-plan "$CI_PLAN" --json "build/gate-shard-${{ matrix.shard }}.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -147,7 +185,8 @@ jobs:
           if-no-files-found: ignore
 
   checks:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    needs: plan
+    if: needs.plan.outputs.toolchain_matrix != '[]'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     # actions: read, to fetch the build job's binaries from this run (.github/scripts/fetch_tools.py)
@@ -157,8 +196,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        shard: ${{ fromJSON(needs.plan.outputs.toolchain_matrix) }}
     name: checks (${{ matrix.shard }})
+    env:
+      CI_PLAN: ${{ needs.plan.outputs.plan }}
+      SHARDS: ${{ fromJSON(needs.plan.outputs.plan).shards }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -197,7 +239,7 @@ jobs:
       - name: Run the shard
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 -I conformance/tools/gate.py --tier quick --shard "${{ matrix.shard }}/$SHARDS" --py-shards "$PY_SHARDS" --build-seconds "$BUILD_SECONDS" --toolchain "python3 -I .github/scripts/fetch_tools.py" --json "build/gate-shard-${{ matrix.shard }}.json"
+        run: python3 -I conformance/tools/gate.py --tier quick --shard "${{ matrix.shard }}/$SHARDS" --ci-plan "$CI_PLAN" --toolchain "python3 -I .github/scripts/fetch_tools.py" --json "build/gate-shard-${{ matrix.shard }}.json"
       - name: Record the files' times for the next run's cache
         run: python3 -I .github/scripts/cache_mtimes.py save
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -211,10 +253,13 @@ jobs:
 
   # the single status to require in branch protection
   quick:
-    needs: [build, rust-tests, checks-python, checks]
+    needs: [plan, build, rust-tests, checks-python, checks]
     if: always() && (github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      CI_PLAN: ${{ needs.plan.outputs.plan }}
+      JOB_RESULTS: ${{ toJSON(needs) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -225,11 +270,22 @@ jobs:
           path: build/shards
           merge-multiple: true
       - name: Combine the shards' reports
-        run: python3 -I conformance/tools/gate.py --combine build/shards/*.json --json build/gate.json
-      - name: Every job passed
+        run: python3 -I conformance/tools/gate.py --tier quick --ci-plan "$CI_PLAN" --combine build/shards/*.json --json build/gate.json
+      - name: Every planned job passed
+        if: always()
         run: |
-          echo "build: ${{ needs.build.result }}, rust-tests: ${{ needs.rust-tests.result }}, checks: ${{ needs.checks-python.result }} and ${{ needs.checks.result }}"
-          [ "${{ needs.build.result }}" = success ] && [ "${{ needs.rust-tests.result }}" = success ] && [ "${{ needs.checks-python.result }}" = success ] && [ "${{ needs.checks.result }}" = success ]
+          python3 - <<'PYTHON'
+          import json, os
+          needs = json.loads(os.environ["JOB_RESULTS"])
+          assert needs["plan"]["result"] == "success", "plan failed or did not run"
+          plan = json.loads(os.environ["CI_PLAN"])
+          required = {"build": plan["build"], "rust-tests": plan["rust_tests"],
+                      "checks-python": plan["py_shards"] > 0, "checks": plan["shards"] > plan["py_shards"]}
+          for job, runs in required.items():
+              actual, expected = needs[job]["result"], "success" if runs else "skipped"
+              print(f"{job}: {actual} (expected {expected})")
+              assert actual == expected, f"{job}: {actual}, expected {expected}"
+          PYTHON
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

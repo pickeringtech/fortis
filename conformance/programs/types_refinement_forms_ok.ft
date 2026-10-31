@@ -1,0 +1,17 @@
+// accept
+// covers: LANG-06-02
+// The refinement forms 6.3 lists (X-510): a range over any integer type, within the base's own range, one value wide
+// or one-sided; `scalars` over `String` and `StringView`; `length` over `Bytes`, `BytesView`, `List[T]` and
+// `ListView[T]`, from zero.
+pure func one(n: Int<5..5>) Int => n
+pure func below(n: Int<0..<1>) Int => n
+pure func low(n: Int<..0>) Int => n
+pure func high(n: Int<1..>) Int => n
+pure func whole(n: Int8<-128..127>) Int8 => n
+pure func byte(n: UInt8<0..255>) UInt8 => n
+pure func text(s: String<scalars: 1..3>) Int => 1
+pure func textView(s: StringView<scalars: 1..3>) Int => 1
+pure func bytes(b: Bytes<length: 0..3>) Int => 1
+pure func byteView(b: BytesView<length: 0..3>) Int => 1
+pure func items(xs: List[Int]<length: 0..3>) Int => 1
+pure func itemView(xs: ListView[Int]<length: 0..0>) Int => 1

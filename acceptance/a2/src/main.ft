@@ -13,7 +13,7 @@ import acme.tally.count { Tally, count }
 func minLength(env: Environment, access: SecretAccess) Int {
   let text = match env.get("TALLY_MIN") {
     present(s) => reveal(s, access)
-    null => String.from("1")
+    null => "1" as String
   }
   return match text {
     "2" => 2

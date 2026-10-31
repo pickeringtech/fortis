@@ -1,0 +1,12 @@
+// reject: E-OWN-053, E-OWN-051
+// covers: LANG-07-06, LANG-08-02
+import fortis.host { Console }
+func keep() List[fn() Int] {
+  let s = "hello" as String
+  let f = fn[alias s]() Int => s.byteCount()
+  return List.of(move f)
+}
+func main(console: Console) {
+  let fs = keep()
+  console.print("${fs.count()}")
+}

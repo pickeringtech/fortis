@@ -1,20 +1,19 @@
 # Lookahead report (generated parser, DEL-02)
 
-Grammar sha256 `048e1b0919de39a334d8cf8fb50094eea202389b60b7e53f538765d45e3455d2`; generator `conformance/tools/gen_parser.py`; emitted parser `conformance/generated/fortis_parser.py`.
+Grammar sha256 `4658cfa29c3c521c4fa321e822fec871287f97d0fbf34e8ee559ac5d9cb1ceec`; generator `conformance/tools/gen_parser.py`; emitted parser `conformance/generated/fortis_parser.py`.
 
-**Lookahead bound: k = 3**, confirmed by the generator: at k = 3 every one of the 290 decision points is separated by token classes alone or covered by a documented policy (0 undocumented conflicts). No decision consults a name: lookahead tables hold literal token texts and lexer kinds only.
+**Lookahead bound: k = 3**, confirmed by the generator: at k = 3 every one of the 298 decision points is separated by token classes alone or covered by a documented policy (0 undocumented conflicts). No decision consults a name: lookahead tables hold literal token texts and lexer kinds only.
 
 | k | decisions | conflicts | without a documented policy |
 |---|---|---|---|
-| 1 | 290 | 85 | 10 |
-| 2 | 290 | 43 | 2 |
-| 3 | 290 | 36 | 0 |
+| 1 | 298 | 86 | 11 |
+| 2 | 298 | 43 | 2 |
+| 3 | 298 | 36 | 0 |
 
-Conflicts at k = 3 by resolution policy (Language Reference 3.2, X-94): P2: 22, P3: 14
+Conflicts at k = 3 by resolution policy (Language Reference 3.2, X-94): P2: 23, P3: 13
 
 | Rule | Decision | Branches | Example shared prefix | Policy |
 |---|---|---|---|---|
-| mixinMember | alternative | [0, 1] | `KIND:UPPER KIND:UPPER KIND:UPPER` | P3 |
 | funcSignature | alternative | [0, 1] | `{ KIND:LOWER :` | P3 |
 | paramType | option | [0, 1] | `editable ( (` | P2 |
 | statement | alternative | [1, 19] | `KIND:LOWER . KIND:KW` | P3 |
@@ -36,6 +35,7 @@ Conflicts at k = 3 by resolution policy (Language Reference 3.2, X-94): P2: 22, 
 | shiftExpr | repetition | [0, 1] | `<< ! !` | P2 |
 | additiveExpr | repetition | [0, 1] | `+ ! !` | P2 |
 | multiplicativeExpr | repetition | [0, 1] | `% ! !` | P2 |
+| asExpr | repetition | [0, 1] | `as KIND:LOWER .` | P2 |
 | markerExpr | option | [0, 1] | `( ! !` | P2 |
 | markerExpr | repetition | [0, 1] | `( ! !` | P2 |
 | postfixExpr | repetition | [0, 1] | `( ! !` | P2 |
@@ -53,12 +53,12 @@ Conflicts at k = 3 by resolution policy (Language Reference 3.2, X-94): P2: 22, 
 
 ## Agreement with the recogniser
 
-902 fixtures: 0 disagreements.
+1162 fixtures: 0 disagreements.
 
 ## Ambiguity corpus
 
-27 programs, 27 with exactly one parse (no undocumented fallback); documented ordered choices used: 70.
+30 programs, 30 with exactly one parse (no undocumented fallback); documented ordered choices used: 76.
 
 ## Timing (pinned conditions)
 
-Warm process, median of 20 parses per fixture, Linux-7.2.5-3-omarchy-x86_64-with-glibc2.44, Python 3.12.12; 873 fixtures listed by sha256 in check.json; slowest median 8.41 ms (PRG-syntax_component_fn_param, 43 tokens); 0 at or over 50 ms.
+Warm process, median of 20 parses per fixture, Linux-7.2.5-3-omarchy-x86_64-with-glibc2.44, Python 3.12.12; 1128 fixtures listed by sha256 in check.json; slowest median 12.79 ms (PRG-exec_loan_owned_part, 1405 tokens); 0 at or over 50 ms.

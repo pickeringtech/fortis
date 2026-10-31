@@ -1,0 +1,15 @@
+// execute: 1
+// requires: runtime
+// covers: LANG-06-11
+// A binding initialised by a generic class's constructor without written type arguments (`let h = Holder(a: 1)`) takes
+// the inferred instantiation, so it builds natively too (D-86, which no longer reproduces on master).
+import fortis.host { Console }
+
+export class Holder[T] {
+  export a: T
+}
+
+func main(console: Console) {
+  let h = Holder(a: 1)
+  console.print("${h.a}")
+}

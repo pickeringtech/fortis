@@ -1,0 +1,27 @@
+// execute: heLLLLo|ba|abc|abc||hello|a-b-c|[x]|STRAßE ÜBER ABC 1|straße Über abc 1|àé|ÀÉ ΑΣ|true true true
+// requires: runtime
+// covers: LANG-06-06
+// X-479, R19, 6.6: `replace` rewrites every non-overlapping occurrence of the old text, found left to right, and
+// answers an owned copy; the empty old text occurs nowhere, so the copy is unchanged, and the empty text has nothing to
+// replace. `asciiUpper` and `asciiLower` map the ASCII letters only and leave every other scalar as it is: "ß", "Ü",
+// "é" and the Greek capital sigma keep their case, since full Unicode case mapping depends on the Unicode version,
+// the language and the context, and can change a text's length. Both leave the receiver alone.
+import fortis.host { Console }
+
+recovers func main(console: Console) {
+  console.print("hello".replace("l", "LL"))
+  console.print("aaa".replace("aa", "b"))
+  console.print("abc".replace("", "x"))
+  console.print("abc".replace("z", "y"))
+  console.print("".replace("a", "b"))
+  console.print("héllo".replace("é", "e"))
+  console.print("a b c".replace(" ", "-"))
+  console.print("[${" x ".replace(" ", "")}]")
+  console.print("straße Über abc 1".asciiUpper())
+  console.print("STRAßE ÜBER ABC 1".asciiLower())
+  console.print("àé".asciiUpper())
+  console.print("ÀÉ ΑΣ".asciiLower())
+  let heap = "Hello" as String
+  let upper = heap.asciiUpper()
+  console.print("${upper == "HELLO"} ${heap == "Hello"} ${heap.asciiLower() == "hello"}")
+}

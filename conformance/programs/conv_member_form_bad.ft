@@ -1,0 +1,33 @@
+// reject: E-TYP-184 (at the marked lines)
+// covers: LANG-06-15
+// 6.13 (X-551): a pair is a pair of whole types: a generic class or enum declares no `convert` member, and the
+// other type a member names is a nominal type, never a refinement — a refinement target stays the built-in
+// table's `validate` row (6.3).
+class Box[T] {
+  value: T
+
+  export convert to Text {                   // reject: E-TYP-184 — a generic class declares no convert member
+    return Text(body: "")
+  }
+}
+
+enum Either[T] {
+  Left(it: T)
+  Right(it: T)
+
+  export convert to Text {                   // reject: E-TYP-184 — a generic enum declares no convert member
+    return Text(body: "")
+  }
+}
+
+class Wrap {
+  n: Int
+
+  export convert to Int<0..10> {             // reject: E-TYP-184 — the other type is a refinement, no nominal type
+    return 0
+  }
+}
+
+class Text {
+  body: String
+}

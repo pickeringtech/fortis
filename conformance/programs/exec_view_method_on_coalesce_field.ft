@@ -1,0 +1,42 @@
+// execute: r recv|drop recv|after recv|end
+// requires: runtime
+// covers: LANG-07-07, LANG-07-06
+// D-449, 7.9: a method whose result is a view of `self`, called on a field of a `??` whose left is a loan
+// (`empty.get(0)`) and whose fallback is a moved local, read in an interpolation: the result borrows the field
+// of the element or of the fallback, a temporary of the statement (D-375), destroyed when it ends (`drop recv`).
+// Natively the field read through the holder the `??` gives was once passed to the method without its borrow
+// (rustc E0308) where both checkers accept the program and the interpreter and the VM run it; the field of the
+// holder is now borrowed as a field of a statement temporary is. The tokens sit in slots without a cleanup of
+// their own, so that no backend announces the temporaries in its trace (D-344); the output shows every cleanup
+// once. Found by the v0.1 stream A fix of D-375.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+
+  func name(self) StringView from self => alias self.label
+}
+
+class Slot {
+  token: Token
+}
+
+func make(console: Shared[Console], label: StringView) Slot {
+  return Slot(token: Token(label: label as String, console: console.retain()))
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Slot] = List.default()
+  {
+    let d = make(console, "recv")
+    console.print("r ${(empty.get(0) ?? move d).token.name()}")
+    console.print("after recv")
+  }
+  console.print("end")
+}

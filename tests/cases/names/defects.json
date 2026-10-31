@@ -1,0 +1,7 @@
+[
+  {"name": "lr91_duplicate_field_constant", "input": "class Item { value: Int\nconst value = 1 }", "expect": ["E-TYP-070"]},
+  {"name": "lr91_duplicate_method_constant", "input": "class Item { func value(self) Int => 0\nconst value = 1 }", "expect": ["E-TYP-070"]},
+  {"name": "lr91_duplicate_constant_field", "input": "class Item { const value = 1\nvalue: Int }", "expect": ["E-TYP-070"]},
+  {"name": "lr91_duplicate_constant_method", "input": "class Item { const value = 1\nfunc value(self) Int => 0 }", "expect": ["E-TYP-070"]},
+  {"name": "lr91_duplicate_constant_constant", "input": "class Item { const value = 1\nconst value = 1 }", "expect": ["E-TYP-070"]}
+]

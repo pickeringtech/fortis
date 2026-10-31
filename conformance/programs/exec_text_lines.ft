@@ -1,0 +1,29 @@
+// execute: 3 [one, two, three]|0 []|1 []|1 [a]|2 [a, ]|3 [x, , y]|1 [a\r]|1 [a\rb]|2 [naïve, café]|3 [one, two, three\r]|3
+// requires: runtime
+// covers: LANG-06-06
+// X-479, R19, 6.6: `lines` ends a line at a line feed, and at a carriage return directly before it (`\r\n`); neither
+// stays in the line. The text after the last terminator is a line only when it is not empty, so the empty text has no
+// lines, "a\n" has one and "\n" has one empty line. A carriage return that does not come before a line feed is
+// ordinary text and stays. A final line without a terminator, multi-byte text and a `String` receiver all work.
+// `show` writes a carriage return as the two characters backslash and r, so that the marker above can show it.
+import fortis.host { Console }
+
+func show(rows: List[String]) String {
+  let out = String.join(rows, ", ")
+  return "${rows.count()} [${out.replace("\r", "\\r")}]"
+}
+
+recovers func main(console: Console) {
+  console.print(show("one\r\ntwo\nthree\n".lines()))
+  console.print(show("".lines()))
+  console.print(show("\n".lines()))
+  console.print(show("a\r\n".lines()))
+  console.print(show("a\n\n".lines()))
+  console.print(show("x\r\n\r\ny".lines()))
+  console.print(show("a\r".lines()))
+  console.print(show("a\rb\n".lines()))
+  let heap = "naïve\r\ncafé" as String
+  console.print(show(heap.lines()))
+  console.print(show("one\r\ntwo\nthree\r".lines()))
+  console.print("${"1\n2\n3".lines().count()}")
+}

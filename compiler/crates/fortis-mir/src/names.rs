@@ -40,10 +40,7 @@ impl Qualify {
         for (identity, types) in modules {
             let package = split_identity(identity).0;
             let name = package.split('@').next().unwrap_or(package);
-            if name == "fortis" {
-                continue;
-            }
-            versions.entry(name.to_string()).or_default().insert(package.to_string());
+            if name != "fortis" { versions.entry(name.to_string()).or_default().insert(package.to_string()); }
             for t in types {
                 declared.entry(t).or_default().insert(identity.to_string());
             }
@@ -117,8 +114,19 @@ pub fn map_types(prog: &mut Program, f: &mut dyn FnMut(&mut Type)) {
             TypeKind::Observation { fields, .. } => fields.iter_mut().for_each(|(_, t, _)| f(t)),
             TypeKind::Interface { .. } | TypeKind::Mixin { .. } => {}
         }
+        // an interface's declared signatures and every type's interface arguments (D-82)
+        for s in &mut t.sigs {
+            s.params.iter_mut().for_each(|(_, _, pt)| f(pt));
+            f(&mut s.ret);
+            s.bounds.iter_mut().for_each(|(_, _, a)| a.iter_mut().for_each(|x| f(x)));
+        }
+        t.iface_args.iter_mut().for_each(|(_, a)| a.iter_mut().for_each(|x| f(x)));
+    }
+    for imp in &mut prog.impls {
+        imp.args.iter_mut().for_each(|x| f(x));
     }
     for func in &mut prog.functions {
+        func.bounds.iter_mut().for_each(|(_, _, a)| a.iter_mut().for_each(|x| f(x)));
         f(&mut func.ret);
         func.locals.iter_mut().for_each(|l| f(&mut l.ty));
         for p in &mut func.params {

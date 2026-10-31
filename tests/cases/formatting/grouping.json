@@ -1,0 +1,962 @@
+[
+  {
+    "name": "lr6_13_bare_place",
+    "input": {
+      "context": "old()",
+      "operand": "x"
+    },
+    "expect": "x as Target"
+  },
+  {
+    "name": "lr6_13_bare_call",
+    "input": {
+      "context": "old()",
+      "operand": "f()"
+    },
+    "expect": "f() as Target"
+  },
+  {
+    "name": "lr6_13_bare_negative",
+    "input": {
+      "context": "old()",
+      "operand": "-x"
+    },
+    "expect": "-x as Target"
+  },
+  {
+    "name": "lr6_13_bare_move",
+    "input": {
+      "context": "old()",
+      "operand": "move x"
+    },
+    "expect": "move x as Target"
+  },
+  {
+    "name": "lr6_13_bare_cast",
+    "input": {
+      "context": "old()",
+      "operand": "x as Source"
+    },
+    "expect": "x as Source as Target"
+  },
+  {
+    "name": "lr6_13_bare_sum",
+    "input": {
+      "context": "old()",
+      "operand": "a + b"
+    },
+    "expect": "(a + b) as Target"
+  },
+  {
+    "name": "lr6_13_bare_optional",
+    "input": {
+      "context": "old()",
+      "operand": "a ?? b"
+    },
+    "expect": "(a ?? b) as Target"
+  },
+  {
+    "name": "lr6_13_bare_lambda",
+    "input": {
+      "context": "old()",
+      "operand": "fn() => x"
+    },
+    "expect": "(fn() => x) as Target"
+  },
+  {
+    "name": "lr6_13_field_place",
+    "input": {
+      "context": "old().field",
+      "operand": "x"
+    },
+    "expect": "(x as Target)"
+  },
+  {
+    "name": "lr6_13_field_call",
+    "input": {
+      "context": "old().field",
+      "operand": "f()"
+    },
+    "expect": "(f() as Target)"
+  },
+  {
+    "name": "lr6_13_field_negative",
+    "input": {
+      "context": "old().field",
+      "operand": "-x"
+    },
+    "expect": "(-x as Target)"
+  },
+  {
+    "name": "lr6_13_field_move",
+    "input": {
+      "context": "old().field",
+      "operand": "move x"
+    },
+    "expect": "(move x as Target)"
+  },
+  {
+    "name": "lr6_13_field_cast",
+    "input": {
+      "context": "old().field",
+      "operand": "x as Source"
+    },
+    "expect": "(x as Source as Target)"
+  },
+  {
+    "name": "lr6_13_field_sum",
+    "input": {
+      "context": "old().field",
+      "operand": "a + b"
+    },
+    "expect": "((a + b) as Target)"
+  },
+  {
+    "name": "lr6_13_field_optional",
+    "input": {
+      "context": "old().field",
+      "operand": "a ?? b"
+    },
+    "expect": "((a ?? b) as Target)"
+  },
+  {
+    "name": "lr6_13_field_lambda",
+    "input": {
+      "context": "old().field",
+      "operand": "fn() => x"
+    },
+    "expect": "((fn() => x) as Target)"
+  },
+  {
+    "name": "lr6_13_call_place",
+    "input": {
+      "context": "old()()",
+      "operand": "x"
+    },
+    "expect": "(x as Target)"
+  },
+  {
+    "name": "lr6_13_call_call",
+    "input": {
+      "context": "old()()",
+      "operand": "f()"
+    },
+    "expect": "(f() as Target)"
+  },
+  {
+    "name": "lr6_13_call_negative",
+    "input": {
+      "context": "old()()",
+      "operand": "-x"
+    },
+    "expect": "(-x as Target)"
+  },
+  {
+    "name": "lr6_13_call_move",
+    "input": {
+      "context": "old()()",
+      "operand": "move x"
+    },
+    "expect": "(move x as Target)"
+  },
+  {
+    "name": "lr6_13_call_cast",
+    "input": {
+      "context": "old()()",
+      "operand": "x as Source"
+    },
+    "expect": "(x as Source as Target)"
+  },
+  {
+    "name": "lr6_13_call_sum",
+    "input": {
+      "context": "old()()",
+      "operand": "a + b"
+    },
+    "expect": "((a + b) as Target)"
+  },
+  {
+    "name": "lr6_13_call_optional",
+    "input": {
+      "context": "old()()",
+      "operand": "a ?? b"
+    },
+    "expect": "((a ?? b) as Target)"
+  },
+  {
+    "name": "lr6_13_call_lambda",
+    "input": {
+      "context": "old()()",
+      "operand": "fn() => x"
+    },
+    "expect": "((fn() => x) as Target)"
+  },
+  {
+    "name": "lr6_13_index_place",
+    "input": {
+      "context": "old()[0]",
+      "operand": "x"
+    },
+    "expect": "(x as Target)"
+  },
+  {
+    "name": "lr6_13_index_call",
+    "input": {
+      "context": "old()[0]",
+      "operand": "f()"
+    },
+    "expect": "(f() as Target)"
+  },
+  {
+    "name": "lr6_13_index_negative",
+    "input": {
+      "context": "old()[0]",
+      "operand": "-x"
+    },
+    "expect": "(-x as Target)"
+  },
+  {
+    "name": "lr6_13_index_move",
+    "input": {
+      "context": "old()[0]",
+      "operand": "move x"
+    },
+    "expect": "(move x as Target)"
+  },
+  {
+    "name": "lr6_13_index_cast",
+    "input": {
+      "context": "old()[0]",
+      "operand": "x as Source"
+    },
+    "expect": "(x as Source as Target)"
+  },
+  {
+    "name": "lr6_13_index_sum",
+    "input": {
+      "context": "old()[0]",
+      "operand": "a + b"
+    },
+    "expect": "((a + b) as Target)"
+  },
+  {
+    "name": "lr6_13_index_optional",
+    "input": {
+      "context": "old()[0]",
+      "operand": "a ?? b"
+    },
+    "expect": "((a ?? b) as Target)"
+  },
+  {
+    "name": "lr6_13_index_lambda",
+    "input": {
+      "context": "old()[0]",
+      "operand": "fn() => x"
+    },
+    "expect": "((fn() => x) as Target)"
+  },
+  {
+    "name": "lr6_13_negative_place",
+    "input": {
+      "context": "-old()",
+      "operand": "x"
+    },
+    "expect": "(x as Target)"
+  },
+  {
+    "name": "lr6_13_negative_call",
+    "input": {
+      "context": "-old()",
+      "operand": "f()"
+    },
+    "expect": "(f() as Target)"
+  },
+  {
+    "name": "lr6_13_negative_negative",
+    "input": {
+      "context": "-old()",
+      "operand": "-x"
+    },
+    "expect": "(-x as Target)"
+  },
+  {
+    "name": "lr6_13_negative_move",
+    "input": {
+      "context": "-old()",
+      "operand": "move x"
+    },
+    "expect": "(move x as Target)"
+  },
+  {
+    "name": "lr6_13_negative_cast",
+    "input": {
+      "context": "-old()",
+      "operand": "x as Source"
+    },
+    "expect": "(x as Source as Target)"
+  },
+  {
+    "name": "lr6_13_negative_sum",
+    "input": {
+      "context": "-old()",
+      "operand": "a + b"
+    },
+    "expect": "((a + b) as Target)"
+  },
+  {
+    "name": "lr6_13_negative_optional",
+    "input": {
+      "context": "-old()",
+      "operand": "a ?? b"
+    },
+    "expect": "((a ?? b) as Target)"
+  },
+  {
+    "name": "lr6_13_negative_lambda",
+    "input": {
+      "context": "-old()",
+      "operand": "fn() => x"
+    },
+    "expect": "((fn() => x) as Target)"
+  },
+  {
+    "name": "lr6_13_not_place",
+    "input": {
+      "context": "!old()",
+      "operand": "x"
+    },
+    "expect": "(x as Target)"
+  },
+  {
+    "name": "lr6_13_not_call",
+    "input": {
+      "context": "!old()",
+      "operand": "f()"
+    },
+    "expect": "(f() as Target)"
+  },
+  {
+    "name": "lr6_13_not_negative",
+    "input": {
+      "context": "!old()",
+      "operand": "-x"
+    },
+    "expect": "(-x as Target)"
+  },
+  {
+    "name": "lr6_13_not_move",
+    "input": {
+      "context": "!old()",
+      "operand": "move x"
+    },
+    "expect": "(move x as Target)"
+  },
+  {
+    "name": "lr6_13_not_cast",
+    "input": {
+      "context": "!old()",
+      "operand": "x as Source"
+    },
+    "expect": "(x as Source as Target)"
+  },
+  {
+    "name": "lr6_13_not_sum",
+    "input": {
+      "context": "!old()",
+      "operand": "a + b"
+    },
+    "expect": "((a + b) as Target)"
+  },
+  {
+    "name": "lr6_13_not_optional",
+    "input": {
+      "context": "!old()",
+      "operand": "a ?? b"
+    },
+    "expect": "((a ?? b) as Target)"
+  },
+  {
+    "name": "lr6_13_not_lambda",
+    "input": {
+      "context": "!old()",
+      "operand": "fn() => x"
+    },
+    "expect": "((fn() => x) as Target)"
+  },
+  {
+    "name": "lr6_13_await_place",
+    "input": {
+      "context": "await old()",
+      "operand": "x"
+    },
+    "expect": "(x as Target)"
+  },
+  {
+    "name": "lr6_13_await_call",
+    "input": {
+      "context": "await old()",
+      "operand": "f()"
+    },
+    "expect": "(f() as Target)"
+  },
+  {
+    "name": "lr6_13_await_negative",
+    "input": {
+      "context": "await old()",
+      "operand": "-x"
+    },
+    "expect": "(-x as Target)"
+  },
+  {
+    "name": "lr6_13_await_move",
+    "input": {
+      "context": "await old()",
+      "operand": "move x"
+    },
+    "expect": "(move x as Target)"
+  },
+  {
+    "name": "lr6_13_await_cast",
+    "input": {
+      "context": "await old()",
+      "operand": "x as Source"
+    },
+    "expect": "(x as Source as Target)"
+  },
+  {
+    "name": "lr6_13_await_sum",
+    "input": {
+      "context": "await old()",
+      "operand": "a + b"
+    },
+    "expect": "((a + b) as Target)"
+  },
+  {
+    "name": "lr6_13_await_optional",
+    "input": {
+      "context": "await old()",
+      "operand": "a ?? b"
+    },
+    "expect": "((a ?? b) as Target)"
+  },
+  {
+    "name": "lr6_13_await_lambda",
+    "input": {
+      "context": "await old()",
+      "operand": "fn() => x"
+    },
+    "expect": "((fn() => x) as Target)"
+  },
+  {
+    "name": "lr6_13_less_place",
+    "input": {
+      "context": "old() < 5",
+      "operand": "x"
+    },
+    "expect": "(x as Target)"
+  },
+  {
+    "name": "lr6_13_less_call",
+    "input": {
+      "context": "old() < 5",
+      "operand": "f()"
+    },
+    "expect": "(f() as Target)"
+  },
+  {
+    "name": "lr6_13_less_negative",
+    "input": {
+      "context": "old() < 5",
+      "operand": "-x"
+    },
+    "expect": "(-x as Target)"
+  },
+  {
+    "name": "lr6_13_less_move",
+    "input": {
+      "context": "old() < 5",
+      "operand": "move x"
+    },
+    "expect": "(move x as Target)"
+  },
+  {
+    "name": "lr6_13_less_cast",
+    "input": {
+      "context": "old() < 5",
+      "operand": "x as Source"
+    },
+    "expect": "(x as Source as Target)"
+  },
+  {
+    "name": "lr6_13_less_sum",
+    "input": {
+      "context": "old() < 5",
+      "operand": "a + b"
+    },
+    "expect": "((a + b) as Target)"
+  },
+  {
+    "name": "lr6_13_less_optional",
+    "input": {
+      "context": "old() < 5",
+      "operand": "a ?? b"
+    },
+    "expect": "((a ?? b) as Target)"
+  },
+  {
+    "name": "lr6_13_less_lambda",
+    "input": {
+      "context": "old() < 5",
+      "operand": "fn() => x"
+    },
+    "expect": "((fn() => x) as Target)"
+  },
+  {
+    "name": "lr6_13_le_place",
+    "input": {
+      "context": "old() <= 5",
+      "operand": "x"
+    },
+    "expect": "x as Target"
+  },
+  {
+    "name": "lr6_13_le_call",
+    "input": {
+      "context": "old() <= 5",
+      "operand": "f()"
+    },
+    "expect": "f() as Target"
+  },
+  {
+    "name": "lr6_13_le_negative",
+    "input": {
+      "context": "old() <= 5",
+      "operand": "-x"
+    },
+    "expect": "-x as Target"
+  },
+  {
+    "name": "lr6_13_le_move",
+    "input": {
+      "context": "old() <= 5",
+      "operand": "move x"
+    },
+    "expect": "move x as Target"
+  },
+  {
+    "name": "lr6_13_le_cast",
+    "input": {
+      "context": "old() <= 5",
+      "operand": "x as Source"
+    },
+    "expect": "x as Source as Target"
+  },
+  {
+    "name": "lr6_13_le_sum",
+    "input": {
+      "context": "old() <= 5",
+      "operand": "a + b"
+    },
+    "expect": "(a + b) as Target"
+  },
+  {
+    "name": "lr6_13_le_optional",
+    "input": {
+      "context": "old() <= 5",
+      "operand": "a ?? b"
+    },
+    "expect": "(a ?? b) as Target"
+  },
+  {
+    "name": "lr6_13_le_lambda",
+    "input": {
+      "context": "old() <= 5",
+      "operand": "fn() => x"
+    },
+    "expect": "(fn() => x) as Target"
+  },
+  {
+    "name": "lr6_13_gt_place",
+    "input": {
+      "context": "old() > 5",
+      "operand": "x"
+    },
+    "expect": "x as Target"
+  },
+  {
+    "name": "lr6_13_gt_call",
+    "input": {
+      "context": "old() > 5",
+      "operand": "f()"
+    },
+    "expect": "f() as Target"
+  },
+  {
+    "name": "lr6_13_gt_negative",
+    "input": {
+      "context": "old() > 5",
+      "operand": "-x"
+    },
+    "expect": "-x as Target"
+  },
+  {
+    "name": "lr6_13_gt_move",
+    "input": {
+      "context": "old() > 5",
+      "operand": "move x"
+    },
+    "expect": "move x as Target"
+  },
+  {
+    "name": "lr6_13_gt_cast",
+    "input": {
+      "context": "old() > 5",
+      "operand": "x as Source"
+    },
+    "expect": "x as Source as Target"
+  },
+  {
+    "name": "lr6_13_gt_sum",
+    "input": {
+      "context": "old() > 5",
+      "operand": "a + b"
+    },
+    "expect": "(a + b) as Target"
+  },
+  {
+    "name": "lr6_13_gt_optional",
+    "input": {
+      "context": "old() > 5",
+      "operand": "a ?? b"
+    },
+    "expect": "(a ?? b) as Target"
+  },
+  {
+    "name": "lr6_13_gt_lambda",
+    "input": {
+      "context": "old() > 5",
+      "operand": "fn() => x"
+    },
+    "expect": "(fn() => x) as Target"
+  },
+  {
+    "name": "lr6_13_ge_place",
+    "input": {
+      "context": "old() >= 5",
+      "operand": "x"
+    },
+    "expect": "x as Target"
+  },
+  {
+    "name": "lr6_13_ge_call",
+    "input": {
+      "context": "old() >= 5",
+      "operand": "f()"
+    },
+    "expect": "f() as Target"
+  },
+  {
+    "name": "lr6_13_ge_negative",
+    "input": {
+      "context": "old() >= 5",
+      "operand": "-x"
+    },
+    "expect": "-x as Target"
+  },
+  {
+    "name": "lr6_13_ge_move",
+    "input": {
+      "context": "old() >= 5",
+      "operand": "move x"
+    },
+    "expect": "move x as Target"
+  },
+  {
+    "name": "lr6_13_ge_cast",
+    "input": {
+      "context": "old() >= 5",
+      "operand": "x as Source"
+    },
+    "expect": "x as Source as Target"
+  },
+  {
+    "name": "lr6_13_ge_sum",
+    "input": {
+      "context": "old() >= 5",
+      "operand": "a + b"
+    },
+    "expect": "(a + b) as Target"
+  },
+  {
+    "name": "lr6_13_ge_optional",
+    "input": {
+      "context": "old() >= 5",
+      "operand": "a ?? b"
+    },
+    "expect": "(a ?? b) as Target"
+  },
+  {
+    "name": "lr6_13_ge_lambda",
+    "input": {
+      "context": "old() >= 5",
+      "operand": "fn() => x"
+    },
+    "expect": "(fn() => x) as Target"
+  },
+  {
+    "name": "lr6_13_add_place",
+    "input": {
+      "context": "old() + 5",
+      "operand": "x"
+    },
+    "expect": "x as Target"
+  },
+  {
+    "name": "lr6_13_add_call",
+    "input": {
+      "context": "old() + 5",
+      "operand": "f()"
+    },
+    "expect": "f() as Target"
+  },
+  {
+    "name": "lr6_13_add_negative",
+    "input": {
+      "context": "old() + 5",
+      "operand": "-x"
+    },
+    "expect": "-x as Target"
+  },
+  {
+    "name": "lr6_13_add_move",
+    "input": {
+      "context": "old() + 5",
+      "operand": "move x"
+    },
+    "expect": "move x as Target"
+  },
+  {
+    "name": "lr6_13_add_cast",
+    "input": {
+      "context": "old() + 5",
+      "operand": "x as Source"
+    },
+    "expect": "x as Source as Target"
+  },
+  {
+    "name": "lr6_13_add_sum",
+    "input": {
+      "context": "old() + 5",
+      "operand": "a + b"
+    },
+    "expect": "(a + b) as Target"
+  },
+  {
+    "name": "lr6_13_add_optional",
+    "input": {
+      "context": "old() + 5",
+      "operand": "a ?? b"
+    },
+    "expect": "(a ?? b) as Target"
+  },
+  {
+    "name": "lr6_13_add_lambda",
+    "input": {
+      "context": "old() + 5",
+      "operand": "fn() => x"
+    },
+    "expect": "(fn() => x) as Target"
+  },
+  {
+    "name": "lr6_13_mul_place",
+    "input": {
+      "context": "old() * 5",
+      "operand": "x"
+    },
+    "expect": "x as Target"
+  },
+  {
+    "name": "lr6_13_mul_call",
+    "input": {
+      "context": "old() * 5",
+      "operand": "f()"
+    },
+    "expect": "f() as Target"
+  },
+  {
+    "name": "lr6_13_mul_negative",
+    "input": {
+      "context": "old() * 5",
+      "operand": "-x"
+    },
+    "expect": "-x as Target"
+  },
+  {
+    "name": "lr6_13_mul_move",
+    "input": {
+      "context": "old() * 5",
+      "operand": "move x"
+    },
+    "expect": "move x as Target"
+  },
+  {
+    "name": "lr6_13_mul_cast",
+    "input": {
+      "context": "old() * 5",
+      "operand": "x as Source"
+    },
+    "expect": "x as Source as Target"
+  },
+  {
+    "name": "lr6_13_mul_sum",
+    "input": {
+      "context": "old() * 5",
+      "operand": "a + b"
+    },
+    "expect": "(a + b) as Target"
+  },
+  {
+    "name": "lr6_13_mul_optional",
+    "input": {
+      "context": "old() * 5",
+      "operand": "a ?? b"
+    },
+    "expect": "(a ?? b) as Target"
+  },
+  {
+    "name": "lr6_13_mul_lambda",
+    "input": {
+      "context": "old() * 5",
+      "operand": "fn() => x"
+    },
+    "expect": "(fn() => x) as Target"
+  },
+  {
+    "name": "lr6_13_cast_place",
+    "input": {
+      "context": "old() as Next",
+      "operand": "x"
+    },
+    "expect": "x as Target"
+  },
+  {
+    "name": "lr6_13_cast_call",
+    "input": {
+      "context": "old() as Next",
+      "operand": "f()"
+    },
+    "expect": "f() as Target"
+  },
+  {
+    "name": "lr6_13_cast_negative",
+    "input": {
+      "context": "old() as Next",
+      "operand": "-x"
+    },
+    "expect": "-x as Target"
+  },
+  {
+    "name": "lr6_13_cast_move",
+    "input": {
+      "context": "old() as Next",
+      "operand": "move x"
+    },
+    "expect": "move x as Target"
+  },
+  {
+    "name": "lr6_13_cast_cast",
+    "input": {
+      "context": "old() as Next",
+      "operand": "x as Source"
+    },
+    "expect": "x as Source as Target"
+  },
+  {
+    "name": "lr6_13_cast_sum",
+    "input": {
+      "context": "old() as Next",
+      "operand": "a + b"
+    },
+    "expect": "(a + b) as Target"
+  },
+  {
+    "name": "lr6_13_cast_optional",
+    "input": {
+      "context": "old() as Next",
+      "operand": "a ?? b"
+    },
+    "expect": "(a ?? b) as Target"
+  },
+  {
+    "name": "lr6_13_cast_lambda",
+    "input": {
+      "context": "old() as Next",
+      "operand": "fn() => x"
+    },
+    "expect": "(fn() => x) as Target"
+  },
+  {
+    "name": "lr6_13_grouped_place",
+    "input": {
+      "context": "(old()).field",
+      "operand": "x"
+    },
+    "expect": "x as Target"
+  },
+  {
+    "name": "lr6_13_grouped_call",
+    "input": {
+      "context": "(old()).field",
+      "operand": "f()"
+    },
+    "expect": "f() as Target"
+  },
+  {
+    "name": "lr6_13_grouped_negative",
+    "input": {
+      "context": "(old()).field",
+      "operand": "-x"
+    },
+    "expect": "-x as Target"
+  },
+  {
+    "name": "lr6_13_grouped_move",
+    "input": {
+      "context": "(old()).field",
+      "operand": "move x"
+    },
+    "expect": "move x as Target"
+  },
+  {
+    "name": "lr6_13_grouped_cast",
+    "input": {
+      "context": "(old()).field",
+      "operand": "x as Source"
+    },
+    "expect": "x as Source as Target"
+  },
+  {
+    "name": "lr6_13_grouped_sum",
+    "input": {
+      "context": "(old()).field",
+      "operand": "a + b"
+    },
+    "expect": "(a + b) as Target"
+  },
+  {
+    "name": "lr6_13_grouped_optional",
+    "input": {
+      "context": "(old()).field",
+      "operand": "a ?? b"
+    },
+    "expect": "(a ?? b) as Target"
+  },
+  {
+    "name": "lr6_13_grouped_lambda",
+    "input": {
+      "context": "(old()).field",
+      "operand": "fn() => x"
+    },
+    "expect": "(fn() => x) as Target"
+  }
+]

@@ -24,6 +24,40 @@ pub fn is_interp(t: &Type) -> bool {
 
 const VIEW_OF: &[(&str, &str)] = &[("String", "StringView"), ("Bytes", "BytesView"), ("List", "ListView"), ("Array", "ListView"), ("FixedList", "ListView")];
 
+/// Whether `view` is the view type taken of an owned `owner` (6.6, 6.7).
+pub fn view_of(owner: &str, view: &str) -> bool {
+    VIEW_OF.contains(&(owner, view))
+}
+
+/// An integer refinement spanning its base's whole range is the base itself: `Int<min..max>` is `Int` (6.3).
+pub fn unrefined_full(t: &Type) -> Type {
+    if let Type::Refined { base, kind, .. } = t {
+        if kind == "range" && int_types(&base.name).is_some() && int_bounds(t) == int_types(&base.name) {
+            return Type::Named(base.clone());
+        }
+    }
+    t.clone()
+}
+
+/// Two type arguments that are assignable one way but differ in a refinement (6.3, X-514): `Int<0..3>` against
+/// `Int<0..5>` or `Int`. A literal's exact type and a string literal are not refinements a value carries.
+pub fn refinement_differs(a: &Type, b: &Type) -> bool {
+    let (a, b) = (unrefined_full(strip(a)), unrefined_full(strip(b)));
+    let (a, b) = (&a, &b);
+    if a == b || is_strlit(a) || is_strlit(b) {
+        return false;
+    }
+    let refined = |t: &Type| matches!(t, Type::Refined { kind, .. } if kind != "exact");
+    if refined(a) || refined(b) { return true; }
+    match (a, b) {
+        (Type::Optional(x), Type::Optional(y)) => refinement_differs(x, y),
+        (Type::Tuple(xs), Type::Tuple(ys)) => xs.iter().zip(ys).any(|(x, y)| refinement_differs(x, y)),
+        (Type::Record(xs), Type::Record(ys)) => xs.iter().any(|(k, x)| ys.iter().find(|(l, _)| k == l).is_some_and(|(_, y)| refinement_differs(x, y))),
+        (Type::Named(x), Type::Named(y)) => x.args.iter().zip(&y.args).any(|(x, y)| refinement_differs(x, y)),
+        _ => false,
+    }
+}
+
 /// Unicode scalars of a string literal's content (escapes resolved; no interpolation).
 pub fn scalar_count(text: &str) -> Int {
     let cs: Vec<char> = text.chars().collect();
@@ -241,26 +275,17 @@ pub fn dynamic_covers(expected: Option<&Type>, value: &Type) -> bool {
     }
 }
 
-fn origin_who(n: &NamedT) -> String {
-    if !n.package.is_empty() {
-        n.package.clone()
-    } else if !n.origin.is_empty() {
-        n.origin.clone()
-    } else {
-        "this package".to_string()
-    }
-}
-
 /// Why these types name different declarations, or "" when every origin agrees.
 /// Equality ignores origin. Assignability asks this before it accepts on equality, so a type
 /// argument or a callback parameter cannot swap a user's class for the core type of the same name.
 /// A type parameter or an unknown type agrees: the caller treats that as unproved.
-fn origin_clash(have: &Type, want: &Type) -> String {
+pub fn origin_clash(have: &Type, want: &Type) -> String {
     fn named(h: &NamedT, w: &NamedT) -> String {
-        if h.name == w.name && h.origin != w.origin {
-            return format!("{} of {} is not {} of {}", h.name, origin_who(h), w.name, origin_who(w));
+        if h.name.split('@').next() == w.name.split('@').next() && (h.package != w.package || h.origin != w.origin) {
+            let shown = crate::types::diagnostic_types(&[&h.as_type(), &w.as_type()]);
+            return format!("{} is not {}", shown[0], shown[1]);
         }
-        if h.name == w.name {
+        if h.name.split('@').next() == w.name.split('@').next() {
             for (a, b) in h.args.iter().zip(w.args.iter()) {
                 let found = origin_clash(a, b);
                 if !found.is_empty() {
@@ -318,12 +343,67 @@ fn origin_clash(have: &Type, want: &Type) -> String {
 }
 
 /// (true) when have is assignable to want; (false, why) when not; (None) when unknown.
+pub fn invariant_assignable(have: &Type, want: &Type) -> Verdict {
+    let (have, want) = (strip(have), strip(want));
+    let forward = assignable(have, want);
+    if forward.0 == Some(false) { return forward; }
+    let backward = assignable(want, have);
+    if backward.0 == Some(false) {
+        return no(format!("writable types are invariant: {} is not {} (6.9)", have.show(), want.show()));
+    }
+    let pairs: Option<Vec<(&Type, &Type)>> = match (have, want) {
+        (Type::Tuple(xs), Type::Tuple(ys)) => Some(xs.iter().zip(ys).collect()),
+        (Type::Record(xs), Type::Record(ys)) => Some(xs.iter().map(|(k, x)| (x, &ys.iter().find(|(l, _)| k == l).unwrap().1)).collect()),
+        (Type::Optional(x), Type::Optional(y)) => Some(vec![(x, y)]),
+        (Type::Named(x), Type::Named(y)) if x.name == y.name && x.args.len() == y.args.len() => Some(x.args.iter().zip(&y.args).collect()),
+        (Type::Fn { params: hp, ret: hr, .. }, Type::Fn { params: wp, ret: wr, .. }) => Some(hp.iter().zip(wp).chain(std::iter::once((&**hr, &**wr))).collect()),
+        _ => None,
+    };
+    if let Some(pairs) = pairs {
+        let mut unknown = false;
+        for (a, b) in pairs {
+            let verdict = invariant_assignable(a, b);
+            if verdict.0 == Some(false) { return verdict; }
+            unknown |= verdict.0.is_none();
+        }
+        return if unknown { unknown_v() } else { yes() };
+    }
+    if matches!(have, Type::Dynamic(_)) || matches!(want, Type::Dynamic(_)) {
+        if have == want { return yes(); }
+        if !matches!(have, Type::Unknown(_) | Type::TypeParam(_)) && !matches!(want, Type::Unknown(_) | Type::TypeParam(_)) {
+            return no(format!("writable types are invariant: {} is not {} (6.9)", have.show(), want.show()));
+        }
+    }
+    if refinement_differs(have, want) {
+        return no(format!("writable types are invariant: {} is not {} (6.9)", have.show(), want.show()));
+    }
+    if forward.0.is_none() || backward.0.is_none() { unknown_v() } else { yes() }
+}
+
+fn contains_structural(t: &Type) -> bool {
+    match strip(t) {
+        Type::Record(_) | Type::Tuple(_) => true,
+        Type::Refined { base, .. } => contains_structural(&base.as_type()),
+        Type::Optional(inner) => contains_structural(inner),
+        Type::Named(n) => n.args.iter().any(contains_structural),
+        _ => false,
+    }
+}
+
 pub fn assignable(have: &Type, want: &Type) -> Verdict {
+    if matches!(have, Type::Loan { mode, .. } if mode == "editable") || matches!(want, Type::Loan { mode, .. } if mode == "editable") {
+        // Length-refined collections already reject every editable loan with E-REF-003.
+        if (contains_structural(have) || contains_structural(want)) && !matches!(strip(have), Type::Refined { kind, .. } if kind == "length") {
+            return invariant_assignable(have, want);
+        }
+    }
     let have = strip(have);
     let want = strip(want);
     if matches!(have, Type::Unknown(_) | Type::TypeParam(_)) || matches!(want, Type::Unknown(_) | Type::TypeParam(_)) {
         return unknown_v();
     }
+    let clash = origin_clash(have, want);
+    if !clash.is_empty() { return no(clash); }
     if closure_conflict(have, want) {
         return no(CLOSURE_WHY.into());
     }
@@ -401,7 +481,11 @@ pub fn assignable(have: &Type, want: &Type) -> Verdict {
         }
         return no(format!("{} is not {}", have.show(), want.show()));
     }
-    if matches!(have, Type::Refined { .. }) && matches!(want, Type::Refined { .. }) {
+    if let (Type::Refined { base: hb, lo: hl, hi: hh, kind: hk }, Type::Refined { base: wb, lo: wl, hi: wh, kind: wk }) = (have, want) {
+        if hb == wb && hk == wk && matches!(hk.as_str(), "scalars" | "length")
+            && wl.is_none_or(|w| hl.is_some_and(|h| h >= w)) && wh.is_none_or(|w| hh.is_some_and(|h| h <= w)) {
+            return yes();
+        }
         return unknown_v();
     }
     if let Type::Refined { base, .. } = have {
@@ -411,7 +495,7 @@ pub fn assignable(have: &Type, want: &Type) -> Verdict {
         return unknown_v();
     }
     if let (Type::Named(h), Type::Named(w)) = (have, want) {
-        if h.name == w.name && h.origin != w.origin {
+        if h.name == w.name && (h.package != w.package || h.origin != w.origin) {
             return no(origin_clash(have, want));
         }
         if h == w {
@@ -422,10 +506,10 @@ pub fn assignable(have: &Type, want: &Type) -> Verdict {
             }
             return yes();
         }
-        if h.name == "Never" {
+        if h.name == "Never" && h.package.is_empty() {
             return yes();
         }
-        if VIEW_OF.contains(&(h.name.as_str(), w.name.as_str())) && (h.args.is_empty() || w.args.is_empty() || h.args[0] == w.args[0]) {
+        if h.package.is_empty() && w.package.is_empty() && VIEW_OF.contains(&(h.name.as_str(), w.name.as_str())) && (h.args.is_empty() || w.args.is_empty() || h.args[0] == w.args[0]) {
             // an owned value where its view is expected (6.6, 7.4); the element still has an origin
             if !h.args.is_empty() && !w.args.is_empty() {
                 let found = origin_clash(&h.args[0], &w.args[0]);
@@ -435,7 +519,7 @@ pub fn assignable(have: &Type, want: &Type) -> Verdict {
             }
             return yes();
         }
-        if h.name == w.name && h.origin == w.origin && (h.package == w.package || h.package.is_empty() || w.package.is_empty()) {
+        if h.name == w.name && h.origin == w.origin && h.package == w.package {
             // arguments are invariant in the proved direction: one false argument makes the whole type false,
             // so `List[Bool]` is not `List[Int]` even when another argument is still a type parameter (6.1, 6.7).
             if h.args.len() != w.args.len() {
@@ -453,6 +537,11 @@ pub fn assignable(have: &Type, want: &Type) -> Verdict {
                 let (verdict, why) = assignable(a, b);
                 if verdict == Some(false) {
                     return no(why);
+                }
+                if verdict == Some(true) && refinement_differs(a, b) {
+                    // a type argument is invariant in its refinement (6.3, X-514; D-465): through an alias with the wider
+                    // element type a value the narrower one excludes could be stored
+                    return no(format!("type arguments are invariant in their refinement: {} is not {} (6.3)", a.show(), b.show()));
                 }
                 if verdict.is_none() {
                     unknown = true;
@@ -474,7 +563,7 @@ pub fn assignable(have: &Type, want: &Type) -> Verdict {
         }
         return no(format!("{} is not {}", have.show(), want.show()));
     }
-    if let (Type::Fn { params: hp, ret: hr, kind: hk, modifiers: hm, .. }, Type::Fn { params: wp, ret: wr, kind: wk, modifiers: wm, .. }) = (have, want) {
+    if let (Type::Fn { params: hp, ret: hr, kind: hk, modifiers: hm, param_modes: hmode, .. }, Type::Fn { params: wp, ret: wr, kind: wk, modifiers: wm, param_modes: wmode, .. }) = (have, want) {
         let order = |k: &str| match k {
             "fn" => 0,
             "fn mut" => 1,
@@ -486,7 +575,10 @@ pub fn assignable(have: &Type, want: &Type) -> Verdict {
         if hp.len() != wp.len() {
             return no("parameter count differs".into());
         }
-        for (a, b) in hp.iter().zip(wp.iter()) {
+        for (i, (a, b)) in hp.iter().zip(wp.iter()).enumerate() {
+            let h = hmode.get(i).map(String::as_str).unwrap_or("");
+            let w = wmode.get(i).map(String::as_str).unwrap_or("");
+            if h != w { return no(format!("parameter {} mode {} differs from {} (8.4)", i + 1, if h.is_empty() { "read" } else { h }, if w.is_empty() { "read" } else { w })); }
             if known(a) && known(b) && strip(a) != strip(b) {
                 return no(format!("parameter {} differs from {}", a.show(), b.show()));
             }
@@ -497,8 +589,13 @@ pub fn assignable(have: &Type, want: &Type) -> Verdict {
                 }
             }
         }
-        if wm.iter().any(|m| m == "pure") && !hm.iter().any(|m| m == "pure") {
-            return no("the position requires `pure`".into());
+        if wm.iter().any(|m| m == "async") && !hm.iter().any(|m| m == "async") {
+            return no("the position requires an async callable: declare the function `async`, or wrap the call in an async lambda (8.4, 12.3)".into());
+        }
+        for claim in ["pure", "noalloc"] {
+            if wm.iter().any(|m| m == claim) && !hm.iter().any(|m| m == claim) {
+                return no(format!("the position requires `{claim}`"));
+            }
         }
         for weak in ["try", "async", "recovers"] {
             if hm.iter().any(|m| m == weak) && !wm.iter().any(|m| m == weak) {
@@ -507,6 +604,28 @@ pub fn assignable(have: &Type, want: &Type) -> Verdict {
         }
         let r = assignable(hr, wr);
         return if r.0 != Some(false) { yes() } else { no(format!("result {}", r.1)) };
+    }
+    let pairs: Vec<(&Type, &Type)> = match (have, want) {
+        (Type::Tuple(xs), Type::Tuple(ys)) => {
+            if xs.len() != ys.len() { return no("tuple element count differs".into()); }
+            xs.iter().zip(ys).collect()
+        }
+        (Type::Record(xs), Type::Record(ys)) => {
+            if xs.len() != ys.len() || xs.iter().any(|(k, _)| !ys.iter().any(|(l, _)| k == l)) {
+                return no("record field names differ".into());
+            }
+            xs.iter().map(|(k, x)| (x, &ys.iter().find(|(l, _)| k == l).unwrap().1)).collect()
+        }
+        _ => Vec::new(),
+    };
+    if matches!((have, want), (Type::Tuple(_), Type::Tuple(_)) | (Type::Record(_), Type::Record(_))) {
+        let mut unknown = false;
+        for (a, b) in pairs {
+            let verdict = assignable(a, b);
+            if verdict.0 == Some(false) { return verdict; }
+            unknown |= verdict.0.is_none();
+        }
+        return if unknown { unknown_v() } else { yes() };
     }
     if have.is_optional() && !want.is_optional() {
         return no(format!("{} is optional; {} is not (6.8)", have.show(), want.show()));
@@ -518,5 +637,5 @@ pub fn assignable(have: &Type, want: &Type) -> Verdict {
         // two known types of different kinds (`Light` against `fn`, `fn` against `Never?`) are not the same type (6.1)
         return no(format!("{} is not {}", have.show(), want.show()));
     }
-    unknown_v() // tuples and records are not compared structurally; identical ones stay unproved and are accepted
+    unknown_v()
 }

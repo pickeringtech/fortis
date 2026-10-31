@@ -16,7 +16,12 @@ import reading  # noqa: E402
 from lexer import Token  # noqa: E402
 from tree import children, name, direct_tokens, find, find_all, tokens  # noqa: E402
 
+from checker.types import INT_TYPES  # noqa: E402
+# the methods of `T?` and `Outcome[T]` receivers, whose run-time value is the present value or the success itself
+RECEIVER_METHODS = {"map"}
+
 from interpreter import codec
+from interpreter import convert
 from interpreter import intrinsics
 from interpreter import numeric
 from interpreter import records
@@ -25,8 +30,8 @@ from interpreter.executor import OBSERVATION_BOUND, CancelSignal, DefectSignal, 
 from interpreter.values import SharedBox, SharedVal, WeakVal
 from interpreter.values import render_message  # noqa: E402
 from interpreter.values import LentRecord, LentTuple, lent_parts, retuple  # noqa: E402
-from interpreter.values import (VOID, BuilderVal, Capability, ClassInfo, Closure, EnumInfo, EnumValue, ErrorInfo, Failure,  # noqa: E402
-                                FailureSignal, FortisError, Instance, ListVal, Report, Void, check_int, deep_copy, display)
+from interpreter.values import (VOID, BuilderVal, Capability, ClassInfo, Closure, ConvertInfo, EnumInfo, EnumValue, ErrorInfo,  # noqa: E402
+                                Failure, FailureSignal, FortisError, Instance, ListVal, Report, Void, check_int, deep_copy, display)
 
 
 # ---------------------------------------------------------------- control flow
@@ -49,15 +54,19 @@ class RegionFailure(Exception):
     """A checked operator failed inside a checked region (6.4, X-345): the region's value is this failure."""
     def __init__(self, failure): self.failure = failure
 
-class ExpectFailure(Exception):
-    """A false `expect` inside a test (14): carries the typed actual/expected evidence."""
-    def __init__(self, evidence): self.evidence = evidence
+class ExpectFailure(FortisError):
+    """A false `expect` inside a test (14): carries the typed actual/expected evidence. Outside a test, which only an
+    unchecked program reaches (`expect` there is E-TYP-120, D-414), it is a dynamic check failure, worded as the VM's."""
+    def __init__(self, evidence):
+        super().__init__(f"expect:{evidence['line']}:actual={evidence['actual']} expected={evidence['expected']}")
+        self.evidence = evidence
 
 
 class Cell:
-    __slots__ = ("value", "mutable", "moved", "returned", "owns")
+    __slots__ = ("value", "mutable", "editable", "moved", "returned", "owns")
     def __init__(self, value, mutable, owns=True):
         self.value, self.mutable, self.moved = value, mutable, False
+        self.editable = False       # a parameter can edit its referent without being reassignable (7.6)
         self.returned = False       # `return x` of a local: its value left with the return, so the block keeps it (X-345)
         # whether the binding owns its value. A binding that holds a loan (`alias p`, `editable p`, a `get`, a `from`
         # result, a read parameter, a borrowed pattern or loop binding) is a path to the owner: its end destroys
@@ -73,6 +82,7 @@ class Env:
         self.frame = False              # a call's own environment (its parameters): the locals of the call are below it
         # the module whose code runs in this environment: its scope resolves module-level names (X-136)
         self.module: Optional[str] = parent.module if parent is not None else None
+        self.conversion_application = parent.conversion_application if parent is not None else None
 
     def declare(self, n: str, value, mutable=False, owns=True):
         self.vars[n] = Cell(value, mutable, owns)
@@ -98,11 +108,11 @@ SPREAD = "..."                          # the name an argument list gives a cons
 def param_owned(p) -> bool:
     """A parameter written `name: owned T`: its own mode, not one inside its type (`f: fn(owned T) U` is a loan)."""
     pt = tree.child(p, "paramType")
-    return pt is not None and any(t.text == "owned" for t in direct_tokens(pt))
+    return (pt is not None and any(t.text == "owned" for t in direct_tokens(pt))) or any(tree.name(c) == "inferredParamMode" and c[1] == "owned" for c in p[1])
 
 
 LIBRARY_MODULES = ("prelude", "text", "collections", "numeric", "time", "money", "host")
-DATA_MODULES = ("time", "money")       # library modules whose classes with fields, enums and errors the interpreter registers
+DATA_MODULES = ("time", "money", "collections")       # library modules whose classes with fields, enums and errors the interpreter registers
 _LIBRARY: Optional[Dict[str, dict]] = None
 
 # the values `destroy` reaches (7.9): a statement temporary of one of these types is destroyed at the end of
@@ -128,9 +138,9 @@ def trivial(v) -> bool:
         return v.cls.trivial
     if isinstance(v, EnumValue):
         return all(trivial(p) for p in v.payload.values())
-    if type(v) is tuple:
+    if isinstance(v, tuple):
         return all(trivial(x) for x in v)
-    if type(v) is dict:
+    if isinstance(v, dict):
         return all(trivial(x) for x in v.values())
     return False
 
@@ -214,8 +224,9 @@ class TypeRefVal:
 
     `core` is set when the name was reached through an alias of a `fortis` module (D-142). A later call must
     not resolve the bare name, which a program class of the same name would win."""
-    def __init__(self, name: str, bounds=None, core: bool = False):
+    def __init__(self, name: str, bounds=None, core: bool = False, array_size=None):
         self.name, self.bounds, self.core = name, bounds, core
+        self.array_size = array_size
 
 
 class FuncVal:
@@ -234,8 +245,9 @@ class ModuleRef:
 
 class BoundMember:
     """`receiver.member` not yet called: a method, associated function or capability operation."""
-    def __init__(self, receiver, member: str):
+    def __init__(self, receiver, member: str, via: Optional[str] = None):
         self.receiver, self.member = receiver, member
+        self.via = via          # `Optional` or `Outcome` when the checker recorded the receiver's type (6.8, 10; X-479)
 
 
 class Scalar:
@@ -258,6 +270,16 @@ class Interpreter:
         self.rec = fparser.load_grammar(os.path.join(ROOT, "reference", "grammar", "fortis.ebnf"))
         self.link, entry = linked if linked is not None else (None, None)
         self.module = entry.tree if entry is not None else self.rec.parse(lexer.lex(src), "module")
+        self.array_sizes = getattr(entry, "array_sizes", {})
+        if entry is None:
+            from checker import check
+            import names
+            checker_library = names.Library(self.rec)
+            check.check_tree(checker_library, self.module, file)
+            from interpreter.type_facts import array_sizes
+            self.array_sizes = array_sizes(self.module, checker_library, file)
+            from interpreter.link import single
+            self.link, entry = single(self.module, file, self.rec)
         self.module_key: Optional[str] = entry.key if entry is not None else None
         self.loading_module: Optional[str] = self.module_key
         self.head_module: Dict[int, str] = {}       # id(function or method head) -> the module that declares it
@@ -276,6 +298,7 @@ class Interpreter:
         self._open_names: Optional[set] = None
         self.const_nodes: Dict[str, Any] = {}
         self.imported: Dict[str, str] = {}         # name -> import path (kit names fail at use)
+        self.module_imports: Dict[tuple, str] = {}
         self.interp_cache: Dict[str, Any] = {}
         self.aspects: Dict[str, dict] = {}         # aspect declarations (11.8)
         self.aspect_homes: Dict[str, set] = {}     # aspect name -> the modules (program keys) that declare it
@@ -309,6 +332,8 @@ class Interpreter:
             for d in tree.declarations(mtree):
                 if d["kind"] not in ("test", "property", "implement", "mixin", "contract", "interface") and d["name"] in taken:
                     raise FortisError(f"`{d['name']}` is declared by two modules ({file} and another); the kernel runs one namespace")
+        if self.link is not None and key in self.link.modules:
+            self.array_sizes.update(self.link.modules[key].array_sizes)
         tests = list(self.tests)
         self.loading_module = key
         self.load_declarations(mtree)
@@ -329,6 +354,8 @@ class Interpreter:
         if not library:
             for imp in tree.imports(mtree):
                 path = ".".join(imp["path"])
+                if not imp["members"]:
+                    self.module_imports[self.loading_module, imp["alias"] or imp["path"][-1]] = path
                 for m in (imp["members"] or [imp["alias"] or imp["path"][-1]]):
                     self.imported[m] = path
         for d in tree.declarations(mtree):
@@ -338,7 +365,7 @@ class Interpreter:
             if library and kind == "class" and find(node, "fieldDecl") is None:
                 continue                                # a class with no fields is an intrinsic type (Duration, Timestamp)
             if kind == "class":
-                fields, exported, methods, field_types, consts = {}, {}, {}, {}, {}
+                fields, exported, methods, field_types, consts, converts = {}, {}, {}, {}, {}, []
                 for m in children(node):
                     if name(m) != "classMember":
                         continue
@@ -352,11 +379,18 @@ class Interpreter:
                         exported[ts[0].text] = exp
                         field_types[ts[0].text] = next((c for c in children(fd) if name(c) == "type"), None)
                         continue
+                    cd = find(m, "convertDecl")
+                    if cd is not None:
+                        converts.append(self.convert_info(cd))
+                        self.note_module(cd)
+                        continue
                     head = find(m, "methodHead")
                     if head is not None:
                         methods[tokens(find(head, "memberName"))[0].text] = (head, find(m, "funcBody"))
                         self.note_module(head)
                 self.classes[nm] = ClassInfo(nm, fields, exported, methods, node)
+                self.note_module(node)
+                self.classes[nm].converts = converts
                 self.classes[nm].field_types = field_types
                 self.classes[nm].consts = consts
                 # the `trivial` modifier, read as the checkers read it (decls.py): a trivial class is copied by `return`
@@ -376,7 +410,7 @@ class Interpreter:
                 if cl is not None:
                     self.classes[nm].cleanup = find(cl, "block")
             elif kind == "enum":
-                variants, methods, ptypes, consts = {}, {}, {}, {}
+                variants, methods, ptypes, consts, converts = {}, {}, {}, {}, []
                 for m in children(node):
                     if name(m) != "enumMember":
                         continue
@@ -393,11 +427,18 @@ class Interpreter:
                         else:
                             ptypes[vt[0].text] = []
                         continue
+                    cd = find(m, "convertDecl")
+                    if cd is not None:
+                        converts.append(self.convert_info(cd))
+                        self.note_module(cd)
+                        continue
                     head = find(m, "methodHead")
                     if head is not None:
                         methods[tokens(find(head, "memberName"))[0].text] = (head, find(m, "funcBody"))
                         self.note_module(head)
                 self.enums[nm] = EnumInfo(nm, variants, methods)
+                self.enums[nm].node = node
+                self.enums[nm].converts = converts
                 self.enums[nm].payload_types = ptypes
                 self.enums[nm].consts = consts
                 tp = next((c for c in children(node) if name(c) == "typeParams"), None)
@@ -452,12 +493,43 @@ class Interpreter:
                         ms[tokens(find(head, "memberName"))[0].text] = (head, body)
                         self.note_module(head)
                 self.mixin_methods[nm] = ms
-            # type, interface, implement, contract, aspect, observation: no runtime behaviour in the kernel
+            elif kind == "implement":
+                # `implement I for T { … }` (9.5): in Language 1.0, T is a class or enum the program declares (X-180),
+                # so the block is T listing I in `implements` with these methods; joined to T below, once T is loaded
+                ts = [c for c in children(node) if name(c) == "type"]
+                if len(ts) == 2:
+                    iface = next((t.text for t in tokens(ts[0]) if t.kind == "UPPER"), None)
+                    target = next((t.text for t in tokens(ts[1]) if t.kind == "UPPER"), None)
+                    ms = {}
+                    for m in [c for c in children(node) if name(c) == "implementMember"]:
+                        head = find(m, "methodHead")
+                        body = find(m, "funcBody") if head is not None else None
+                        if head is not None and body is not None:
+                            ms[tokens(find(head, "memberName"))[0].text] = (head, body)
+                            self.note_module(head)
+                    if not hasattr(self, "implement_members"):
+                        self.implement_members = []
+                    self.implement_members.append((target, iface, ms))
+            # type, interface, contract, aspect, observation: no runtime behaviour in the kernel
         for ci in self.classes.values():
             for mx in getattr(ci, "mixins", []):
                 for mname, hb in self.mixin_methods.get(mx, {}).items():
+                    # Keep the declaring head: bind() uses its head_module for lexical names, while the
+                    # call supplies this class's self. Importing a mixin never changes its body scope (D-486).
                     ci.methods.setdefault(mname, hb)
+        for target, iface, ms in getattr(self, "implement_members", []):
+            info = self.classes.get(target) or self.enums.get(target)
+            if info is None:
+                continue                                     # its type is loaded with a later module
+            for mname, hb in ms.items():
+                info.methods.setdefault(mname, hb)
+            impl = getattr(info, "implements", None)
+            if impl is not None and iface is not None and iface not in impl:
+                impl.append(iface)
         self.globals = Env()
+        # Package tests and their table rows start here without going through bind(). Keep the entry module's
+        # source identity so `as` reads its checked newtype/conversion facts, just as a function body does (D-506).
+        self.globals.module = self.module_key
         self._open_names = None                  # recomputed when first needed, over every declaration loaded
 
     def load_const_member(self, member, consts: Dict[str, Any]) -> bool:
@@ -558,6 +630,11 @@ class Interpreter:
 
     def module_member(self, ref: ModuleRef, n: str):
         """A function or constant of an aliased module."""
+        if ref.module.startswith("fortis."):
+            value = self.library_name(ref.module[len("fortis."):], n)
+            if value is not None:
+                return value
+            raise FortisError(f"module {ref.module} has no member `{n}`")
         key = self.link.key(ref.module, n)
         if key in self.const_nodes:
             return self.const(key)
@@ -969,7 +1046,9 @@ class Interpreter:
             if v.completion == "Cancelled":
                 raise FortisError(f"awaited task {v.name} was cancelled: cancellation of a child reaches the parent (12.5)")
             return self.fresh_add(v.result)
-        raise FortisError("await of a value that is not a future or task")
+        # a synchronous implementation of an interface's async member, awaited through a bound or a `dynamic` value: it
+        # did less than the interface allows (9.5), and its result is already the awaited value (D-89)
+        return v
 
     def not_started(self, fut: Optional[FutureVal]):
         self.emit({"kind": "task-lifecycle", "function": fut.fname if fut else "", "state": "not_started", "rule": "LANG-12-03"})
@@ -989,11 +1068,14 @@ class Interpreter:
         owned = set(self.owned_params(head))
         if self_value is not None or any(p[2] for p in self.params_of(head)):
             env.declare("self", self_value, mutable=True, owns="self" in owned)
+            if isinstance(self_value, Instance):
+                env.conversion_application = self.application_identity(self_value.cls)
             if "self" in owned:
                 self.release(self_value)               # an owned self: the callee becomes its owner (7.9)
         positional = [v for n, v in args if n is None]
         named = {n: v for n, v in args if n is not None}
-        ptypes = self.param_type_nodes(head) if self.open_names() else {}
+        ptypes = self.param_type_nodes(head)
+        editable = {pn for pn, pt in ptypes.items() if any(t.text == "editable" for t in direct_tokens(pt))}
         for i, (pn, default, _) in enumerate(params):
             # a plain or `editable` parameter holds a loan; an `owned` one owns its argument (7.6)
             if i < len(positional):
@@ -1007,6 +1089,7 @@ class Interpreter:
                 env.declare(pn, v, mutable=False, owns=pn in owned)
             else:
                 raise FortisError(f"missing argument `{pn}`")
+            env.cell(pn).editable = pn in editable
             if pn in owned:
                 self.release(v)                        # an owned parameter owns the value, even a field of a temporary (7.9)
         if named:
@@ -1712,7 +1795,7 @@ class Interpreter:
         modes (`item: owned T`); the registry runs them in Python, so the kernel mirrors them here."""
         if isinstance(out, Failure):
             return out                                    # a failed intrinsic stored nothing
-        if (tn, mname) in (("List", "get"), ("Array", "get"), ("Map", "get"), ("ListCursor", "next")):
+        if (tn, mname) in (("List", "get"), ("Array", "get"), ("Array", "asView"), ("Map", "get"), ("ListCursor", "next")):
             return self.lend(out)                         # `(alias T from self)?`: a loan of the stored value (D-338)
         if tn == "List" and mname == "push":
             self.release(pos[0])
@@ -1833,10 +1916,15 @@ class Interpreter:
                 self.destroy_unbound(value, {id(c.value) for n, c in env.vars.items() if n not in before})
                 return
             nm = next(t for t in ts if t.kind == "LOWER")
-            value = self.eval(next(c for c in children(first) if name(c) == "expr"), env)
-            # a loan the statement produced is held, not owned: the binding's end destroys nothing (7.3; D-338)
-            owns = not self.is_lent(value)
+            init = next(c for c in children(first) if name(c) == "expr")
+            value = self.eval(init, env)
+            # a loan the statement produced is held, not owned: the binding's end destroys nothing (7.3; D-338). So is a
+            # bare read of a place (`let a = t`, `let a = pair.0`): the checkers accept one only where its type is a loan
+            # or trivial, so the new binding holds a loan of what the place holds, even where the place owns it (a `??`
+            # fallback, a tuple's own element), and the owner alone destroys it (7.9; D-370)
+            owns = not self.is_lent(value) and not self.bare_place_read(init)
             env.declare(nm.text, self.expected(value, next((c for c in children(first) if name(c) == "type"), None)), mutable, owns)
+            env.cell(nm.text).editable = self.editable_loan(init)
             if owns:
                 self.release(value)                        # the local owns the value, even a field of a temporary (7.9)
             return
@@ -1844,7 +1932,8 @@ class Interpreter:
             place = find(first, "place")
             op = next(t.text for t in direct_tokens(first) if t.text in ("=", "+=", "-=", "*=", "/=", "%="))
             if op == "=":
-                self.assign(place, self.eval(find(first, "expr"), env), env)
+                rhs = find(first, "expr")
+                self.assign(place, self.eval(rhs, env), env, bare=self.bare_place_read(rhs))
                 return
             # `x op= e` is sugar for `x = x op e` (1.1) and operands are evaluated left to right (5.7): `x` is read
             # before `e` runs, and the result is stored into the place `x` names after `e` has run (D-60)
@@ -1915,6 +2004,40 @@ class Interpreter:
                 # temporary is owned by the loop: the source keeps none of the elements, so destroying the
                 # source cannot destroy one the body moved, and elements still unyielded die with the loop (7.9).
                 owns = name(src) == "place" or self._statement_temp(coll) or self._moves_source(src)
+                if isinstance(coll, Instance) and "consume" in coll.cls.methods and name(src) == "place":
+                    cursor = self.invoke_method(coll, "consume", [])
+                    defect = False
+                    try:
+                        while True:
+                            item = self.invoke_method(cursor, "next", [])
+                            if item is None:
+                                break
+                            body_env = Env(env)
+                            if var != "_":
+                                body_env.declare(var, item, mutable=False)
+                            try:
+                                action = self.loop_body(blk, body_env, label)
+                            except (DefectSignal, RecursionError):
+                                defect = True
+                                raise
+                            finally:
+                                if not defect:
+                                    if var != "_":
+                                        cell = body_env.vars[var]
+                                        if not cell.moved:
+                                            cell.moved = True
+                                            self.destroy(cell.value)
+                                    else:
+                                        self.destroy(item)
+                            if action == "break":
+                                break
+                    except (DefectSignal, RecursionError):
+                        defect = True
+                        raise
+                    finally:
+                        if not defect:
+                            self.destroy(cursor)
+                    return
                 if isinstance(coll, (ListVal, intrinsics.ArrayVal)):
                     if owns:
                         seq = coll.items
@@ -1929,6 +2052,12 @@ class Interpreter:
                     seq = [tuple(kv) for kv in coll.entries.values()]     # (key, value) in first-insertion order (6.6)
                     if owns:
                         coll.entries.clear()
+                elif isinstance(coll, Instance) and "iterate" in coll.cls.methods and name(src) != "place":
+                    # a class that implements `Iterable[T, I]` (5.3, 7.7): `iterate()` gives a standard cursor over what the
+                    # class holds, and the loop reads each item by loan, as over the collection the cursor walks (D-545)
+                    cursor = self.invoke_method(coll, "iterate", [])
+                    seq = list(cursor.items[cursor.pos:])
+                    owns = False
                 else:
                     raise FortisError("for over a non-collection value is outside the kernel")
                 if not owns:
@@ -2056,8 +2185,47 @@ class Interpreter:
         if not isinstance(v, bool):
             raise FortisError("condition is not Bool")                  # plug-in: typing (DEL-12)
 
-    def assign(self, place, value, env: Env):
-        """`place = value`, with `value` already evaluated (a compound assignment arrives here expanded, D-60)."""
+    def bare_place_read(self, e) -> bool:
+        """Whether `e` reads a place bare: a binding, `self` or a member path of one, with no marker (7.5). What such a
+        read gives a binding or a store is a loan of what the place holds, never a second owner (7.9; D-370)."""
+        n = e
+        while n is not None and not isinstance(n, Token):
+            kids = children(n)
+            if name(n) == "primaryExpr" and len(kids) == 3 and isinstance(kids[0], Token) and kids[0].text == "(":
+                n = kids[1]
+            elif len(kids) == 1 and not isinstance(kids[0], Token) and name(n) != "postfixExpr":
+                n = kids[0]
+            else:
+                break
+        if n is None or isinstance(n, Token) or name(n) == "markerExpr":
+            return False
+        if name(n) == "postfixExpr":
+            kids = children(n)
+            root = self.place_path(kids[0])
+            if root is None:
+                return False
+            for pf in kids[1:]:
+                k = children(pf)
+                # a member name or a tuple field (`pair.0`), each a part of the place (7.2)
+                if not (k and isinstance(k[0], Token) and k[0].text == "." and len(k) > 1 and (name(k[1]) == "memberName" or (isinstance(k[1], Token) and k[1].kind == "INT"))):
+                    return False
+            return True
+        return self.place_path(n) is not None
+
+    def editable_loan(self, node):
+        """An editable place loan retains permission when bound locally (7.6)."""
+        if name(node) == "markerExpr":
+            return len(children(node)) == 2 and tokens(node)[0].text == "editable"
+        kids = children(node)
+        nodes = [c for c in kids if not isinstance(c, Token)]
+        ts = direct_tokens(node)
+        if len(nodes) == 1 and (not ts or [t.text for t in ts] == ["(", ")"]):
+            return self.editable_loan(nodes[0])
+        return False
+
+    def assign(self, place, value, env: Env, bare: bool = False):
+        """`place = value`, with `value` already evaluated (a compound assignment arrives here expanded, D-60). `bare`:
+        the value was read from a place without a marker, so what is stored is a loan of it (D-370)."""
         ts = tokens(place)
         root = ts[0].text
         path = [t.text for t in ts[1:] if t.text not in (".", "[", "]")]
@@ -2067,12 +2235,13 @@ class Interpreter:
         else:
             cell = env.cell(root)
             target = cell.value
+        lent = self.is_lent(value) or bare
         if not path:
             if cell is None:
                 raise FortisError("cannot assign to self")
             if not cell.mutable:
                 raise FortisError(f"`{root}` is not mutable (E-NAM-002)")     # plug-in: typing (DEL-12)
-            owns = not self.is_lent(value)             # a loan stored stays a loan: the binding holds it (D-350)
+            owns = not lent                            # a loan stored stays a loan: the binding holds it (D-350)
             if owns:
                 self.release(value)                    # before the store: the place may be a temporary record or object (7.9)
             if not cell.moved and cell.owns:
@@ -2081,17 +2250,36 @@ class Interpreter:
             cell.moved = False
             cell.owns = owns
             return
-        if cell is not None and not cell.mutable and not isinstance(target, Instance):
+        if cell is not None and not (cell.mutable or cell.editable) and not isinstance(target, Instance):
             raise FortisError(f"`{root}` is not mutable")
+        def index(text):
+            text = text.replace("_", "")
+            return int(text, 0) if text.startswith(("0x", "0X", "0b", "0B", "0o", "0O")) else int(text)
         for seg in path[:-1]:
-            target = self.field(target, seg)
+            target = self.index(target, index(seg)) if isinstance(target, ListVal) else self.field(target, seg)
         last = path[-1]
-        self.release(value)                            # before the store, so detaching cannot delete the field just written (7.9)
-        if isinstance(target, Instance):
+        if not lent:
+            self.release(value)                        # before the store, so detaching cannot delete the field just written (7.9)
+        if isinstance(target, ListVal):
+            slot = index(last)
+            if not 0 <= slot < len(target.items):
+                raise FortisError("assignment index outside collection")
+            self.destroy(target.items[slot])
+            target.items[slot] = value
+        elif isinstance(target, Instance):
             self.destroy(target.fields.get(last))
             target.fields[last] = value
         elif isinstance(target, dict):
+            # a record literal's field: the old value is destroyed when the record owned it, and the record then holds
+            # what it is given, a loan or a value of its own (7.9; D-366, D-376)
+            if last in target and last not in lent_parts(target):
+                self.announce_drop(target[last])
+                self.destroy(target[last])
+            was = set(lent_parts(target))
+            now = (was | {last}) if lent else (was - {last})
             target[last] = value
+            if isinstance(target, LentRecord):
+                target.lent = frozenset(now)
         else:
             raise FortisError("assignment into a non-object")
 
@@ -2166,6 +2354,8 @@ class Interpreter:
             return v
         if n in ("bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr"):
             return self.chain(kids, env)
+        if n == "asExpr":
+            return self.convert(kids, env)
         if n == "unaryExpr":
             if isinstance(kids[0], Token):
                 op = kids[0].text
@@ -2185,10 +2375,21 @@ class Interpreter:
             marker = tokens(kids[0])[0].text
             place = kids[1]
             pts = tokens(place)
+            if len(kids) == 2:
+                try:
+                    env.cell(pts[0].text)
+                except FortisError:
+                    # A declaration reference creates its callable; it has no local storage to move or borrow.
+                    value = self.literal(pts[0], env)
+                    if len(pts) == 3 and pts[1].text == "." and isinstance(value, ModuleRef):
+                        value = self.module_member(value, pts[2].text)
+                    if isinstance(value, (FuncVal, BoundMember)):
+                        return value
             called = len(kids) > 2 and isinstance(kids[2], Token) and kids[2].text == "("
             if marker == "move" and called and len(pts) >= 3 and pts[-2].text == ".":
                 # `move items.consumeEach(f)`: the marker moves the receiver; the last segment names the method (7.1)
-                v = BoundMember(self.eval_place_tokens(pts[:-2], env, move=True), pts[-1].text)
+                v = BoundMember(self.eval_place_tokens(pts[:-2], env, move=True), pts[-1].text,
+                                self.receiver_method(env, pts[-1]) if pts[-1].text in RECEIVER_METHODS else None)
             else:
                 v = self.eval_place(place, env, move=(marker == "move"))
             # a binding that holds a loan moves that loan: a tuple, a record or a binding that takes it borrows it, and
@@ -2198,8 +2399,15 @@ class Interpreter:
                 self.lend(v)                                 # a loan of the place, held by whatever takes it (7.3; D-338)
             elif marker == "move" and not held:
                 self.unlend(v)                               # ownership moves with the value
+                if not called:
+                    # the value has left its owner: it is the statement's own until something takes it (a binding, an
+                    # owned parameter, a field, a signal), and is destroyed at the statement's end otherwise, as a value
+                    # lent for a call through a `??` fallback is (7.9; D-375)
+                    self.fresh_add(v)
             if marker == "copy":
                 v = deep_copy(v)
+                if not called:
+                    self.fresh_add(v)                        # a copy is a fresh value of the statement's own (7.9)
             rest = kids[2:]
             i = 0
             while i < len(rest):
@@ -2249,6 +2457,8 @@ class Interpreter:
             owned = []
             if cl is not None:
                 cenv = Env(self.globals)                     # an explicit capture list scopes the body (8.3)
+                cenv.module = env.module
+                cenv.conversion_application = env.conversion_application
                 for cap in [c for c in children(cl) if name(c) == "capture"]:
                     ck = children(cap)
                     if isinstance(ck[0], Token):
@@ -2305,7 +2515,9 @@ class Interpreter:
             for k, x in out.items():
                 if k not in lent:
                     self.release(x)                        # the record takes its fields, even a field of a temporary (7.9)
-            return self.fresh_add(LentRecord(out, lent) if lent else out)
+            # every record literal records which fields it borrows, none at first where none lends: a field assigned
+            # later may hold a loan, or stop holding one (7.9; D-366, D-376)
+            return self.fresh_add(LentRecord(out, lent))
         if n == "rangeExpr":
             raise FortisError("range outside a for")
         if n == "place":
@@ -2342,6 +2554,280 @@ class Interpreter:
             raise RegionFailure(r)
         return r
 
+    def convert(self, kids, env):
+        """`x as T` (6.13, X-475, X-551): the operand's value through the one conversion the checker resolved for
+        the pair, left to right along the chain: a declared `convert` member of the source's or the target's type,
+        or a built-in row. A target refinement is the spelled `validate` (6.3): the value, or
+        `refinement.out_of_range`. A total conversion gives the value; a fallible one the value or its failure, as a
+        `try` call does."""
+        v = self.eval(kids[0], env)
+        origin = self.stack[-1] if self.stack else "main"
+        for i in range(1, len(kids), 2):
+            tr = kids[i + 1]
+            trs = direct_tokens(tr)
+            target = trs[2].text if trs[0].kind == "LOWER" else trs[0].text
+            # Newtypes erase their run-time identity. Read the checker's selected row, rather than infer an
+            # unwrap from the representation's value shape (a class or collection may be a representation).
+            from checker import check
+            file = self.link.modules[env.module].file if self.link is not None and env.module in self.link.modules else self.file
+            file_key = os.path.abspath(file)
+            if file_key not in check.CONVERSIONS and self.link is None:
+                import names
+                check.check_source(names.Library(self.rec), self.src, self.file)
+            resolved = self.resolved_conversion(env, kids[i])
+            if resolved.get("kind") in ("newtype_wrap", "newtype_unwrap"):
+                continue
+            if resolved.get("kind") == "newtype_validate":
+                ref = self.newtypes[target]
+                result = v if ref is None else self.validate(v, self.refinement(ref, self.globals))
+                if isinstance(result, Failure):
+                    self.release(v)
+                    self.destroy(v)  # a failed consuming conversion ends its representation before the handler
+                v = result
+                continue
+            refinement = own_refinement(tr)
+            if refinement is not None:
+                v = self.validate(v, self.refinement(refinement, env))
+                continue
+            source_hint = resolved.get("from")
+            if self.link is not None and env.module in self.link.modules and source_hint is not None:
+                source_hint = self.link.modules[env.module].scope.get(source_hint, source_hint)
+            m = self.find_convert_member(v, target, source_hint, resolved)
+            if m is not None:
+                if resolved.get("text_copy"):
+                    v = deep_copy(v)  # D-421: the member owns a copy, never the view's backing storage.
+                v = self.call_convert(m, v)
+                continue
+            if isinstance(v, (Instance, EnumValue)):
+                # a class or enum value converts only by a declared member: the built-in rows take built-in values,
+                # never a user value whose type happens to spell a built-in name (D-516)
+                src = v.cls.name if isinstance(v, Instance) else v.enum
+                raise FortisError(f"no conversion from {src} to {target} (6.13)")
+            v = convert.convert(v, target, origin, Scalar, intrinsics.BytesVal)
+        return v
+
+    def application_identity(self, cls):
+        """Stable source identity even when the linker qualifies module keys by package version."""
+        module = self.head_module.get(id(cls.node), "main")
+        original, file = cls.name, self.file
+        if self.link is not None and module in self.link.modules:
+            loaded = self.link.modules[module]
+            file = loaded.file
+            original = next((name for name, linked in loaded.scope.items()
+                             if linked == cls.name and name[:1].isupper() and "." not in name), original)
+        return os.path.abspath(file), original
+
+    def resolved_conversion(self, env, tok):
+        """Use this application's facts while keeping the body's lexical source identity (D-524)."""
+        from checker import check
+        file = self.link.modules[env.module].file if self.link is not None and env.module in self.link.modules else self.file
+        key = os.path.abspath(file)
+        if env.conversion_application is not None:
+            facts = check.MIXIN_CONVERSIONS.get((key, *env.conversion_application), {})
+            if (tok.line, tok.col) in facts:
+                return facts[(tok.line, tok.col)]
+        return check.CONVERSIONS.get(key, {}).get((tok.line, tok.col), {})
+
+    def convert_info(self, cd) -> ConvertInfo:
+        """A `convert` member as the interpreter runs it (6.13, X-551): the head's direction, the type name it
+        spells, its `try` and `owned` words, and the parameter a `from` member binds."""
+        kids = children(cd)
+        tr_i = next(i for i, c in enumerate(kids) if name(c) == "typeRef")
+        direction = kids[tr_i - 1].text                       # the `to`/`from` token directly before the type
+        fallible = any(isinstance(c, Token) and c.text == "try" for c in kids[:tr_i])
+        owned = any(isinstance(c, Token) and c.text == "owned" for c in kids[tr_i + 1:])
+        trs = direct_tokens(kids[tr_i])
+        other = trs[2].text if trs[0].kind == "LOWER" else trs[0].text
+        pname = "self"
+        if direction == "from":
+            pname = next(t.text for t in kids[tr_i + 1:] if isinstance(t, Token) and t.kind == "LOWER")
+        return ConvertInfo(cd, direction, other, fallible, owned, pname, find(cd, "funcBody"))
+
+    def find_convert_member(self, v, target: str, source_hint: Optional[str] = None, resolved=None):
+        """The declared conversion for the value `v` and the target name `target` (6.13, X-551): a `convert to
+        target` member of the value's own type, or a `convert from` member of the type named `target` that takes
+        the value. The checker has resolved the pair; a built-in value answers by the names its shape spells (an
+        int answers every integer type name, as the built-in rows differ only in the target's bounds)."""
+        if resolved and "member_line" in resolved:
+            # Generic type arguments and newtypes can erase at run time. Use the member the checker selected.
+            source = v.cls if isinstance(v, Instance) else self.enums.get(v.enum) if isinstance(v, EnumValue) else None
+            destination = self.classes.get(target) or self.enums.get(target)
+            for owner, direction in ((source, "to"), (destination, "from")):
+                for cv in owner.converts if owner is not None else ():
+                    at = tokens(cv.node)[0]
+                    if cv.direction == direction == resolved["member_direction"] and (at.line, at.col) == (resolved["member_line"], resolved["member_column"]):
+                        return cv
+        if isinstance(v, Instance):
+            for cv in v.cls.converts:
+                if cv.direction == "to" and cv.other == target and (source_hint is None or source_hint == v.cls.name):
+                    return cv
+            src = v.cls.name
+        elif isinstance(v, EnumValue):
+            info = self.enums.get(v.enum)
+            for cv in (info.converts if info is not None else []):
+                if cv.direction == "to" and cv.other == target and (source_hint is None or source_hint == v.enum):
+                    return cv
+            src = v.enum
+        else:
+            src = None
+        tinfo = self.classes.get(target) or self.enums.get(target)
+        if tinfo is not None:
+            shapes = self.value_shapes(v)
+            for cv in list(tinfo.converts) + self.derived_conversions(tinfo):
+                if cv.direction == "from" and (cv.other == source_hint if source_hint in self.newtypes else (cv.other == src if src is not None else cv.other in shapes)):
+                    return cv
+            if "From" in getattr(tinfo, "implements", []) and "from" in tinfo.methods:
+                head, body = tinfo.methods["from"][:2]
+                ptypes = self.param_types(head)
+                if len(ptypes) == 1:
+                    pname, source = next(iter(ptypes.items()))
+                    if source in tinfo.type_params or (source == src if src is not None else source in shapes):
+                        return ConvertInfo(head, "from", source, False, False, pname, body, legacy_head=head)
+        return None
+
+    def derived_conversions(self, info):
+        if not isinstance(info, (ClassInfo, EnumInfo)):
+            return []
+        ul = next((c for c in children(info.node) if name(c) == "upperIdentList"), None)
+        if ul is None:
+            return []
+        kids, out = children(ul), []
+        for i, k in enumerate(kids):
+            source = None
+            if isinstance(k, Token) and k.text == "convert" and i + 2 < len(kids):
+                source = kids[i + 2]
+            elif isinstance(k, Token) and k.text == "From" and i + 1 < len(kids) and name(kids[i + 1]) == "typeArgs":
+                source = find(kids[i + 1], "typeRef")
+            if source is not None:
+                ts = direct_tokens(source)
+                other = ts[2].text if ts[0].kind == "LOWER" else ts[0].text
+                args = find(source, "typeArgs")
+                source_args = tuple("".join(t.text for t in tokens(a)) for a in children(args) if name(a) == "type") if args is not None else ()
+                out.append(ConvertInfo(info.node, "from", other, False, False, "source", None, derived_target=info.name, derived_source_args=source_args))
+        return out
+
+    def value_shapes(self, v) -> set:
+        """The built-in type names a built-in value's shape spells (6.13): an int answers every integer type, a
+        `str` both text types, and the rest one name each. The checker resolved which member the pair names; the
+        interpreter sees the shape alone."""
+        if isinstance(v, bool):
+            return {"Bool"}
+        if isinstance(v, int):
+            return set(INT_TYPES)
+        if isinstance(v, str):
+            return {"String", "StringView"}
+        if isinstance(v, float):
+            return {"Float"}
+        if isinstance(v, numeric.F32):
+            return {"Float32"}
+        if isinstance(v, numeric.Dec):
+            return {"Decimal"}
+        if isinstance(v, numeric.Dur):
+            return {"Duration"}
+        if isinstance(v, intrinsics.TimestampVal):
+            return {"Timestamp"}
+        if isinstance(v, (bytes, intrinsics.BytesVal)):
+            return {"Bytes"}
+        if isinstance(v, ListVal):
+            return {"List"}
+        return set()
+
+    def call_convert(self, cv: ConvertInfo, v):
+        """Run a declared `convert` member's body on the value `v` (6.13, X-551): `convert to T` binds `self`;
+        `convert from S(s)` binds the source to its parameter. An `owned` head owns the value and destroys it at
+        the member's exit unless the body moved it (7.9). A `try` member gives its failure as the conversion's
+        value; any other member's failure is the defect the checker refused (10.2)."""
+        if cv.derived_target:
+            if cv.derived_target in self.enums:
+                info = self.enums[cv.derived_target]
+                fold = str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")
+                for variant in info.variants:
+                    if v.translate(fold) == variant.translate(fold):
+                        return EnumValue(info.name, variant)
+                return convert.failure("conversion.parse", {"text": v, "variants": ", ".join(info.variants)}, self.stack[-1] if self.stack else "main")
+            cls = self.classes[cv.derived_target]
+            fields, temporaries = {}, []
+            defect = False
+            try:
+                for field, tnode in cls.field_types.items():
+                    value = deep_copy(v.fields[field])
+                    source_subst = dict(zip(v.cls.type_params, cv.derived_source_args))
+                    source_type = "".join(source_subst.get(t.text, t.text) for t in tokens(v.cls.field_types[field]))
+                    target_type = "".join(t.text for t in tokens(tnode))
+                    if source_type != target_type:
+                        temporaries.append(value)
+                        ref = type_ref(tnode)
+                        ts = direct_tokens(ref)
+                        target = ts[2].text if ts[0].kind == "LOWER" else ts[0].text
+                        source_ref = type_ref(v.cls.field_types[field])
+                        source_ts = direct_tokens(source_ref)
+                        source = source_ts[2].text if source_ts[0].kind == "LOWER" else source_ts[0].text
+                        source = source_subst.get(source, source)
+                        member = self.find_convert_member(value, target, source)
+                        if member is not None:
+                            value = self.call_convert(member, value)
+                        elif target in self.newtypes or source in self.newtypes:
+                            pass  # the checker proved a visible, total, trivial representation step (X-552)
+                        else:
+                            value = convert.convert(value, target, self.stack[-1] if self.stack else "main", Scalar, intrinsics.BytesVal)
+                    fields[field] = value
+                return Instance(cls, fields)
+            except DefectSignal:
+                defect = True
+                raise
+            finally:
+                if not defect:
+                    for temporary in reversed(temporaries):
+                        self.announce_drop(temporary)
+                        self.destroy(temporary)
+
+        if cv.legacy_head is not None:
+            return self.call(cv.legacy_head, cv.body, [(None, v)], None)
+        env = Env(self.globals)
+        env.frame = True
+        env.module = self.head_module.get(id(cv.node), env.module)
+        pname = "self" if cv.direction == "to" else cv.pname
+        env.declare(pname, v, mutable=cv.direction == "to", owns=cv.owned)
+        if cv.owned:
+            self.release(v)                                 # the member becomes the value's owner (7.9)
+        fname = f"convert:{cv.direction}:{cv.other}"
+        self.frames.append(None)
+        self.stack.append(fname)
+        outcome = "success"
+        lent = True
+        try:
+            blk = find(cv.body, "block") if cv.body is not None and name(children(cv.body)[0]) == "block" else None
+            if blk is not None:
+                self.run_block(blk, env)
+                raise FortisError(f"`convert {cv.direction}` member with no returned value")
+            r = self.eval(find(cv.body, "expr"), env)
+            lent = self.is_lent(r)
+            return r
+        except ReturnSignal as r:
+            lent = r.lent
+            return r.value
+        except FailureSignal as f:
+            outcome = "failure"
+            if cv.fallible:
+                return f.failure
+            raise FortisError(f"`fail` in a convert member without `try` ({f.failure.code})")
+        except CancelSignal:
+            outcome = "cancelled"
+            raise
+        except DefectSignal:
+            outcome = "defect"
+            raise
+        finally:
+            if outcome != "defect" and cv.owned:            # a defect runs no cleanup (10.8)
+                cell = env.vars.get(pname)
+                if cell is not None and not cell.moved:     # the owned value is destroyed at the exit, unless moved (7.9)
+                    self.announce_drop(cell.value)
+                    cell.moved = True
+                    self.destroy(cell.value)
+            self.stack.pop()
+            self.frames.pop()
+            self.returned_lent = lent
+
     def chain(self, kids, env):
         v = self.eval(kids[0], env)
         for i in range(1, len(kids), 2):
@@ -2355,6 +2841,9 @@ class Interpreter:
             eq = self.equal(a, b)
             return eq if op == "==" else not eq
         if op in ("<", "<=", ">", ">="):
+            if isinstance(a, (Instance, EnumValue)) and isinstance(b, (Instance, EnumValue)):
+                c = self.compare3(a, b)                                    # derived Comparable or its own compare (X-516)
+                return {"<": c < 0, "<=": c <= 0, ">": c > 0, ">=": c >= 0}[op]
             if isinstance(a, intrinsics.TimestampVal) and isinstance(b, intrinsics.TimestampVal):
                 a, b = a.ns, b.ns
             if isinstance(a, bool) or isinstance(b, bool) or type(a) is not type(b) or not isinstance(a, (int, str, float, numeric.F32, numeric.Dec, numeric.Dur)):
@@ -2393,6 +2882,10 @@ class Interpreter:
 
     def equal(self, a, b) -> bool:
         if isinstance(a, EnumValue) and isinstance(b, EnumValue):
+            en = self.enum_iface(a, b)
+            if en is not None and "equals" in en.methods:
+                head, body = en.methods["equals"]
+                return bool(self.call(head, body, [(None, b)], a))         # the enum's own equals (X-516; D-84)
             return (a.enum == b.enum or "" in (a.enum, b.enum)) and a.variant == b.variant and all(self.equal(a.payload[k], b.payload.get(k)) for k in a.payload)
         if isinstance(a, Instance) and isinstance(b, Instance):
             if "equals" in a.cls.methods:
@@ -2410,6 +2903,78 @@ class Interpreter:
         if isinstance(a, numeric.F32) and isinstance(b, numeric.F32):
             return a.v == b.v
         return a == b                     # floats: IEEE equality, NaN != NaN
+
+    def enum_iface(self, a, b):
+        """The enum declaration two enum values belong to, for its own `equals`/`compare`: their common closed name,
+        or, when one is an open unprefixed variant, the closed side or the one enum that declares both variants (9.7)."""
+        if a.enum and a.enum == b.enum:
+            return self.enums.get(a.enum)
+        if "" in (a.enum, b.enum):
+            for nm in (a.enum, b.enum):
+                en = self.enums.get(nm)
+                if en is not None and a.variant in en.variants and b.variant in en.variants:
+                    return en
+            owners = [en for en in self.enums.values() if a.variant in en.variants and b.variant in en.variants]
+            if len(owners) == 1:
+                return owners[0]
+        return None
+
+    def compare3(self, a, b) -> int:
+        """The order (-1, 0, 1) of two values for a derived `Comparable` (X-516; D-54.1): a type's own `compare`
+        first, else a class by its fields in declaration order, an enum by variant order and then its payload's
+        fields in order, else the primitives' order. The checker proved both sides are Comparable."""
+        if isinstance(a, EnumValue) and isinstance(b, EnumValue):
+            en = self.enum_iface(a, b)
+            if en is not None and "compare" in en.methods:
+                head, body = en.methods["compare"]
+                return self.order_int(self.call(head, body, [(None, b)], a))
+            if en is None or a.variant not in en.variants or b.variant not in en.variants:
+                raise FortisError("`compare` on values of different enums")
+            order = list(en.variants)
+            ia, ib = order.index(a.variant), order.index(b.variant)
+            if ia != ib:
+                return -1 if ia < ib else 1
+            for f in en.variants[a.variant]:                     # the payload's fields in declaration order (R5)
+                c = self.compare3(a.payload.get(f), b.payload.get(f))
+                if c:
+                    return c
+            return 0
+        if isinstance(a, Instance) and isinstance(b, Instance):
+            if "compare" in a.cls.methods:
+                head, body = a.cls.methods["compare"]
+                return self.order_int(self.call(head, body, [(None, b)], a))
+            if a.cls is not b.cls:
+                raise FortisError("`compare` on values of different classes")
+            for f in a.cls.fields:                               # the fields in declaration order (R5)
+                c = self.compare3(a.fields.get(f), b.fields.get(f))
+                if c:
+                    return c
+            return 0
+        if isinstance(a, bool) and isinstance(b, bool):
+            return -1 if a < b else (1 if a > b else 0)          # False before True
+        if isinstance(a, intrinsics.TimestampVal) and isinstance(b, intrinsics.TimestampVal):
+            a, b = a.ns, b.ns
+        if isinstance(a, numeric.Dur) and isinstance(b, numeric.Dur):
+            a, b = a.ns, b.ns
+        if isinstance(a, numeric.Dec) and isinstance(b, numeric.Dec):
+            return numeric.dec_cmp(a, b)
+        if isinstance(a, numeric.F32) and isinstance(b, numeric.F32):
+            a, b = a.v, b.v
+        if type(a) is type(b) and isinstance(a, (int, str, float)):
+            return -1 if a < b else (1 if a > b else 0)
+        raise FortisError("`compare` on non-comparable values")
+
+    def order_int(self, v) -> int:
+        """An `Ordering` value as -1, 0, 1 (the result of a hand-written `compare`)."""
+        if isinstance(v, EnumValue) and v.variant in ("Less", "Equal", "Greater"):
+            return {"Less": -1, "Equal": 0, "Greater": 1}[v.variant]
+        raise FortisError("compare returned a value that is not an Ordering variant")
+
+    def ordering_value(self, c: int):
+        """The `Ordering` variant of an order (-1, 0, 1): the result of `.compare` on a derived Comparable (X-516)."""
+        en = self.core_enums.get("Ordering") or self.enums.get("Ordering")
+        vname = "Less" if c < 0 else ("Greater" if c > 0 else "Equal")
+        return self.variant(en, vname, []) if en is not None else EnumValue("Ordering", vname)
 
     def literal(self, tok: Token, env):
         if tok.kind == "INT":
@@ -2442,6 +3007,9 @@ class Interpreter:
                 ref = self.module_alias(tok.text, env)
                 if ref is not None:
                     return ref
+                whole = self.module_imports.get((env.module, tok.text))
+                if whole is not None and whole.startswith("fortis."):
+                    return ModuleRef(whole)
                 path = self.imported.get(tok.text)
                 if path is not None and path.startswith("fortis."):
                     v = self.library_name(path[len("fortis."):], tok.text)
@@ -2471,12 +3039,12 @@ class Interpreter:
 
     def interpolate(self, tok: Token, env) -> str:
         body = tok.text[1:-1]
-        out, i = [], 0
+        out, i, hole = [], 0, 0
         while i < len(body):
             c = body[i]
             if c == "\\":
                 nxt = body[i + 1]
-                out.append({"n": "\n", "t": "\t", '"': '"', "\\": "\\", "$": "$"}.get(nxt, nxt))
+                out.append({"n": "\n", "t": "\t", "r": "\r", "0": "\0", '"': '"', "\\": "\\", "$": "$"}.get(nxt, nxt))
                 i += 2
             elif body.startswith("${", i):
                 depth, j = 1, i + 2
@@ -2487,9 +3055,13 @@ class Interpreter:
                 src = body[i + 2:j - 1]
                 node = getattr(tok, "interp_trees", {}).get(src)      # linked: parsed with its program keys (X-136)
                 if node is None:
-                    if src not in self.interp_cache:
-                        self.interp_cache[src] = self.rec.parse(lexer.lex(src), "expr")
-                    node = self.interp_cache[src]
+                    from checker.typer import Typer
+                    key = (env.module, tok.line, tok.col, hole, src)
+                    if key not in self.interp_cache:
+                        from checker import check
+                        self.interp_cache[key] = check.elaborate_captures(self.rec.parse(Typer.hole_tokens(tok, hole, src), "expr"), self.file)
+                    node = self.interp_cache[key]
+                hole += 1
                 out.append(self.show(self.eval(node, env)))
                 i = j
             else:
@@ -2601,7 +3173,7 @@ class Interpreter:
         if isinstance(v, ModuleRef):
             return self.module_member(v, fname)
         if isinstance(v, TypeRefVal):
-            return self.type_dispatch(v.name, fname, [], False, v.bounds)
+            return self.type_dispatch(v.name, fname, [], False, v.bounds, v.array_size)
         if isinstance(v, SharedVal):
             return self.field(v.box.value, fname)              # reading through a Shared is a read loan (7.8)
         if isinstance(v, Instance):
@@ -2810,6 +3382,11 @@ class Interpreter:
 
     def call_value(self, v, args):
         if isinstance(v, BoundMember):
+            if v.via is not None:
+                lm = self.library_method(v.via, v.member)
+                if lm is not None:
+                    return self.call_library(lm[0], lm[1][0], lm[1][1], ([(None, v.receiver)] if v.via == "Optional" else []) + args,
+                                             None if v.via == "Optional" else v.receiver)
             return self.invoke_method(v.receiver, v.member, args)
         if isinstance(v, FuncVal):
             if v.module is not None:
@@ -2833,6 +3410,7 @@ class Interpreter:
             defect = False
             in_test, self.in_test_body = self.in_test_body, False  # a lambda's body is not the test's (14)
             self.writers.append((v.label, len(self.stack)))        # a log record in the body names the lambda (13; D-323)
+            self.stack.append(v.label)
             try:
                 if blk is not None:
                     self.run_block(blk, env)
@@ -2862,6 +3440,7 @@ class Interpreter:
                                 cell.moved = True
                                 self.destroy(cell.value)
                 finally:
+                    self.stack.pop()
                     self.writers.pop()
         # a payload-free variant used as its constructor (`let f: fn() Coin = Coin.Penny`) is the value itself;
         # calling it yields that value (LR 9.7). `let c: Coin = Coin.Penny` never comes through here.
@@ -2870,10 +3449,47 @@ class Interpreter:
         raise FortisError(f"call of a non-callable: {display(v)}")
 
     def method_call(self, v, mc, env):
+        if tokens(mc)[0].text == "?." and v is None:
+            return None
         mname = tokens(find(mc, "memberName"))[0].text
         al = find(mc, "argList")
         args = self.args(al, env) if al else []
+        receiver = self.receiver_method(env, tokens(find(mc, "memberName"))[0]) if mname in RECEIVER_METHODS else None
+        if receiver is not None:
+            # the receiver is an `Outcome[T]` or a `T?` (6.8, 10; X-479): its value is the success or the present value
+            # itself, so the method is the prelude class's, which the checker recorded at this position
+            lm = self.library_method(receiver, mname)
+            if lm is not None:
+                if receiver == "Optional":
+                    return self.call_library(lm[0], lm[1][0], lm[1][1], [(None, v)] + args, None)
+                return self.call_library(lm[0], lm[1][0], lm[1][1], args, v)
+        if mname == "to" and not (isinstance(v, Instance) and "to" in v.cls.methods):
+            from checker import check
+            file = self.link.modules[env.module].file if self.link is not None and env.module in self.link.modules else self.file
+            key = os.path.abspath(file)
+            if key not in check.CONVERSIONS and self.link is None:
+                import names
+                check.check_source(names.Library(self.rec), self.src, self.file)
+            tok = tokens(find(mc, "memberName"))[0]
+            resolved = self.resolved_conversion(env, tok)
+            target = resolved.get("to")
+            if target is not None:
+                target = target.split("[", 1)[0]
+                if self.link is not None and env.module in self.link.modules:
+                    target = self.link.modules[env.module].scope.get(target, target)
+                member = self.find_convert_member(v, target)
+                return self.call_convert(member, v) if member is not None else convert.convert(v, target, self.stack[-1] if self.stack else "main", Scalar, intrinsics.BytesVal)
         return self.invoke_method(v, mname, args)
+
+    def receiver_method(self, env, tok):
+        """`Optional` or `Outcome` when the checker recorded a method call at `tok` on a receiver of that type."""
+        from checker import check
+        file = self.link.modules[env.module].file if self.link is not None and env.module in self.link.modules else self.file
+        if os.path.abspath(file) not in check.CONVERSIONS and self.link is None:
+            import names
+            check.check_source(names.Library(self.rec), self.src, self.file)   # the facts of a program run unchecked, as `to` reads them
+        fact = self.resolved_conversion(env, tok)
+        return fact.get("type") if fact.get("kind") == "receiver_method" else None
 
     def variant_name(self, v) -> str:
         """A payload-free variant of a prelude enum reaches a builtin as a bound member (RoundingMode.HalfEven)."""
@@ -2932,12 +3548,15 @@ class Interpreter:
                     if not cen.variants[mname] and not args:
                         return self.variant(cen, mname, [])
                     return self.variant(cen, mname, args)
-                return self.builtin(v.name, mname, args, True)
-            return self.type_dispatch(v.name, mname, args, True, v.bounds)
+                return self.builtin(v.name, mname, args, True, v.array_size)
+            return self.type_dispatch(v.name, mname, args, True, v.bounds, v.array_size)
         pos = [a for _, a in args]
         if isinstance(v, Instance):
             if mname in v.cls.methods:
                 head, body = v.cls.methods[mname]
+                if body is None and (v.cls.name, mname) in intrinsics.METHODS:
+                    # a trusted method of a library class written in Fortis (`Deque.iterate`): the registry runs it
+                    return self.intrinsic_ownership(v.cls.name, mname, pos, intrinsics.METHODS[(v.cls.name, mname)](self, v, pos))
                 return self.call(head, body, args, v)
             if v.cls.name == "Capabilities":
                 raise FortisError("capability field access, not a method")
@@ -2952,6 +3571,12 @@ class Interpreter:
             raise FortisError(f"capability {v.kind}.{mname} has no development adapter")
         if isinstance(v, Failure) and mname == "code":
             return v.code
+        # a type's own `equals`/`compare` that its declaration does not provide: a core type's, or a derived
+        # Equatable/Comparable's, run by the kernel (X-516; D-84, D-85). The checker proved the type implements it.
+        if mname == "equals" and len(pos) == 1:
+            return self.equal(v, pos[0])
+        if mname == "compare" and len(pos) == 1:
+            return self.ordering_value(self.compare3(v, pos[0]))
         raise FortisError(f"no method `{mname}` on {display(v)} in the kernel")
 
     # ---- primary expressions ----------------------------------------------------
@@ -3006,21 +3631,20 @@ class Interpreter:
         refinement = own_refinement(tr)                  # the type's own, not one of its arguments' (`List[Int<0..9>]`)
         bounds = self.refinement(refinement, env) if refinement is not None else None
         ta = find(tr, "typeArgs")
-        if type_tok_text == "Array" and ta is not None:
-            ints = [t for t in tokens(ta) if t.kind == "INT"]
-            self.array_n = int(ints[-1].text.replace("_", "")) if ints else None    # Array[T, N]: the size from the type
+        file = self.link.modules[env.module].file if self.link is not None and env.module in self.link.modules else self.file
+        array_size = self.array_sizes.get((os.path.abspath(file), trs[0].line, trs[0].col))
         if member is None and not called:
             if refinement is None and ta is None and trs[0].kind != "LOWER" and self.declares_variant(type_tok_text):
                 return self.unprefixed_variant(type_tok_text, [])          # `return Pound` where a `Coin` is expected (9.7)
-            return TypeRefVal(type_tok_text, bounds)
+            return TypeRefVal(type_tok_text, bounds, array_size=array_size)
         if member in ("fromText", "fromBytes") and called:
             return self.decode(member, tr, args[0][1])              # the canonical decoders (6.10)
         # a program method must not shadow a core intrinsic reached through the alias (D-142)
         if via_core is not None and member is not None and (
                 intrinsics.ASSOC.get((type_tok_text, member)) is not None or self.library_method(type_tok_text, member) is not None):
             if not called:
-                return BoundMember(TypeRefVal(type_tok_text, bounds, core=True), member)
-            return self.builtin(type_tok_text, member, args, called)
+                return BoundMember(TypeRefVal(type_tok_text, bounds, core=True, array_size=array_size), member)
+            return self.builtin(type_tok_text, member, args, called, array_size)
         # a core enum's variant, not a program enum of the same bare name (`money.Currency.GBP`)
         if via_core is not None and member is not None:
             cen = self.core_enums.get(type_tok_text)
@@ -3028,9 +3652,17 @@ class Interpreter:
                 if called or not cen.variants[member]:
                     return self.variant(cen, member, args if called else [])
                 return BoundMember(TypeRefVal(type_tok_text, bounds, core=True), member)
-        return self.type_dispatch(type_tok_text, member, args, called, bounds)
+        if type_tok_text in self.newtypes and member == "validate" and called and args:
+            from checker import check
+            file = self.link.modules[env.module].file if self.link is not None and env.module in self.link.modules else self.file
+            mtok = tokens(kids[2])[0]
+            if self.resolved_conversion(env, mtok).get("kind") == "legacy_validate_copy":
+                # Compatibility for the retired read form: its result owns an independent Copyable value.
+                # Non-Copyable representations require a transfer, which the checker enforces (D-518).
+                args[0] = (args[0][0], self.fresh_add(deep_copy(args[0][1])))
+        return self.type_dispatch(type_tok_text, member, args, called, bounds, array_size)
 
-    def type_dispatch(self, type_tok_text, member, args, called, bounds=None):
+    def type_dispatch(self, type_tok_text, member, args, called, bounds=None, array_size=None):
         owner = self.classes.get(type_tok_text) or self.enums.get(type_tok_text)
         if member is not None and not called and owner is not None and member in owner.consts:
             return self.associated_const(owner, member)                 # `Grid.size` is the constant's value (9.3)
@@ -3042,7 +3674,7 @@ class Interpreter:
                 return BoundMember(TypeRefVal(type_tok_text, bounds), member)
             if type_tok_text in self.enum_variant_owner() and member is None:
                 pass
-            return BoundMember(TypeRefVal(type_tok_text, bounds), member)
+            return BoundMember(TypeRefVal(type_tok_text, bounds, array_size=array_size), member)
         # refinement validate (6.3): `Int<lo..hi>.validate(x)`, `String<scalars: …>`, `List[T]<length: …>`, `Bytes<length: …>`
         if bounds is not None and member == "validate":
             return self.validate(args[0][1], bounds)
@@ -3052,7 +3684,11 @@ class Interpreter:
             x = args[0][1] if args else None
             if member == "validate":
                 ref = self.newtypes[type_tok_text]
-                return x if ref is None else self.validate(x, self.refinement(ref, self.globals))
+                result = x if ref is None else self.validate(x, self.refinement(ref, self.globals))
+                if isinstance(result, Failure):
+                    self.release(x)
+                    self.destroy(x)
+                return result
             if member is None and called:
                 return x
         if type_tok_text in self.classes:
@@ -3066,6 +3702,10 @@ class Interpreter:
             if fn is not None:
                 # a trusted intrinsic of a library class (Money.multiply)
                 return self.intrinsic_ownership(cls.name, member, [v for _, v in args], fn(self, [v for _, v in args]))
+            if member == "from" and called and len(args) == 1:
+                conversion = self.find_convert_member(args[0][1], type_tok_text)
+                if conversion is not None:
+                    return self.call_convert(conversion, args[0][1])
             if member == "default" and called and self.derives(cls, "Default"):
                 return self.derived_default(cls)               # `derive Default`: every field at its initialiser (9.2; D-170)
             raise FortisError(f"{cls.name} has no associated function `{member}`")
@@ -3090,7 +3730,7 @@ class Interpreter:
             return Failure(e.code, payload, origin=self.stack[-1] if self.stack else "main", message=e.message or "")
         if member is None and self.declares_variant(type_tok_text):
             return self.unprefixed_variant(type_tok_text, args if called else [])
-        return self.builtin(type_tok_text, member, args, called)
+        return self.builtin(type_tok_text, member, args, called, array_size)
 
     def enum_variant_owner(self) -> Dict[str, EnumInfo]:
         return {v: en for en in self.enums.values() for v in en.variants}
@@ -3134,14 +3774,24 @@ class Interpreter:
         name where a function is expected is that class's constructor, and a value of a class named like one of the
         enum's variants is that variant (9.7). An enum value is never changed in place: the same value may be bound
         at another type."""
-        if type_node is None or v is None or not self.open_names():
+        if type_node is None or v is None:
             return v
         t = type_node if name(type_node) == "type" else find(type_node, "type")
         if t is None:
             return v
         if name(children(t)[0]) == "fnType":
+            if isinstance(v, EnumValue) and not v.payload:
+                # An unprefixed constructor takes its enum from the expected function result (LR 9.7).
+                result = next((k for k in children(children(t)[0]) if name(k) == "type"), None)
+                result_type = find(result, "typeRef") if result is not None else None
+                enum_name = next((x.text for x in direct_tokens(result_type) if x.kind == "UPPER"), "") if result_type is not None else ""
+                en = self.enums.get(enum_name)
+                if en is not None and v.enum in ("", en.name) and v.variant in en.variants:
+                    return BoundMember(TypeRefVal(enum_name), v.variant)
             if isinstance(v, EnumValue) and not v.payload and v.variant in self.classes:
                 return TypeRefVal(v.variant)                  # `let make: fn(Int) Green = Green`: the constructor
+            return v
+        if not self.open_names():
             return v
         nt = find(t, "namedType")
         if nt is None:
@@ -3372,7 +4022,7 @@ class Interpreter:
             self.release(v)                                # expected() may have replaced an open variant's wrapper
         return self.fresh_add(EnumValue(en.name, vname, payload))
 
-    def builtin(self, tname, member, args, called):
+    def builtin(self, tname, member, args, called, array_size=None):
         """An associated function or module-level name of the core: a Fortis body first (DEL-26), then the
         intrinsic registry (interpreter/intrinsics.py), then the host and kit boundaries."""
         pos = [v for _, v in args]
@@ -3383,7 +4033,7 @@ class Interpreter:
             fn = intrinsics.ASSOC.get((tname, member))
             if fn is not None:
                 if (tname, member) == ("Array", "filled"):
-                    return intrinsics.array_filled(self, pos, getattr(self, "array_n", None))
+                    return intrinsics.array_filled(self, pos, array_size)
                 return self.intrinsic_ownership(tname, member, pos, fn(self, pos))
         if tname in intrinsics.FUNCS and member in (None, tname):
             return self.intrinsic_ownership(tname, member, pos, intrinsics.FUNCS[tname](self, pos))
@@ -3400,7 +4050,7 @@ class Interpreter:
         n = name(e)
         kids = children(e)
         if n in ("constExpr", "expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr",
-                 "shiftExpr", "additiveExpr", "multiplicativeExpr", "unaryExpr", "exprStmt") and len(kids) == 1:
+                 "shiftExpr", "additiveExpr", "multiplicativeExpr", "asExpr", "unaryExpr", "exprStmt") and len(kids) == 1:
             return self.place_path(kids[0])
         if n == "place":
             return self.place_path_of_place(e)
@@ -3537,7 +4187,10 @@ class Interpreter:
                 raise FortisError(f"`{root}` was moved (use after move)")
             v = cell.value
             cell.moved = True
-            moved_place = True
+            # `match move o` of a binding that holds a loan (`let o = xs.get(0)`, the `Outcome` of a `try` call whose
+            # result is a loan) moves the loan: the arm's bindings hold loans of the owner's parts and destroy nothing
+            # when the arm ends (7.9; D-394)
+            moved_place = cell.owns
         else:
             v = self.eval(scrut_node, env)
             moved_place = False
@@ -3681,7 +4334,28 @@ class Interpreter:
                 return True
         if name(first) == "literal":
             return self.equal(v, self.literal(children(first)[0], env))
+        if name(first) == "rangePattern":
+            return self.match_range(first, v, env)
         raise FortisError("pattern")
+
+    def match_range(self, rp, v, env) -> bool:
+        """A range pattern (9.8, X-517): the value matches when it lies in the interval the bounds spell, each bound
+        evaluated as a refinement's bound is (6.3, X-512). `hi` is inclusive, so `lo..<hi` matches to hi - 1; a
+        leading `..` or `..<` leaves the low end open. The checker has judged the bounds and the scrutinee's type."""
+        if not isinstance(v, int) or isinstance(v, bool):
+            return False
+        kids = children(rp)
+        lo = hi = None
+        if not (isinstance(kids[0], Token) and kids[0].text in ("..", "..<")):
+            lo = self.eval(kids[0], env)
+            rest = kids[1:]
+        else:
+            rest = kids
+        if len(rest) >= 2 and name(rest[1]) == "constExpr":
+            hi = self.eval(rest[1], env)
+            if isinstance(rest[0], Token) and rest[0].text == "..<":
+                hi -= 1
+        return (lo is None or lo <= v) and (hi is None or v <= hi)
 
     def match_part(self, pat, v, env: Env, lent: bool) -> bool:
         """Match an element of a tuple or a record. The bindings inside an element the aggregate borrows hold loans, so

@@ -1,0 +1,11 @@
+// accept
+// D-583: the interpreter resolves a moved function value as a local place.
+import fortis.host { Console }
+pure func store[T](value: owned T) Int {
+  let xs = List.of(move value)
+  return xs.count()
+}
+func main(console: Console) {
+  let f: pure fn(owned Int) Int = move store
+  console.print("${f(4)}")
+}

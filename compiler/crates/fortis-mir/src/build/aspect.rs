@@ -169,6 +169,20 @@ impl<'t, 'a> Builder<'t, 'a> {
 
     /// A function with applied aspects: its body, hooks and handlers as functions, and the woven function.
     pub fn woven_function(&mut self, sig: &Sig<'a>, label: &str, self_t: Option<Type>, uses: Vec<N<'a>>) -> BResult<()> {
+        let first = self.prog.functions.len();
+        let bounds = self.bounds_of(sig, self_t.as_ref());
+        let r = self.woven_function_inner(sig, label, self_t, uses);
+        // every function the weave makes (the wrapper, its hooks and handlers) keeps the target's `where` bounds, so
+        // a backend that writes them generically can call the bounded body (D-82)
+        for f in self.prog.functions[first..].iter_mut() {
+            if f.bounds.is_empty() {
+                f.bounds = bounds.clone();
+            }
+        }
+        r
+    }
+
+    fn woven_function_inner(&mut self, sig: &Sig<'a>, label: &str, self_t: Option<Type>, uses: Vec<N<'a>>) -> BResult<()> {
         let body_label = format!("{label}#body");
         self.function_plain(sig, &body_label, self_t.clone(), uses.clone())?;
         let line = sig.node.map(line_of).unwrap_or(0);

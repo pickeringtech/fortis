@@ -1,0 +1,25 @@
+// reject: E-OWN-001, E-OWN-002 (at the marked lines)
+// covers: LANG-07-01
+// A `T` is ownership-bearing in every generic body (6.10, 6.12, X-513; D-352): a parameter `x: T` is a loan, so
+// returning it or passing it to an `owned` position needs a marker (E-OWN-001; `copy x` is allowed only with
+// `T implements Copyable`, E-OWN-002 without it), and a loaned `T` a call returns (`xs.get(0)`) cannot be made owned at
+// all without the bound (E-OWN-002). Without the type parameter these were always rejected.
+func id[T](x: T) T {
+  return x                                   // reject: E-OWN-001
+}
+
+func dup[T](x: T) T where T implements Copyable {
+  return x                                   // reject: E-OWN-001
+}
+
+func first[T](xs: List[T]) T? {
+  return xs.get(0)                           // reject: E-OWN-002
+}
+
+func keep[T](x: T, into: editable List[T]) where T implements Copyable {
+  into.push(x)                               // reject: E-OWN-001
+}
+
+func cloned[T](x: T) T {
+  return copy x                              // reject: E-OWN-002
+}

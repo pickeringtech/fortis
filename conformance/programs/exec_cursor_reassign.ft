@@ -1,0 +1,39 @@
+// execute: n b|end|drop b|drop a
+// requires: runtime
+// covers: LANG-07-05, LANG-07-06
+// D-401, 7.3, 7.7, 7.9: a `let mut` binding that holds a standard cursor may be reassigned. The binding owns the
+// cursor value (7.7), so the write destroys the old cursor and the loan the old cursor stored ends with it (7.9):
+// the old owner is free again, and the new cursor's loan is held by the binding until the end of the binding's
+// own block, freezing the new owner as the first binding froze the old (own_cursor_reassign_frozen_bad.ft). A
+// loan drawn through the old cursor is the origin's and outlives the cursor value itself (7.6, 7.9). Both
+// checkers refused the reassignment with E-OWN-011 ("holds a loan and cannot be reassigned"), because every
+// loan-holding binding sat in the holders map; the write check now exempts the cursor bindings, and the
+// assignment attaches the new value's loan to the binding as the first binding did. A view binding
+// (`let v = alias p`) keeps its rejection (7.3).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: label as String, console: console.retain())
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  let mut ys: List[Token] = List.default()
+  ys.push(make(console, "b"))
+  let mut c = alias xs.iterate()
+  discard c.next()
+  c = alias ys.iterate()
+  console.print("n ${c.next()?.label ?? "none"}")
+  console.print("end")
+}

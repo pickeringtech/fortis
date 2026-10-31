@@ -133,19 +133,19 @@ export class Diagnostics {
 // failures is the `recovers` effect, so only tests use this; the program reports its failures instead.
 export pure recovers func settle(sink: owned List[Failure]) Int {
   let mut count = 0
-  move sink.consumeEach(fn mut[editable count](f: owned Failure) Void {
+  for f in move sink {
     let lost: Outcome[Int] = Outcome.failure(move f)
     let one = move lost or recover 1
     count = Int.saturatingAdd(count, one)
-  })
+  }
   return count
 }
 
 test "codes and severities" cases {
-  "malformed date": { problem: Problem.MalformedDate, code: "date.malformed", serious: true }
-  "unbalanced":     { problem: Problem.Unbalanced, code: "transaction.unbalanced", serious: true }
-  "out of order":   { problem: Problem.DateOutOfOrder, code: "date.out_of_order", serious: false }
-  "duplicate":      { problem: Problem.DuplicateAccount, code: "account.duplicate", serious: false }
+  "malformed date": { problem: MalformedDate, code: "date.malformed", serious: true }
+  "unbalanced":     { problem: Unbalanced, code: "transaction.unbalanced", serious: true }
+  "out of order":   { problem: DateOutOfOrder, code: "date.out_of_order", serious: false }
+  "duplicate":      { problem: DuplicateAccount, code: "account.duplicate", serious: false }
 } as row {
   expect problemCode(row.problem) == row.code
   expect (severityOf(row.problem) == Error) == row.serious
@@ -197,7 +197,7 @@ property "a line is reported at most once" forall (lines: List[Int<1..20>]) {
   let mut found = Diagnostics.empty()
   let mut distinct: Set[Int] = Set.default()
   for n in lines {
-    let line = LineNo.validate(n)
+    let line = n as LineNo
     discard found.note(line, MalformedPosting, "x")
     discard distinct.add(n)
   }

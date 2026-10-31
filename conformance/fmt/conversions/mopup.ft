@@ -1,0 +1,19 @@
+// execute: ABC|ABC|42|9
+// covers: LANG-06-03, LANG-06-14
+// D-509: fresh text is evaluated once; only proved validation loses its handler.
+import fortis.host { Console }
+type Code = String<scalars: 1..10>
+type Age = Int<0..120>
+func text(console: Console) String {
+  console.print("ABC")
+  return "ABC"
+}
+recovers func main(console: Console) {
+  let code = Code.validate(text(console)) or recover Code("fallback")
+  console.print("${code}")
+  let age = Age.validate(42) catch e { recover Age(0) }
+  console.print("${age}")
+  let bad: Int = 200
+  let recovered = Age.validate(bad) catch e { recover Age(9) }
+  console.print("${recovered}")
+}

@@ -1,0 +1,3 @@
+// reject: E-OWN-002
+// covers: LANG-07-01, LANG-10-02
+func duplicate[T](x: T) T where T: linear, T implements Copyable => copy x

@@ -22,7 +22,7 @@ func paren(console: Shared[Console]) Res {
 
 func marked(console: Shared[Console]) Res {
   let r = Res(console: console.retain(), label: "marked")
-  return (move r)
+  return (r)
 }
 
 func nested(console: Shared[Console]) Res {

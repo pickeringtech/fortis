@@ -1,0 +1,14 @@
+// reject: E-OWN-051
+// covers: LANG-07-06, LANG-08-02
+func keepOutcome() fn once() Void {
+  let s = "hello" as String
+  let f = fn[alias s]() Int => s.byteCount()
+  let wrapped = Outcome.success(move f)
+  let g = fn once[move wrapped]() {
+    match move wrapped {
+      success(work) => { let n = work() }
+      failure(problem) => { report problem }
+    }
+  }
+  return g
+}

@@ -1,0 +1,12 @@
+// execute: 3|0|0
+// requires: runtime
+// covers: LANG-06-08, LANG-07-01
+import fortis.host { Console }
+func main(console: Console) {
+  let mut xs: List[Int<0..3>?] = List.of(1)
+  xs[0] = 3
+  console.print("${xs.get(0) ?? 0}")
+  xs[0] = null
+  console.print("${xs.get(0) ?? 0}")
+  console.print("${xs.get(9) ?? 0}")
+}

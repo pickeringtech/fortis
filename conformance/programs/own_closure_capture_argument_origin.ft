@@ -1,0 +1,9 @@
+// reject: E-OWN-050
+// covers: LANG-07-06, LANG-08-02
+func lend(s: String, f: owned fn() Int from s) fn() Int from s => move f
+func bad() fn() Int {
+  let a = "first" as String
+  let b = "second" as String
+  let f = fn[alias b]() Int => b.byteCount()
+  return lend(alias a, move f)
+}

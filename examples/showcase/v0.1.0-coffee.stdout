@@ -1,0 +1,34 @@
+skipped 'huge, 3'
+skipped 'large, many'
+skipped 'small, 40'
+2 x Large coffee: 700p
+6 x Small coffee: 900p
+1 x Medium coffee: 250p
+total 1850p, any large? true
+all under 20? true, small orders 1
+cheapest first: 1 x Medium coffee: 250p
+first large at 0
+Large: 1 order(s)
+Small: 1 order(s)
+Medium: 1 order(s)
+#0 Large
+#1 Small
+#2 Medium
+cups 9, larger size Medium
+checked 1 x Small coffee: 150p
+checked 2 x Large coffee: 700p
+parsed 3 counts, sum 12, both lines valid
+first price 700, doubled 42
+ticket Large x 2, size Large, band medium
+till 330p
+late order 1 x Medium coffee: 250p
+served Cy, next Ann, waiting 2
+sizes from Small to Large
+shelf slot 1 holds 0, view of 3
+3 sizes, large cups 2, both 2
+keys 3, cups 9
+2 X LARGE COFFEE: 700P | 6 X SMALL COFFEE: 900P | 1 X MEDIUM COFFEE: 250P
+has small? true, starts true, at 23
+2 x Large: 700p | 6 x Small: 900p | 1 x Medium: 250p
+--------------------
+spare 0

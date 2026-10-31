@@ -1,0 +1,8 @@
+// reject: E-OBL-001
+// covers: LANG-10-02
+class Bin[T] where T: linear {
+  item: T
+}
+func exercise() {
+  let b = Bin(item: Outcome.success(7))
+}

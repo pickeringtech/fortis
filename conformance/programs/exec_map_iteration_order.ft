@@ -5,7 +5,7 @@
 import fortis.host { Console }
 
 pure func show(m: Map[String, Int]) String {
-  let mut out = String.from("")
+  let mut out = "" as String
   for entry in m {
     out = if out == "" { give "${entry.0}=${entry.1}" } else { give "${out},${entry.0}=${entry.1}" }
   }
@@ -22,7 +22,7 @@ func main(console: Console) {
   let mut s: Set[String] = Set.default()
   discard s.add("x")
   discard s.add("y")
-  let mut items = String.from("")
+  let mut items = "" as String
   for x in s {
     items = if items == "" { give copy x } else { give "${items},${x}" }
   }

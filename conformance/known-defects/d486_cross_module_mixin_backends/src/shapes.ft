@@ -1,0 +1,12 @@
+// D-486: a mixin applied from another module of the package. The interpreter prints `8|8`. The VM and native code
+// refuse to build `twice`, which calls this module's private `helper` ("`helper` is not a local, a constant or a
+// function", the IR builder resolving it in app.ft); with `twice` removed, the VM prints `8` and native code still
+// refuses the program at build time (rustc E0308) for `once`, which calls nothing private. The same mixin applied in
+// its own module builds and runs on all three.
+pure func helper(n: Int) Int => n
+
+export mixin Doubled {
+  requires pure func base(self) Int
+  export pure func twice(self) Int => Int.saturatingMul(helper(self.base()), 2)
+  export pure func once(self) Int => Int.saturatingMul(self.base(), 2)
+}

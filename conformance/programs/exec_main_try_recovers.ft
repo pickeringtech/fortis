@@ -6,8 +6,8 @@
 import fortis.host { Console }
 
 try recovers func main(console: Console) {
-  let kept = Int<0..100>.validate(42) or fail
-  let dropped = Int<0..100>.validate(-7) or recover 0
+  let kept = 42
+  let dropped = -7 as Int<0..100> or recover 0
   console.print("${kept}")
   console.print("${dropped}")
 }

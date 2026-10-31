@@ -1,0 +1,101 @@
+[
+  {
+    "name": "lr_7_6_scalar",
+    "input": "Int",
+    "expect": false
+  },
+  {
+    "name": "lr_7_6_owned_text",
+    "input": "String",
+    "expect": false
+  },
+  {
+    "name": "lr_7_6_view",
+    "input": "StringView",
+    "expect": true
+  },
+  {
+    "name": "lr_7_6_record_view",
+    "input": [
+      "record",
+      "StringView"
+    ],
+    "expect": true
+  },
+  {
+    "name": "lr_7_6_record_scalar",
+    "input": [
+      "record",
+      "Int"
+    ],
+    "expect": false
+  },
+  {
+    "name": "lr_7_6_tuple_view",
+    "input": [
+      "tuple",
+      "Int",
+      "StringView"
+    ],
+    "expect": true
+  },
+  {
+    "name": "lr_7_6_optional_view",
+    "input": [
+      "optional",
+      "StringView"
+    ],
+    "expect": true
+  },
+  {
+    "name": "lr_7_6_outcome_view",
+    "input": [
+      "Outcome",
+      "StringView"
+    ],
+    "expect": true
+  },
+  {
+    "name": "lr_7_6_future_scalar",
+    "input": [
+      "Future",
+      "Int"
+    ],
+    "expect": true
+  },
+  {
+    "name": "lr_7_6_unknown",
+    "input": [
+      "unknown"
+    ],
+    "expect": true
+  },
+  {
+    "name": "lr_7_6_record_unknown",
+    "input": [
+      "record",
+      [
+        "unknown"
+      ]
+    ],
+    "expect": true
+  },
+  {
+    "name": "lr_7_6_generic_result",
+    "input": [
+      "parameter",
+      "T"
+    ],
+    "expect": true
+  },
+  {
+    "name": "lr_7_6_generic_unknown",
+    "input": [
+      "Box",
+      [
+        "unknown"
+      ]
+    ],
+    "expect": true
+  }
+]

@@ -1,0 +1,51 @@
+// execute: 8|8|5|4|12|12|7|6|42|fortis
+// requires: runtime
+// covers: LANG-09-04, LANG-04-04
+// D-486: each application uses its class's receiver and the mixin's lexical module.
+import fortis.host { Console }
+import exec.mixin.lexical.shapes { Doubled, Shown }
+import exec.mixin.lexical.other { Crate }
+
+const factor = 99
+pure func helper(n: Int) Int => 99
+
+export class Box with Doubled {
+  export n: Int
+  export pure func base(self) Int => self.n
+}
+
+// The same mixin nodes have different field and inferred local types in these applications.
+export class Numeric {
+  export n: Int
+  export pure func render(self) String => "${self.n}"
+}
+
+export class Textual {
+  export text: String
+  export pure func render(self) String => "${self.text}"
+}
+
+export class Numbered with Shown {
+  export value: Numeric
+}
+
+export class Named with Shown {
+  export value: Textual
+}
+
+func main(console: Console) {
+  let b = Box(n: 4)
+  console.print("${b.twice()}")
+  console.print("${b.once()}")
+  console.print("${b.next()}")
+  console.print("${b.fresh()}")
+  let c = Crate(n: 6)
+  console.print("${c.twice()}")
+  console.print("${c.once()}")
+  console.print("${c.next()}")
+  console.print("${c.fresh()}")
+  let number = Numbered(value: Numeric(n: 42))
+  let name = Named(value: Textual(text: "fortis"))
+  console.print(number.show())
+  console.print(name.show())
+}

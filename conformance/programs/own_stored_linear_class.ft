@@ -1,0 +1,15 @@
+// reject: E-OWN-053
+// covers: LANG-07-06, LANG-10-02
+// D-580: permitting linear arguments does not permit a stored loan.
+class Bin[T] where T: linear {
+  item: T
+  export func take(owned self) T {
+    let Bin(item: value) = move self
+    return move value
+  }
+}
+pure func keep() Bin[StringView] { // reject: E-OWN-053
+  let own = "hello" as String
+  let part = own.trim()
+  return Bin(item: move part) // reject: E-OWN-053
+}

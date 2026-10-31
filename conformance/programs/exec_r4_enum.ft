@@ -1,0 +1,12 @@
+// execute: 1 2 3
+// requires: runtime
+// covers: LANG-08-04
+import fortis.host { Console }
+enum Choice[T] { Some(value: T) }
+func value(c: Choice[Int]) Int => match c { Some(n) => n }
+func main(console: Console) {
+  let a: pure fn(Int) Choice[Int] = Choice.Some
+  let b: pure fn(Int) Choice[Int] = Choice[Int].Some
+  let c: pure fn(Int) Choice[Int] = Some
+  console.print("${value(a(1))} ${value(b(2))} ${value(c(3))}")
+}

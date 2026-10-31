@@ -7,7 +7,7 @@ export enum Kind derive Equatable {
 export class Tagged derive Equatable {
   name: String
   export kind: Kind
-  export pure func first(text: StringView) Tagged => Tagged(name: String.from(text), kind: First)
+  export pure func first(text: StringView) Tagged => Tagged(name: text as String, kind: First)
 }
 export enum Flag {
   On

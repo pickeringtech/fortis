@@ -1,0 +1,2 @@
+// accept
+export pure func bump(n: Int) Int => Int.saturatingAdd(n, 1)

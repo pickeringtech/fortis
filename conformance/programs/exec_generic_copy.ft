@@ -1,0 +1,32 @@
+// execute: 1 9|1 1|7
+// requires: runtime
+// covers: LANG-07-01
+// The owned `T` a generic body returns is a `copy` of what it was lent (6.10, 6.12, X-513; D-352): the caller's value
+// is untouched, and the body runs the same at a class and at an `Int`.
+import fortis.host { Console }
+
+class Item {
+  n: Int
+}
+
+func dup[T](x: T) T where T implements Copyable {
+  return copy x
+}
+
+func firstCopy[T](xs: List[T]) T? where T implements Copyable {
+  return match xs.get(0) {
+    present(v) => copy v
+    null => null
+  }
+}
+
+func main(console: Console) {
+  let item = Item(n: 1)
+  let mut y = dup(item)
+  y.n = 9
+  console.print("${item.n} ${y.n}")
+  let xs: List[Item] = List.of(Item(n: 1))
+  let z = firstCopy(xs) ?? Item(n: 0)
+  console.print("${xs.count()} ${z.n}")
+  console.print("${dup(7)}")
+}

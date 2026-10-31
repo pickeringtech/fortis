@@ -1,0 +1,25 @@
+// execute: kept|kept|literal|kept|kept
+// covers: LANG-06-03, LANG-06-14
+// Legacy validation reads and copies a Copyable representation, including an implicitly owned string literal.
+import fortis.host { Console }
+
+type Text = String
+
+recovers func main(console: Console) {
+  let original: String = "kept"
+  let copied = Text.validate(original) or recover Text("fallback")
+  console.print(original)
+  console.print("${copied}")
+  let literal = Text.validate("literal") or recover Text("fallback")
+  console.print("${literal}")
+  copyExpression(console, original)
+}
+
+func borrowed(value: String) alias String from value => alias value
+
+recovers func copyExpression(console: Console, original: String) {
+  let copied = Text.validate(borrowed(alias original)) or recover Text("fallback")
+  console.print("${copied}")
+  let textCopy = String.from(borrowed(alias original))
+  console.print(textCopy)
+}

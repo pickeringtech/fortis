@@ -1,0 +1,6 @@
+import bad.mixin.application.shapes as mixins
+
+// Same spelling as app.Vault, a distinct application and a distinct record.
+export class Vault with mixins.Peeks {
+  secret: Int
+}

@@ -1,0 +1,53 @@
+// execute: deep|neg|zero|ends|ends|ends|cold
+// requires: runtime
+// covers: LANG-09-05
+// X-523: range matches run identically on the interpreter, the VM and native: the typed IR carries the folded
+// inclusive interval (`a..<b` folds to `a..b-1`, an open end clips to the base type's range), the VM compares
+// against it, native lowers `lo..=hi`, and the interpreter folds the same way — negative bounds, alternatives,
+// one-sided ends and a sized `Int8` scrutinee included.
+import fortis.host { Console }
+
+const low: Int = -10
+const high: Int = 10
+
+func band(n: Int<low..high>, console: Console) {
+  match n {
+    ..<-5 => console.print("deep")
+    -5..<-1 => console.print("neg")
+    -1..1 => console.print("zero")
+    2..5 | 8..10 => console.print("ends")
+    _ => console.print("mid")
+  }
+}
+
+func main(console: Console) {
+  match -7 as Int<low..high> {
+    success(n) => band(n, console)
+    failure(f) => { report f }
+  }
+  match -3 as Int<low..high> {
+    success(n) => band(n, console)
+    failure(f) => { report f }
+  }
+  match 0 as Int<low..high> {
+    success(n) => band(n, console)
+    failure(f) => { report f }
+  }
+  match 3 as Int<low..high> {
+    success(n) => band(n, console)
+    failure(f) => { report f }
+  }
+  match 9 as Int<low..high> {
+    success(n) => band(n, console)
+    failure(f) => { report f }
+  }
+  match 10 as Int<low..high> {
+    success(n) => band(n, console)
+    failure(f) => { report f }
+  }
+  let b: Int8 = -128
+  match b {
+    ..<0 => console.print("cold")
+    0..=> console.print("warm")
+  }
+}

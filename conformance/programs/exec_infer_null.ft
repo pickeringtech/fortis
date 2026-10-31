@@ -1,0 +1,30 @@
+// execute: 3|5|none|x
+// requires: runtime
+// covers: LANG-06-11
+// `null` fixes no type argument (6.8, 6.10, X-513; D-52.3): `orElse(null, 3)` takes `T` from `3`, and a typed absent
+// optional fixes `T` where `null` alone would leave it unfixed (gen_infer_unfixed_bad.ft).
+import fortis.host { Console }
+
+pure func orElse[T](value: T?, fallback: T) T where T implements Copyable {
+  return match value {
+    present(v) => copy v
+    null => copy fallback
+  }
+}
+
+pure func label[T](value: T?, absent: String) String where T implements Displayable {
+  return match value {
+    present(v) => "${v}"
+    null => copy absent
+  }
+}
+
+func main(console: Console) {
+  console.print("${orElse(null, 3)}")
+  let v: Int? = 5
+  console.print("${orElse(v, 3)}")
+  let absent: Int? = null
+  console.print(label(absent, "none" as String))
+  let s: String? = "x" as String
+  console.print(label(s, "none" as String))
+}

@@ -1,0 +1,16 @@
+// accept
+// covers: LANG-06-15
+// X-555: generic legacy declarations accepted before their retirement stay accepted.
+class Source { value: Int }
+class Derived[T] derive From[Source] { value: Int }
+class Explicit[T] implements From[Source] {
+  value: Int
+  export pure func from(source: Source) Explicit[T] {
+    return Explicit[T](value: source.value)
+  }
+}
+
+class Constant[T] implements From[T] {
+  value: Int
+  export pure func from(source: T) Constant[T] { return Constant[T](value: 8) }
+}

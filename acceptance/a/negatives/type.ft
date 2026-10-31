@@ -2,7 +2,7 @@
 // class: E-TYP
 // change: a Bool where the declared result is an integer
 // Nominal identifiers and refined quantities (Language Reference 6.3, 6.9). Plain operators where the interval
-// domain proves the result, a checked operator or `validate` where it cannot.
+// domain proves the result, a checked operator or an `as` conversion where it cannot.
 export type SkuId = Int<1..999999>
 export type BinId = Int<1..999>
 
@@ -18,15 +18,15 @@ export pure func lineValue(quantity: Int<0..10000>, unitCents: Int<0..1000000>) 
 
 // The sum may leave the stock range: the result is validated at the boundary.
 export pure try func restocked(current: Int<0..10000>, added: Int<0..10000>) Int<0..10000> {
-  return Int<0..10000>.validate(current + added) or fail
+  return (current + added) as Int<0..10000> or fail
 }
 
-// Taking more than is held is a domain failure; the difference is then in range, which `validate` confirms.
+// Taking more than is held is a domain failure; the difference is then in range, which the `as` conversion confirms.
 export pure try func withdrawn(current: Int<0..10000>, taken: Int<0..10000>) Int<0..10000> {
   if taken > current {
     fail OutOfStock()
   }
-  return Int<0..10000>.validate(current - taken) or fail
+  return (current - taken) as Int<0..10000> or fail
 }
 
 // An unbounded running total uses a checked operator: overflow is a failure, never a wrap.
@@ -63,17 +63,17 @@ test "taking more than is held is a domain failure" {
 }
 
 test "nominal identifiers are validated at the boundary" {
-  let low = SkuId.validate(0) catch e {
+  let low = 0 as SkuId catch e {
     expect e.code == "refinement.out_of_range"
     recover SkuId(1)
   }
   expect low == SkuId(1)
-  let high = BinId.validate(1000) catch e {
+  let high = 1000 as BinId catch e {
     expect e.code == "refinement.out_of_range"
     recover BinId(999)
   }
   expect high == BinId(999)
-  expect SkuId.validate(999999) == SkuId(999999)
+  expect 999999 as SkuId == SkuId(999999)
 }
 
 test "a checked operator fails instead of wrapping" {

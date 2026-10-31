@@ -29,6 +29,6 @@ func depth(t: owned Tree) Int {
 }
 
 func main(console: Console) {
-  let t = Tree.Node(child: Hold(value: Hold(value: Tree.Leaf)))
+  let t = Tree.Node(child: Hold(value: Hold(value: Leaf)))
   console.print("nested ${depth(move t)}")
 }

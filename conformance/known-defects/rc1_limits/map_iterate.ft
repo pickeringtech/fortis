@@ -1,0 +1,3 @@
+// D-535, D-58.1: Map still has no iterate method.
+func main() { let m = Map[Int, Int].empty()
+  let cursor = m.iterate() }

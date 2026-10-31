@@ -60,7 +60,7 @@ pub const CHECKS: &[Check] = &[
     Check { id: "C3.parallel", row: "`launchParallel`/`launchBlocking`", property: "alloc", subset: "G3" },
     // ---- the IR's own invariants
     Check { id: "wf.locals", row: "IR invariant", property: "every local is declared and every block local is bound once", subset: "G1" },
-    Check { id: "wf.calls", row: "IR invariant", property: "every callee and type the IR names exists", subset: "G1" },
+    Check { id: "wf.calls", row: "IR invariant", property: "every callee and type the IR names exists; nominal identities agree across calls, bindings and returns", subset: "G1" },
     Check { id: "wf.control", row: "IR invariant", property: "break/continue in a loop with that label; give in a block expression; recover in a catch", subset: "G1" },
 ];
 

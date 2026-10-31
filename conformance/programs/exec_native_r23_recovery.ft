@@ -1,0 +1,71 @@
+// execute: show moved-call|drop moved-call|call ended|show made-let|let body|drop made-let|binding ended|drop nested|discard ended|empty|show a|show a|loans live|drop unused|drop a
+// execute-trace: drop Token|loans-end|drop Token|drop Token|loans-end|drop Token
+// requires: runtime
+// covers: LANG-07-07, LANG-10-01
+// Recovery owns only the selected replacement, through calls, bindings, nested and discarded forms.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: label as String, console: console.retain())
+}
+
+func show(console: Shared[Console], t: Token) {
+  console.print("show ${t.label}")
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func find(xs: List[Token]) alias Token from xs {
+  match xs.get(0) {
+    present(t) => { return t }
+    null => { fail Missing() }
+  }
+}
+
+try func first(xs: List[Token]) alias Token from xs {
+  return xs.get(0) ?? (xs.get(1) ?? fail Missing())
+}
+recovers func missing(console: Shared[Console], xs: List[Token]) {
+  discard first(alias xs) catch e {
+    console.print("empty")
+    return
+  }
+}
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  let d = make(console, "moved-call")
+  show(console, find(alias empty) catch e { recover move d })
+  console.print("call ended")
+  {
+    let t = find(alias empty) or recover (find(alias empty) catch e { recover make(console, "made-let") })
+    show(console, t)
+    console.print("let body")
+  }
+  console.print("binding ended")
+  discard find(alias empty) catch e { recover find(alias empty) or recover make(console, "nested") }
+  console.print("discard ended")
+  missing(console, empty)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  let unused = make(console, "unused")
+  {
+    let t = find(alias xs) catch e { recover move unused }
+    show(console, t)
+    show(console, first(alias xs) or recover make(console, "never"))
+    discard find(alias xs) or recover (find(alias empty) or recover make(console, "never"))
+    discard find(alias xs) catch e { recover make(console, "never") }
+  }
+  console.print("loans live")
+}

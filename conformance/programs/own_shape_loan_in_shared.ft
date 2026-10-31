@@ -1,5 +1,5 @@
-// reject: E-OWN-090 (at the marked line)
-// covers: LANG-07-09
+// reject: E-OWN-053 (at the marked line)
+// covers: LANG-07-06
 // C.2: a loan (here a view carrying a loan of `user`) stored in Shared has no safe lowering; own the value instead.
 export class User {
   export name: String
@@ -7,6 +7,6 @@ export class User {
 pure func displayName(user: User) StringView from user => alias user.name
 func run(user: User) Int {
   let seen = displayName(alias user)
-  let shared = Shared.create(move seen)    // reject: E-OWN-090 — a loan stored in Shared
+  let shared = Shared.create(move seen)    // reject: E-OWN-053 — a loan stored in Shared
   return shared.scalarCount()
 }

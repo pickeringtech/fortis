@@ -1,0 +1,52 @@
+// execute: bumped 1|set 9|field 5
+// requires: runtime
+// covers: LANG-07-06
+// D-185, 7.6: a function whose result is an exclusive loan of its editable parameter or receiver (`editable Cell
+// from c`, `editable Cell from self`) returns the exclusive loan itself: natively, `return editable c` lowers as
+// the `&mut` the parameter is, reborrowed (`&mut *c`), and a call whose result is such a loan is reborrowed where
+// one takes it, so the bound result (LR 7.6's own accept example), the result passed straight to another editable
+// parameter and a loan of a field path all build and run the same on every backend. Natively the returned loan
+// was once a read reference (`&*c`) and the loaned call result was wrapped in a second `&mut` (rustc E0308),
+// while the interpreter and the VM ran the program. Pre-existing since v0.0.1.
+import fortis.host { Console }
+
+export class Cell {
+  export value: Int
+}
+
+export class Pair {
+  export cell: Cell
+  export tag: String
+}
+
+func project(c: editable Cell) editable Cell from c {
+  return editable c
+}
+
+func projectField(p: editable Pair) editable Cell from p {
+  return editable p.cell
+}
+
+func setNine(c: editable Cell) {
+  c.value = 9
+}
+
+func bumpField(pair: editable Pair) {
+  let r = projectField(editable pair)
+  r.value = 5
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut cell = Cell(value: 0)
+  {
+    let result = project(editable cell)
+    result.value = 1
+  }
+  console.print("bumped ${cell.value}")
+  setNine(project(editable cell))
+  console.print("set ${cell.value}")
+  let mut pair = Pair(cell: Cell(value: 0), tag: "p" as String)
+  bumpField(editable pair)
+  console.print("field ${pair.cell.value}")
+}

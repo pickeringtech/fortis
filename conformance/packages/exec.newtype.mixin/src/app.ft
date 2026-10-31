@@ -1,0 +1,13 @@
+// execute: 1|3|42|9
+import exec.newtype.mixin.defs { Snapshot }
+import fortis.host { Console }
+class App with Snapshot {}
+class Other with Snapshot {}
+try func main(console: Console) {
+  let app = App()
+  console.print((app.read() or fail) as String)
+  console.print(app.direct() as String)
+  console.print(app.coin() as String)
+  let other = Other()
+  console.print(other.legacy() as String)
+}

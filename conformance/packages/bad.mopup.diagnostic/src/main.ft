@@ -1,0 +1,8 @@
+// reject: E-TYP-040 (at the marked line)
+// D-665: a nominal clash qualifies both spellings in the message and the type fields.
+import fortis.prelude
+class Bool derive Equatable, Hashable { n: Int }
+func wrong(xs: owned Map[Bool, Int]) Map[prelude.Bool, Int] {
+  return move xs // reject: E-TYP-040
+}
+func main() {}

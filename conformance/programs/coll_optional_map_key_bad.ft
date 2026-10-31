@@ -1,0 +1,13 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-06-16
+// 6.7 and 6.8 (X-479): `map` is the one method a `T?` has without a null test; any other is still the error 6.8 gives.
+// A key that `containsKey` and `remove` read must be a key of the map's type (a `StringView` for a `Map[String, V]`).
+func filters(items: List[Int]) Int? {
+  return items.first().filter(fn(n: Int) Bool => n > 0)       // reject: E-TYP-040: an optional has `map` only
+}
+
+func keys(stock: editable Map[String, Int], flags: Map[Int, Bool]) {
+  let a = stock.containsKey(5)                                // reject: E-TYP-040: an Int is not a String key
+  let b = stock.remove(5)                                     // reject: E-TYP-040: an Int is not a String key
+  let c = flags.containsKey("seven")                          // reject: E-TYP-040: a String is not an Int key
+}

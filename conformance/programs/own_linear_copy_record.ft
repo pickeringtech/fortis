@@ -1,0 +1,6 @@
+// reject: E-OWN-002, E-OBL-001
+// covers: LANG-07-01, LANG-10-02
+func demo() {
+  let first = { value: Must.create() }
+  let second = copy first
+}

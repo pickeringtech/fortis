@@ -87,6 +87,8 @@ def members_of(node) -> Set[str]:
         if isinstance(k, lexer.Token) and k.text == "derive" and i + 1 < len(kids) and not isinstance(kids[i + 1], lexer.Token):
             if any(t.kind == "UPPER" and t.text == "Default" for t in direct_tokens(kids[i + 1])):
                 out.add("default")
+            if any(t.text in ("From", "convert") for t in direct_tokens(kids[i + 1])):
+                out.add("from")
     return out
 
 
@@ -344,6 +346,28 @@ class Resolver:
             body = find(m, "funcBody")
             self.resolve_callable(head, body, s, is_method=True)
             return
+        cv = find(m, "convertDecl")
+        if cv is not None:
+            # a `convert` member (6.13, X-551): its head type resolves as a signature's; its body resolves as a
+            # method body: `convert to T` has `self`, `convert from S(s)` binds the one parameter
+            kids = children(cv)
+            tr_i = next(i for i, c in enumerate(kids) if tree.is_node(c) and name(c) == "typeRef")
+            self.check_types_in(kids[tr_i], s)
+            if kids[tr_i - 1].text == "to":
+                s.declare("self", {"kind": "self"})
+            else:
+                pname = next(t.text for t in kids[tr_i + 1:] if not tree.is_node(t) and t.kind == "LOWER")
+                s.declare(pname, {"kind": "param"})
+            body = find(cv, "funcBody")
+            if body is not None:
+                b = children(body)[0] if children(body) and name(children(body)[0]) == "block" else None
+                if b is not None:
+                    self.resolve_block(b, s)
+                else:
+                    e = find(body, "expr")
+                    if e is not None:
+                        self.resolve_expr(e, s)
+            return
         v = find(m, "variant")
         if v is not None:
             self.check_types_in(v, s)
@@ -593,6 +617,12 @@ class Resolver:
         info = scope.lookup(tok.text)
         if info is None:
             outer = self.lambda_outer(scope)
+            if outer is not None:
+                nearest = scope
+                while getattr(nearest, "lambda_outer", None) is None:
+                    nearest = nearest.parent
+                if getattr(nearest, "infer_captures", False):
+                    return self.check_root(tok, outer, members)
             if outer is not None and outer.lookup(tok.text) is not None:
                 self.rec("E-FUN-011", f"`{tok.text}` is not in the lambda's capture list", "LANG-08-03", tok, {"violation": "uncaptured name", "capture_span": tok.text, "use_span": tok.text})
                 return None
@@ -707,6 +737,7 @@ class Resolver:
         n = name(node)
         if n == "lambda":
             s = Scope(self.module_scope)          # names not in the capture list are inaccessible (8.3)
+            s.infer_captures = tree.child(node, "captureList") is None
             s.lambda_outer = scope                # type: ignore[attr-defined]
             cl = tree.child(node, "captureList")       # the lambda's own, not a nested lambda's (D-34)
             if cl is not None:
@@ -811,7 +842,9 @@ class Resolver:
                         else:
                             self.rec("E-NAM-001", f"`{up.text}` is not declared", "LANG-04-05", up, {"name": up.text, "candidates": sorted(v for v in self.enum_variants if v.startswith(up.text[:1]))[:6]})
                     elif member is not None and info.get("members") and member.text not in info["members"] and info.get("kind") in ("class", "enum") and info.get("origin") in ("prelude", "module") or (member is not None and info.get("members") and member.text not in info["members"] and str(info.get("origin", "")).startswith("fortis.")):
-                        if member.text not in ("validate", "fromText", "fromBytes"):   # validate (6.3) and the canonical decoders (6.10) exist on every eligible type
+                        # Eligibility and identity are checked by the typer: `from` may be supplied by an
+                        # implement block outside the declaration's own member list (6.13, X-552).
+                        if member.text not in ("validate", "fromText", "fromBytes", "from"):
                             self.rec("E-NAM-001", f"`{up.text}` has no member `{member.text}`", "LANG-04-05", member, {"name": f"{up.text}.{member.text}", "candidates": sorted(info["members"])[:8]})
                 # type arguments and refinements inside the typeRef, each once
                 for sub in find_all(tr, "typeRef"):

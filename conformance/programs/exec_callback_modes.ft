@@ -1,0 +1,42 @@
+// execute: 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5
+// requires: runtime
+// covers: LANG-08-04, LANG-08-02
+// D-541: written modes, named callables and context-inferred lambda modes.
+import fortis.host { Console }
+func read(f: pure fn(String) Int) Int {
+  let s = "hello" as String
+  return f(s)
+}
+func edit(f: pure fn(editable String) Int) Int {
+  let mut s = "hello" as String
+  return f(editable s)
+}
+func own(f: pure fn(owned String) Int) Int {
+  let s = "hello" as String
+  return f(move s)
+}
+pure func readSize(s: String) Int => s.byteCount()
+pure func editSize(s: editable String) Int => s.byteCount()
+pure func ownSize(s: owned String) Int => s.byteCount()
+func main(console: Console) {
+  let a = read(fn(s: String) Int => s.byteCount())
+  let b = edit(fn(s: editable String) Int => s.byteCount())
+  let c = own(fn(s: owned String) Int => s.byteCount())
+  let d = read(readSize)
+  let e = edit(editSize)
+  let f = own(ownSize)
+  let g = read(fn(s) => s.byteCount())
+  let h = edit(fn(s) => s.byteCount())
+  let i = own(fn(s) => s.byteCount())
+  let base = 0
+  let r: pure fn(String) Int = fn(s: String) Int => s.byteCount()
+  let efn: pure fn(editable String) Int = fn(s: editable String) Int => s.byteCount()
+  let ofn: pure fn(owned String) Int = fn(s: owned String) Int => s.byteCount()
+  let j = read(r)
+  let k = edit(efn)
+  let l = own(ofn)
+  let m = read(fn[base](s) => Int.saturatingAdd(base, s.byteCount()))
+  let n = edit(fn(s) => Int.saturatingAdd(base, s.byteCount()))
+  let o = own(fn(s) => Int.saturatingAdd(base, s.byteCount()))
+  console.print("${a} ${b} ${c} ${d} ${e} ${f} ${g} ${h} ${i} ${j} ${k} ${l} ${m} ${n} ${o}")
+}

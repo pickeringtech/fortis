@@ -1,0 +1,6 @@
+// reject: E-SYN-000
+// covers: LANG-06-15
+// A newtype declaration has no member body.
+type Pence = Int {
+  convert to String { return "money" }
+}

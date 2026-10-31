@@ -1,0 +1,76 @@
+// accept
+// covers: LANG-06-15
+// 6.13 (X-551): the declared conversions of a class or enum resolve `as`: `convert to T` and `convert from S(s)`,
+// total and `try`, a read loan and `owned` (the use site writes `move`); the body is a method body, and a chain
+// reads left to right through members and built-in rows alike.
+class Celsius {
+  degrees: Float
+
+  export convert to Fahrenheit {
+    return Fahrenheit(degrees: self.degrees * 9.0 / 5.0 + 32.0)
+  }
+  export convert from Fahrenheit(f) {
+    return Celsius(degrees: (f.degrees - 32.0) * 5.0 / 9.0)
+  }
+}
+
+class Fahrenheit {
+  degrees: Float
+}
+
+class Buffer {
+  bytes: Bytes
+
+  export try convert to Text(owned self) {
+    return Text(body: self.bytes as String or fail)
+  }
+  export convert from Text(t) {
+    return Buffer(bytes: t.body as Bytes)
+  }
+}
+
+class Text {
+  body: String
+}
+
+class Score {
+  points: Int
+
+  export try convert to Int8 {
+    return self.points as Int8 or fail       // fallible: conversion.out_of_range beyond the type
+  }
+  export convert from Int8(n) {
+    return Score(points: n as Int)
+  }
+}
+
+enum Coin {
+  Cent
+  Nickel
+
+  export convert to Int {
+    return match self {
+      Cent => 1
+      Nickel => 5
+    }
+  }
+  export convert from Int(n) {
+    return if n >= 5 { give Nickel } else { give Cent }
+  }
+}
+
+try func members(c: Celsius, f: Fahrenheit, t: Text, points: Int, n: Int) String {
+  let hot = c as Fahrenheit                  // total: the member on Celsius; `c` is loaned for it
+  let cold = f as Celsius                    // total: the member `convert from Fahrenheit` on Celsius
+  let buf = Buffer(bytes: "hi" as Bytes)
+  let text = move buf as Text or fail        // consuming: the member takes `owned self`
+  let back = text as Buffer                  // total: the member `convert from Text` on Buffer
+  let small = Score(points) as Int8 or fail
+  let score = small as Score                 // total: the member `convert from Int8` on Score
+  let coin = n as Coin as Int                // a chain: the member from Int, then the member to Int
+  let copied = copy t as Buffer              // a copy converted by the read-loan member
+  discard back
+  discard score
+  discard copied
+  return "${hot.degrees}/${cold.degrees}/${text.body}/${small as String}/${coin}"
+}

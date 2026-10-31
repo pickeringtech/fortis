@@ -1,0 +1,7 @@
+// accept
+// covers: LANG-04-04, LANG-06-06, LANG-06-10
+// D-591, X-640: the qualified requirement is a different interface, not a cycle.
+import fortis.prelude
+interface Hashable requires prelude.Hashable {}
+interface Equatable requires prelude.Equatable {}
+func keys[K](xs: owned Map[K, Int]) Map[K, Int] where K implements Hashable, K implements Equatable => move xs

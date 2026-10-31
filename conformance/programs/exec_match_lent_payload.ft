@@ -1,0 +1,82 @@
+// execute: v x|after match x|end|drop x|v x|after match x|end|drop x
+// requires: runtime
+// covers: LANG-07-07, LANG-09-06
+// D-394, 7.9, 9.8: a lent `match` payload is destroyed at its owner's end, not the arm's. `match move o` of a binding
+// that holds a loan (`let o = xs.get(0)`, or the `Outcome` of a `try` function whose result is that loan) moves the
+// loan, so the arm's binding holds a loan of the list's element, and a read after the match sees the element; the
+// list destroys it once, at the end of the function. The interpreter ran the cleanup at the arm's end in both shapes
+// and the VM in the optional's; native code was right. The token sits in a slot without a cleanup of its own, so
+// that no backend announces the arm's binding in its trace (D-344); the output shows the one cleanup.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+class Slot {
+  token: Token
+}
+
+func make(console: Shared[Console], label: StringView) Slot {
+  return Slot(token: Token(label: label as String, console: console.retain()))
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func pick(xs: List[Slot], c: Bool) (alias Slot from xs)? {
+  if c {
+    return xs.get(0)
+  }
+  fail Missing()
+}
+
+func plainOptional(console: Shared[Console]) {
+  let mut xs: List[Slot] = List.default()
+  xs.push(make(console, "x"))
+  {
+    let o = xs.get(0)
+    match move o {
+      present(v) => {
+        console.print("v ${v.token.label}")
+      }
+      null => console.print("none")
+    }
+    let again = xs.get(0) ?? make(console, "none")
+    console.print("after match ${again.token.label}")
+  }
+  console.print("end")
+}
+
+recovers func outcome(console: Shared[Console]) {
+  let mut xs: List[Slot] = List.default()
+  xs.push(make(console, "x"))
+  {
+    let o = pick(alias xs, true)
+    match move o {
+      success(v) => {
+        let s = v ?? make(console, "none")
+        console.print("v ${s.token.label}")
+      }
+      failure(f) => {
+        report f
+        console.print("f")
+      }
+    }
+    let again = xs.get(0) ?? make(console, "none")
+    console.print("after match ${again.token.label}")
+  }
+  console.print("end")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  plainOptional(console)
+  outcome(console)
+}

@@ -1,0 +1,8 @@
+// reject: E-OBL-001
+// covers: LANG-10-01
+// D-705: rc.1 regression.
+class Cell { export func take[T](self, m: owned T, f: fn(owned T) Int) Int where T: linear => f(move m) }
+func consume(m: owned Must) Int { Must.discharge(move m)
+  return 1 }
+func f(c: Cell?) { let m = Must.create()
+  let n = c?.take(move m, consume) }

@@ -1,0 +1,66 @@
+[
+  {
+    "name": "zwj",
+    "input": {
+      "left": "module\n  STR '\\u200d' 2:3",
+      "right": "module\n  STR '\u200d' 2:3"
+    },
+    "expect": true
+  },
+  {
+    "name": "quotes",
+    "input": {
+      "left": "module\n  STR 'text' 2:3",
+      "right": "module\n  STR \"text\" 2:3"
+    },
+    "expect": true
+  },
+  {
+    "name": "backslash",
+    "input": {
+      "left": "module\n  STR '\\\\u200d' 2:3",
+      "right": "module\n  STR '\u200d' 2:3"
+    },
+    "expect": false
+  },
+  {
+    "name": "value",
+    "input": {
+      "left": "module\n  STR 'a' 2:3",
+      "right": "module\n  STR 'b' 2:3"
+    },
+    "expect": false
+  },
+  {
+    "name": "position",
+    "input": {
+      "left": "module\n  STR 'a' 2:3",
+      "right": "module\n  STR 'a' 2:4"
+    },
+    "expect": false
+  },
+  {
+    "name": "kind",
+    "input": {
+      "left": "module\n  STR 'a' 2:3",
+      "right": "module\n  LOWER 'a' 2:3"
+    },
+    "expect": false
+  },
+  {
+    "name": "structure",
+    "input": {
+      "left": "module\n  literal\n    STR 'a' 2:3",
+      "right": "module\n  STR 'a' 2:3"
+    },
+    "expect": false
+  },
+  {
+    "name": "malformed",
+    "input": {
+      "left": "module\n  STR 'a' 2:3",
+      "right": "module\n  STR a 2:3"
+    },
+    "expect": false
+  }
+]

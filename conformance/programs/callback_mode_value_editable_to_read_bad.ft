@@ -1,0 +1,7 @@
+// reject: E-TYP-040
+// covers: LANG-08-04
+// D-541: callable parameter modes must match exactly.
+func use(f: pure fn(String) Int) {}
+func exercise(f: pure fn(editable String) Int) {
+  use(f)
+}

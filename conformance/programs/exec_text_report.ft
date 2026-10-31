@@ -1,0 +1,38 @@
+// execute: tea=3|coffee=12|bad line 5: oops|total 15 of 2 items|TEA+COFFEE
+// requires: runtime
+// covers: LANG-06-06, LANG-06-08
+// X-479, R19, 6.6 with 6.13: the text essentials together, as a small tool uses them: split a report into `lines`
+// (a Windows line ending included), `trim` each, skip blanks and comments with `startsWith`, cut a row at its comma
+// with `split`, parse the amount with `as Int`, and write the result with `join` and `asciiUpper`.
+import fortis.host { Console }
+
+recovers func main(console: Console) {
+  let text = "# amounts\r\n  tea, 3\r\n\r\ncoffee ,12 \noops\n"
+  let mut names: List[String] = List.default()
+  let mut sum = 0
+  let mut seen = 0
+  let mut number = 0
+  for row in text.lines() {
+    number = Int.wrappingAdd(number, 1)
+    let line = row.trim()
+    if line.scalarCount() == 0 || line.startsWith("#") {
+      continue
+    }
+    let fields = line.split(",")
+    if fields.count() != 2 {
+      console.print("bad line ${number}: ${line}")
+      continue
+    }
+    let rawName = fields.get(0) ?? ""
+    let rawAmount = fields.get(1) ?? ""
+    let name = rawName.trim()
+    let amount = rawAmount.trim()
+    let value = amount as Int or recover 0
+    console.print("${name}=${value}")
+    sum = Int.saturatingAdd(sum, value)
+    seen = Int.wrappingAdd(seen, 1)
+    names.push(name as String)
+  }
+  console.print("total ${sum} of ${seen} items")
+  console.print(String.join(names, "+").asciiUpper())
+}

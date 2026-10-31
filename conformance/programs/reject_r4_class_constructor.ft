@@ -1,0 +1,4 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+class Box { export n: Int }
+func main() { let f = Box }

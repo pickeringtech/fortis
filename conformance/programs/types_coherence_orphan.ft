@@ -1,7 +1,8 @@
-// reject: E-TYP-100 (at the marked line)
+// reject: E-TYP-100, E-TYP-171 (at the marked line)
 // covers: LANG-06-10
-// Neither Displayable nor Int is declared in this package.
-implement Displayable for Int {            // reject: E-TYP-100
+// Neither Displayable nor Int is declared in this package (coherence); and in Language 1.0 an `implement` block's
+// target is a class or enum the program declares, which a core type is not (X-180).
+implement Displayable for Int {            // reject: E-TYP-100, E-TYP-171
   pure func display(self, into: editable Builder) {
   }
 }

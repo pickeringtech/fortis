@@ -1,0 +1,25 @@
+// execute: 7|1|made|cleanup|done
+// requires: runtime
+// covers: LANG-04-04, LANG-07-07
+// D-592, X-640: a local view spelling owns its fields; a local Future has its declared cleanup.
+import fortis.host { Console }
+class StringView { export n: Int }
+class Task[T] { export value: T }
+class Future {
+  export console: Shared[Console]
+  cleanup(editable self) { self.console.print("cleanup") }
+}
+func make() StringView => StringView(n: 7)
+func scopeIt(console: Shared[Console]) {
+  let task = Future(console: console.retain())
+  console.print("made")
+}
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let value = make()
+  console.print("${value.n}")
+  let saved = List.of(Task(value: StringView(n: 8)))
+  console.print("${saved.count()}")
+  scopeIt(console)
+  console.print("done")
+}

@@ -1,0 +1,67 @@
+// reject: E-EFF-050, E-EFF-001 (at the marked lines)
+// covers: LANG-11-06
+// Contradictory contracts are rejected (11.5): `pure` with `requires capability` (a pure function receives no
+// authority), `forbids` of an effect a modifier permits (`async` with `forbids suspend`, `try` with `forbids fail`,
+// `recovers` with `forbids recovers`), and one authority both required and excluded. A contract's own contradiction is
+// reported at the contract; one between a function's written modifiers and a contract it carries, or between two
+// contracts it carries, at the function, where the side the function then breaks is reported too (E-EFF-001).
+import fortis.host { Clock }
+
+contract Timed {                               // reject: E-EFF-050 — pure with requires capability
+  pure
+  requires capability Clock
+}
+
+contract Quiet {                               // reject: E-EFF-050 — async with forbids suspend
+  async
+  forbids suspend
+}
+
+contract Sure {                                // reject: E-EFF-050 — try with forbids fail
+  try
+  forbids fail
+}
+
+contract Strict {                              // reject: E-EFF-050 — recovers with forbids recovers
+  recovers
+  forbids recovers
+}
+
+contract Torn {                                // reject: E-EFF-050 — Clock both required and excluded
+  requires capability Clock
+  excludes capability Clock
+}
+
+contract NoFail {
+  forbids fail
+}
+
+contract Calm {
+  pure
+}
+
+contract Ticks {
+  requires capability Clock
+}
+
+contract NoClock {
+  excludes capability Clock
+}
+
+contract Fallible {
+  try
+}
+
+NoFail try func risky(n: Int) Int => n         // reject: E-EFF-050 — try with a contract that forbids fail
+
+Fallible NoFail func both(n: Int) Int => n     // reject: E-EFF-050 — one contract's try, another's forbids fail
+
+Ticks pure func stamp(clock: Clock) Int => 1   // reject: E-EFF-050, E-EFF-001 — pure, and Ticks requires Clock
+
+Calm Ticks func calm(clock: Clock) Int => 1    // reject: E-EFF-050, E-EFF-001 — one contract's pure, another's Clock
+
+Ticks NoClock func torn(clock: Clock) Int => 1 // reject: E-EFF-050, E-EFF-001 — Clock required and excluded
+
+NoFail func safe(n: Int) Int => n
+
+Ticks func tick(clock: Clock) Int => 1

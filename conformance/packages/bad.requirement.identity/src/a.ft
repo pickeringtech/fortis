@@ -1,0 +1,3 @@
+// accept
+// D-67: one of two memberless interfaces named `Required`; b.ft declares the other.
+export interface Required {}

@@ -1,0 +1,8 @@
+// reject: E-TYP-180
+// covers: LANG-06-15
+// X-555: substitution matches whole source types, never their bare spelling.
+class Source[U] { tag: Int }
+class Target[T] derive convert from Source[T] { tag: Int }
+func wrong(source: Source[Int]) Target[String] {
+  return source as Target[String]
+}

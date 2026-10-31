@@ -1,0 +1,9 @@
+// reject: E-OWN-051
+// covers: LANG-07-06, LANG-06-08
+class Cell { text: String
+  func get(self) (alias String from self)? => alias self.text
+}
+func bad() (alias String from static)? {
+  let c: Cell? = Cell(text: "gone")
+  return c?.get()
+}

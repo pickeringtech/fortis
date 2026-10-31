@@ -11,12 +11,12 @@ enum Light {
   Wrap(n: Int)
 }
 
-func box[T](a: T) List[T] {
-  return List.of(a)
+func box[T](a: owned T) List[T] {
+  return List.of(move a)
 }
 
-func make[T](value: T) Box[T] {
-  return Box(value: value)
+func make[T](value: owned T) Box[T] {
+  return Box(value: move value)
 }
 
 func badBox() Int {

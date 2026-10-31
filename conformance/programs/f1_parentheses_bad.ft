@@ -1,0 +1,6 @@
+// reject: E-REF-001
+// covers: LANG-06-01, LANG-06-02, LANG-06-08
+func bad(x: Int<0..9>) Int<0..3> {
+  if ((x < 5) && (x >= 0)) { return x }
+  return 0
+}

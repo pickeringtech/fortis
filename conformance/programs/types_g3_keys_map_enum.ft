@@ -1,0 +1,6 @@
+// reject: E-TYP-090
+// covers: LANG-06-06
+// D-549, X-615: hash-container key requirements.
+enum Key { One
+  Two }
+func probe() { let bad: Map[Key, Int]? = null }

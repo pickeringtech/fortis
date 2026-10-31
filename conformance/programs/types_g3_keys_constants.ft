@@ -1,0 +1,6 @@
+// reject: E-TYP-090
+// covers: LANG-06-06
+// D-549: unused constant annotations still have to be well formed.
+class Plain { export n: Int }
+const absent: Map[Plain, Int]? = null
+class Holder { const absent: Set[Plain]? = null }

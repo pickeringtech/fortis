@@ -1,0 +1,29 @@
+// execute: 7|1|1|1|true
+// requires: runtime
+// covers: LANG-04-04, LANG-06-10
+// D-591, X-640: local interfaces and qualified core bounds coexist.
+import fortis.host { Console }
+import fortis.prelude
+interface Equatable { func marker(self) Int }
+interface Hashable requires Equatable {}
+class Item implements Equatable, Hashable {
+  export n: Int
+  func marker(self) Int => self.n
+}
+implement prelude.Equatable for Item {
+  pure func equals(self, other: Item) prelude.Bool => self.n == other.n
+}
+func local[T](x: T) Int where T implements Hashable => x.marker()
+func core[T](x: T) Int where T implements prelude.Hashable, T implements prelude.Equatable => 1
+func keys[K](x: Map[K, Int]) Int where K implements prelude.Hashable, K implements prelude.Equatable => x.count()
+func main(console: Console) {
+  console.print("${local(Item(n: 7))}")
+  console.print("${core(1)}")
+  let mut m: Map[Int, Int] = Map.default()
+  m.set(1, 9)
+  console.print("${keys(m)}")
+  let mut s: Set[Int] = Set.default()
+  discard s.add(1)
+  console.print("${s.count()}")
+  console.print("${Item(n: 7) == Item(n: 7)}")
+}

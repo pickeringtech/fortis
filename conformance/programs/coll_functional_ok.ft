@@ -1,0 +1,38 @@
+// accept
+// covers: LANG-06-16
+// 6.7 (X-479): the methods that only look at the elements need no `Copyable`, so a list of resources can be visited,
+// searched and folded; `find` lends the element it finds; a `try` callback is a lambda whose body is a call of a `try`
+// function; and the methods are on `ListView`, `Map` and `Set` as well.
+import fortis.host { Console }
+
+class Handle {
+  export guard: Mutex[Int]
+  export name: String
+}
+
+type Pence = Int<0..>
+
+try func addPence(a: Pence, b: Pence) Pence {
+  let sum = Int.add(a as Int, b as Int) or fail
+  return sum as Pence
+}
+
+func named(handles: ListView[Handle], wanted: StringView) (alias Handle from handles)? => handles.find(fn[alias wanted](h) => h.name == wanted)
+
+func count(handles: List[Handle]) Int => handles.fold(0, fn(sum, h) => Int.wrappingAdd(sum, h.name.byteCount()))
+
+func anyNamed(handles: List[Handle]) Bool => handles.any(fn(h) => h.name.byteCount() == 3)
+
+func visit(handles: List[Handle], console: Console) {
+  handles.each(fn[alias console](h) => console.print(h.name))
+}
+
+try func prices(values: List[Pence]) Pence => values.tryFold(0 as Pence, fn(sum, p) => addPence(sum, p)) or fail
+
+try func parse(lines: ListView[String]) List[Int] => lines.tryMap(fn(line) => line as Int) or fail
+
+func groups(words: List[String]) Map[Int, List[String]] => words.groupBy(fn(w) => w.byteCount())
+
+func overlap(a: Set[String], b: Set[String]) Set[String] => a.intersection(b)
+
+func label(size: Int?) String => size.map(fn(n) => "size ${n}") ?? "none"

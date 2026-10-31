@@ -1,0 +1,1 @@
+{"verdict": "execute", "expected": "3 false 1 3 2|1|2|3|6|4 4", "covers": ["LANG-06-01", "LANG-06-16", "LANG-08-02"], "runfile": "src/app.ft"}

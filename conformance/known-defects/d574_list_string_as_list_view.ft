@@ -1,0 +1,13 @@
+// D-574: both checkers accept a `List[String]` where a `List[StringView]` is declared (`let b: List[StringView] = mk()`),
+// although Language Reference 6.1 has no implicit conversion between distinct types and the same value is refused
+// for a `ListView[StringView]` parameter. A `List[StringView]` is then a list that may hold owned strings.
+import fortis.host { Console }
+
+func mk() List[String] {
+  return List.default()
+}
+
+func main(console: Console) {
+  let b: List[StringView] = mk()
+  console.print("${b.count()}")
+}

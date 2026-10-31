@@ -1,0 +1,508 @@
+[
+  {
+    "name": "alias_good",
+    "input": {
+      "source": "import fortis.text as words\nfunc main() { let f = words.graphemes\n let n = f(\"aé\") }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "alias_bad",
+    "input": {
+      "source": "import fortis.text as words\nfunc main() { let f = words.graphemes\n let n = f(42) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "module_good",
+    "input": {
+      "source": "import fortis.text\nfunc main() { let f = text.graphemes\n let n = f(\"aé\") }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "module_bad",
+    "input": {
+      "source": "import fortis.text\nfunc main() { let f = text.graphemes\n let n = f(42) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "braced_good",
+    "input": {
+      "source": "import fortis.text { graphemes }\nfunc main() { let f = graphemes\n let n = f(\"aé\") }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "braced_bad",
+    "input": {
+      "source": "import fortis.text { graphemes }\nfunc main() { let f = graphemes\n let n = f(42) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "array_good",
+    "input": {
+      "source": "func main() { let make = Array[Int, 2].filled\n let a = make(1) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "class_good",
+    "input": {
+      "source": "class Box[T] { export func size(value: T) Int => 1 }\nfunc main() { let f = Box[Int].size\n let n = f(1) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "array_bad",
+    "input": {
+      "source": "func main() { let make = Array[Int, 2].filled\n let a = make(\"wrong\") }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "class_bad",
+    "input": {
+      "source": "class Box[T] { export func size(value: T) Int => 1 }\nfunc main() { let f = Box[Int].size\n let n = f(\"wrong\") }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "array_unspecialised",
+    "input": {
+      "source": "func main() { let f = Array.filled }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "wrap"
+    }
+  },
+  {
+    "name": "class_unspecialised",
+    "input": {
+      "source": "class Box[T] { export func size(value: T) Int => 1 }\nfunc main() { let f = Box.size }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "wrap"
+    }
+  },
+  {
+    "name": "generic_free",
+    "input": {
+      "source": "func size[T](value: T) Int => 1\nfunc main() { let f = size }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "wrap"
+    }
+  },
+  {
+    "name": "generic_member",
+    "input": {
+      "source": "class Box { export func size[T](value: T) Int => 1 }\nfunc main() { let f = Box.size }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "wrap"
+    }
+  },
+  {
+    "name": "free_where",
+    "input": {
+      "source": "func size[T](value: T) Int where T implements Copyable => 1\nfunc main() { let f = size }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "wrap"
+    }
+  },
+  {
+    "name": "newtype_method",
+    "input": {
+      "source": "type Bag = List[Int]\nfunc main() { let b = Bag(List.of(1))\n let f = b.count }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "wrap"
+    }
+  },
+  {
+    "name": "class_method",
+    "input": {
+      "source": "class Box { export func size(self) Int => 1 }\nfunc main() { let b = Box()\n let f = b.size }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "wrap"
+    }
+  },
+  {
+    "name": "class_constructor",
+    "input": {
+      "source": "class Box { export n: Int }\nfunc main() { let f = Box }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "newtype_constructor",
+    "input": {
+      "source": "type Count = Int\nfunc main() { let f = Count }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "enum_choice_some_good",
+    "input": {
+      "source": "enum Choice[T] { Some(value: T) }\nfunc main() { let f: pure fn(Int) Choice[Int] = Choice.Some\n let c = f(1) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "enum_choice_some_bad",
+    "input": {
+      "source": "enum Choice[T] { Some(value: T) }\nfunc main() { let f: pure fn(Int) Choice[Int] = Choice.Some\n let c = f(\"bad\") }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "enum_choice_int_some_good",
+    "input": {
+      "source": "enum Choice[T] { Some(value: T) }\nfunc main() { let f: pure fn(Int) Choice[Int] = Choice[Int].Some\n let c = f(1) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "enum_choice_int_some_bad",
+    "input": {
+      "source": "enum Choice[T] { Some(value: T) }\nfunc main() { let f: pure fn(Int) Choice[Int] = Choice[Int].Some\n let c = f(\"bad\") }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "enum_some_good",
+    "input": {
+      "source": "enum Choice[T] { Some(value: T) }\nfunc main() { let f: pure fn(Int) Choice[Int] = Some\n let c = f(1) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "enum_some_bad",
+    "input": {
+      "source": "enum Choice[T] { Some(value: T) }\nfunc main() { let f: pure fn(Int) Choice[Int] = Some\n let c = f(\"bad\") }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "enum_untyped",
+    "input": {
+      "source": "enum Choice { Some(value: Int) }\nfunc main() { let f = Choice.Some }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "function type"
+    }
+  },
+  {
+    "name": "free_good",
+    "input": {
+      "source": "func size(value: Int) Int => value\nfunc main() { let f = size\n let n = f(1) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "free_bad",
+    "input": {
+      "source": "func size(value: Int) Int => value\nfunc main() { let f = size\n let n = f(\"bad\") }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "mode_bad",
+    "input": {
+      "source": "func size(value: owned String) Int => value.scalarCount()\nfunc main() { let f: fn(String) Int = size }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "mode_good",
+    "input": {
+      "source": "func size(value: owned String) Int => value.scalarCount()\nfunc main() { let f: fn(owned String) Int = size }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "local_shadow",
+    "input": {
+      "source": "func size(n: Int) Int => n\nfunc main() { let size = fn(n: Int) Int => n\n let f = size }"
+    },
+    "expect": {
+      "codes": [
+        "E-NAM-003",
+        "E-OWN-001"
+      ]
+    }
+  },
+  {
+    "name": "module_shadow",
+    "input": {
+      "source": "import fortis.text as words\nfunc main() { let words = { graphemes: fn(n: Int) Int => n }\n let f = words.graphemes }"
+    },
+    "expect": {
+      "codes": [
+        "E-NAM-003",
+        "E-OWN-001"
+      ]
+    }
+  },
+  {
+    "name": "marked_method",
+    "input": {
+      "source": "class Box { export func size(self) Int => 1 }\nfunc main() { let b = Box()\n let f = alias b.size }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "marked_newtype_method",
+    "input": {
+      "source": "type Bag = List[Int]\nfunc main() { let b = Bag(List.of(1))\n let f = alias b.count }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "generic_default",
+    "input": {
+      "source": "class Box[T] derive Default {}\nfunc main() { let f = Box.default }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "owner_self",
+    "input": {
+      "source": "class Box[T] { export func size(value: Self) Int => 1 }\nfunc f(b: Box[Int]) { let size = Box[Int].size\n let n = size(b) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "owned_intrinsic_mode",
+    "input": {
+      "source": "func main() { let make: pure fn(owned String) Shared[String] = Shared[String].create }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "local_closure",
+    "input": {
+      "source": "func main() { let a = fn(n: Int) Int => n\n let b = a }"
+    },
+    "expect": {
+      "codes": [
+        "E-OWN-001"
+      ]
+    }
+  },
+  {
+    "name": "marked_module_function",
+    "input": {
+      "source": "import fortis.text as words\nfunc main() { let f = alias words.graphemes\n let n = f(42) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "enum_incomplete",
+    "input": {
+      "source": "enum Choice[T] { Some(value: T) }\nfunc main() { let f: fn(Int) Choice = Choice.Some\n let n = f(1) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "dynamic_method",
+    "input": {
+      "source": "interface I { func size(self) Int }\nfunc f(x: dynamic I) { let m = x.size }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "parameter_method",
+    "input": {
+      "source": "interface I { func size(self) Int }\nfunc f[T](x: T) where T implements I { let m = x.size }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "generic_context",
+    "input": {
+      "source": "func size[T](value: T) Int => 1\nfunc apply(f: fn(Int) Int) Int => f(1)\nfunc main() { let n = apply(size) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "owner_context",
+    "input": {
+      "source": "class Box[T] { export func size(value: T) Int => 1 }\nfunc main() { let f: fn(Int) Int = Box.size\n let n = f(1) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "generic_storage",
+    "input": {
+      "source": "pure func store[T](value: owned T) Int { let xs = List.of(move value)\n return xs.count() }\npure func use(s: StringView) Int { let f: pure fn(owned StringView) Int = move store\n return f(s) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OWN-053"
+      ]
+    }
+  },
+  {
+    "name": "marked_main",
+    "input": {
+      "source": "func main() { let f = move main }"
+    },
+    "expect": {
+      "codes": [
+        "E-EFF-010"
+      ]
+    }
+  },
+  {
+    "name": "marked_named",
+    "input": {
+      "source": "func size(n: Int) Int => n\nfunc main() { let f = move size\n let n = f(1) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "marked_module_good",
+    "input": {
+      "source": "import fortis.text as words\nfunc main() { let f = alias words.graphemes\n let n = f(\"aé\") }"
+    },
+    "expect": {
+      "codes": []
+    }
+  }
+]

@@ -1,0 +1,24 @@
+// execute: 7|8|9|10|true|text
+// requires: runtime
+// covers: LANG-04-04, LANG-06-01
+// D-592, X-640: local scalar spellings retain their own representation on every backend.
+import fortis.host { Console }
+import fortis.prelude
+class Int { export n: prelude.Int }
+class String { export n: prelude.Int }
+class Bool { export n: prelude.Int }
+class Outcome { export n: prelude.Int }
+func main(console: Console) {
+  let a = Int(n: 7)
+  let b = String(n: 8)
+  let c = Bool(n: 9)
+  let d = Outcome(n: 10)
+  console.print("${a.n}")
+  console.print("${b.n}")
+  console.print("${c.n}")
+  console.print("${d.n}")
+  let yes: prelude.Bool = true
+  if yes { console.print("true") }
+  let text: prelude.String = "text"
+  console.print(text)
+}

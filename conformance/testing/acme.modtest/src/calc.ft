@@ -3,6 +3,9 @@
 // these tests could not run; both runners now load the enclosing package and resolve the import.
 import acme.modtest.numbers { double, isEven, Kind }
 
+// D-506: conversions in package tests use their module's checked conversion facts.
+type Positive = Int<1..>
+
 observation CalcTrace {
   value: Kind                          required: all
 }
@@ -19,11 +22,29 @@ export pure func quadruple(x: Int) Int {
 test "a test calls the sibling's functions" {
   expect quadruple(5) == 20
   expect isEven(quadruple(5))
+  let local = 3 as Positive
+  expect (local as Int) == 3
+  let imported = 4 as Kind
+  expect imported == Kind(4)
+  let rejected = 0 as Positive catch problem {
+    expect problem.code == "refinement.out_of_range"
+    report problem
+    recover Positive(1)
+  }
+  expect rejected == Positive(1)
 }
 
 test "a table test calls the sibling's functions" cases {
-  "two": { x: 2, want: 8 }
-  "three": { x: 3, want: 12 }
+  "two": { x: 2, want: 8, raw: -1, converted: 1 }
+  "three": { x: 3, want: 12, raw: 3, converted: 3 }
 } as row {
   expect quadruple(row.x) == row.want
+  let value = row.x as Positive or fail
+  expect (value as Int) == row.x
+  let checked = row.raw as Positive catch problem {
+    expect problem.code == "refinement.out_of_range"
+    report problem
+    recover Positive(1)
+  }
+  expect (checked as Int) == row.converted
 }

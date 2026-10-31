@@ -1,0 +1,11 @@
+// D-685: both checkers accept and interpreter/VM print 5; native refuses with E-INT-002.
+import fortis.host { Console }
+class Holder { export work: fn() Int }
+func field() Holder {
+  let s = "hello" as String
+  return Holder(work: fn[move s]() Int => s.byteCount())
+}
+func main(console: Console) {
+  let h = field()
+  console.print("${(h.work)()}")
+}

@@ -1,0 +1,389 @@
+[
+  {
+    "name": "prelude_shadow",
+    "input": {
+      "a": {
+        "name": "Bool",
+        "package": "<single>/main",
+        "args": [],
+        "origin": ""
+      },
+      "b": {
+        "name": "Bool",
+        "package": "",
+        "args": [],
+        "origin": ""
+      }
+    },
+    "expect": [
+      "main.Bool",
+      "prelude.Bool"
+    ]
+  },
+  {
+    "name": "map_key",
+    "input": {
+      "a": {
+        "name": "Map",
+        "package": "",
+        "args": [
+          {
+            "name": "Bool",
+            "package": "<single>/main",
+            "args": [],
+            "origin": ""
+          },
+          {
+            "name": "Int",
+            "package": "",
+            "args": [],
+            "origin": ""
+          }
+        ],
+        "origin": ""
+      },
+      "b": {
+        "name": "Map",
+        "package": "",
+        "args": [
+          {
+            "name": "Bool",
+            "package": "",
+            "args": [],
+            "origin": ""
+          },
+          {
+            "name": "Int",
+            "package": "",
+            "args": [],
+            "origin": ""
+          }
+        ],
+        "origin": ""
+      }
+    },
+    "expect": [
+      "Map[main.Bool, Int]",
+      "Map[prelude.Bool, Int]"
+    ]
+  },
+  {
+    "name": "separate_modules",
+    "input": {
+      "a": {
+        "name": "Node",
+        "package": "app@1/first",
+        "args": [],
+        "origin": ""
+      },
+      "b": {
+        "name": "Node",
+        "package": "app@1/second",
+        "args": [],
+        "origin": ""
+      }
+    },
+    "expect": [
+      "first.Node",
+      "second.Node"
+    ]
+  },
+  {
+    "name": "separate_versions",
+    "input": {
+      "a": {
+        "name": "Node",
+        "package": "app@1/main",
+        "args": [],
+        "origin": ""
+      },
+      "b": {
+        "name": "Node",
+        "package": "app@2/main",
+        "args": [],
+        "origin": ""
+      }
+    },
+    "expect": [
+      "app@1/main.Node",
+      "app@2/main.Node"
+    ]
+  },
+  {
+    "name": "unambiguous",
+    "input": {
+      "a": {
+        "name": "String",
+        "package": "",
+        "args": [],
+        "origin": ""
+      },
+      "b": {
+        "name": "Int",
+        "package": "",
+        "args": [],
+        "origin": ""
+      }
+    },
+    "expect": [
+      "String",
+      "Int"
+    ]
+  },
+  {
+    "name": "same_identity",
+    "input": {
+      "a": {
+        "name": "Bool",
+        "package": "<single>/main",
+        "args": [],
+        "origin": ""
+      },
+      "b": {
+        "name": "Bool",
+        "package": "<single>/main",
+        "args": [],
+        "origin": ""
+      }
+    },
+    "expect": [
+      "Bool",
+      "Bool"
+    ]
+  },
+  {
+    "name": "core_modules",
+    "input": {
+      "a": {
+        "name": "Handle",
+        "package": "",
+        "args": [],
+        "origin": "fortis.files"
+      },
+      "b": {
+        "name": "Handle",
+        "package": "",
+        "args": [],
+        "origin": "fortis.host"
+      }
+    },
+    "expect": [
+      "files.Handle",
+      "host.Handle"
+    ]
+  },
+  {
+    "name": "same_spelling_in_one",
+    "input": {
+      "a": {
+        "name": "Map",
+        "package": "",
+        "args": [
+          {
+            "name": "Bool",
+            "package": "<single>/main",
+            "args": [],
+            "origin": ""
+          },
+          {
+            "name": "Bool",
+            "package": "",
+            "args": [],
+            "origin": ""
+          }
+        ],
+        "origin": ""
+      },
+      "b": {
+        "name": "Int",
+        "package": "",
+        "args": [],
+        "origin": ""
+      }
+    },
+    "expect": [
+      "Map[main.Bool, prelude.Bool]",
+      "Int"
+    ]
+  },
+  {
+    "name": "optional",
+    "input": {
+      "a": {
+        "optional": {
+          "name": "Bool",
+          "package": "<single>/main",
+          "args": [],
+          "origin": ""
+        }
+      },
+      "b": {
+        "optional": {
+          "name": "Bool",
+          "package": "",
+          "args": [],
+          "origin": ""
+        }
+      }
+    },
+    "expect": [
+      "main.Bool?",
+      "prelude.Bool?"
+    ]
+  },
+  {
+    "name": "function",
+    "input": {
+      "a": {
+        "fn": [
+          [
+            {
+              "name": "Bool",
+              "package": "<single>/main",
+              "args": [],
+              "origin": ""
+            }
+          ],
+          {
+            "name": "Bool",
+            "package": "",
+            "args": [],
+            "origin": ""
+          }
+        ]
+      },
+      "b": {
+        "fn": [
+          [
+            {
+              "name": "Bool",
+              "package": "",
+              "args": [],
+              "origin": ""
+            }
+          ],
+          {
+            "name": "Bool",
+            "package": "<single>/main",
+            "args": [],
+            "origin": ""
+          }
+        ]
+      }
+    },
+    "expect": [
+      "fn(main.Bool) prelude.Bool",
+      "fn(prelude.Bool) main.Bool"
+    ]
+  },
+  {
+    "name": "loan",
+    "input": {
+      "a": {
+        "loan": {
+          "name": "Bool",
+          "package": "<single>/main",
+          "args": [],
+          "origin": ""
+        }
+      },
+      "b": {
+        "loan": {
+          "name": "Bool",
+          "package": "",
+          "args": [],
+          "origin": ""
+        }
+      }
+    },
+    "expect": [
+      "alias main.Bool from owner",
+      "alias prelude.Bool from owner"
+    ]
+  },
+  {
+    "name": "record",
+    "input": {
+      "a": {
+        "record": [
+          [
+            "x",
+            {
+              "name": "Bool",
+              "package": "<single>/main",
+              "args": [],
+              "origin": ""
+            }
+          ]
+        ]
+      },
+      "b": {
+        "record": [
+          [
+            "x",
+            {
+              "name": "Bool",
+              "package": "",
+              "args": [],
+              "origin": ""
+            }
+          ]
+        ]
+      }
+    },
+    "expect": [
+      "{ x: main.Bool }",
+      "{ x: prelude.Bool }"
+    ]
+  },
+  {
+    "name": "refinement",
+    "input": {
+      "a": {
+        "refined": {
+          "name": "Int",
+          "package": "<single>/main",
+          "args": [],
+          "origin": ""
+        }
+      },
+      "b": {
+        "refined": {
+          "name": "Int",
+          "package": "",
+          "args": [],
+          "origin": ""
+        }
+      }
+    },
+    "expect": [
+      "main.Int<0..10>",
+      "prelude.Int<0..10>"
+    ]
+  },
+  {
+    "name": "dynamic",
+    "input": {
+      "a": {
+        "dynamic": {
+          "name": "Show",
+          "package": "app@1/one",
+          "args": [],
+          "origin": ""
+        }
+      },
+      "b": {
+        "dynamic": {
+          "name": "Show",
+          "package": "app@1/two",
+          "args": [],
+          "origin": ""
+        }
+      }
+    },
+    "expect": [
+      "dynamic one.Show",
+      "dynamic two.Show"
+    ]
+  }
+]

@@ -1,0 +1,10 @@
+// reject: E-OWN-001, E-TYP-090
+// covers: LANG-10-02, LANG-06-16
+// A move marker cannot turn a borrowing signature into a consuming one.
+recovers func map(xs: owned List[Outcome[Int]]) {
+  discard move xs.map(fn(item) => 1)
+}
+recovers func filter(xs: owned List[Outcome[Int]]) {
+  let result = move xs.filter(fn(item) => true)
+  move result.consumeEach(fn(item) { discard item or recover 0 })
+}

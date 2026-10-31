@@ -748,7 +748,9 @@ impl<'p> Vm<'p> {
                 Some(t) => self.await_task(t),
             },
             Value::Task(t) => self.await_task(t.id),
-            other => dynamic(format!("await of a value that is not a future or task: {}", display(&other))),
+            // a synchronous implementation of an interface's async member, awaited through a bound or a `dynamic` value:
+            // it did less than the interface allows (9.5), and its result is already the awaited value (D-89)
+            other => Ok(other),
         }
     }
 

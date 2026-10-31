@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-06-06
+// D-549, X-615: hash-container key requirements.
+class Plain { export n: Int }
+class Map[K, V] { export key: K
+  export value: V }
+class Set[T] { export item: T }
+func probe() { let m: Map[Plain, Int]? = null
+  let s: Set[Plain]? = null }

@@ -1,0 +1,4 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+class Box[T] derive Default {}
+func main() { let f = Box.default }

@@ -1,0 +1,12 @@
+// reject: E-TYP-160
+// covers: LANG-06-11, LANG-10-02
+// D-547: a later put cannot silently fix an unbounded generic owner's type.
+class Bin[T] {
+  items: List[T] = List.default()
+  export pure func default() Bin[T] => Bin(items: List.default())
+  export func put(editable self, item: owned T) { self.items.push(move item) }
+}
+func exercise() {
+  let mut b = Bin.default()
+  b.put(Outcome.success(1))
+}

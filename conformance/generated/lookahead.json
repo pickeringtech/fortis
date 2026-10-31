@@ -1,12 +1,12 @@
 {
- "grammar_sha256": "92246869e741341209aa1a55156eb9cb1dedec9eccc73c8802789cdae27f0167",
+ "grammar_sha256": "690e39fe67dca91ac6ac3dfbfc3d96a2bcd7726353592e2181fc4ce8f5ba41b5",
  "kmax": 3,
  "runs": [
   {
    "k": 1,
-   "decisions": 293,
-   "conflicts": 85,
-   "undocumented": 10,
+   "decisions": 308,
+   "conflicts": 94,
+   "undocumented": 11,
    "conflict_list": [
     {
      "rule": "identList",
@@ -53,6 +53,18 @@
      ],
      "shared": [
       "export"
+     ],
+     "policy": null
+    },
+    {
+     "rule": "classMember",
+     "where": "alternative",
+     "branches": [
+      2,
+      3
+     ],
+     "shared": [
+      "try"
      ],
      "policy": null
     },
@@ -127,23 +139,6 @@
       "KIND:NL"
      ],
      "policy": "P2"
-    },
-    {
-     "rule": "mixinMember",
-     "where": "alternative",
-     "branches": [
-      0,
-      1
-     ],
-     "shared": [
-      "KIND:UPPER",
-      "async",
-      "noalloc",
-      "pure",
-      "recovers",
-      "trusted"
-     ],
-     "policy": "P3"
     },
     {
      "rule": "contractDecl",
@@ -665,6 +660,18 @@
      "policy": "P2"
     },
     {
+     "rule": "asExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "as"
+     ],
+     "policy": "P2"
+    },
+    {
      "rule": "markerExpr",
      "where": "option",
      "branches": [
@@ -673,7 +680,8 @@
      ],
      "shared": [
       "(",
-      "."
+      ".",
+      "?."
      ],
      "policy": "P2"
     },
@@ -728,6 +736,18 @@
      ],
      "shared": [
       "."
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "postfix",
+     "where": "alternative",
+     "branches": [
+      0,
+      3
+     ],
+     "shared": [
+      "?."
      ],
      "policy": "P3"
     },
@@ -864,6 +884,18 @@
      "policy": "P2"
     },
     {
+     "rule": "lambda",
+     "where": "alternative",
+     "branches": [
+      0,
+      2
+     ],
+     "shared": [
+      "{"
+     ],
+     "policy": "P3"
+    },
+    {
      "rule": "matchExpr",
      "where": "option",
      "branches": [
@@ -893,6 +925,83 @@
      "branches": [
       0,
       1
+     ],
+     "shared": [
+      "{"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      2
+     ],
+     "shared": [
+      "KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      3
+     ],
+     "shared": [
+      "KIND:BYTES",
+      "KIND:DEC",
+      "KIND:DUR",
+      "KIND:FLOAT",
+      "KIND:INT",
+      "KIND:RAW"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      4
+     ],
+     "shared": [
+      "KIND:UPPER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      6
+     ],
+     "shared": [
+      "null"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      10
+     ],
+     "shared": [
+      "("
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      11
      ],
      "shared": [
       "{"
@@ -1065,27 +1174,10 @@
   },
   {
    "k": 2,
-   "decisions": 293,
-   "conflicts": 43,
+   "decisions": 308,
+   "conflicts": 48,
    "undocumented": 2,
    "conflict_list": [
-    {
-     "rule": "mixinMember",
-     "where": "alternative",
-     "branches": [
-      0,
-      1
-     ],
-     "shared": [
-      "KIND:UPPER KIND:UPPER",
-      "KIND:UPPER async",
-      "KIND:UPPER noalloc",
-      "KIND:UPPER pure",
-      "KIND:UPPER recovers",
-      "KIND:UPPER trusted"
-     ],
-     "policy": "P3"
-    },
     {
      "rule": "funcSignature",
      "where": "alternative",
@@ -1466,6 +1558,19 @@
      "policy": "P2"
     },
     {
+     "rule": "asExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "as KIND:LOWER",
+      "as KIND:UPPER"
+     ],
+     "policy": "P2"
+    },
+    {
      "rule": "markerExpr",
      "where": "option",
      "branches": [
@@ -1526,6 +1631,19 @@
      "shared": [
       ". KIND:KW",
       ". KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "postfix",
+     "where": "alternative",
+     "branches": [
+      0,
+      3
+     ],
+     "shared": [
+      "?. KIND:KW",
+      "?. KIND:LOWER"
      ],
      "policy": "P3"
     },
@@ -1606,6 +1724,19 @@
      "policy": "P2"
     },
     {
+     "rule": "lambda",
+     "where": "alternative",
+     "branches": [
+      0,
+      2
+     ],
+     "shared": [
+      "{ KIND:LOWER",
+      "{ KIND:NL"
+     ],
+     "policy": "P3"
+    },
+    {
      "rule": "matchExpr",
      "where": "option",
      "branches": [
@@ -1629,6 +1760,47 @@
       "{ KIND:LOWER",
       "{ KIND:NL",
       "{ KIND:UPPER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      4
+     ],
+     "shared": [
+      "KIND:UPPER ("
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      10
+     ],
+     "shared": [
+      "( (",
+      "( -",
+      "( KIND:BYTES",
+      "( KIND:DEC",
+      "( KIND:DUR",
+      "( KIND:FLOAT"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      11
+     ],
+     "shared": [
+      "{ KIND:LOWER"
      ],
      "policy": "P3"
     },
@@ -1720,27 +1892,10 @@
   },
   {
    "k": 3,
-   "decisions": 293,
-   "conflicts": 36,
+   "decisions": 308,
+   "conflicts": 41,
    "undocumented": 0,
    "conflict_list": [
-    {
-     "rule": "mixinMember",
-     "where": "alternative",
-     "branches": [
-      0,
-      1
-     ],
-     "shared": [
-      "KIND:UPPER KIND:UPPER KIND:UPPER",
-      "KIND:UPPER KIND:UPPER async",
-      "KIND:UPPER KIND:UPPER noalloc",
-      "KIND:UPPER KIND:UPPER pure",
-      "KIND:UPPER KIND:UPPER recovers",
-      "KIND:UPPER KIND:UPPER trusted"
-     ],
-     "policy": "P3"
-    },
     {
      "rule": "funcSignature",
      "where": "alternative",
@@ -2085,6 +2240,23 @@
      "policy": "P2"
     },
     {
+     "rule": "asExpr",
+     "where": "repetition",
+     "branches": [
+      0,
+      1
+     ],
+     "shared": [
+      "as KIND:LOWER .",
+      "as KIND:UPPER !=",
+      "as KIND:UPPER %",
+      "as KIND:UPPER &",
+      "as KIND:UPPER &&",
+      "as KIND:UPPER ("
+     ],
+     "policy": "P2"
+    },
+    {
      "rule": "markerExpr",
      "where": "option",
      "branches": [
@@ -2145,6 +2317,19 @@
      "shared": [
       ". KIND:KW (",
       ". KIND:LOWER ("
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "postfix",
+     "where": "alternative",
+     "branches": [
+      0,
+      3
+     ],
+     "shared": [
+      "?. KIND:KW (",
+      "?. KIND:LOWER ("
      ],
      "policy": "P3"
     },
@@ -2217,6 +2402,19 @@
      "policy": "P2"
     },
     {
+     "rule": "lambda",
+     "where": "alternative",
+     "branches": [
+      0,
+      2
+     ],
+     "shared": [
+      "{ KIND:LOWER :",
+      "{ KIND:NL KIND:LOWER"
+     ],
+     "policy": "P3"
+    },
+    {
      "rule": "matchExpr",
      "where": "option",
      "branches": [
@@ -2244,6 +2442,52 @@
       "{ KIND:LOWER :",
       "{ KIND:NL KIND:LOWER",
       "{ KIND:NL KIND:UPPER"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      4
+     ],
+     "shared": [
+      "KIND:UPPER ( (",
+      "KIND:UPPER ( -",
+      "KIND:UPPER ( KIND:BYTES",
+      "KIND:UPPER ( KIND:DEC",
+      "KIND:UPPER ( KIND:DUR",
+      "KIND:UPPER ( KIND:FLOAT"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      10
+     ],
+     "shared": [
+      "( ( (",
+      "( ( -",
+      "( ( KIND:BYTES",
+      "( ( KIND:DEC",
+      "( ( KIND:DUR",
+      "( ( KIND:FLOAT"
+     ],
+     "policy": "P3"
+    },
+    {
+     "rule": "pattern",
+     "where": "alternative",
+     "branches": [
+      0,
+      11
+     ],
+     "shared": [
+      "{ KIND:LOWER :"
      ],
      "policy": "P3"
     },

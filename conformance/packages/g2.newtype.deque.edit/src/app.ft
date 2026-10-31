@@ -1,0 +1,7 @@
+// reject: E-NAM-004
+import fortis.host { Console }
+import g2.newtype.deque.edit.defs as defs
+func main(console: Console) {
+  let mut queue = defs.make()
+  queue.pushBack(4)
+}

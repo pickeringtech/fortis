@@ -1,0 +1,14 @@
+// accept
+// covers: LANG-06-08, LANG-09-07
+// D-605: native refuses direct present injection into an optional dynamic interface parameter.
+import fortis.host { Console }
+interface Named { func title(self) String }
+class Item implements Named { export func title(self) String => "item" }
+func read(value: dynamic Named?) String {
+  if value == null { return "none" }
+  return value.title()
+}
+func main(console: Console) {
+  let item = Item()
+  console.print(read(item))
+}

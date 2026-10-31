@@ -1,0 +1,9 @@
+// execute: 2
+// requires: runtime
+// covers: LANG-06-11
+import fortis.host { Console }
+func make[T](value: T) Array[T, 2] where T implements Copyable => Array[T].filled(value)
+func main(console: Console) {
+  let a = make(4)
+  console.print("${a.count()}")
+}

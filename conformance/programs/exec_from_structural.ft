@@ -67,7 +67,7 @@ func ints(xs: List[Int]) alias (Int, Int) from xs {
 }
 
 func make(console: Shared[Console], label: StringView) Token {
-  return Token(label: String.from(label), console: console.retain())
+  return Token(label: label as String, console: console.retain())
 }
 
 func main(out: Console) {

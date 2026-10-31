@@ -1,0 +1,17 @@
+// backstop: before|dynamic:expect:10:actual=false expected=true
+// D-414: `expect` in an ordinary function body, which both checkers once accepted (E-TYP-120 now, LR 14: `expect` is
+// test code). Built without the checker's verdict, a failing one stops the run with a dynamic check failure, reported
+// after the lines printed before it, on the interpreter as on the VM. The interpreter once stopped with an uncaught
+// traceback and no record. A deferred block's `expect` is the same statement and stops the run the same way.
+import fortis.host { Console }
+
+func positive(n: Int) Int {
+  let ok = n > 0
+  expect ok
+  return n
+}
+
+func main(console: Console) {
+  console.print("before")
+  console.print("got ${positive(0)}")
+}

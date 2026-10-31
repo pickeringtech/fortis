@@ -1,0 +1,22 @@
+// execute: 2|3|6|4|7
+// requires: runtime
+// covers: LANG-08-02, LANG-08-03
+import fortis.host { Console }
+const extra = 1
+func call(f: editable fn mut() Void) { f() }
+func main(console: Console) {
+  let mut n = 0
+  call((fn() { n = 2 }))
+  console.print("${n}")
+  call(fn() {
+    let local = 3
+    call(fn() { n = local })
+  })
+  console.print("${n}")
+  let xs = List.of(2, 3)
+  let factor = 2
+  let ys = xs.map(fn(x) => Int.wrappingMul(x, factor))
+  for y in ys.reversed() { console.print("${y}") }
+  call(fn() { n = Int.wrappingAdd(n, Int.wrappingAdd(factor, extra)) })
+  console.print("${Int.wrappingAdd(n, extra)}")
+}

@@ -1,0 +1,16 @@
+// reject: E-OBL-003 (at the marked line)
+// covers: LANG-10-02
+// X-519: a generic that holds one of its own type parameters by value — an `owned T` parameter — cannot be
+// instantiated with a linear type unless it declares `T: linear`: the value's obligation would open in a body
+// that treats `T` as non-linear and cannot hold it. The call is rejected with the callee named; the repairs are
+// the bound, with a body that consumes the value (X-520), or taking `T` by loan, which leaves the value and its
+// obligation with the caller.
+import fortis.host { Console }
+
+func sink[T](x: owned T) {
+}
+
+recovers func main(console: Console) {
+  let r = Int<0..10>.validate(3)
+  sink(move r)                                  // reject: E-OBL-003 — `sink` holds `T` by value without the bound
+}

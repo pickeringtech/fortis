@@ -1,0 +1,8 @@
+// execute: 2
+// requires: runtime
+// covers: LANG-04-02
+import fortis.host { Console }
+import fortis.text
+func main(console: Console) {
+  console.print("${text.graphemes("aé")}")
+}

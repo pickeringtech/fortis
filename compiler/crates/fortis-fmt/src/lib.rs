@@ -17,9 +17,11 @@
 //!
 //! `format_reprinting` first rewrites the old forms v0.0.2 replaced (`old_forms`, X-345), then prints back the inferred facts of a module the checker accepts (Programme 9.3, X-130):
 //! the single-word modifiers of each named contract (a lambda's inferred `pure` and `noalloc` are not printed, LR 8.2,
-//! X-345). The module with the facts written must check exactly as before. `fortis fmt` uses it.
+//! X-345). Capture lists and kinds inferred for directly loaned callbacks are also absent from the written
+//! token stream (LR 8.2, X-580); explicit capture lists and kinds are kept. The module with the facts written must check exactly as before. `fortis fmt` uses it.
 
 mod old_forms;
+mod conversions;
 pub mod migrate;
 
 use fortis_syntax::lexer::{lex, Kind, Token};
@@ -173,6 +175,11 @@ pub fn format_migrating(src: &str, file: &str) -> Result<(String, Vec<Insertion>
 /// their own is rewritten, and each rewrite verified, in its package (the module's file replaced in memory, nothing
 /// else read differently); its inferred facts are not printed back, as for any module that does not check alone.
 pub fn format_migrating_in(src: &str, unit: Unit) -> Result<(String, Vec<Insertion>, usize), FormatError> {
+    format_migrating_options_in(src, unit, true)
+}
+
+/// As `format_migrating_in`, with the conversion retirements disabled by the CLI's `--no-migrate` switch.
+pub fn format_migrating_options_in(src: &str, unit: Unit, retire_conversions: bool) -> Result<(String, Vec<Insertion>, usize), FormatError> {
     let file = match unit {
         Unit::Alone(file) => file.to_string(),
         Unit::Package { file, .. } => file.display().to_string(),
@@ -181,8 +188,8 @@ pub fn format_migrating_in(src: &str, unit: Unit) -> Result<(String, Vec<Inserti
     // the old forms first (`old_forms`), then the reading forms (`fortis_types::migrate`)
     let src = old_forms::rewrite_in(&src.replace("\r\n", "\n"), unit)?.0;
     let mut ins = Vec::new();
-    let mut text = src.clone();
-    let mut rewritten = 0;
+    let (mut text, mut rewritten, notes) = if retire_conversions { conversions::rewrite_in(&src, unit) } else { (src.clone(), 0, vec![]) };
+    for note in notes { eprintln!("{file}:{note}"); }
     // a rewrite that overlaps another waits for the next round, so the result is a fixed point
     for _ in 0..4 {
         let Ok(parsed) = fortis_syntax::parse_module(&text) else { break };

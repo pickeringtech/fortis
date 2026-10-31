@@ -44,7 +44,7 @@ pure func checkout(prices: List[Int<0..1000>], coupon: String) Int {
 }
 
 func main(console: Console) {
-  let prices = List.of(120, 45, 300)
+  let prices: List[Int<0..1000>] = List.of(120, 45, 300)
   console.print("total ${checkout(prices, "SPRING")}")
 }
 ```

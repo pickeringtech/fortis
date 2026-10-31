@@ -1,0 +1,14 @@
+// reject: E-TYP-040, E-MAT-001
+// covers: LANG-08-01
+import fortis.host { Console }
+try func parse(s: String) Int => s as Int or fail
+func main(console: Console) {
+  let f = parse
+  match move f("3") {
+    success(inner) => match move inner {
+      success(n) => console.print("deep ${n}")
+      failure(_) => console.print("inner-fail")
+    }
+    failure(_) => console.print("outer-fail")
+  }
+}

@@ -1,0 +1,15 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-01
+// A generic class's constructor takes its type arguments from the expected type when the written type has none
+// (6.10, 9.2; D-66): `Pair(a: "x", b: 1)` where a `Pair[Int, String]` is expected checks `a` against `Int` and `b`
+// against `String`.
+class Pair[A, B] {
+  a: A
+  b: B
+}
+
+func main() {
+  let p: Pair[Int, String] = Pair(a: "x", b: 1)       // reject: E-TYP-040
+  let q: Pair[Int, String] = Pair(a: 1, b: "y")
+  let r = Pair(a: 1, b: "z" as String)
+}

@@ -1,6 +1,9 @@
 //! Match, patterns and if-expressions (Language Reference 5.3, 9.8): the pattern half of checker/typer.py.
 
+use crate::decls::named_of_decl;
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
+use std::rc::Rc;
 
 use fortis_diag::Json;
 use fortis_syntax::lexer::{Kind, Token};
@@ -8,7 +11,7 @@ use fortis_syntax::view::{C, N};
 
 use super::*;
 use crate::literals::{assignable, is_strlit, literal_type};
-use crate::owners::Owners;
+use crate::owners::{Loan, LoanData, Owners};
 use crate::types::*;
 
 impl<'a> Typer<'a> {
@@ -41,12 +44,21 @@ impl<'a> Typer<'a> {
             self.own.move_(p);
         }
         let owning = moving || sp.is_none();
+        // a temporary scrutinee that lends (`match xs.get(0)`): the loans it carries are held by the arms' payload
+        // bindings, so the owner cannot change while an arm reads them (7.3; D-355)
+        let scrut_loans: Vec<Loan> = if sp.is_none() { self.carried.iter().filter(|l| l.borrow().holder.is_none()).cloned().collect() } else { vec![] };
+        let mut handed: Vec<Loan> = Vec::new();
+        let mut owned_arm = false;
         let kw = ctok(kids[0]).clone();
         let arms = node.child_nodes("matchArm");
         let mut covered: BTreeSet<String> = BTreeSet::new();
         let mut catch_all: Option<Token> = None;
         let mut arm_results: Vec<(Type, Token)> = Vec::new();
         let closed = self.closed_variants(&st);
+        // a refined integer scrutinee (9.8, X-518): the arms' range intervals together cover its interval, or the
+        // uncovered values are named (E-MAT-001); an unrefined integer keeps the catch-all rule
+        let scrut_iv: Option<Interval> = if matches!(st, Type::Refined { .. }) { int_bounds(&st) } else { None };
+        let mut covered_iv: Vec<Interval> = vec![];
         // D-76: each arm runs from the state left when the arms before it did not match (a failed `when` guard keeps its
         // effects); the state after the match joins the arms that complete
         let entry = self.facts.clone();
@@ -88,6 +100,7 @@ impl<'a> Typer<'a> {
                 cov.extend(c);
                 is_catch = is_catch || k;
             }
+            let arm_ivs: Vec<Interval> = pats.iter().filter_map(|p| self.pattern_interval(*p, &st)).collect(); // the arm's ranges (9.8)
             let irrefutable = pats.iter().any(|p| self.irrefutable(*p));
             let mut arm_holders = Vec::new();
             let mut arm_obligations = Vec::new();
@@ -119,6 +132,35 @@ impl<'a> Typer<'a> {
                         arm_holders.push(b.clone());
                     }
                 }
+            } else if !scrut_loans.is_empty() {
+                for b in bound.clone() {
+                    if let Some(bb) = env_local(&e, &b) {
+                        if self.is_bearing(&bb.ty) || self.holds_loan(&bb.ty) {
+                            for l in &scrut_loans {
+                                let ld = l.borrow().clone();
+                                let d = self.depth + 1;
+                                crate::journal::loan(&ld.owner, &ld.mode, Some(&b), d, ld.line);
+                                let c = Rc::new(RefCell::new(LoanData { owner: ld.owner, mode: ld.mode, holder: Some(b.clone()), depth: d, line: ld.line, nested: true, via: ld.via, parent: ld.parent }));
+                                self.own.loans.push(c.clone());
+                                self.own.holders.set_default(&b, c);
+                            }
+                            arm_holders.push(b.clone());
+                        }
+                    }
+                }
+            }
+            if let Some(sp) = &sp {
+                if !arm_ivs.is_empty() {
+                    // the arm sees the scrutinee narrowed to the arm's ranges, as a `when` guard narrows (6.3, 9.8, X-518)
+                    let mut arm_iv = arm_ivs[0];
+                    for wider in &arm_ivs[1..] {
+                        arm_iv = iv::hull(Some(arm_iv), Some(*wider)).unwrap();
+                    }
+                    let base_iv = self.facts.ints.get(sp).copied().unwrap_or_else(|| int_bounds(&st).unwrap());
+                    if let Some(met) = iv::meet(base_iv, arm_iv) {
+                        self.facts.ints.insert(sp.clone(), met);
+                    }
+                }
             }
             if let Some(g) = guard {
                 // the arm sees the guard's true state, as an `if` body sees its condition's (6.8, 9.8); a later arm
@@ -146,8 +188,22 @@ impl<'a> Typer<'a> {
                 self.facts = true_f;
             } else {
                 covered.extend(cov);
+                covered_iv.extend(arm_ivs.iter().copied()); // a guarded arm counts for no coverage, range or not (9.8)
                 if is_catch && catch_all.is_none() {
                     catch_all = Some(ftok(pat).clone());
+                }
+                if let Some(sp) = &sp {
+                    if !arm_ivs.is_empty() {
+                        // a later arm knows the scrutinee did not match this arm's ranges (9.8, X-518)
+                        let mut cur = residual.ints.get(sp).copied().unwrap_or_else(|| int_bounds(&st).unwrap());
+                        for cut in &arm_ivs {
+                            match Self::minus_interval(cur, *cut) {
+                                Some(nxt) => cur = nxt,
+                                None => break, // wholly cut: no one interval says it, so `cur` stands
+                            }
+                        }
+                        residual.ints.insert(sp.clone(), cur);
+                    }
                 }
             }
             residual.restore_names(&bound, &outer);
@@ -161,12 +217,16 @@ impl<'a> Typer<'a> {
             if body_node.name() == "block" {
                 self.ctx.push("arm".into());
                 self.arm_types.push(vec![]);
+                self.arm_loans.push(vec![]);
+                self.arm_owned.push(false);
                 self.exit_frames.push((self.depth, vec![]));
                 self.give_seen.push(false);
                 self.branch_expected.push(expected.cloned());
                 self.walk_block(body_node, &e);
                 self.branch_expected.pop();
                 let gives = self.arm_types.pop().unwrap();
+                handed.extend(self.arm_loans.pop().unwrap_or_default());
+                owned_arm = self.arm_owned.pop().unwrap_or(false) || owned_arm;
                 let gave = self.exit_frames.pop().map(|f| f.1).unwrap_or_default();
                 self.ctx.pop();
                 self.give_seen.pop();
@@ -188,6 +248,9 @@ impl<'a> Typer<'a> {
                 let outer_pending = self.pending.clone();
                 self.pending = None;
                 let t = self.infer(Some(body_node), &e, expected);
+                let n_carried = self.carried.len();
+                handed.extend(self.handed_on(Some(body_node), &t).into_iter().skip(n_carried)); // what the arm's bindings lend; its calls' loans are carried already
+                owned_arm = owned_arm || self.owns_value(Some(body_node), &t, &e) || self.has_owned_part(Some(body_node));
                 self.branch_value(Some(body_node), &t, "=>"); // an expression arm is its `give` (9.8): the value is handed on (D-159)
                 if self.pending.is_none() {
                     self.pending = outer_pending;
@@ -225,6 +288,15 @@ impl<'a> Typer<'a> {
                     self.rec_c("E-MAT-001", format!("match over {} does not cover `{v}`", st.show()), "LANG-09-05", &kw, mat(missing.clone(), &st.show()), if i == 0 { corr.clone() } else { None });
                 }
             }
+        } else if scrut_iv.is_some() && catch_all.is_none() && !self.irrefutable_present(&arms) {
+            // a refined integer scrutinee (9.8, X-518): exhaustive exactly when the arms' range intervals together
+            // cover the scrutinee's interval; the values left out are named with their intervals (E-MAT-001)
+            let missing_iv = Self::uncovered(&covered_iv, scrut_iv.unwrap());
+            exhaustive = missing_iv.is_empty();
+            let names: Vec<String> = missing_iv.iter().map(|(a, b)| format!("{a}..{b}")).collect();
+            for nm in &names {
+                self.rec("E-MAT-001", format!("match over {} does not cover `{nm}`", st.show()), "LANG-09-05", &kw, mat(names.clone(), &st.show()));
+            }
         } else if known(&st) && catch_all.is_none() && !self.irrefutable_present(&arms) {
             exhaustive = false;
             self.rec("E-MAT-001", format!("match over the open type {} has no catch-all arm", st.show()), "LANG-09-05", &kw, mat(vec!["otherwise".into()], &st.show()));
@@ -250,7 +322,10 @@ impl<'a> Typer<'a> {
         if as_statement {
             return void();
         }
-        self.unify_branches(&arm_results, "match arm", expected)
+        self.take_handed(handed); // the arms' loans go to the expression's consumer (7.3; D-355)
+        let res = self.unify_branches(&arm_results, "match arm", expected);
+        self.note_owned_part(node, &res, owned_arm); // an arm's own value beside a lent one (7.9; D-389)
+        res
     }
 
     /// Ownership after a guard, without this arm's pattern loans, for the paths that do not take the arm.
@@ -327,7 +402,7 @@ impl<'a> Typer<'a> {
             st.opt_inner().cloned()
         } else {
             match st {
-                Type::Named(n) if n.name == "Outcome" && !n.args.is_empty() && v == "success" => Some(n.args[0].clone()),
+                Type::Named(n) if n.package.is_empty() && n.name == "Outcome" && !n.args.is_empty() && v == "success" => Some(n.args[0].clone()),
                 _ => match self.decl_of(st) {
                     Some(d) if d.kind == "enum" => match d.variants.get(v) {
                         Some(p) if p.len() == 1 => {
@@ -418,10 +493,10 @@ impl<'a> Typer<'a> {
             other => other.clone(),
         };
         if let Type::Named(n) = &st {
-            if n.name == "Outcome" {
+            if n.package.is_empty() && n.name == "Outcome" {
                 return Some(vec!["success".into(), "failure".into()]);
             }
-            if n.name == "Bool" {
+            if n.package.is_empty() && n.name == "Bool" {
                 return Some(vec!["true".into(), "false".into()]);
             }
             if let Some(d) = self.decl_of(&st) {
@@ -444,6 +519,9 @@ impl<'a> Typer<'a> {
         let subs = pat.child_nodes("pattern");
         if ts.is_empty() {
             if let Some(C::N(k0)) = pat.kid(0) {
+                if k0.name() == "rangePattern" {
+                    return self.range_pattern(k0, st);
+                }
                 if k0.name() == "literal" {
                     ts = k0.tokens();
                 }
@@ -468,8 +546,9 @@ impl<'a> Typer<'a> {
             return (BTreeSet::new(), true);
         }
         if head.text == "true" || head.text == "false" {
-            if known(st) && base_name(st) != Some("Bool") {
-                self.typ("E-TYP-040", format!("literal pattern Bool against {}", st.show()), head, &st.show(), "Bool", "pattern", "LANG-06-01");
+            if known(st) && core_name(st) != Some("Bool") {
+                let names = diagnostic_types(&[&boolean(), st]);
+                self.typ("E-TYP-040", format!("literal pattern {} against {}", names[0], names[1]), head, &names[1], &names[0], "pattern", "LANG-06-01");
             }
             return (one(&head.text), false);
         }
@@ -479,10 +558,11 @@ impl<'a> Typer<'a> {
                 let a = if is_strlit(&lt) { string_view() } else { lt };
                 let (ok, _) = assignable(&a, st);
                 if ok == Some(false) && *st != string() {
-                    self.typ("E-TYP-040", format!("literal pattern {} against {}", a.show(), st.show()), head, &st.show(), &a.show(), "pattern", "LANG-06-01");
+                    let displays = diagnostic_types(&[&a, &st]);
+                    self.typ("E-TYP-040", format!("literal pattern {} against {}", displays[0], displays[1]), head, &displays[1], &displays[0], "pattern", "LANG-06-01");
                 }
             }
-            if base_name(st) == Some("Bool") {
+            if core_name(st) == Some("Bool") {
                 return (one(&head.text), false);
             }
             return (BTreeSet::new(), false);
@@ -510,7 +590,7 @@ impl<'a> Typer<'a> {
         if head.text == "success" || head.text == "failure" {
             let mut inner = unknown("");
             match st {
-                Type::Named(n) if n.name == "Outcome" && !n.args.is_empty() => {
+                Type::Named(n) if n.package.is_empty() && n.name == "Outcome" && !n.args.is_empty() => {
                     inner = if head.text == "success" { n.args[0].clone() } else { named("Failure") };
                 }
                 _ => {
@@ -527,8 +607,9 @@ impl<'a> Typer<'a> {
             return (icov.iter().map(|c| format!("{}/{c}", head.text)).collect(), false);
         }
         if head.text == "is" {
-            if known(st) && base_name(st) != Some("Failure") {
-                self.typ("E-TYP-040", format!("`is` pattern against {}, which is not a Failure", st.show()), head, "Failure", &st.show(), "is", "LANG-06-01");
+            if known(st) && core_name(st) != Some("Failure") {
+                let displays = diagnostic_types(&[&st, &named("Failure")]);
+                self.typ("E-TYP-040", format!("`is` pattern against {}, which is not a {expected}", displays[0], expected = displays[1]), head, &displays[1], &displays[0], "is", "LANG-06-01");
             }
             let ename = ts[1].text.clone();
             let ed = self.dc.table.get(&ename).cloned();
@@ -610,7 +691,7 @@ impl<'a> Typer<'a> {
                     return (BTreeSet::new(), false);
                 }
                 if d.kind == "class" {
-                    if d.name != head.text {
+                    if self.dc.table.get(&head.text).map_or(true, |p| named_of_decl(p, vec![]) != named_of_decl(d, vec![])) {
                         self.typ("E-TYP-040", format!("pattern {} against {}", head.text, st.show()), head, &st.show(), &head.text, "pattern", "LANG-06-01");
                         return (BTreeSet::new(), false);
                     }
@@ -645,15 +726,110 @@ impl<'a> Typer<'a> {
         (BTreeSet::new(), false)
     }
 
+    /// A range pattern (9.8, X-517): over the integer types only, with the bounds of a refinement (X-512). An empty
+    /// or inverted range, a bound that does not fold and a bound outside the base's own range are E-MAT-005; a range
+    /// over a scrutinee that is not an integer type is E-TYP-040. A range covers no named case and is never a
+    /// catch-all: interval coverage is computed in match_ (X-518).
+    fn range_pattern(&mut self, rp: N<'a>, st: &Type) -> (BTreeSet<String>, bool) {
+        let tok = ftok(rp).clone();
+        let shown: String = rp.tokens().iter().map(|t| t.text.as_str()).collect();
+        if known(st) && int_bounds(st).is_none() {
+            self.typ("E-TYP-040", format!("range pattern against {}, which is not an integer type", st.show()), &tok, "an integer type", &st.show(), &shown, "LANG-06-01");
+            return (BTreeSet::new(), false);
+        }
+        let Some(base) = core_name(st) else { return (BTreeSet::new(), false) };
+        let Some(full) = int_types(base) else { return (BTreeSet::new(), false) };
+        let (lo, hi, mut why) = self.dc.range_of(rp, base);
+        if why.is_none() {
+            for b in [lo, hi].into_iter().flatten() {
+                if b < full.0 || b > full.1 {
+                    why = Some(format!("the bound {b} is outside {base}'s own range [{}, {}]", full.0, full.1));
+                    break;
+                }
+            }
+        }
+        if why.is_none() && lo.unwrap_or(full.0) > hi.unwrap_or(full.1) {
+            why = Some("the range is empty".into());
+        }
+        if let Some(why) = why {
+            self.rec("E-MAT-005", format!("the range pattern `{shown}` is not well formed: {why}"), "LANG-09-05", &tok, Json::obj([("missing_variants", Json::Arr(vec![])), ("arm_set", Json::str(&st.show()))]));
+        }
+        (BTreeSet::new(), false)
+    }
+
+    /// The interval a range pattern matches over the scrutinee type, clipped to the base's own range (9.8), or None
+    /// for every other pattern and for a range the typer has already rejected (E-MAT-005).
+    fn pattern_interval(&mut self, pat: N<'a>, st: &Type) -> Option<Interval> {
+        let Some(C::N(rp)) = pat.kid(0) else { return None };
+        if rp.name() != "rangePattern" {
+            return None;
+        }
+        let Some(base) = core_name(st) else { return None };
+        let Some(full) = int_types(base) else { return None };
+        let (lo, hi, why) = self.dc.range_of(rp, base);
+        if why.is_some() || [lo, hi].into_iter().flatten().any(|b| b < full.0 || b > full.1) {
+            return None;
+        }
+        let low = lo.unwrap_or(full.0);
+        let high = hi.unwrap_or(full.1);
+        if low <= high {
+            Some((low, high))
+        } else {
+            None
+        }
+    }
+
+    /// The interval `cur` less the values `cut` matches, where one interval can say it (9.8): cutting an end trims it,
+    /// cutting the middle leaves `cur` (the domain has no unions) and a cut covering `cur` leaves nothing sayable.
+    fn minus_interval(cur: Interval, cut: Interval) -> Option<Interval> {
+        let (lo, hi) = cur;
+        let (clo, chi) = cut;
+        if clo <= lo && hi <= chi {
+            return None;
+        }
+        if clo <= lo {
+            return Some((chi + 1, hi));
+        }
+        if chi >= hi {
+            return Some((lo, clo - 1));
+        }
+        Some(cur)
+    }
+
+    /// The intervals of `whole` the covered intervals leave out, ascending (9.8, X-518).
+    fn uncovered(covered: &[Interval], whole: Interval) -> Vec<Interval> {
+        let mut out: Vec<Interval> = vec![];
+        let mut cur = whole.0;
+        let mut sorted = covered.to_vec();
+        sorted.sort();
+        for (lo, hi) in sorted {
+            if hi < cur {
+                continue;
+            }
+            if lo > cur {
+                out.push((cur, (lo - 1).min(whole.1)));
+            }
+            cur = cur.max(hi + 1);
+            if cur > whole.1 {
+                return out;
+            }
+        }
+        if cur <= whole.1 {
+            out.push((cur, whole.1));
+        }
+        out
+    }
+
     /// The first part of a `let` pattern that can fail to match a value of `st`, or none (5.1; D-243). A `let`
-    /// destructures a class, tuple or record, so a variant, a literal, `null`, `present(…)`, `success(…)`,
-    /// `failure(…)` or `is …` pattern is refutable at any depth; `_` and a name always match. A pattern the typer has
-    /// already rejected against its type is left to that record.
+    /// destructures a class, tuple or record, so a variant, a literal, a range (9.8), `null`, `present(…)`,
+    /// `success(…)`, `failure(…)` or `is …` pattern is refutable at any depth; `_` and a name always match. A
+    /// pattern the typer has already rejected against its type is left to that record.
     pub fn let_refutable(&self, pat: N<'a>, st: &Type) -> Option<N<'a>> {
         let ts = pat.direct_tokens();
         let subs = pat.child_nodes("pattern");
         if ts.is_empty() {
             return match pat.kid(0) {
+                Some(C::N(k0)) if k0.name() == "rangePattern" => Some(pat), // a range pattern can fail to match (9.8; E-MAT-004)
                 Some(C::N(k0)) if k0.name() == "literal" => Some(pat),
                 _ => None,
             };
@@ -685,7 +861,7 @@ impl<'a> Typer<'a> {
             if d.kind == "enum" {
                 return Some(pat);
             }
-            if d.kind != "class" || d.name != head.text {
+            if d.kind != "class" || self.dc.table.get(&head.text).map_or(true, |p| named_of_decl(p, vec![]) != named_of_decl(&d, vec![])) {
                 return None;
             }
             let mm = self.recv_subst(st, &d);
@@ -782,11 +958,18 @@ impl<'a> Typer<'a> {
     pub fn if_expr(&mut self, node: N<'a>, env: &Env, expected: Option<&Type>) -> Type {
         let mut results: Vec<(Type, Token)> = Vec::new();
         let entry = self.facts.clone();
+        self.arm_loans.push(vec![]);
+        self.arm_owned.push(false);
         let ends = self.if_expr_paths(node, env, expected, &mut results);
+        let handed = self.arm_loans.pop().unwrap_or_default();
+        let owned = self.arm_owned.pop().unwrap_or(false);
         // D-76: each branch runs from its condition's state, and the expression's value comes from one of them; the state
         // after is the join of the branches that complete, never the last branch walked
         self.facts = if ends.is_empty() { entry } else { Facts::join_all(&ends) };
-        self.unify_branches(&results, "if-expression branch", expected)
+        self.take_handed(handed); // the branches' loans go to the expression's consumer (7.3; D-355)
+        let res = self.unify_branches(&results, "if-expression branch", expected);
+        self.note_owned_part(node, &res, owned); // a branch's own value beside a lent one (7.9; D-389)
+        res
     }
 
     /// Walk an if-expression's branches, each from the state its condition gives; return the end states of those that
@@ -855,10 +1038,11 @@ impl<'a> Typer<'a> {
         if !known(&t) {
             return;
         }
-        if base_name(&t) != Some("Bool") || t.is_optional() {
+        if core_name(&t) != Some("Bool") || t.is_optional() {
             let tk = ftok(expr);
             let span = expr.tokens().iter().take(6).map(|x| x.text.clone()).collect::<Vec<_>>().join(" ");
-            self.typ("E-TYP-010", format!("condition has type {}, not Bool", t.show()), tk, "Bool", &t.show(), &span, "LANG-05-03");
+            let names = diagnostic_types(&[&t, &boolean()]);
+            self.typ("E-TYP-010", format!("condition has type {}, not {}", names[0], names[1]), tk, &names[1], &names[0], &span, "LANG-05-03");
         }
     }
 }

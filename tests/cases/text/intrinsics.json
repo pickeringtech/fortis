@@ -1,0 +1,22 @@
+[
+  {"name": "trim_ascii", "input": {"op": "trim", "text": " \t a b\r\n", "args": []}, "expect": "a b"},
+  {"name": "trim_unicode", "input": {"op": "trim", "text": "  café　", "args": []}, "expect": "café"},
+  {"name": "trim_not_white_space", "input": {"op": "trim", "text": "\u001ca​", "args": []}, "expect": "\u001ca​"},
+  {"name": "trim_empty", "input": {"op": "trim", "text": "", "args": []}, "expect": ""},
+  {"name": "trim_all_white_space", "input": {"op": "trim", "text": "\t\n  ", "args": []}, "expect": ""},
+  {"name": "split_repeated", "input": {"op": "split", "text": "a,b,,c,", "args": [","]}, "expect": ["a", "b", "", "c", ""]},
+  {"name": "split_empty_separator", "input": {"op": "split", "text": "abc", "args": [""]}, "expect": ["abc"]},
+  {"name": "split_empty_text", "input": {"op": "split", "text": "", "args": [","]}, "expect": [""]},
+  {"name": "split_non_overlapping", "input": {"op": "split", "text": "aaa", "args": ["aa"]}, "expect": ["", "a"]},
+  {"name": "split_unicode", "input": {"op": "split", "text": "a🙂b🙂", "args": ["🙂"]}, "expect": ["a", "b", ""]},
+  {"name": "find_scalar_offset", "input": {"op": "find", "text": "naïve 🙂café", "args": ["café"]}, "expect": 7},
+  {"name": "find_empty_needle", "input": {"op": "find", "text": "abc", "args": [""]}, "expect": 0},
+  {"name": "find_missing", "input": {"op": "find", "text": "abc", "args": ["d"]}, "expect": null},
+  {"name": "find_first_occurrence", "input": {"op": "find", "text": "banana", "args": ["ana"]}, "expect": 1},
+  {"name": "replace_all", "input": {"op": "replace", "text": "ab ab", "args": ["ab", "x"]}, "expect": "x x"},
+  {"name": "replace_empty_pattern", "input": {"op": "replace", "text": "abc", "args": ["", "x"]}, "expect": "abc"},
+  {"name": "replace_non_overlapping", "input": {"op": "replace", "text": "aaa", "args": ["aa", "b"]}, "expect": "ba"},
+  {"name": "replace_delete", "input": {"op": "replace", "text": "a🙂b🙂", "args": ["🙂", ""]}, "expect": "ab"},
+  {"name": "ascii_upper_letters", "input": {"op": "asciiUpper", "text": "aAzZ 123!", "args": []}, "expect": "AAZZ 123!"},
+  {"name": "ascii_upper_preserves_unicode", "input": {"op": "asciiUpper", "text": "café ß🙂", "args": []}, "expect": "CAFé ß🙂"}
+]

@@ -1,0 +1,114 @@
+[
+  {
+    "name": "array_expected",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet seed = Array[Int, 2].filled(0)\nlet arr: Array[Int, 3] = Array.filled(7)\nconsole.print(\"${seed.count()} ${arr.count()}\")\n}\n"
+    },
+    "expect": [
+      "2 3"
+    ]
+  },
+  {
+    "name": "array_bound",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet two = Array[Int, 2].filled\nlet three = Array[Int, 3].filled\nlet a = two(0)\nlet b = three(7)\nconsole.print(\"${a.count()} ${b.count()}\")\n}\n"
+    },
+    "expect": [
+      "2 3"
+    ]
+  },
+  {
+    "name": "list_write",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet mut xs: List[Int] = List.of(1, 2)\nxs[0] = 9\nconsole.print(\"${xs.get(0) ?? 0}\")\n}\n"
+    },
+    "expect": [
+      "9"
+    ]
+  },
+  {
+    "name": "editable_record",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc poke(s: editable { n: Int }) { s.n = 9 }\nfunc main(console: Console) {\nlet mut s: { n: Int } = { n: 1 }\npoke(editable s)\nconsole.print(\"${s.n}\")\n}\n"
+    },
+    "expect": [
+      "9"
+    ]
+  },
+  {
+    "name": "module_import",
+    "input": {
+      "source": "import fortis.host { Console }\nimport fortis.text\nfunc main(console: Console) {\nconsole.print(\"${text.graphemes(\"a\u00e9\")}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "optional_record",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc widen(s: { n: Int<0..3>? }) { n: Int? } { return s }\nfunc main(console: Console) {\nlet s: { n: Int<0..3>? } = { n: 1 }\nlet w = widen(s)\nmatch w.n {\npresent(n) => console.print(\"${n}\")\nnull => console.print(\"null\")\n}\n}\n"
+    },
+    "expect": [
+      "1"
+    ]
+  },
+  {
+    "name": "array_return_parameter",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc make() Array[Int, 3] { return Array.filled(7) }\nfunc size(a: Array[Int, 4]) Int { return a.count() }\nfunc main(console: Console) {\nlet a = make()\nconsole.print(\"${a.count()} ${size(Array.filled(5))}\")\n}\n"
+    },
+    "expect": [
+      "3 4"
+    ]
+  },
+  {
+    "name": "optional_tuple",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet pair: (Int?, Int?) = (1, null)\nconsole.print(\"${pair.0 ?? 0} ${pair.1 ?? 2}\")\n}\n"
+    },
+    "expect": [
+      "1 2"
+    ]
+  },
+  {
+    "name": "optional_class",
+    "input": {
+      "source": "import fortis.host { Console }\nclass Box { export n: Int? }\nfunc main(console: Console) {\nlet b = Box(n: 1)\nconsole.print(\"${b.n ?? 0}\")\n}\n"
+    },
+    "expect": [
+      "1"
+    ]
+  },
+  {
+    "name": "module_alias",
+    "input": {
+      "source": "import fortis.host { Console }\nimport fortis.text as words\nfunc main(console: Console) {\nconsole.print(\"${words.graphemes(\"a\u00e9\")}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "optional_list_write",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\n  let mut xs: List[Int<0..3>?] = List.of(1)\n  xs[0] = 3\n  console.print(\"${xs.get(0) ?? 0}\")\n  xs[0] = null\n  console.print(\"${xs.get(0) ?? 0}\")\n  console.print(\"${xs.get(9) ?? 0}\")\n}\n"
+    },
+    "expect": [
+      "3",
+      "0",
+      "0"
+    ]
+  },
+  {
+    "name": "optional_collection_get",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\n  let xs: List[String?] = List.of(String.from(\"kept\"))\n  console.print(\"${xs.get(0) ?? \"empty\"}\")\n  console.print(\"${xs.get(9) ?? \"empty\"}\")\n  let a = Array[Int?, 2].filled(2)\n  console.print(\"${a.get(0) ?? 0}\")\n}\n"
+    },
+    "expect": [
+      "kept",
+      "empty",
+      "2"
+    ]
+  }
+]

@@ -1,7 +1,13 @@
 // accept
-// covers: LANG-06-10
+// covers: LANG-06-10, LANG-06-13
+// The `Labelled` block's target was `Int` before Language 1.0 limited `implement` targets to the classes and enums
+// a program declares (X-180); it now names `Count`, a class this package declares.
 export class Tag {
   export name: String
+}
+
+export class Count {
+  export n: Int
 }
 
 implement Displayable for Tag {
@@ -13,6 +19,6 @@ export interface Labelled {
   pure func label(self) String
 }
 
-implement Labelled for Int {
-  pure func label(self) String => "int"
+implement Labelled for Count {
+  pure func label(self) String => "count"
 }

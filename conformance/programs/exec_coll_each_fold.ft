@@ -1,0 +1,47 @@
+// execute: tea 120|cola 250|water 80|2|cheap tea,water|total 450|any true all false|water|4 1|has true false
+// requires: runtime
+// covers: LANG-06-16
+// The functional methods of List (6.7, X-479), the owner's examples: `each` runs a callback for its effect and sees
+// each element by read loan, `filter` and `fold` compute, `find` lends the first match, and `indexWhere`, `any`,
+// `all` and `contains` ask questions. Capture lists are written; a lambda written straight into a call needs no
+// parameter types.
+import fortis.host { Console }
+
+enum Size derive Equatable {
+  Small
+  Large
+}
+
+class Drink {
+  export name: String
+  export cost: Int
+  export size: Size
+  export func label(self) String => "${self.name} ${self.cost}"
+  export func price(self) Int => self.cost
+}
+
+func main(console: Console) {
+  let drinks = List.of(
+    Drink(name: "tea", cost: 120, size: Size.Small),
+    Drink(name: "cola", cost: 250, size: Size.Large),
+    Drink(name: "water", cost: 80, size: Size.Small)
+  )
+  drinks.each(fn[alias console](drink) => console.print(drink.label()))
+  let mut seen = 0
+  drinks.each(fn mut[editable seen](drink) Void { seen = Int.wrappingAdd(seen, 1) })
+  console.print("${Int.wrappingSub(seen, 1)}")
+  let limit = 200
+  let cheap = drinks.countWhere(fn[limit](drink) => drink.price() < limit)
+  let names = drinks.map(fn(drink) => copy drink.name)
+  let cheapNames = names.filter(fn(name) => name.byteCount() < 6)
+  console.print("cheap ${cheapNames.get(0) ?? ""},${cheapNames.get(2) ?? ""}")
+  let total = drinks.fold(0, fn(sum, drink) => Int.wrappingAdd(sum, drink.price()))
+  console.print("total ${total}")
+  console.print("any ${drinks.any(fn(d) => d.size == Size.Large)} all ${drinks.all(fn(d) => d.size == Size.Large)}")
+  let small = drinks.find(fn(d) => d.cost < 100)
+  console.print(small.map(fn(d) => copy d.name) ?? "none")
+  let at = drinks.indexWhere(fn(d) => d.size == Size.Large)
+  console.print("${Int.wrappingAdd(cheap, 2)} ${at ?? -1}")
+  let numbers = List.of(3, 5, 8)
+  console.print("has ${numbers.contains(5)} ${numbers.contains(6)}")
+}

@@ -1,0 +1,26 @@
+// reject: E-TYP-040, E-EFF-001 (at the marked lines)
+// covers: LANG-06-16
+// 6.7 and 11.3 (X-479): a callback that only computes is a `pure fn` parameter, so a lambda that does I/O cannot be
+// passed to `any`, `map` or `fold`; `each` takes a callback that may have effects, so it is not pure and a `pure`
+// function cannot call it, whatever lambda it passes.
+import fortis.host { Console }
+
+func asks(items: List[Int], console: Console) Bool {
+  return items.any(fn[alias console](n: Int) Bool {   // reject: E-TYP-040: the callback performs io
+    console.print("looking at ${n}")
+    return n > 0
+  })
+}
+
+func folds(items: List[Int], console: Console) Int {
+  return items.fold(0, fn[alias console](sum: Int, n: Int) Int {   // reject: E-TYP-040: the callback performs io
+    console.print("adding ${n}")
+    return Int.wrappingAdd(sum, n)
+  })
+}
+
+pure func total(items: List[Int]) Int {
+  let mut sum = 0
+  items.each(fn mut[editable sum](n: Int) Void { sum = Int.wrappingAdd(sum, n) })   // reject: E-EFF-001: each is not pure
+  return sum
+}

@@ -1,0 +1,24 @@
+// reject: E-TYP-080 (at the marked lines)
+// covers: LANG-09-04
+// A mixin's requirement is a signature, compared like an interface member's (9.6): `Report` has a `title`, but it
+// returns an `Int` where the mixin requires a `String`; `Note`'s `title` is not `pure`, which the mixin's body relies
+// on; `Memo` meets the requirement.
+export mixin Summarised {
+  requires pure func title(self) String
+  export pure func summary(self) String => "${self.title()}!"
+}
+
+export class Report with Summarised {         // reject: E-TYP-080 — title returns Int, not String
+  export n: Int
+  export pure func title(self) Int => self.n
+}
+
+export class Note with Summarised {           // reject: E-TYP-080 — title drops `pure`
+  export name: String
+  export func title(self) String => copy self.name
+}
+
+export class Memo with Summarised {
+  export name: String
+  export pure func title(self) String => copy self.name
+}

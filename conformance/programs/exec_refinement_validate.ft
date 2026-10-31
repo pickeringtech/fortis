@@ -6,9 +6,9 @@ import fortis.host { Console }
 export type Percent = Int<0..100>
 
 try recovers func main(console: Console) {
-  let fine = Int<0..100>.validate(42) or fail
+  let fine = 42
   console.print("${fine}")
-  let bad = Int<0..100>.validate(300) catch e {
+  let bad = 300 as Int<0..100> catch e {
     console.print(e.code)
     recover 0
   }

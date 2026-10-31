@@ -1,0 +1,11 @@
+// execute: 2 3
+// requires: runtime
+// covers: LANG-06-11
+import fortis.host { Console }
+func main(console: Console) {
+  let two = Array[Int, 2].filled
+  let three = Array[Int, 3].filled
+  let a = two(0)
+  let b = three(7)
+  console.print("${a.count()} ${b.count()}")
+}

@@ -1,0 +1,21 @@
+import fortis.host { Console }
+
+interface Worker {
+  async func work(self, console: Console) Int
+}
+class Work implements Worker {
+  export func work(self, console: Console) Int {
+    console.print("body")
+    return 3
+  }
+}
+async func invoke[T](w: T, console: Console) where T implements Worker {
+  let pending = w.work(console)
+  console.print("before")
+  let n = await pending
+  console.print("${n}")
+}
+async func main(console: Console) {
+  let w = Work()
+  await invoke(w, console)
+}

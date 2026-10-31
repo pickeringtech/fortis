@@ -177,7 +177,7 @@ export class Parser {
       self.refuse(line, MalformedDirective, "a commodity has 0 to 8 decimal places, not ${places}")
       return
     }
-    let scale = Int<0..8>.validate(places) or fail
+    let scale = places
     if !(self.commodities.declare(copy code, scale)) {
       self.refuse(line, DuplicateCommodity, "commodity ${code} is already declared")
     }
@@ -343,7 +343,7 @@ pure try func commentFreeCount(words: ListView[String]) Int {
 pure try func tagName(word: StringView) String {
   let n = word.scalarCount()
   let name = word.slice(1, n) or fail
-  return String.from(name)
+  return name as String
 }
 
 // The refusals below only inspect the failure (`match f` without `move` reads it and consumes nothing); the

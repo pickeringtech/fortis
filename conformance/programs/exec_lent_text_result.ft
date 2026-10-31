@@ -1,0 +1,32 @@
+// execute: a|none|first a|first none|end
+// requires: runtime
+// covers: LANG-07-06
+// D-353, 7.6: a function whose result is an optional loan of text, `(alias String from xs)?`, returns the loan
+// itself: natively the signature is `Option<&str>`, while `xs.get(0)` and `xs.first()` answer `Option<&String>`,
+// and the return bridges the two, so the program builds and runs the same on every backend. Natively the two
+// once mismatched (rustc E0308) where both checkers accept the program and the interpreter and the VM run it;
+// the same result of a class, `(alias Item from xs)?`, always built. Pre-existing since v0.0.1.
+import fortis.host { Console }
+
+func firstName(xs: List[String]) (alias String from xs)? {
+  return xs.get(0)
+}
+
+func firstOf(xs: List[String]) (alias String from xs)? {
+  return xs.first()
+}
+
+func main(console: Console) {
+  let mut xs: List[String] = List.default()
+  xs.push("a" as String)
+  let n = firstName(alias xs)
+  console.print("${n ?? "none"}")
+  let ys: List[String] = List.default()
+  let m = firstName(alias ys)
+  console.print("${m ?? "none"}")
+  let f = firstOf(alias xs)
+  console.print("first ${f ?? "none"}")
+  let g = firstOf(alias ys)
+  console.print("first ${g ?? "none"}")
+  console.print("end")
+}

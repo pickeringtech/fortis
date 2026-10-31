@@ -1,0 +1,2 @@
+// D-714: pipe this file to fortisc test /dev/stdin; it must report one failed test and exit 1.
+test "fails" { expect false }

@@ -1,0 +1,6 @@
+// reject: E-OBL-001
+// covers: LANG-10-02
+class Bin[T] where T: linear {
+  item: T
+  export func forget(owned self) {}
+}

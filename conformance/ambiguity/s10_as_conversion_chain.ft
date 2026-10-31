@@ -1,0 +1,7 @@
+// accept: S10: `as` after an operand is a conversion; it binds tighter than `*` and `+` and chains left to right (X-475)
+try func total(count: Int8, price: Decimal, n: Int) Decimal {
+  let wide = count as Int as Decimal
+  let scaled = n as Int8 or fail
+  discard scaled
+  return Decimal.mul(wide, price) or fail
+}

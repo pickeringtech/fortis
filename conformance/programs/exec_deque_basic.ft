@@ -1,0 +1,54 @@
+// execute: 0 true [] -1 -1 -1 -1|4 [-1,0,1,2] -1 2 0 2|pop -1 2 [0,1]|drain 1 0 -1 -1 0 true|[10,20,30,40,50] 10 50 -1 -1|pop 10 20 [30,40,50]|[5,30,40,50,60] 5 30 50 60|words ada bo cy|[7,8,9]
+// requires: runtime
+// covers: LANG-06-16
+// A double-ended queue (6.7, X-576): `pushBack` and `pushFront` add at the ends, `popFront` and `popBack` take from them
+// and give null when it is empty, `peekFront`, `peekBack` and `get` lend an item without removing it, and `for` visits the
+// items from the front to the back. Cases: empty, one end only, both ends, `fromList`, an index past either end, and
+// owned items that are text.
+import fortis.collections { Deque }
+import fortis.host { Console }
+
+func show(d: Deque[Int]) String {
+  let mut out = "["
+  let mut first = true
+  for x in d {
+    if !first {
+      out = "${out},"
+    }
+    first = false
+    out = "${out}${x}"
+  }
+  return "${out}]"
+}
+
+func main(console: Console) {
+  let mut d: Deque[Int] = Deque.default()
+  console.print("${d.count()} ${d.isEmpty()} ${show(d)} ${d.peekFront() ?? -1} ${d.peekBack() ?? -1} ${d.popFront() ?? -1} ${d.popBack() ?? -1}")
+  d.pushBack(1)
+  d.pushBack(2)
+  d.pushFront(0)
+  d.pushFront(-1)
+  console.print("${d.count()} ${show(d)} ${d.peekFront() ?? 99} ${d.peekBack() ?? 99} ${d.get(1) ?? 99} ${d.get(3) ?? 99}")
+  console.print("pop ${d.popFront() ?? 99} ${d.popBack() ?? 99} ${show(d)}")
+  console.print("drain ${d.popBack() ?? 99} ${d.popFront() ?? 99} ${d.popFront() ?? -1} ${d.popBack() ?? -1} ${d.count()} ${d.isEmpty()}")
+  let mut e = Deque.fromList(List.of(10, 20, 30, 40, 50))
+  console.print("${show(e)} ${e.get(0) ?? 99} ${e.get(4) ?? 99} ${e.get(5) ?? -1} ${e.get(-1) ?? -1}")
+  console.print("pop ${e.popFront() ?? 99} ${e.popFront() ?? 99} ${show(e)}")
+  e.pushFront(5)
+  e.pushBack(60)
+  console.print("${show(e)} ${e.get(0) ?? 99} ${e.get(1) ?? 99} ${e.get(3) ?? 99} ${e.peekBack() ?? 99}")
+  let mut words: Deque[String] = Deque.default()
+  words.pushBack("bo")
+  words.pushBack("cy")
+  words.pushFront("ada")
+  let mut line = "words"
+  while !words.isEmpty() {
+    line = "${line} ${words.popFront() ?? "none"}"
+  }
+  console.print(line)
+  let mut f: Deque[Int] = Deque.default()
+  f.pushBack(9)
+  f.pushFront(8)
+  f.pushFront(7)
+  console.print(show(f))
+}

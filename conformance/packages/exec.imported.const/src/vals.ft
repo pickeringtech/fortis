@@ -1,3 +1,3 @@
 // accept
 export const limit = 3
-export const names = List.of("ada", "brian", "carla")
+export const names: List[String] = List.of("ada", "brian", "carla")

@@ -23,6 +23,24 @@ impl<'t, 'a> Builder<'t, 'a> {
                     _ => err(line, "an interpolated string as a pattern"),
                 }
             }
+            C::N(n) if n.name() == "rangePattern" => {
+                // a range pattern (9.8, X-517): the bounds fold as a refinement's fold (X-512); the checker has
+                // judged the form (E-MAT-005, E-TYP-040), so the MIR keeps the folded inclusive interval, its open
+                // ends clipped to the base's own range (a value of the type always lies inside it, and every
+                // backend then holds one closed interval)
+                let base = match base_name(&s) {
+                    Some(b) if int_types(b).is_some() => b,
+                    _ => return err(line, "a range pattern over a non-integer type"),
+                };
+                let (lo, hi, why) = self.ty.dc.range_of(n, base);
+                match why {
+                    None => {
+                        let full = int_types(base).unwrap();
+                        Ok(Pattern::Range { lo: Some(lo.unwrap_or(full.0)), hi: Some(hi.unwrap_or(full.1)) })
+                    }
+                    Some(why) => err(line, format!("a range pattern whose bound does not fold: {why}")),
+                }
+            }
             C::N(n) => err(line, format!("pattern {}", n.name())),
             C::T(tk) => {
                 let w = tk.text.as_str();
@@ -42,7 +60,7 @@ impl<'t, 'a> Builder<'t, 'a> {
                     (_, "success") | (_, "failure") => {
                         let inner = if w == "success" {
                             match &s {
-                                Type::Named(n) if n.name == "Outcome" && !n.args.is_empty() => n.args[0].clone(),
+                                Type::Named(n) if n.package.is_empty() && n.name == "Outcome" && !n.args.is_empty() => n.args[0].clone(),
                                 _ => unknown("success"),
                             }
                         } else {

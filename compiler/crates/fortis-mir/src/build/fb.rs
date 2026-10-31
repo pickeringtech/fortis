@@ -1,7 +1,7 @@
 //! The state of one function being built: its locals, its lexical scopes, and — for a lambda — the captures it
 //! takes from the enclosing function.
 
-use fortis_types::types::Type;
+use fortis_types::types::{NamedT, Type};
 
 use crate::model::*;
 
@@ -26,6 +26,9 @@ pub struct Fb {
     /// the statement temporaries of each open statement, innermost last, in creation order (5.7): the
     /// statement takes them when it is built, and they are destroyed at its end
     pub stmt_temps: Vec<Vec<LocalId>>,
+    /// the `where` bounds in force in the function (its own and, for a method, its class's): (type parameter,
+    /// the bound interface as the checker names it, with its type arguments)
+    pub bounds: Vec<(String, NamedT)>,
 }
 
 pub struct LambdaCtx {
@@ -50,6 +53,7 @@ impl Fb {
             captures: vec![],
             capture_values: vec![],
             stmt_temps: vec![],
+            bounds: vec![],
         }
     }
 
@@ -119,6 +123,6 @@ impl Fb {
     }
 
     pub fn finish(self, line: u32, body: Option<Block>, modifiers: Vec<String>, effects: Effects, observe: Option<String>, closure: Option<ClosureDef>) -> Function {
-        Function { name: self.name, label: self.label, module: self.module, line, params: self.params, ret: self.ret, modifiers, locals: self.locals, body, effects, observe, closure }
+        Function { name: self.name, label: self.label, module: self.module, body_module: None, line, params: self.params, ret: self.ret, modifiers, locals: self.locals, body, effects, observe, closure, bounds: vec![] }
     }
 }

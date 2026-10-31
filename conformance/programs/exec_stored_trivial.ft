@@ -1,0 +1,13 @@
+// execute: 7|1
+// requires: runtime
+// covers: LANG-07-06, LANG-07-01
+// D-580: a loan of a trivial value becomes that value before collection storage (7.6).
+import fortis.host { Console }
+func main(console: Console) {
+  let numbers = List.of(7)
+  let mut kept: List[Int] = List.default()
+  kept.push(numbers.get(0) ?? 0)
+  let optional = List.of(numbers.get(0))
+  console.print("${kept.get(0) ?? 0}")
+  console.print("${optional.count()}")
+}

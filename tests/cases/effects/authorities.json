@@ -1,0 +1,22 @@
+[
+  {"name":"lr_11_6_filesystem_authority","input":{"name":"FileSystem","shadow":false},"expect":true},
+  {"name":"lr_11_6_filesystem_local_shadow","input":{"name":"FileSystem","shadow":true},"expect":false},
+  {"name":"lr_11_6_network_authority","input":{"name":"Network","shadow":false},"expect":true},
+  {"name":"lr_11_6_network_local_shadow","input":{"name":"Network","shadow":true},"expect":false},
+  {"name":"lr_11_6_clock_authority","input":{"name":"Clock","shadow":false},"expect":true},
+  {"name":"lr_11_6_clock_local_shadow","input":{"name":"Clock","shadow":true},"expect":false},
+  {"name":"lr_11_6_random_authority","input":{"name":"Random","shadow":false},"expect":true},
+  {"name":"lr_11_6_random_local_shadow","input":{"name":"Random","shadow":true},"expect":false},
+  {"name":"lr_11_6_environment_authority","input":{"name":"Environment","shadow":false},"expect":true},
+  {"name":"lr_11_6_environment_local_shadow","input":{"name":"Environment","shadow":true},"expect":false},
+  {"name":"lr_11_6_process_authority","input":{"name":"Process","shadow":false},"expect":true},
+  {"name":"lr_11_6_process_local_shadow","input":{"name":"Process","shadow":true},"expect":false},
+  {"name":"lr_11_6_supervisor_authority","input":{"name":"Supervisor","shadow":false},"expect":true},
+  {"name":"lr_11_6_supervisor_local_shadow","input":{"name":"Supervisor","shadow":true},"expect":false},
+  {"name":"lr_11_6_console_authority","input":{"name":"Console","shadow":false},"expect":true},
+  {"name":"lr_11_6_console_local_shadow","input":{"name":"Console","shadow":true},"expect":false},
+  {"name":"lr_11_6_secretaccess_authority","input":{"name":"SecretAccess","shadow":false},"expect":true},
+  {"name":"lr_11_6_secretaccess_local_shadow","input":{"name":"SecretAccess","shadow":true},"expect":false},
+  {"name":"lr_11_6_rawsql_authority","input":{"name":"RawSql","shadow":false},"expect":true},
+  {"name":"lr_11_6_rawsql_local_shadow","input":{"name":"RawSql","shadow":true},"expect":false}
+]

@@ -1,0 +1,28 @@
+// execute: 6|312|6|123|0
+// requires: runtime
+// covers: LANG-06-16, LANG-08-01, LANG-08-02, LANG-08-03, LANG-08-04
+// G2 and H: library callbacks infer editable captures and kind, preserving traversal order.
+import fortis.collections { Deque, SortedSet }
+import fortis.host { Console }
+func main(console: Console) {
+  let queue = Deque.fromList(List.of(3, 1, 2))
+  let mut total = 0
+  queue.each(fn(n) { total = Int.saturatingAdd(total, n) })
+  console.print("${total}")
+  let mut order = ""
+  queue.each(fn(n) { order = "${order}${n}" })
+  console.print(order)
+  let sorted = SortedSet.fromList(List.of(3, 1, 2, 1))
+  total = 0
+  sorted.each(fn(n) { total = Int.saturatingAdd(total, n) })
+  console.print("${total}")
+  order = ""
+  sorted.each(fn(n) { order = "${order}${n}" })
+  console.print(order)
+  let emptyQueue: Deque[Int] = Deque.default()
+  let emptySet: SortedSet[Int] = SortedSet.default()
+  let mut calls = 0
+  emptyQueue.each(fn(n) { calls = Int.saturatingAdd(calls, 1) })
+  emptySet.each(fn(n) { calls = Int.saturatingAdd(calls, 1) })
+  console.print("${calls}")
+}

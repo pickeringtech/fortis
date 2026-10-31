@@ -1,0 +1,12 @@
+// execute: 2
+// requires: runtime
+// covers: LANG-08-02, LANG-08-03
+// D-554: the lambda projects a captured field from its owner.
+import fortis.host { Console }
+class Pair { left: List[Int] }
+func call(f: editable fn mut() Void) { f() }
+func main(console: Console) {
+  let mut p = Pair(left: List.of(1))
+  call(fn() { p.left.push(2) })
+  console.print("${p.left.count()}")
+}

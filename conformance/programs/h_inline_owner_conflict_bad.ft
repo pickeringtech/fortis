@@ -1,0 +1,7 @@
+// reject: E-OWN-010
+// covers: LANG-08-02, LANG-07-05
+func call(xs: editable List[Int], f: fn() Int) {}
+func demo() {
+  let mut xs = List.of(1)
+  call(editable xs, fn() => xs.count())
+}

@@ -123,7 +123,7 @@ impl<'a> Typer<'a> {
         };
         let ts = e.tokens();
         if let Type::Named(n) = strip(pt) {
-            if n.name == "ObservationSchema" {
+            if n.package.is_empty() && n.name == "ObservationSchema" {
                 let d = if ts.len() == 1 && ts[0].kind == Kind::Upper { self.dc.table.get(&ts[0].text).cloned() } else { None };
                 if let Some(d) = &d {
                     if d.kind == "unknown" {
@@ -167,6 +167,23 @@ impl<'a> Typer<'a> {
                 self.expect(&t, pt, ts[0], &format!("aspect argument `{pn}`"));
             }
         }
+    }
+
+    /// A hook of the aspect `base`: the hook is written in the aspect's declaration, so only the aspect's own type
+    /// parameter (`R`, the target's result) is in scope, never the target's (a class the aspect names `T` is that
+    /// class); an associated call on `R` is E-TYP-170 like one on any type parameter (X-180).
+    #[allow(clippy::too_many_arguments)]
+    fn aspect_hook(&mut self, base: &Decl<'a>, blk: N<'a>, env: &Env, ret: Type, in_try: bool, what: &str, owned: Option<&str>, tok: Option<&Token>) -> Summary {
+        let tp = base.aspect.as_ref().and_then(|a| a.type_param.clone());
+        let scope: std::collections::BTreeSet<String> = tp.into_iter().collect();
+        // an annotation in the hook names only the aspect's own parameter, never the target's (D-52.7)
+        let saved_tp = std::mem::replace(&mut self.dc.type_params, scope.clone());
+        let saved_scope = (std::mem::replace(&mut self.tparams_in_scope, scope), std::mem::take(&mut self.where_in_scope));
+        let out = self.hook(blk, env, ret, in_try, what, owned, tok);
+        self.dc.type_params = saved_tp;
+        self.tparams_in_scope = saved_scope.0;
+        self.where_in_scope = saved_scope.1;
+        out
     }
 
     pub fn hook(&mut self, blk: N<'a>, env: &Env, ret: Type, in_try: bool, what: &str, owned: Option<&str>, tok: Option<&Token>) -> Summary {
@@ -233,7 +250,7 @@ impl<'a> Typer<'a> {
                 }
             }
             for (n2, ty, mode) in a.needs.clone() {
-                let matches: Vec<(String, String)> = sig.params.iter().filter(|(_, pt, _)| base_name(strip(pt)) == base_name(&ty)).map(|(pn, _, pm)| (pn.clone(), pm.clone())).collect();
+                let matches: Vec<(String, String)> = sig.params.iter().filter(|(_, pt, _)| unrefined(pt) == unrefined(&ty) && crate::literals::origin_clash(pt, &ty).is_empty()).map(|(pn, _, pm)| (pn.clone(), pm.clone())).collect();
                 if matches.is_empty() {
                     self.asp_err(format!("@{} needs a parameter of type {} ({n2}); {label} has none", nm.text, ty.show()), &nm, &ty.show(), "no such parameter", &n2);
                 } else if matches.len() > 1 {
@@ -263,7 +280,7 @@ impl<'a> Typer<'a> {
                 env_set(&e, pn, me.subst(pt, &m), false, "let");
             }
             for (n2, ty, _) in &a.needs {
-                if let Some((_, pt, pm)) = sig.params.iter().find(|(_, pt, _)| base_name(strip(pt)) == base_name(ty)) {
+                if let Some((_, pt, pm)) = sig.params.iter().find(|(_, pt, _)| unrefined(pt) == unrefined(ty) && crate::literals::origin_clash(pt, ty).is_empty()) {
                     let k = match pm.trim_start_matches('.') {
                         "editable" => "editable",
                         "owned" => "owned",
@@ -283,7 +300,7 @@ impl<'a> Typer<'a> {
             }
             for blk in a.before.clone() {
                 let e = hook_env(self, base);
-                self.hook(blk, &e, void(), target_try || handler_above, &format!("before hook of @{}", nm.text), None, None);
+                self.aspect_hook(base, blk, &e, void(), target_try || handler_above, &format!("before hook of @{}", nm.text), None, None);
                 before_names.push(nm.text.clone());
             }
         }
@@ -295,7 +312,7 @@ impl<'a> Typer<'a> {
                 let e = hook_env(self, &base);
                 env_set(&e, &rn, sig.ret.clone(), false, "param");
                 if let Some(blk) = blk {
-                    let out = self.hook(blk, &e, void(), target_try || handler_at_or_above[i], &format!("after hook of @{}", nm.text), None, None);
+                    let out = self.aspect_hook(&base, blk, &e, void(), target_try || handler_at_or_above[i], &format!("after hook of @{}", nm.text), None, None);
                     if out.has("fail") && self.is_linear(&sig.ret) {
                         let site = out.sites.get("fail").cloned().unwrap_or_else(|| nm.clone());
                         self.obl_err(
@@ -318,7 +335,7 @@ impl<'a> Typer<'a> {
                 let e = hook_env(self, &base);
                 env_set(&e, &fname, named("Failure"), false, "owned");
                 if let Some(blk) = blk {
-                    self.hook(blk, &e, sig.ret.clone(), true, &format!("failure handler of @{}", nm.text), Some(&fname), Some(&ftok_));
+                    self.aspect_hook(&base, blk, &e, sig.ret.clone(), true, &format!("failure handler of @{}", nm.text), Some(&fname), Some(&ftok_));
                 }
                 handler_names.push(nm.text.clone());
             }
@@ -382,7 +399,7 @@ impl<'a> Typer<'a> {
             }
         };
         if let Type::Refined { base, .. } = &ft {
-            if base.name == "String" {
+            if base.package.is_empty() && base.name == "String" {
                 ft = Type::Named(base.clone());
             }
         }
@@ -567,23 +584,9 @@ impl<'a> Typer<'a> {
 
     pub fn check_shared_shape(&mut self, args_types: &[(Type, N<'a>)], what: &str) {
         for (t, e) in args_types {
-            let s = strip(t);
-            if t.is_loan() || matches!(s, Type::Named(n) if ["StringView", "BytesView", "ListView"].contains(&n.name.as_str())) {
-                self.shape_err(&format!("a loan is stored in {what}"), ftok(*e), &format!("loan in {what}"), "own the value");
-            } else if matches!(s, Type::Fn { kind, .. } if kind == "fn mut") {
+            self.check_stored_type(t, ftok(*e), true);
+            if matches!(strip(t), Type::Fn { kind, .. } if kind == "fn mut") {
                 self.shape_err(&format!("a `fn mut` closure escapes into {what}"), ftok(*e), &format!("fn mut in {what}"), "a Mutex around the state and a `fn` closure");
-            } else {
-                let d = if known(s) { self.decl_of(s) } else { None };
-                if let Some(d) = d {
-                    if d.lifetime.is_some() {
-                        self.shape_err(
-                            &format!("a value of {}, which carries a loan through its lifetime parameter, is stored in {what}", d.name),
-                            ftok(*e),
-                            &format!("loan-carrying value in {what}"),
-                            "own the value",
-                        );
-                    }
-                }
             }
         }
     }
@@ -595,20 +598,24 @@ impl<'a> Typer<'a> {
         let roots: BTreeSet<String> = named.into_iter().filter(|n| env_lookup(env, n).is_some()).collect(); // the bindings the defer names, in holes too
         let tok = inner.direct_tokens()[0].clone();
         for r in &roots {
-            let b = env_lookup(env, r);
-            let h = self.own.holders.get(r).cloned();
-            if let (Some(b), Some(h)) = (b, h) {
-                if b.depth == self.depth && h.borrow().holder.as_deref() == Some(r.as_str()) {
-                    self.own_err(
-                        "E-OWN-052",
-                        format!("`{r}` holds a loan that ends when this block exits, before its deferred block runs; the defer may not use it (12.1)"),
-                        &tok,
-                        r,
-                        "loan ended before the defer",
-                        "LANG-07-04",
-                        "",
-                    );
-                }
+            let Some(b) = env_lookup(env, r) else { continue };
+            if b.depth != self.depth {
+                continue;
+            }
+            // a binding of this block that holds a loan, whole (`let r = alias p`, a `from` result) or inside an optional,
+            // a tuple or a record (`let t = xs.get(0)`): the loan has ended when the deferred block runs (12.1; D-364)
+            let whole = self.own.holders.get(r).map_or(false, |h| h.borrow().holder.as_deref() == Some(r.as_str()));
+            let held = self.own.loans.iter().any(|l| l.borrow().holder.as_deref() == Some(r.as_str()));
+            if whole || self.holds_loan(&b.ty) || held {
+                self.own_err(
+                    "E-OWN-052",
+                    format!("`{r}` holds a loan that ends when this block exits, before its deferred block runs; the defer may not use it (12.1)"),
+                    &tok,
+                    r,
+                    "loan ended before the defer",
+                    "LANG-07-04",
+                    "",
+                );
             }
         }
         crate::journal::cleanup("defer", "", tok.line, vec![]);

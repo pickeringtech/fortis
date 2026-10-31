@@ -1,0 +1,30 @@
+// execute: 29 passed, 0 failed
+// tests: run
+// requires: runtime
+// covers: LANG-14-04, LANG-14-02
+// `expect` in the places that give it a meaning (14): a `test` body, a `cases` body, a `property` body, and a lambda
+// written inside a test body.
+pure func half(n: Int<0..1000>) Int => n / 2
+
+test "half of ten" {
+  expect half(10) == 5
+}
+
+test "halves" cases {
+  "even": { n: 8, want: 4 }
+  "odd": { n: 9, want: 4 }
+} as row {
+  expect half(row.n) == row.want
+}
+
+property "half never exceeds its argument" forall (n: Int<0..1000>) {
+  expect half(n) <= n
+}
+
+test "a lambda in a test body" {
+  let check = fn(n: Int) Int {
+    expect n >= 0
+    return n
+  }
+  expect check(3) == 3
+}

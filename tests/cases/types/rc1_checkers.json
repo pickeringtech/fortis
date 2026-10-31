@@ -1,0 +1,420 @@
+[
+  {
+    "name": "optional_must",
+    "input": {
+      "source": "class Cell { export func take(self, m: owned Must) Int { Must.discharge(move m)\n return 1 } }\nfunc f(c: Cell?) { let m = Must.create()\n let n = c?.take(move m) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ]
+    }
+  },
+  {
+    "name": "ordinary_must",
+    "input": {
+      "source": "class Cell { export func take(self, m: owned Must) Int { Must.discharge(move m)\n return 1 } }\nfunc f(c: Cell) { let m = Must.create()\n let n = c.take(move m) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "optional_outcome",
+    "input": {
+      "source": "class Cell { export func take(self, o: owned Outcome[Int]) Int { return match move o { success(n) => n\n failure(e) => { report e\n give 0 } } } }\nfunc f(c: Cell?) { let o = \"1\" as Int\n let n = c?.take(move o) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ]
+    }
+  },
+  {
+    "name": "optional_string",
+    "input": {
+      "source": "class Cell { export func take(self, s: owned String) Int => s.scalarCount() }\nfunc f(c: Cell?) { let s: String = \"abc\"\n let n = c?.take(move s) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "optional_nested_move",
+    "input": {
+      "source": "class Cell { export func take(self, n: Int) Int => n }\nfunc consume(m: owned Must) Int { Must.discharge(move m)\n return 1 }\nfunc f(c: Cell?) { let m = Must.create()\n let n = c?.take(consume(move m)) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ]
+    }
+  },
+  {
+    "name": "optional_generic",
+    "input": {
+      "source": "class Cell { export func take[T](self, m: owned T, f: fn(owned T) Int) Int where T: linear => f(move m) }\nfunc consume(m: owned Must) Int { Must.discharge(move m)\n return 1 }\nfunc f(c: Cell?) { let m = Must.create()\n let n = c?.take(move m, consume) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ]
+    }
+  },
+  {
+    "name": "list_bad",
+    "input": {
+      "source": "func f() { let mut xs: List[Int<0..3>] = List.of(1)\n xs[0] = 9 }"
+    },
+    "expect": {
+      "codes": [
+        "E-REF-001"
+      ]
+    }
+  },
+  {
+    "name": "list_optional_bad",
+    "input": {
+      "source": "func f() { let mut xs: List[Int<0..3>?] = List.of(1)\n xs[0] = 9 }"
+    },
+    "expect": {
+      "codes": [
+        "E-REF-001"
+      ]
+    }
+  },
+  {
+    "name": "list_good",
+    "input": {
+      "source": "func f() { let mut xs: List[Int<0..3>] = List.of(1)\n xs[0] = 2 }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "list_optional_null",
+    "input": {
+      "source": "func f() { let mut xs: List[Int<0..3>?] = List.of(1)\n xs[0] = null }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "list_generic",
+    "input": {
+      "source": "func f[T](xs: editable List[T], v: owned T) { xs[0] = move v }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "editable_record",
+    "input": {
+      "source": "func poke(s: editable { n: Int }) {}\nfunc f(s: editable { n: Int<0..3> }) { poke(editable s) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "editable_optional_field",
+    "input": {
+      "source": "func poke(s: editable { n: Int? }) {}\nfunc f(s: editable { n: Int<0..3>? }) { poke(editable s) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "editable_nested_record",
+    "input": {
+      "source": "func poke(s: editable { inner: { n: Int } }) {}\nfunc f(s: editable { inner: { n: Int<0..3> } }) { poke(editable s) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "editable_tuple",
+    "input": {
+      "source": "func poke(s: editable (Int, Bool)) {}\nfunc f(s: editable (Int<0..3>, Bool)) { poke(editable s) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "editable_collection_record",
+    "input": {
+      "source": "func poke(s: editable List[{ n: Int }]) {}\nfunc f(s: editable List[{ n: Int<0..3> }]) { poke(editable s) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "editable_same",
+    "input": {
+      "source": "func poke(s: editable { n: Int<0..3> }) {}\nfunc f(s: editable { n: Int<0..3> }) { poke(editable s) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "record_read_widen",
+    "input": {
+      "source": "func read(s: { n: Int }) {}\nfunc f(s: { n: Int<0..3> }) { read(s) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "record_owned_widen",
+    "input": {
+      "source": "func take(s: owned { n: Int }) {}\nfunc f(s: owned { n: Int<0..3> }) { take(move s) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "guard_invalidates",
+    "input": {
+      "source": "class Box { export n: Int }\nfunc change(x: editable Box) Bool { x.n = 100\n return true }\nfunc restricted(n: Int<0..3>) {}\nfunc f(x: editable Box) { match x.n { 0..3 when change(editable x) => restricted(x.n)\n otherwise => {} } }"
+    },
+    "expect": {
+      "codes": [
+        "E-REF-001"
+      ]
+    }
+  },
+  {
+    "name": "guard_reads",
+    "input": {
+      "source": "class Box { export n: Int }\nfunc change(x: editable Box) Bool { x.n = 100\n return true }\nfunc restricted(n: Int<0..3>) {}\nfunc read(x: Box) Bool => true\nfunc f(x: Box) { match x.n { 0..3 when read(x) => restricted(x.n)\n otherwise => {} } }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "guard_copy",
+    "input": {
+      "source": "class Box { export n: Int }\nfunc change(x: editable Box) Bool { x.n = 100\n return true }\nfunc restricted(n: Int<0..3>) {}\nfunc f(x: editable Box) { let n = x.n\n match n { 0..3 when change(editable x) => restricted(n)\n otherwise => {} } }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "trim_count",
+    "input": {
+      "source": "pure func n(a: String) Int { return a.trim().scalarCount() }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "trim_lends",
+    "input": {
+      "source": "pure func n(a: String) StringView { return a.trim() }"
+    },
+    "expect": {
+      "codes": [
+        "E-OWN-053"
+      ]
+    }
+  },
+  {
+    "name": "trim_declared_origin",
+    "input": {
+      "source": "pure func n(a: String) StringView from a { return a.trim() }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "count_preserves_other_loan",
+    "input": {
+      "source": "func f(a: String, b: String) (StringView, Int) { return (a.trim(), b.trim().scalarCount()) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OWN-002",
+        "E-OWN-053"
+      ]
+    }
+  },
+  {
+    "name": "optional_linear_body",
+    "input": {
+      "source": "class Cell { export func take[T](self, x: owned T, use: fn(owned T) Int) Int where T: linear => use(move x) }\nfunc f[T](c: Cell?, x: owned T, use: fn(owned T) Int) where T: linear { let n = c?.take(move x, use) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ]
+    }
+  },
+  {
+    "name": "optional_capture",
+    "input": {
+      "source": "class Cell { export func take(self, f: owned fn once() Int) Int => move f() }\nfunc f(c: Cell?) { let m = Must.create()\n let n = c?.take(fn once[move m]() Int { Must.discharge(move m)\n return 1 }) }"
+    },
+    "expect": {
+      "codes": [
+        "E-OBL-001"
+      ]
+    }
+  },
+  {
+    "name": "optional_fresh_closure",
+    "input": {
+      "source": "class Cell { export func take(self, f: owned fn once() Int) Int => move f() }\nfunc f(c: Cell?) { let n = c?.take(fn once() Int { let m = Must.create()\n Must.discharge(move m)\n return 1 }) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "editable_record_field",
+    "input": {
+      "source": "func poke(s: editable { n: Int }) {}\nfunc f(s: editable { inner: { n: Int<0..3> } }) { poke(editable s.inner) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "record_view_keeps_loan",
+    "input": {
+      "source": "func f(a: owned String) { let r = { v: a.trim() }\n discard move a }"
+    },
+    "expect": {
+      "codes": [
+        "E-OWN-011"
+      ]
+    }
+  },
+  {
+    "name": "trim_comparison",
+    "input": {
+      "source": "pure func same(a: String, b: String) Bool => a.trim() == b.trim()"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "retired_validation_owned_result",
+    "input": {
+      "source": "type Code = String<scalars: 1..10>\nfunc read(s: String) alias String from s { return alias s }\ntry func f(s: String) Code { return Code.validate(read(alias s)) or fail }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "editable_collection_element",
+    "input": {
+      "source": "func poke(s: editable { n: Int }) {}\nfunc f(xs: editable List[{ n: Int<0..3> }]) { poke(editable xs[0]) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "editable_dynamic_field",
+    "input": {
+      "source": "interface I {}\nclass C implements I {}\nfunc poke(s: editable { item: dynamic I }) {}\nfunc f(s: editable { item: C }) { poke(editable s) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "editable_optional_injection",
+    "input": {
+      "source": "interface I {}\nclass C implements I {}\nfunc poke(s: editable { item: Int? }) {}\nfunc f(s: editable { item: Int }) { poke(editable s) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "editable_plain_callback",
+    "input": {
+      "source": "func run(f: editable fn mut() Int) Int => f()\nfunc main() { let mut f = fn() Int => 1\n let n = run(editable f) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "editable_bad_callback",
+    "input": {
+      "source": "func run(f: editable fn mut() Int) Int => f()\nfunc main() { let mut n = 0\n let mut f = fn[editable n]() Int { n = 1\n return n }\n let result = run(editable f) }"
+    },
+    "expect": {
+      "codes": [
+        "E-FUN-010"
+      ]
+    }
+  },
+  {
+    "name": "editable_function_field",
+    "input": {
+      "source": "func poke(s: editable { f: fn() Int }) {}\nfunc probe(s: editable { f: fn() Int<0..3> }) { poke(editable s) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "editable_function_kind",
+    "input": {
+      "source": "func poke(s: editable { f: fn mut() Int }) {}\nfunc probe(s: editable { f: fn() Int }) { poke(editable s) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "editable_function_same",
+    "input": {
+      "source": "func poke(s: editable { f: fn() Int<0..3> }) {}\nfunc probe(s: editable { f: fn() Int<0..3> }) { poke(editable s) }"
+    },
+    "expect": {
+      "codes": []
+    }
+  }
+]

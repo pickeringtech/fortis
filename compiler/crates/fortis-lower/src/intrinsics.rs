@@ -76,7 +76,7 @@ pub(crate) fn owning_launch(g: &mut FnGen, callee: &Callee, fargs: &[Arg], own_a
             Some(inner) => {
                 // the owned optional the future holds, typed (a `null` argument names no type)
                 binds.push(format!("let __p{k}: Option<{}> = {v};", crate::types::rust_ty(&inner, g.prog)));
-                if crate::types::is_string(&inner) { format!("__p{k}.as_deref()") } else { format!("__p{k}.as_ref()") }
+                if crate::types::is_string(&inner, g.prog) { format!("__p{k}.as_deref()") } else { format!("__p{k}.as_ref()") }
             }
             None => {
                 binds.push(format!("let __p{k} = {v};"));
@@ -112,7 +112,84 @@ pub(crate) fn owning_launch(g: &mut FnGen, callee: &Callee, fargs: &[Arg], own_a
     Some(format!("{{ {} async move {{ {call}({}).await }} }}", binds.join(" "), pass.join(", ")))
 }
 
+/// The Rust integer type of a built-in integer type name (6.2).
+fn rust_int(name: &str) -> &'static str {
+    match name {
+        "Int32" => "i32",
+        "Int16" => "i16",
+        "Int8" => "i8",
+        "UInt" | "UInt64" => "u64",
+        "UInt32" => "u32",
+        "UInt16" => "u16",
+        "UInt8" | "Byte" => "u8",
+        _ => "i64",
+    }
+}
+
+/// `x as T` (6.13, X-475): a row of the built-in conversion table, named `as:<kind>:<source>:<target>`, over one
+/// read argument. A widening, a canonical text and a `Bytes` are plain Rust; the rows that can fail call the
+/// runtime (fortis-native `convert`) and give an `Outcome`.
+fn conversion(g: &mut FnGen, row: &str, args: &[Arg]) -> String {
+    let mut parts = row.splitn(3, ':');
+    let (kind, source, target) = (parts.next().unwrap_or(""), parts.next().unwrap_or(""), parts.next().unwrap_or(""));
+    let origin = format!("{:?}", crate::gen::source_name(g.f));
+    let bounds = |name: &str| fortis_types::types::int_types(name).map(|(lo, hi)| format!("{lo}, {hi}")).unwrap_or_else(|| "0, 0".into());
+    let Some(a) = args.first() else { return "()".into() };
+    let value = |g: &mut FnGen| g.expr(&a.value, Want::Value);
+    let any = |g: &mut FnGen| g.expr(&a.value, Want::Any);
+    match kind {
+        "newtype_unwrap" => value(g),
+        "newtype_copy" => {
+            g.audit.clone_at(&g.f.name, a.value.line, "copy");
+            let value = g.expr(&a.value, Want::Ref);
+            if crate::types::is_string(&a.value.ty, g.prog) {
+                format!("({value}).to_string() /* legacy validate copy */")
+            } else {
+                format!("({value}).clone() /* legacy validate copy */")
+            }
+        },
+        "int_widen" => format!("({} as {})", value(g), rust_int(target)),
+        "int_narrow" => format!("rt::convert::narrow::<{}>({} as i128, {}, {origin})", rust_int(target), value(g), bounds(target)),
+        "int_to_decimal" => format!("rt::convert::int_to_decimal({} as i128)", value(g)),
+        "decimal_to_int" => format!("rt::convert::decimal_to_int::<{}>(&{}, {}, {origin})", rust_int(target), any(g), bounds(target)),
+        "int_to_float" if matches!(source, "Int" | "Int64" | "UInt" | "UInt64") => format!("rt::convert::int_to_float({} as i128, {origin})", value(g)),
+        "int_to_float" => format!("({} as f64)", value(g)),
+        // a sized integer shows as its 64-bit kin; every other source has its own `Show`
+        "to_string" if fortis_types::types::is_int_type(source) && source.starts_with('U') => format!("rt::Show::show(&({} as u64))", value(g)),
+        "to_string" if fortis_types::types::is_int_type(source) => format!("rt::Show::show(&({} as i64))", value(g)),
+        "to_string" | "view_to_string" => format!("rt::Show::show(&{})", any(g)),
+        "parse_int" => format!("rt::convert::parse_int::<{}>(rt::show::s(&{}), {}, {origin})", rust_int(target), any(g), bounds(target)),
+        "parse_decimal" => format!("rt::convert::parse_decimal(rt::show::s(&{}), {origin})", any(g)),
+        "parse_bool" => format!("rt::convert::parse_bool(rt::show::s(&{}), {origin})", any(g)),
+        "bytes_to_string" => format!("rt::convert::bytes_to_string(&{}, {origin})", any(g)),
+        "string_to_bytes" => format!("rt::show::s(&{}).as_bytes().to_vec()", any(g)),
+        "scalar_to_int" => format!("({} as i64)", value(g)),
+        "int_to_scalar" => format!("rt::convert::int_to_scalar({} as i128, {origin})", value(g)),
+        _ => {
+            g.err_pub(0, format!("unknown conversion `{row}`"));
+            "()".into()
+        }
+    }
+}
+
 pub fn call(g: &mut FnGen, name: &str, args: &[Arg], ty: &Type, line: u32) -> String {
+    if let Some(target) = name.strip_prefix("enum_parse:") {
+        let names: Vec<String> = match g.prog.type_def(target).map(|d| &d.kind) {
+            Some(TypeKind::Enum { variants }) => variants.iter().map(|v| v.name.clone()).collect(),
+            _ => { g.err_pub(line, "enum parse target missing"); return "()".into(); }
+        };
+        let value = g.expr(&args[0].value, Want::Str);
+        let origin = format!("{:?}", crate::gen::source_name(g.f));
+        let mut code = format!("Err(rt::Failure::new(\"conversion.parse\", {origin}).with(\"text\", rt::Dyn::Str(__text.to_string())).with(\"variants\", rt::Dyn::Str({:?}.to_string())))", names.join(", "));
+        for variant in names.iter().rev() {
+            code = format!("if __text.eq_ignore_ascii_case({variant:?}) {{ Ok({}::{}) }} else {{ {code} }}", ident(target), ident(variant));
+        }
+        return format!("{{ let __text: &str = {value}; {code} }}");
+    }
+    // `x as T` (6.13, X-475): a row of the built-in conversion table
+    if let Some(row) = name.strip_prefix("as:") {
+        return conversion(g, row, args);
+    }
     // variadic `List.of(items...)`
     if name == "List.of" {
         let items: Vec<String> = args.iter().map(|a| g.expr(&a.value, Want::Value)).collect();
@@ -207,6 +284,21 @@ pub fn call(g: &mut FnGen, name: &str, args: &[Arg], ty: &Type, line: u32) -> St
         "Builder.appendLine" => format!("{}.append_line(&{})", any(g, 0), any(g, 1)),
         "Builder.finish" => format!("{}.finish()", any(g, 0)),
         "Text.words" => format!("rt::text::words({})", arg(0)),
+        // the everyday text operations (6.6, X-479): the runtime's own functions, the VM's as well
+        "String.trim" | "StringView.trim" if matches!(ty, Type::Loan { .. }) => format!("rt::text::trim({})", arg(0)),
+        "String.trim" | "StringView.trim" => format!("rt::text::trim({}).to_string()", arg(0)),
+        "String.trimStart" | "StringView.trimStart" if matches!(ty, Type::Loan { .. }) => format!("rt::text::trim_start({})", arg(0)),
+        "String.trimStart" | "StringView.trimStart" => format!("rt::text::trim_start({}).to_string()", arg(0)),
+        "String.trimEnd" | "StringView.trimEnd" if matches!(ty, Type::Loan { .. }) => format!("rt::text::trim_end({})", arg(0)),
+        "String.trimEnd" | "StringView.trimEnd" => format!("rt::text::trim_end({}).to_string()", arg(0)),
+        "String.find" | "StringView.find" => format!("rt::text::find({}, {})", arg(0), arg(1)),
+        "String.startsWith" | "StringView.startsWith" => format!("rt::text::starts_with({}, {})", arg(0), arg(1)),
+        "String.endsWith" | "StringView.endsWith" => format!("rt::text::ends_with({}, {})", arg(0), arg(1)),
+        "String.split" | "StringView.split" => format!("rt::text::split({}, {})", arg(0), arg(1)),
+        "String.lines" | "StringView.lines" => format!("rt::text::lines({})", arg(0)),
+        "String.replace" | "StringView.replace" => format!("rt::text::replace({}, {}, {})", arg(0), arg(1), arg(2)),
+        "String.asciiUpper" | "StringView.asciiUpper" => format!("rt::text::ascii_upper({})", arg(0)),
+        "String.asciiLower" | "StringView.asciiLower" => format!("rt::text::ascii_lower({})", arg(0)),
         // ---- time
         "Duration.days" | "Duration.hours" | "Duration.minutes" | "Duration.seconds" | "Duration.milliseconds" => format!("rt::Duration::of({}, {})", arg(0), ns(&name[9..])),
         "Duration.add" | "Duration.sub" | "Duration.multiply" => format!("rt::Duration::{}({}, {})", &name[9..], arg(0), arg(1)),
@@ -274,12 +366,20 @@ pub fn call(g: &mut FnGen, name: &str, args: &[Arg], ty: &Type, line: u32) -> St
         "injectDefect" => format!("rt::defect(&{})", any(g, 0)),
         "List.default" => "Vec::new()".to_string(),
         "List.count" | "ListView.count" | "Array.count" => format!("rt::collections::count(&{})", any(g, 0)), // D-160: checked
-        "List.get" | "ListView.get" => {
+        // a view reads the array's own elements (X-578)
+        "Array.asView" => arg(0),
+        "List.get" | "ListView.get" | "Array.get" => {
             // `(alias T from self)?`: a loan of the item, or the item itself when it is trivial
+            let mut lookup = format!("rt::collections::list_get_ref({}, {})", arg(0), arg(1));
+            // Optional T stays one optional at the language boundary (D-721), lending its payload.
+            if args.first().and_then(|a| crate::types::args_of(&a.value.ty).first().cloned())
+                .map_or(false, |t| matches!(fortis_types::types::strip(&t), Type::Optional(_))) {
+                lookup.push_str(".and_then(|__v| __v.as_ref())");
+            }
             if trivial(ty, g.prog) || matches!(ty, Type::Optional(i) if crate::types::trivial(i, g.prog)) {
-                format!("rt::collections::list_get_ref({}, {}).copied()", arg(0), arg(1))
+                format!("{lookup}.copied()")
             } else {
-                format!("rt::collections::list_get_ref({}, {})", arg(0), arg(1))
+                lookup
             }
         }
         "Scalar.of" => format!("rt::text::scalar_of({})", arg(0)),
@@ -295,8 +395,14 @@ pub fn call(g: &mut FnGen, name: &str, args: &[Arg], ty: &Type, line: u32) -> St
         }
         "List.pop" => format!("{}.pop()", any(g, 0)),
         "List.set" => format!("rt::collections::list_set({}, {}, {})", arg(0), arg(1), value(g, 2)),
+        "List.clear" => format!("{}.clear()", any(g, 0)),
         "Array.set" => format!("{{ let __i = {}; {}[__i as usize] = {}; }}", arg(1), any(g, 0), value(g, 2)),
         "List.iterate" => format!("rt::collections::Cursor::new({})", arg(0)),
+        // `Deque.iterate` (X-576): the library class keeps `front`, the first item last, and `back`, the last item last
+        "Deque.iterate" => {
+            let recv = arg(0);
+            format!("rt::collections::Cursor::joined(&{recv}.front, &{recv}.back)")
+        }
         "ListCursor.next" => {
             // `(alias T from self)?`: a loan of the item, or the item itself when it is trivial, as `List.get`
             if trivial(ty, g.prog) || matches!(ty, Type::Optional(i) if crate::types::trivial(i, g.prog)) {
@@ -322,6 +428,14 @@ pub fn call(g: &mut FnGen, name: &str, args: &[Arg], ty: &Type, line: u32) -> St
             }
         }
         "Map.set" => format!("{}.set({}, {})", any(g, 0), value(g, 1), value(g, 2)),
+        "Map.containsKey" => {
+            let k = key(g, args, 1);
+            format!("{}.contains_key({k})", any(g, 0))
+        }
+        "Map.remove" | "Set.remove" => {
+            let k = key(g, args, 1);
+            format!("{}.remove({k})", any(g, 0))
+        }
         "Map.count" | "Set.count" => format!("{}.count()", any(g, 0)),
         "Set.default" => "rt::OrderedSet::new()".to_string(),
         "Set.add" => format!("{}.add({})", any(g, 0), value(g, 1)),
@@ -331,7 +445,9 @@ pub fn call(g: &mut FnGen, name: &str, args: &[Arg], ty: &Type, line: u32) -> St
         }
         // ---- outcomes (10)
         "Must.create" | "Must.discharge" => "()".to_string(),
-        "Outcome.success" => format!("Ok({})", value(g, 0)),
+        // A success used directly as a match/or-recover operand has no Err value from which Rust can infer
+        // its error parameter. Fortis outcomes always carry Failure, even when success was proved (X-553).
+        "Outcome.success" => format!("rt::Outcome::Ok({})", value(g, 0)),
         "Outcome.failure" => format!("Err({})", value(g, 0)),
         "annotate" => format!("{}.annotate({})", value(g, 0), value(g, 1)),
         // ---- shared ownership (7.8, 12.7)
@@ -360,12 +476,34 @@ pub fn call(g: &mut FnGen, name: &str, args: &[Arg], ty: &Type, line: u32) -> St
         "Failures.aggregate" => format!("rt::failure::aggregate({}, {:?})", value(g, 0), crate::gen::source_name(g.f)),
         "graphemes" => format!("rt::text::graphemes({})", arg(0)),
         "BytesView.count" | "Bytes.count" | "BytesView.byteCount" | "Bytes.byteCount" => format!("({}.len() as i64)", any(g, 0)),
-        "BytesView.get" | "Bytes.get" => format!("rt::collections::list_get({}, {}).map(|b| b as i64)", arg(0), arg(1)),
+        "BytesView.get" | "Bytes.get" => format!("rt::collections::list_get({}, {})", arg(0), arg(1)),
         "Money.multiply" | "Money.divide" => {
             // a trusted intrinsic of fortis.money: the amount times (or over) an integer, the currency kept
             let op = if name == "Money.multiply" { "mul" } else { "div" };
             let m = any(g, 0);
-            format!("(|| -> rt::Outcome<Money> {{ let __a = rt::numeric::dec({m}.amount.{op}(&rt::Decimal::from_int({} as i128).unwrap()), \"decimal\")?; Ok(Money {{ currency: {m}.currency, amount: __a }}) }})()", arg(1))
+            let money = crate::types::rust_ty(fortis_types::types::strip(&args[0].value.ty), g.prog);
+            format!("(|| -> rt::Outcome<{money}> {{ let __a = rt::numeric::dec({m}.amount.{op}(&rt::Decimal::from_int({} as i128).unwrap()), \"decimal\")?; Ok({money} {{ currency: {m}.currency, amount: __a }}) }})()", arg(1))
+        }
+        // a derived or core type's `equals`/`compare` that its declaration does not provide a body for: Rust's `==`
+        // (the `PartialEq` the derivation or the hand-written `equals` gives) and `<`/`>` producing the `Ordering`
+        // (the `PartialOrd` the derivation or the hand-written `compare` gives) (X-516; D-84, D-85). Text compares as
+        // the ordering operators do, through `rt::show::s`, so a `String` and a literal meet (X-516).
+        _ if name.ends_with(".equals") => {
+            if crate::types::is_string(&args[0].value.ty, g.prog) || args.get(1).map_or(false, |x| crate::types::is_string(&x.value.ty, g.prog)) {
+                format!("(rt::show::s(&{}) == rt::show::s(&{}))", any(g, 0), any(g, 1))
+            } else {
+                format!("({} == {})", arg(0), arg(1))
+            }
+        }
+        _ if name.ends_with(".compare") => {
+            let ord = crate::types::rust_ty(ty, g.prog);
+            let (x, y) = if crate::types::is_string(&args[0].value.ty, g.prog) || args.get(1).map_or(false, |a| crate::types::is_string(&a.value.ty, g.prog)) {
+                (format!("rt::show::s(&{})", any(g, 0)), format!("rt::show::s(&{})", any(g, 1)))
+            } else {
+                (arg(0), arg(1))
+            };
+            let (less, equal, greater) = (ident("Less"), ident("Equal"), ident("Greater"));
+            format!("({{ let __a = {x}; let __b = {y}; if __a < __b {{ {ord}::{less} }} else if __a > __b {{ {ord}::{greater} }} else {{ {ord}::{equal} }} }})")
         }
         _ if name.starts_with("kit:") => {
             let rest = &name["kit:".len()..];
@@ -393,7 +531,7 @@ fn name_of_pub(t: &Type) -> Option<&str> {
 /// A lookup key as a reference: `&str` for text, `&value` otherwise.
 fn key(g: &mut FnGen, args: &[Arg], i: usize) -> String {
     match args.get(i) {
-        Some(a) if crate::types::is_string(&a.value.ty) => g.expr(&a.value, Want::Str),
+        Some(a) if crate::types::is_string(&a.value.ty, g.prog) => g.expr(&a.value, Want::Str),
         Some(a) => {
             let v = g.expr(&a.value, Want::Ref);
             v

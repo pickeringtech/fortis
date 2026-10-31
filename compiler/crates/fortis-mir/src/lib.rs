@@ -56,6 +56,7 @@ fn build_package_with(dir: &std::path::Path, search: &std::path::Path, lib: &bui
     let mut out = Program::default();
     let mut build_errors = Vec::new();
     let mut entry = None;
+    let mut impls: Vec<ImplDef> = Vec::new();
     for (key, r) in built {
         let (p, pkg, pkg_entry, is_root) = match r {
             Some(x) => x,
@@ -77,6 +78,7 @@ fn build_package_with(dir: &std::path::Path, search: &std::path::Path, lib: &bui
                     out.tests.extend(p.tests);
                     out.unbuilt_tests.extend(p.unbuilt_tests);
                 }
+                impls.extend(p.impls);
             }
             Err(es) => build_errors.extend(es),
         }
@@ -85,6 +87,11 @@ fn build_package_with(dir: &std::path::Path, search: &std::path::Path, lib: &bui
         return Err((vec![], build_errors));
     }
     out.entry = entry;
+    // a module's `implement` block for a class another module declares joins that class now (X-180)
+    for p in std::mem::take(&mut impls) {
+        out.impls.push(p);
+    }
+    model::fold_impls(&mut out);
     if !lib.qualify.is_empty() {
         names::map_types(&mut out, &mut |t| lib.qualify.apply(t));
     }

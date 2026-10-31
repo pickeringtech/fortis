@@ -1,0 +1,13 @@
+import fortis.host { Console }
+contract Later { async }
+func work(console: Console) Int {
+  console.print("body")
+  return 3
+}
+async func main(console: Console) {
+  let f: async fn(Console) Int = Later fn(c: Console) Int => work(c)
+  let pending = f(console)
+  console.print("before")
+  let n = await pending
+  console.print("${n}")
+}

@@ -112,6 +112,16 @@ pub fn labels_of<'b>(ty: &mut Typer<'b>, mtree: N<'b>) -> BTreeMap<String, Strin
                             for m in d.methods.keys() {
                                 out.insert(format!("method {name}.{m}"), id.clone());
                             }
+                            // Applied mixin bodies produce summaries under the applying class, just as
+                            // run_unit does. Callback inference must see them through the query database.
+                            for mx in &d.mixins {
+                                let Some(md) = ty.dc.resolve_named(mx, None).filter(|md| md.kind == "mixin") else { continue };
+                                for (m, sig) in md.methods.iter() {
+                                    if !m.starts_with("requires:") && !d.methods.contains(m) && sig.body.is_some() {
+                                        out.insert(format!("method {name}.{m}"), id.clone());
+                                    }
+                                }
+                            }
                             out.insert(format!("cleanup {name}"), id.clone());
                         }
                         _ => {}

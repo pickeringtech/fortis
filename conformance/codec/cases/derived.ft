@@ -74,7 +74,7 @@ try func roundTrips(fs: FileSystem, out: Console) {
   let pc1 = Percent.fromText(pc.toText()) or fail
   let pc2 = Percent.fromBytes(pc.toBytes()) or fail
   out.print("percent ${pc1 == pc} ${pc2 == pc}")
-  let n = Name.validate("Ada") or fail
+  let n = "Ada" as Name
   save(fs, "name", n.toText(), n.toBytes()) or fail
   let n1 = Name.fromText(n.toText()) or fail
   let n2 = Name.fromBytes(n.toBytes()) or fail

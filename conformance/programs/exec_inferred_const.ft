@@ -1,12 +1,12 @@
 // execute: limit 3, 3 names
 // requires: runtime
 // covers: LANG-04-02, LANG-05-01
-// An unannotated constant is usable at its initialiser's type, including a method call on a `List.of` constant
-// (the guide's example; D-54.4). `limit` also meets an `Int` annotation.
+// An unannotated constant is usable at its initialiser's type (D-54.4). `limit` meets an `Int` annotation;
+// the list constant owns its strings (D-580) and supports a method call.
 import fortis.host { Console }
 
 const limit = 3
-const names = List.of("ada", "brian", "carla")
+const names: List[String] = List.of("ada", "brian", "carla")
 
 func main(console: Console) {
   let n: Int = limit

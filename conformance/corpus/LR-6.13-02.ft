@@ -1,0 +1,9 @@
+// reject: E-TYP-180, E-TYP-181 (at the marked lines)
+import fortis.text { Scalar }
+
+func wrong(f: Float, n: Int, s: Scalar) Int {
+  let rounded = f as Int                     // reject: E-TYP-180 — rounding is a choice: Decimal.fromFloat(f, 0, HalfEven)
+  let same = n as Int                        // reject: E-TYP-181 — n is already an Int
+  let d = s as Decimal                       // reject: E-TYP-180 — no row for the pair: Scalar to Int to Decimal is not searched
+  return n
+}

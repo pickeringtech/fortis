@@ -1,0 +1,11 @@
+// reject: E-TYP-050 (at the marked line)
+// covers: LANG-05-09
+// A call that leaves a refined parameter unbound is rejected like any other (5.8; D-62): a bound inside `Int<0..100>`
+// is not a default, and a parameter with a default is still supplied by it.
+pure func refined(n: Int<0..100>) Int => n
+pure func withDefault(n: Int<0..100> = 5) Int => n
+
+test "missing" {
+  expect refined() == 0                    // reject: E-TYP-050
+  expect withDefault() == 5
+}

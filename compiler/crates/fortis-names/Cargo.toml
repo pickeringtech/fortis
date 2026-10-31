@@ -8,3 +8,6 @@ description = "Library modules, packages and name resolution (Language Reference
 fortis-syntax = { path = "../fortis-syntax" }
 fortis-diag = { path = "../fortis-diag" }
 fortis-di = { path = "../fortis-di" }
+
+[dev-dependencies]
+fortis-testkit = { path = "../fortis-testkit" }

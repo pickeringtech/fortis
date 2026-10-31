@@ -1,0 +1,5 @@
+// reject: E-TYP-090
+// covers: LANG-06-15
+enum Size[T] derive convert from String {
+  Small
+  Large }

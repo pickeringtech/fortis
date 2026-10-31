@@ -1,0 +1,21 @@
+// accept
+export type Basket = List[Int]
+export type Counts = Map[String, Int]
+export type Tags = Set[Int]
+export type Pair = Array[Int, 2]
+export type Short = List[Int]<length: 1..3>
+export type Nested = Basket
+export func make() Basket { return Basket(List.of(1, 2)) }
+export func add(b: editable Basket) { b.push(3) }
+export func clear(b: owned Basket) { move b.consumeEach(fn(n) {}) }
+export func counts() Counts {
+  let mut m: Map[String, Int] = Map.default()
+  m.set("one", 1)
+  return Counts(move m)
+}
+export func tags() Tags {
+  let mut s: Set[Int] = Set.default()
+  let added = s.add(7)
+  return Tags(move s)
+}
+export func pair() Pair { return Pair(Array[Int, 2].filled(4)) }

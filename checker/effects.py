@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
+from functools import cache
 from typing import Dict, List, Optional, Set, Tuple
 
 EFFECTS = ("alloc", "io", "mutate", "nondet", "suspend", "block", "fail", "recovers")
@@ -23,6 +24,34 @@ COMPATIBILITY = os.path.join(ROOT, "library", "fortis", "compatibility.yaml")
 # the effects a standard package's data may give an operation, in the order a summary adds them; `fail`, `suspend` and
 # `recovers` change a function's type, so only its modifiers give them (11.2)
 DECLARABLE = ("nondet", "block", "mutate", "alloc", "io")
+
+# a modifier and the effect it permits (11.2): `forbids` of that effect beside the modifier is a contradiction (11.5)
+PERMITS = (("async", "suspend"), ("try", "fail"), ("recovers", "recovers"))
+
+
+def contract_contradictions(parts, skip_own: bool) -> List[Tuple[str, str, str, str, str]]:
+    """The contradictions among a declaration's claims (11.5, E-EFF-050), shared by the contract check and the function
+    check. `parts` lists (origin, items): an origin is a contract's name, or "" for a function's written modifiers;
+    items are a contract's `modifiers`, `forbids`, `requires` and `excludes`. Each contradiction is (kind, first origin,
+    second origin, claim, effect): `pure` beside a required capability ("pure", the capability, "io"), a modifier beside
+    `forbids` of the effect it permits ("forbids", the modifier, the effect), and one authority both required and
+    excluded ("excludes", the capability, "io"). With `skip_own`, a pair whose two sides are one contract's is left out,
+    since that contract's own check reports it. Each is listed once, the written modifiers' side first."""
+    out, seen = [], set()
+    for oa, a in parts:
+        for ob, b in parts:
+            if skip_own and oa and oa == ob:
+                continue
+            found = []
+            if "pure" in a.get("modifiers", ()):
+                found += [("pure", cap, "io") for cap in sorted(b.get("requires", ()))]
+            found += [("forbids", m, e) for m, e in PERMITS if m in a.get("modifiers", ()) and e in b.get("forbids", ())]
+            found += [("excludes", cap, "io") for cap in sorted(set(a.get("requires", ())) & set(b.get("excludes", ())))]
+            for kind, claim, effect in found:
+                if (kind, ob, claim) not in seen:
+                    seen.add((kind, ob, claim))
+                    out.append((kind, oa, ob, claim, effect))
+    return out
 
 
 def standard_packages(path: str = COMPATIBILITY) -> List[str]:
@@ -79,7 +108,16 @@ def load_effect_data(directory: str = EFFECT_DATA, packages: Optional[List[str]]
     return rows
 
 
-TRUSTED_EFFECTS = load_effect_data()
+@cache
+def effect_data():
+    """Load trusted-operation metadata only when a library operation needs it.
+
+    Summary algebra and in-memory checker units need no library files. As in the Rust checker,
+    one analysis process shares the same validated metadata after its first library lookup.
+    """
+    return load_effect_data()
+
+
 AUTHORITIES = {"FileSystem", "Network", "Clock", "Random", "Environment", "Process", "Supervisor", "Console", "SecretAccess", "RawSql"}
 
 
@@ -149,7 +187,7 @@ def library_summary(module: Optional[str], owner: Optional[str], name: str, modi
     if "try" in mods: s.add("fail", "trusted")
     if "async" in mods: s.add("suspend", "trusted")
     if "recovers" in mods: s.add("recovers", "trusted")
-    for e in TRUSTED_EFFECTS.get((module, owner, name), ()):
+    for e in effect_data().get((module, owner, name), ()) if module is not None else ():
         s.add(e, "trusted")
         if e == "io":
             s.needs_auth = True

@@ -1,0 +1,70 @@
+// execute: 300|conversion.out_of_range|-7|1.50|true|conversion.parse|42|conversion.not_integral|9007199254740993|conversion.not_exact|hi|3|65|A|conversion.out_of_range|50|refinement.out_of_range|100|3|7.0|1000.0
+// requires: runtime
+// covers: LANG-06-14
+// 6.13 (X-475): the built-in rows on every backend: widening, narrowing with its failure and its success, the
+// canonical texts, parsing with its failure, Decimal to Int both ways, Int to Float total and fallible, Bytes,
+// Scalar and a refinement target, each failing with the code 6.13 names.
+import fortis.host { Console }
+import fortis.text { Scalar }
+
+try recovers func main(console: Console) {
+  let small: Int8 = 44
+  let wide = small as Int
+  let sum = wide * 2 + 212 or fail
+  console.print("${sum}")
+  let narrow = 300 as Int8 catch e {
+    console.print(e.code)
+    recover small
+  }
+  discard narrow
+  let n = -7
+  console.print(n as String)
+  console.print(1.50d as String)
+  console.print(true as String)
+  let bad = "4 2" as Int catch e {
+    console.print(e.code)
+    recover 0
+  }
+  discard bad
+  let good = "42" as Int or fail
+  console.print(good as String)
+  let frac = 1.5d as Int catch e {
+    console.print(e.code)
+    recover 0
+  }
+  discard frac
+  let big = 9007199254740993
+  console.print(big as String)
+  let f = big as Float catch e {
+    console.print(e.code)
+    recover 0.0
+  }
+  discard f
+  let text = "hi" as Bytes
+  console.print(text as String or fail)
+  let three = "3" as Decimal or fail
+  console.print(three as String)
+  let a = Scalar.of("A")
+  console.print((a as Int) as String)
+  console.print((65 as Scalar or fail) as String)
+  let noScalar = -1 as Scalar catch e {
+    console.print(e.code)
+    recover a
+  }
+  discard noScalar
+  let pct = 50 as Int<0..100> or fail
+  console.print(pct as String)
+  let over = 150 as Int<0..100> catch e {
+    console.print(e.code)
+    recover 0
+  }
+  discard over
+  let fits = 100 as Int8 or fail             // a narrowing that fits: the value, not a failure
+  console.print(fits as String)
+  let asInt = three as Int or fail           // an integral Decimal: the value
+  console.print(asInt as String)
+  let i32: Int32 = 7
+  console.print((i32 as Float) as String)    // Int32 and smaller into Float: total, every value exact
+  let exact = 1000 as Float or fail          // Int into Float: fallible, and this value is exact
+  console.print(exact as String)
+}

@@ -43,7 +43,7 @@ try func main(console: Console) {
   console.print("g ${g}")
   let h = c ?? (boom(-1) or fail)
   console.print("h ${Int.wrappingAdd(h, 1)}")
-  let given: String? = String.from("given")
+  let given: String? = "given" as String
   console.print(pick(given, -1) or fail)
   console.print(pick(null, 3) or fail)
   let last = e ?? (boom(-1) or fail)

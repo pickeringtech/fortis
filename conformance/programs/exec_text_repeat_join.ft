@@ -1,0 +1,36 @@
+// execute: ababab|[]|[]|é|éééé|[naï naï]|4 18|[]|[a]|[a, b, c]|[abc]|[a--b--c]|[, ]|[-]|[1;;3]|x=1;y=2;z=3|true
+// requires: runtime
+// covers: LANG-06-06
+// X-479, R19, 6.6: `repeat(times)` writes a text `times` times in a row (0 times, or the empty text, give the empty
+// string), and `String.join(parts, separator)` writes the parts in order with the separator between neighbours: no
+// parts give the empty string and one part gives itself. Empty parts and the empty separator are ordinary text, and
+// multi-byte scalars count by scalar. `repeat` takes a non-negative count, so `repeat(-1)` is `E-REF-001`.
+import fortis.host { Console }
+
+recovers func main(console: Console) {
+  console.print("ab".repeat(3))
+  console.print("[${"ab".repeat(0)}]")
+  console.print("[${"".repeat(9)}]")
+  console.print("é".repeat(1))
+  console.print("é".repeat(4))
+  let heap = "naï" as String
+  console.print("[${heap.repeat(1)} ${heap.repeat(1)}]")
+  let wide = "éa".repeat(6)
+  console.print("${"é".repeat(4).scalarCount()} ${wide.byteCount()}")
+  let none: List[String] = List.default()
+  console.print("[${String.join(none, ", ")}]")
+  let one: List[String] = List.of("a")
+  console.print("[${String.join(one, ", ")}]")
+  let three: List[String] = List.of("a", "b", "c")
+  console.print("[${String.join(three, ", ")}]")
+  console.print("[${String.join(three, "")}]")
+  console.print("[${String.join(three, "--")}]")
+  let blanks: List[String] = List.of("", "")
+  console.print("[${String.join(blanks, ", ")}]")
+  console.print("[${String.join(blanks, "-")}]")
+  let gaps: List[String] = List.of("1", "", "3")
+  console.print("[${String.join(gaps, ";")}]")
+  let line = "x=1;y=2;z=3"
+  console.print(String.join(line.split(";"), ";"))
+  console.print("${String.join(line.split(";"), ";") == line}")
+}

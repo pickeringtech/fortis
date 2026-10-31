@@ -1,0 +1,7 @@
+[
+  {"name": "lr4_missing_member", "input": {"head": "import acme.items", "source": "items.absent()"}, "expect": ["E-NAM-001"]},
+  {"name": "lr4_private_member", "input": {"head": "import acme.items", "source": "items.private()"}, "expect": ["E-NAM-004"]},
+  {"name": "lr4_module_public", "input": {"head": "import acme.items", "source": "items.public()"}, "expect": []},
+  {"name": "lr4_module_constant", "input": {"head": "import acme.items", "source": "items.count"}, "expect": []},
+  {"name": "lr4_module_constructor", "input": {"head": "import acme.items", "source": "items.Item.make()"}, "expect": []}
+]

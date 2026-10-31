@@ -1,0 +1,9 @@
+[package]
+name = "fortis-testkit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Shared case tables and seeded properties for Fortis unit tests"
+
+[dependencies]
+fortis-diag = { path = "../fortis-diag" }

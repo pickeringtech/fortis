@@ -1,0 +1,46 @@
+// execute: show s|s|show fb|drop fb|x|c x|end|drop s
+// execute-trace: drop Token|loans-end|drop Token
+// requires: runtime
+// covers: LANG-07-01, LANG-07-05
+// D-354, 7.5: an owned optional place written without a marker on the left of a `??` is a read loan of it where the
+// result is lent, for a call (`show(console, some ?? make(console, "fb"))`) or read in an interpolation
+// (`"${t ?? "none"}"`), and the place keeps its value for the uses that follow (the read of `some?.label`, a
+// `copy t` of the text place); a fallback taken is a temporary of the statement, destroyed when it ends
+// (`drop fb`), as D-375 records. Natively the lowering once moved the left operand (rustc E0382, use of moved
+// value) where both checkers accept the program and the interpreter and the VM run it; it now borrows the value
+// in the place or in the fallback's statement slot (through a `Cow` for text), and the place itself ends loans
+// and announces its drop when the function ends (7.9). The owned positions of a bare left place are rejected
+// (D-357; own_coalesce_owned_left_bad.ft), and `move` and `copy` on the left run everywhere
+// (exec_coalesce_owned_left.ft). Pre-existing since v0.0.1.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: label as String, console: console.retain())
+}
+
+func show(console: Shared[Console], t: Token) {
+  console.print("show ${t.label}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let some: Token? = make(console, "s")
+  show(console, some ?? make(console, "fb"))
+  console.print("${some?.label ?? "none"}")
+  let gone: Token? = null
+  show(console, gone ?? make(console, "fb"))
+  let t: String? = "x" as String
+  console.print("${t ?? "none"}")
+  let ct = copy t
+  console.print("c ${ct ?? "none"}")
+  console.print("end")
+}

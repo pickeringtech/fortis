@@ -9,19 +9,19 @@ export class Holder {
   export item: Item
 }
 func change(i: editable Item) {
-  i.name = String.from("changed")
+  i.name = "changed" as String
 }
 func keep(i: owned Item) {
 }
 func run() Int {
-  let mut a = Item(name: String.from("a"))
+  let mut a = Item(name: "a" as String)
   let b = copy a
   {
     let seen = alias a
     discard seen.name
   }
   let h = Holder(item: copy a)
-  let mut c = Item(name: String.from("c"))
+  let mut c = Item(name: "c" as String)
   c = copy b
   let f = fn[alias c]() Int => c.name.scalarCount()
   discard f()

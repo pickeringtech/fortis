@@ -1,0 +1,11 @@
+// execute: 2 tea coffee
+// requires: runtime
+// covers: LANG-04-02, LANG-06-16
+// D-582: the type argument in the initialiser is not the constant's annotation.
+import fortis.host { Console }
+const drinks = List[String].of("tea", "coffee")
+func main(console: Console) {
+  let mut text = "${drinks.count()}"
+  drinks.each(fn(drink) { text = "${text} ${drink}" })
+  console.print(text)
+}

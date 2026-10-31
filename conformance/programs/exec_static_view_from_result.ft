@@ -1,0 +1,74 @@
+// execute: bytes 3|empty|x0|a x0|b missing|c none|d none|end
+// requires: runtime
+// covers: LANG-06-06, LANG-07-06
+// D-390, 6.6/7.6: static text and bytes returned as views `from` parameters: a byte string as the whole
+// `BytesView from xs` result (`=> b"abc"`), an `if` that gives a string literal on one branch and a view of a
+// `String` through a loan on another (`give "empty"` beside `give alias t.label`, as `StringView from t`), a
+// literal recovered into an optional view result (`or recover "missing"` as `(alias StringView from t)?`), and
+// a literal `present` in the branches of a value if and of a value match of one. A literal without
+// interpolation is a view of static storage, and both checkers accept all of these; the interpreter and the VM
+// always ran them, and native code once refused them (the bytes' `vec!` a reference to a temporary, rustc
+// E0515; the mixed branches' owned `String::from` beside the borrowed `&String`, rustc E0308). A bytes view's
+// signature is now the slice (`&[u8]`, which the runtime's bytes functions take and a static literal is), a
+// literal given, matched or recovered into a borrowed text is the static text itself as a recovered one always
+// was, and a literal wrapped into an optional borrowed text (`Option<&str>`, D-353) is `Some` of the static
+// text, its sibling arms read as a `str`. Found by the sweep of D-386's fix, and widened by the v0.0.2-rc.10
+// re-check.
+import fortis.host { Console }
+
+class Token {
+  label: String
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+func bytesOf(xs: List[Token]) BytesView from xs => b"abc"
+
+func labelOr(t: Token, empty: Bool) StringView from t {
+  return if empty {
+    give "empty"
+  } else {
+    give alias t.label
+  }
+}
+
+try func labelOf(t: Token, flag: Bool) (alias StringView from t)? {
+  if flag {
+    return present(alias t.label)
+  }
+  fail Missing()
+}
+
+recovers func pick(t: Token, flag: Bool) (alias StringView from t)? {
+  return labelOf(alias t, flag) or recover "missing"
+}
+
+func pick2(t: Token, flag: Bool) (alias StringView from t)? {
+  return if flag {
+    give present(alias t.label)
+  } else {
+    give present("none")
+  }
+}
+
+func pick3(t: Token, flag: Bool) (alias StringView from t)? {
+  return match flag {
+    true => present(alias t.label)
+    false => present("none")
+  }
+}
+
+recovers func main(console: Console) {
+  let xs: List[Token] = List.default()
+  console.print("bytes ${bytesOf(alias xs).byteCount()}")
+  let t = Token(label: "x0" as String)
+  console.print("${labelOr(alias t, true)}")
+  console.print("${labelOr(alias t, false)}")
+  console.print("a ${pick(alias t, true) ?? "nil"}")
+  console.print("b ${pick(alias t, false) ?? "nil"}")
+  console.print("c ${pick2(alias t, false) ?? "nil"}")
+  console.print("d ${pick3(alias t, false) ?? "nil"}")
+  console.print("end")
+}

@@ -1,0 +1,48 @@
+// execute: tea:Small|none|8 -1|2|4|42 -1 n=7|6
+// requires: runtime
+// covers: LANG-06-16
+// `map` on a `T?` and on an `Outcome[T]` (6.8, 10; X-479): the function is applied to the present value or to the
+// success, and `null` and a failure pass through without calling it. The result is still an optional or an outcome, so
+// it is read with `??` or handled on the line with `or recover`; the operators and `map` do not overlap, because
+// `map` changes the value and the operators decide what happens when there is none.
+import fortis.host { Console }
+
+enum Size derive Equatable, Displayable {
+  Small
+  Large
+}
+
+class Drink {
+  export name: String
+  export size: Size
+  export func label(self) String => "${self.name}:${self.size}"
+}
+
+try func parse(text: StringView) Int => text as Int or fail
+
+recovers func main(console: Console) {
+  let drinks = List.of(Drink(name: "tea", size: Size.Small), Drink(name: "cola", size: Size.Large))
+  let first = drinks.first()
+  console.print(first.map(fn(d) => d.label()) ?? "none")
+  let nobody: List[Drink] = List.default()
+  console.print(nobody.first().map(fn(d) => d.label()) ?? "none")
+  let size: Int? = 4
+  let missing: Int? = null
+  let doubled = size.map(fn(n) => Int.wrappingMul(n, 2))
+  let nothing = missing.map(fn(n) => Int.wrappingMul(n, 2))
+  console.print("${doubled ?? -1} ${nothing ?? -1}")
+  let words = List.of("a" as String, "bb" as String)
+  let found = words.find(fn(w) => w.byteCount() == 2)
+  let length = found.map(fn(w) => w.byteCount())
+  console.print("${length ?? 0}")
+  let text: String? = "kiwi"
+  console.print("${text.map(fn(t) => t.byteCount()) ?? 0}")
+
+  let ok = parse("21").map(fn(n) => Int.wrappingMul(n, 2)) or recover -1
+  let bad = parse("x").map(fn(n) => Int.wrappingMul(n, 2)) or recover -1
+  let named = parse("7").map(fn(n) => "n=${n}") or recover "none"
+  console.print("${ok} ${bad} ${named}")
+  let held = parse("5")
+  let moved = move held.map(fn(n) => Int.wrappingAdd(n, 1)) or recover -1
+  console.print("${moved}")
+}

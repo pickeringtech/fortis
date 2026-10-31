@@ -89,7 +89,7 @@ pure func viaGeneric(s: String?) Int => readAny(s)
 pure func textOr(s: String?, other: String) Int => (s ?? other).scalarCount()
 
 func choose(s: String?) String {
-  let other = String.from("abc")
+  let other = "abc" as String
   return copy s ?? other                               // a read parameter's text is copied to be returned (D-341)
 }
 
@@ -110,12 +110,12 @@ func main(console: Console) {
   console.print("sum ${sum(list)}")
   console.print(head(list))
   console.print(head(null))
-  let name = String.from("ab")
+  let name = "ab" as String
   console.print(label(name))
   console.print(label(name))
   console.print(label(null))
   console.print("first ${passOn(list)}")
-  let tag = Tag(name: String.from("x"))
+  let tag = Tag(name: "x" as String)
   let copied = tagCopy(tag)
   let shown = match copied {
     present(t) => t.name.scalarCount()
@@ -142,7 +142,7 @@ func main(console: Console) {
   console.print("other ${o1} ${o2}")
   console.print("narrowed ${maybeLength(name)} ${maybeLength(null)}")
   console.print("generic ${viaGeneric(name)} ${viaGeneric(null)}")
-  let fallbackText = String.from("abc")
+  let fallbackText = "abc" as String
   console.print("text ${textOr(name, fallbackText)} ${textOr(null, fallbackText)}")
   let chosen = choose(name)
   let fallen = choose(null)

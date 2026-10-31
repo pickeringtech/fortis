@@ -1,0 +1,8 @@
+// reject: E-OBL-001
+// covers: LANG-10-02
+class Bin[T] where T: linear {
+  item: T
+}
+func exercise() {
+  let nested = Bin(item: Bin(item: Outcome.success(3)))
+}

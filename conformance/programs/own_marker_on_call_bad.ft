@@ -1,0 +1,62 @@
+// reject: E-OWN-001, E-OWN-051, E-TYP-040 (at the marked lines)
+// covers: LANG-07-01, LANG-07-06
+// D-382, 5.6, 7.5, 7.6: a marker takes a place, optionally followed by a call on it; a function's name is not a
+// place, so a marker written on a call of a function marks nothing. Both checkers accepted it and let the marker
+// stand, and the interpreter read the callee's name as a place and stopped with a dynamic failure. The call is
+// written plain and the markers sit on its arguments: `first(alias xs)` keeps the loan its `from` result holds
+// (7.6), and `make(console, "m")` needs no marker, its result being fresh (7.5); exec_from_text.ft and
+// exec_coalesce_fallback_temporary.ft run those spellings on every backend. A marker on a call of a value that is
+// no function at all (a `const`) takes the plain call's E-TYP-040. The cursor shape keeps the loan-of-a-temporary
+// rejection beside the marker's (D-392): `fresh(console).iterate()` lends its temporary receiver whatever the
+// marker says.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+const top: Int = 3
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func first(xs: List[Token]) (alias Token from xs)? {
+  return xs.get(0)
+}
+
+func fresh(console: Shared[Console]) List[Token] {
+  return List.of(make(console, "t1"), make(console, "t2"))
+}
+
+func fromResult(console: Shared[Console]) {
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "x0"))
+  let t = alias first(alias xs)                          // reject: E-OWN-001 — the marker belongs on the argument alone: first(alias xs)
+  console.print("first ${t?.label ?? "none"}")
+}
+
+func freshResult(console: Shared[Console]) {
+  let d = move make(console, "m")                        // reject: E-OWN-001 — a fresh result needs no marker: make(console, "m")
+  console.print("move ${d.label}")
+}
+
+func cursorOfTemporary(console: Shared[Console]) {
+  let mut c = alias fresh(console).iterate()             // reject: E-OWN-001, E-OWN-051 — the marker is on the call, and the cursor lends a temporary
+  console.print("cur ${c.next()?.label ?? "?"}")
+}
+
+func callOfConst(console: Shared[Console]) {
+  let v = alias top(1)                                   // reject: E-TYP-040 — a marked call of a value that is no function
+  console.print("v ${v}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  fromResult(console)
+}

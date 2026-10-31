@@ -1,0 +1,40 @@
+// reject: E-OBL-001, E-ERR-001, E-TYP-040 (at the marked lines)
+// covers: LANG-06-16
+// 6.7 and 10 (X-479): `tryMap`, `tryEach` and `tryFold` are `try` functions, so their outcome is handled on the line
+// like any other: dropped, it is `E-OBL-001`, and `or fail` in a function that is not `try` is `E-ERR-001`. The
+// callback returns an outcome; one that returns a plain value is `E-TYP-040`, which names the `Outcome[…]` the
+// callback must return (X-579, D-536; it was `E-TYP-160`), and a `tryFold` result used as the value it folds is
+// `E-TYP-040` too.
+type Pence = Int<0..>
+
+try func addPence(a: Pence, b: Pence) Pence {
+  let sum = Int.add(a as Int, b as Int) or fail
+  return sum as Pence
+}
+
+func dropped(lines: List[String]) {
+  lines.tryMap(fn(line) => line as Int)   // reject: E-OBL-001: the outcome is dropped
+}
+
+func unhandled(lines: List[String]) List[Int] {
+  return lines.tryMap(fn(line) => line as Int) or fail   // reject: E-ERR-001: `or fail` outside a `try` function
+}
+
+try func plain(lines: List[String]) List[Int] {
+  let sizes: List[Int] = lines.tryMap(fn(line) => line.byteCount()) or fail   // reject: E-TYP-040: the callback returns an Int, not the Outcome[U] tryMap needs
+  return move sizes
+}
+
+try func plainEach(lines: List[String]) {
+  lines.tryEach(fn(line) => line.byteCount()) or fail   // reject: E-TYP-040: the callback returns an Int, not an Outcome[Void]
+}
+
+try func plainFold(prices: List[Int]) Int {
+  let total = prices.tryFold(0, fn(sum, p) => Int.wrappingAdd(sum, p)) or fail   // reject: E-TYP-040: the callback returns an Int, not an Outcome[Int]
+  return total
+}
+
+try func fold(prices: List[Pence]) Pence {
+  let sum = prices.tryFold(0 as Pence, fn(sum, p) => addPence(sum, p))
+  return sum   // reject: E-TYP-040: the outcome is used as a Pence
+}

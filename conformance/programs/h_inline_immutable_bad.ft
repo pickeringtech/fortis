@@ -1,0 +1,7 @@
+// reject: E-OWN-001
+// covers: LANG-08-02, LANG-07-01
+func call(f: editable fn mut() Void) { f() }
+func demo() {
+  let xs = List.of(1)
+  call(fn() { xs.push(2) })
+}

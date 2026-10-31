@@ -10,9 +10,9 @@ func classify(age: Age) String {
   return "adult"
 }
 recovers func main(console: Console) {
-  let a = Age.validate(42) or recover Age(0)
+  let a = Outcome[Age].success(42 as Age) or recover Age(0)
   console.print(classify(a))
-  match Age.validate(200) {
+  match 200 as Age {
     success(ok) => console.print("accepted")
     failure(f) => {
       console.print("rejected ${f.code}")

@@ -1,0 +1,11 @@
+// execute: hello
+// requires: runtime
+// covers: LANG-07-06
+// D-581: a cursor from return owns its cursor value while lending the collection.
+import fortis.host { Console }
+pure func cursor(xs: List[String]) ListCursor[String] from xs => xs.iterate()
+func main(console: Console) {
+  let words: List[String] = List.of("hello")
+  let mut c = cursor(alias words)
+  console.print(c.next() ?? "missing")
+}

@@ -1,0 +1,22 @@
+// accept
+// An `implement` block beside the class it is for: the class lists the interface for every module that imports it
+// (9.5; D-132).
+import fortis.text { Builder }
+
+export interface Measured {
+  pure func size(self) Int
+}
+
+export class Tag {
+  export name: String
+}
+
+implement Displayable for Tag {
+  pure func display(self, into: editable Builder) {
+    into.append("tag ${self.name}")
+  }
+}
+
+implement Measured for Tag {
+  pure func size(self) Int => 3
+}

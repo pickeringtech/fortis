@@ -1,0 +1,47 @@
+// execute: a fallback|mid|b second|end|drop second|drop fallback
+// requires: runtime
+// covers: LANG-07-07, LANG-07-01
+// D-370, 7.5, 7.9: an unmarked copy of a binding whose type is a loan but whose value is its own (`let a = t` after
+// `let t = empty.get(0) ?? move d`, or `let a = pair.0` of a tuple built around such a `??`) is a loan: the owner
+// alone destroys the value, at its own block's end, and the block's locals go in reverse initialisation order
+// (`second`, held by `pair`, before `fallback`, held by `t`). The interpreter made the copy a second owner and ran
+// the cleanup when the copy's block ended; native code destroyed the tuple's value after the binding's. The tokens
+// sit in slots without a cleanup of their own, so that no backend announces the drops in its trace (D-344); the
+// output shows every cleanup once.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+class Slot {
+  token: Token
+}
+
+func make(console: Shared[Console], label: StringView) Slot {
+  return Slot(token: Token(label: label as String, console: console.retain()))
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Slot] = List.default()
+  let d = make(console, "fallback")
+  let t = empty.get(0) ?? move d
+  {
+    let a = t
+    console.print("a ${a.token.label}")
+  }
+  console.print("mid")
+  let e = make(console, "second")
+  let pair = (empty.get(0) ?? move e, 1)
+  {
+    let b = pair.0
+    console.print("b ${b.token.label}")
+  }
+  console.print("end")
+}

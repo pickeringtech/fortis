@@ -1,0 +1,9 @@
+import bad.implement.clash.shapes { Box }
+
+export interface Titled {
+  pure func label(self) String
+}
+
+implement Titled for Box {
+  pure func label(self) String => "two"
+}

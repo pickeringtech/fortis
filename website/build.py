@@ -13,7 +13,7 @@ ships nothing stale.
 The site publishes user-facing documentation only: the repository README, every page of the human guide
 (`docs/guide`) and the agent mode (`docs/agent`, with the `fortis-code` skill the agent documentation points
 to), the three specifications (`docs/Fortis_Specification.md`, `docs/Fortis_Language_Reference.md`,
-`docs/Fortis_Platform_Specification.md`) and the release notes (`docs/releases/v0.0.1.md`, `docs/releases/v0.0.2.md`), each rendered
+`docs/Fortis_Platform_Specification.md`) and the release notes (`docs/releases/v0.0.1.md`, `docs/releases/v0.0.2.md`, `docs/releases/v0.1.0.md`), each rendered
 to HTML with its raw Markdown beside it. The maintainers' planning documents (the Delivery Programme, the decision
 register, the delivery plan and the review records) and `AGENTS.md` are never published. A link from a published
 page to an excluded document does not dangle: it is rewritten in the generated HTML and Markdown to the closest
@@ -69,7 +69,7 @@ from docset_check import fences  # noqa: E402
 PUBLISHED_SPECS = ["docs/Fortis_Specification.md", "docs/Fortis_Language_Reference.md",
                    "docs/Fortis_Platform_Specification.md"]
 # documentation pages published beside the documentation set, rendered with the documentation site's renderer
-EXTRA_RENDER = ["docs/releases/v0.0.1.md", "docs/releases/v0.0.2.md"]
+EXTRA_RENDER = ["docs/releases/v0.0.1.md", "docs/releases/v0.0.2.md", "docs/releases/v0.1.0.md"]
 EXTERNAL_OK = ("https://fonts.googleapis.com/",)
 
 # repository paths the site never publishes: the planning and internal documents, and the .html forms the
@@ -82,7 +82,7 @@ EXCLUDED_PREFIXES = ("docs/delivery/", "docs/reviews/")
 # target becomes plain text, keeping the link's words
 LINK_REWRITES = {
     # the delivery status board is published as the current release notes (the landing page's Status agrees)
-    "docs/delivery/status.md": "docs/releases/v0.0.2.md",
+    "docs/delivery/status.md": "docs/releases/v0.1.0.md",
 }
 # the href a link to an excluded document gets when no published page replaces it: WebsitePage.render replaces
 # the whole anchor with its label, so the words stay and no link dangles
@@ -383,7 +383,7 @@ def landing_html(examples):
         fail("the landing page's #src script was not found")
 
     ld = {"@context": "https://schema.org", "@type": "ComputerLanguage", "name": "Fortis", "url": SITE + "/",
-          "description": DESCRIPTION, "version": "0.0.2", "license": "https://spdx.org/licenses/MIT.html",
+          "description": DESCRIPTION, "version": "0.1.0", "license": "https://spdx.org/licenses/MIT.html",
           "publisher": {"@type": "Organization", "name": "Pickering Technologies Ltd"},
           "codeRepository": "https://github.com/pickeringtech/fortis"}
     head = f"""<!doctype html>
@@ -441,6 +441,7 @@ DESCRIPTIONS = {
                              "library/fortis.",
     "docs/releases/v0.0.1.md": "The v0.0.1 release notes: what the release ships, how it was checked and "
                                "reviewed, and what happens next.",
+    "docs/releases/v0.1.0.md": "The v0.1.0 release: domain modelling, conversions, collections and text.",
     "docs/releases/v0.0.2.md": "The v0.0.2 release notes: the reading release's seventeen changes, the decisions "
                                "for review, the defects fixed and how to migrate with fortis fmt.",
 }
@@ -528,7 +529,7 @@ def llms_txt(examples):
     para = re.sub(r"\s*\n\s*", " ", para)
     para = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", para)
     out = ["# Fortis", "", "> " + para.strip(), ""]
-    out += ["Status: v0.0.2 release candidate. Developed by Pickering Technologies Ltd. MIT licence.",
+    out += ["Latest: Model a domain (v0.1.0). Developed by Pickering Technologies Ltd. MIT licence.",
             "Markdown of every page is published beside its HTML; the full agent-mode documentation is "
             "concatenated in /llms-full.txt.", ""]
     out.append("## Agent documentation")
@@ -539,7 +540,9 @@ def llms_txt(examples):
     out += [entry(docsite.title_of(p), page_url(p, markdown=True), first_sentence(p))
             for p in ["README.md"] + human]
     out += ["", "## Release"]
-    out += [entry("v0.0.2 release notes", page_url("docs/releases/v0.0.2.md", markdown=True),
+    out += [entry("Latest: Model a domain (v0.1.0)", page_url("docs/releases/v0.1.0.md", markdown=True),
+                  first_sentence("docs/releases/v0.1.0.md")),
+            entry("v0.0.2 release notes", page_url("docs/releases/v0.0.2.md", markdown=True),
                   first_sentence("docs/releases/v0.0.2.md")),
             entry("v0.0.1 release notes", page_url("docs/releases/v0.0.1.md", markdown=True),
                   first_sentence("docs/releases/v0.0.1.md")),
@@ -613,7 +616,7 @@ def index_md(examples):
            "Fortis is a statically checked, compiled language for software written mostly by AI agents. "
            "**People can read, review and trust it because every decision is written in the source.** Ownership, "
            "changes, failures and effects are explicit.", "",
-           "Status: v0.0.2 release candidate. Language 1.0 is still being built and is not released.", "",
+           "Latest: Model a domain (v0.1.0). Language 1.0 is still being built and is not released.", "",
            "## Examples", ""]
     for entry, program in examples:
         out += [f"### {entry['title']} (`{entry['file']}`)", "",
@@ -634,13 +637,16 @@ def index_md(examples):
             "## Roadmap", "",
             "- **v0.0.1**: write, check, run, build, format and test programs. Modules, functions, classes, "
             "enums, ownership and failures.",
-            "- **v0.0.2 (now)**: code that says only what matters. Fewer markers, capabilities as parameters and "
+            "- **v0.0.2**: code that says only what matters. Fewer markers, capabilities as parameters and "
             "built-in logging.",
-            "- **v0.1**: domain modelling. Interfaces, generics, refinements and contracts.",
-            "- **v0.2**: effects and testing. Checked effects, property tests and packages with dependencies.",
-            "- **v0.3**: concurrency. Async, tasks and structured concurrency.",
-            "- **v0.4**: standard library. Collections, text, Unicode and numerics.",
-            "- **v0.5–0.6**: production tooling. Observation, runtime, kits and an incremental compiler.",
+            "- **v0.1.0 (latest)**: model a domain. Refinements, newtypes, conversions, interfaces, generics, contracts, text and collections.",
+            "- **v0.2**: trust effects and test properly. Checked effects and capabilities, and property tests.",
+            "- **v0.3**: build a web service. An HTTP server with health, readiness and metrics built in, SQLite "
+            "and typed queries.",
+            "- **v0.4**: build web apps. HTML, forms, sessions, authentication, Postgres and migrations.",
+            "- **v0.5**: run it in production. Telemetry, connection pools, timeouts, rate limits and containers.",
+            "- **v0.6**: organise and extend code. Packages with dependencies, checked architecture and extensions.",
+            "- **v0.7–0.9**: async in your own code, a complete standard library, and tooling for large code bases.",
             "- **v1.0**: stability. Editions, migration and a stability promise. Performance judged against Rust.",
             "", "## Licence", "",
             "Developed by Pickering Technologies Ltd. Released under the MIT License.", ""]

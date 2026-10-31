@@ -1,0 +1,11 @@
+// reject: E-TYP-040
+// covers: LANG-06-16
+// D-589: moving an Iterable does not turn its read cursor into a consuming cursor.
+class Bin[T] implements Iterable[T, ListCursor[T]] where T: linear {
+  items: List[T]
+  export pure func iterate(self) ListCursor[T] from self => self.items.iterate()
+}
+func drop() {
+  let b = Bin(items: List[Outcome[Int]].of(Outcome.success(1)))
+  for item in move b {}
+}

@@ -1,8 +1,9 @@
-// reject: E-EFF-001 (at the marked line)
+// reject: E-EFF-001, E-EFF-050 (at the marked line)
 // covers: LANG-11-06
-// A contract subtracts: `forbids recovers` rejects a body with that effect, naming the contract (11.5).
+// A contract subtracts: `forbids recovers` rejects a body with that effect, naming the contract (11.5). A body has the
+// effect only under a written `recovers`, which the contract's `forbids recovers` contradicts (E-EFF-050, X-526).
 contract Strict {
   forbids recovers
 }
 try func half(n: Int) Int => n
-Strict recovers func quiet(n: Int) Int => half(n) or recover 0   // reject: E-EFF-001 — Strict forbids recovers
+Strict recovers func quiet(n: Int) Int => half(n) or recover 0   // reject: E-EFF-001, E-EFF-050 — Strict forbids it

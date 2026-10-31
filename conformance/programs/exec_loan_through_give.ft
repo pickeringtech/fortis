@@ -1,0 +1,64 @@
+// execute: given a|matched a|recovered a|scrutinee a|end|drop a
+// requires: runtime
+// covers: LANG-07-05, LANG-07-04
+// D-355, 7.3: a loan carried out of an `if` or `match` branch by `give`, or out of a handler by `recover`, is held
+// by the binding that receives the expression's value, and a temporary scrutinee's loan (`match xs.get(0)`) by the
+// arm's payload binding; the list is read through them while it is unchanged, and its element is destroyed with the
+// list, once, on every backend.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: label as String, console: console.retain())
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func find(xs: List[Token], c: Bool) (alias Token from xs)? {
+  if c {
+    fail Missing()
+  }
+  return xs.get(0)
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  let some = xs.count() > 0
+  let t = if some {
+    give xs.get(0)
+  } else {
+    give xs.get(1)
+  }
+  console.print("given ${t?.label ?? "none"}")
+  let u = match xs.count() {
+    0 => {
+      give null
+    }
+    otherwise => {
+      give xs.get(0)
+    }
+  }
+  console.print("matched ${u?.label ?? "none"}")
+  let empty: List[Token] = List.default()
+  let r = find(alias empty, true) catch e {
+    recover xs.get(0)
+  }
+  console.print("recovered ${r?.label ?? "none"}")
+  match xs.get(0) {
+    present(w) => console.print("scrutinee ${w.label}")
+    null => console.print("none")
+  }
+  console.print("end")
+}

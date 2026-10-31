@@ -1,0 +1,35 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-11-06
+// The word `capability` in a contract names an Authority type (11.5, 11.6): a class that does not implement `Authority`
+// is not one, nor is an interface, nor a name nothing declares. A name not in scope is judged as an authority
+// parameter's type is: one of the core capabilities (`Network` here, not imported) is an Authority type.
+import fortis.host { Clock }
+
+export class Config {
+  export name: String
+}
+
+export interface Shape {
+  pure func area(self) Int
+}
+
+contract NeedsConfig {
+  requires capability Config                   // reject: E-TYP-040 — Config is not an Authority type
+}
+
+contract NoShape {
+  excludes capability Shape                    // reject: E-TYP-040 — Shape is not an Authority type
+}
+
+contract Offline {
+  excludes capability Netwrok                  // reject: E-TYP-040 — nothing declares Netwrok
+  excludes capability Network
+}
+
+contract Timed {
+  requires capability Clock
+}
+
+Timed func now(clock: Clock) Int => 1
+
+Offline func local(n: Int) Int => n

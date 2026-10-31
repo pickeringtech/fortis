@@ -1,0 +1,7 @@
+// reject: E-OWN-051
+// covers: LANG-08-02, LANG-07-06
+func keep(f: fn() Int) fn() Int from f { return fn[alias f]() Int => f() }
+func demo() fn() Int {
+  let mut n = 0
+  return keep(fn() => n)
+}

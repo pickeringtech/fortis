@@ -1,0 +1,5 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-580: the same storage boundary applies to G2's owned collections.
+import fortis.collections { Deque, SortedSet }
+func use(a: Deque[StringView], b: SortedSet[StringView]) {} // reject: E-OWN-053

@@ -1,0 +1,146 @@
+[
+  {
+    "name": "array_refined",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a: Array[Int<0..9>, 3] = Array[Int<0..9>].filled(1)\nconsole.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "3"
+    ]
+  },
+  {
+    "name": "array_nested",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a: Array[{ n: Int<0..9> }, 3] = Array[{ n: Int<0..9> }].filled({ n: 1 })\nconsole.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "3"
+    ]
+  },
+  {
+    "name": "array_generic",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc make[T](value: T) Array[T, 2] where T implements Copyable => Array[T].filled(value)\nfunc main(console: Console) {\nlet a = make(4)\nconsole.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "array_decimal",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a = Array[Int, 2].filled(1)\nconsole.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "array_hex",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a = Array[Int, 0x2].filled(1)\nconsole.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "array_binary",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a = Array[Int, 0b10].filled(1)\nconsole.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "array_octal",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a = Array[Int, 0o2].filled(1)\nconsole.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "array_underscores",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a = Array[Int, 0_2].filled(1)\nconsole.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "array_hex_underscores",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a = Array[Int, 0x0_2].filled(1)\nconsole.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "array_binary_underscores",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a = Array[Int, 0b1_0].filled(1)\nconsole.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "array_octal_underscores",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a = Array[Int, 0o0_2].filled(1)\nconsole.print(\"${a.count()}\")\n}\n"
+    },
+    "expect": [
+      "2"
+    ]
+  },
+  {
+    "name": "record_shapes",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a: { n: Int } = { n: 1 }\nlet b: { n: Int? } = { n: 1 }\nconsole.print(\"${a.n} ${b.n ?? 0}\")\n}\n"
+    },
+    "expect": [
+      "1 1"
+    ]
+  },
+  {
+    "name": "record_nested",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\nlet a: { inner: { n: Int<0..3>? } } = { inner: { n: 1 } }\nlet b: { inner: { n: Int? } } = a\nconsole.print(\"${b.inner.n ?? 0}\")\n}\n"
+    },
+    "expect": [
+      "1"
+    ]
+  },
+  {
+    "name": "record_order",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc reorder(value: { flag: Bool, count: Int }) { count: Int, flag: Bool } { return value }\nfunc main(console: Console) {\n let value = reorder({ flag: true, count: 3 })\n console.print(\"${value.count} ${value.flag}\")\n}\n"
+    },
+    "expect": [
+      "3 true"
+    ]
+  },
+  {
+    "name": "editable_record_local",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc poke(s: editable { n: Int }) { let t = editable s\nt.n = 9 }\nfunc main(console: Console) {\nlet mut s: { n: Int } = { n: 1 }\npoke(editable s)\nconsole.print(\"${s.n}\")\n}\n"
+    },
+    "expect": [
+      "9"
+    ]
+  },
+  {
+    "name": "editable_nested_reborrow",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc poke(s: editable { n: Int }) { let t = editable s\nlet u = editable t\nu.n = 9 }\nfunc main(console: Console) {\nlet mut s: { n: Int } = { n: 1 }\npoke(editable s)\nconsole.print(\"${s.n}\")\n}\n"
+    },
+    "expect": [
+      "9"
+    ]
+  }
+]

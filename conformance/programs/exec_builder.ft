@@ -6,7 +6,7 @@ import fortis.text
 
 func main(console: Console) {
   let mut out = text.Builder.create()
-  let parts = List.of("a", "b", "c")
+  let parts: List[String] = List.of("a", "b", "c")
   for i in 0..<parts.count() {
     if i > 0 {
       out.append(",")

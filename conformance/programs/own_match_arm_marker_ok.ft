@@ -17,14 +17,14 @@ export enum Slot {
 func pickName(user: User, flag: Bool) String {
   return match flag {
     true => copy user.name
-    false => String.from("anonymous")
+    false => "anonymous" as String
   }
 }
 
 func nameOf(opt: User?) String {
   return match opt {
     present(u) => copy u.name
-    null => String.from("anonymous")
+    null => "anonymous" as String
   }
 }
 
@@ -32,7 +32,7 @@ func takeLabel(slot: owned Slot) String {
   return match move slot {
     Full(label: l) => move l
     Size(count: c) => "size ${c}"
-    Empty => String.from("none")
+    Empty => "none" as String
   }
 }
 

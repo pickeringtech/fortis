@@ -1,0 +1,10 @@
+// reject: E-TYP-070
+// covers: LANG-06-01, LANG-06-02, LANG-06-08
+class A { const value = 1
+  value: Int }
+class B { value: Int
+  const value = 1 }
+class C { const value = 1
+  func value(self) Int => 1 }
+class D { func value(self) Int => 1
+  const value = 1 }

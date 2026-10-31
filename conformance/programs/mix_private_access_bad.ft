@@ -1,0 +1,12 @@
+// reject: E-NAM-004 (at the marked line)
+// covers: LANG-09-04, LANG-09-02
+// A mixin body sees only the class's exported members, even when the mixin is declared in the same module (9.6):
+// `Peek` reads the private field `secret` of the class that applies it, and is refused at that application.
+export mixin Peek {
+  export pure func reveal(self) Int => self.secret     // reject: E-NAM-004
+}
+
+export class Vault with Peek {
+  export name: String
+  secret: Int
+}

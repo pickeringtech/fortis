@@ -13,8 +13,8 @@ pure func idC(n: Int) Int => n
 
 pure func idD(n: Int) Int => n
 
-func pick[T](a: T, b: T, c: T) List[T] {
-  return List.of(a, b, c)
+func pick[T](a: owned T, b: owned T, c: owned T) List[T] {
+  return List.of(move a, move b, move c)
 }
 
 func twoThenDeclared() Int {

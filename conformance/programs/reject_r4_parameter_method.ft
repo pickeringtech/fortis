@@ -1,0 +1,4 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+interface I { func size(self) Int }
+func f[T](x: T) where T implements I { let m = x.size }

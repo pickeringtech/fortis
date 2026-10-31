@@ -255,7 +255,7 @@ impl<'p> Vm<'p> {
 
     fn source_name(f: &Function) -> String {
         let l = &f.label;
-        l.strip_prefix("function ").or_else(|| l.strip_prefix("method ").map(|m| m.rsplit('.').next().unwrap_or(m))).unwrap_or(l).to_string()
+        l.strip_prefix("function ").or_else(|| l.strip_prefix("method ").map(|m| m.rsplit('.').next().unwrap_or(m))).unwrap_or(l).split('#').next().unwrap_or("").to_string()
     }
 
     // ---- calls ----------------------------------------------------------------------------------------------
@@ -680,6 +680,16 @@ impl<'p> Vm<'p> {
         }
     }
 
+    /// A call whose declared result lends (7.6): a loan or an optional loan, or an outcome whose success type is
+    /// one (the try side of an `or recover` or a `catch` is typed as the outcome; D-451).
+    fn call_lends(ty: &fortis_types::types::Type) -> bool {
+        use fortis_types::types::Type;
+        match ty {
+            Type::Named(n) if n.name == "Outcome" && !n.args.is_empty() => Self::loan_ty(&n.args[0]),
+            _ => Self::loan_ty(ty),
+        }
+    }
+
     /// A type whose value holds a loan somewhere: a loan, or a tuple, a record or an optional with one in it. Such an
     /// aggregate owns its other parts, and destroying it destroys only those (7.9; D-349).
     fn holds_loan_ty(ty: &fortis_types::types::Type) -> bool {
@@ -758,6 +768,83 @@ impl<'p> Vm<'p> {
                 (v, self.ret_lent)
             }
             _ => (self.eval(fr, e)?, true),
+        };
+        let carried = matches!(v.deref(), Value::Guard(_) | Value::Cursor(_));
+        Ok((v, lent && !carried))
+    }
+
+    /// What a statement temporary holds (5.7, 7.9; D-451): the value its expression gave, and whether that value is
+    /// a loan the temporary holds rather than owns, so the statement's end destroys nothing and only a value the
+    /// expression made or moved (an `or recover`'s or a `catch` handler's own replacement) is destroyed there.
+    /// Never decided by the static type, unlike `eval_held` for a binding: a temporary of an outcome whose sides
+    /// differ is typed with the value type (`Token`, not `alias Token from xs`), and only the run says which side
+    /// gave the value, a loan or one of the statement's own. An expression that cannot forward a loan (a
+    /// construction, a copy, a literal, an aggregate of the statement's own, an `await`) gives an owned value.
+    fn eval_temp(&mut self, fr: &mut Frame, e: &Expr) -> R<(Value, bool)> {
+        let (v, lent) = match &e.kind {
+            // a moved place gives what it owned: a loan when the local held one (7.9; D-375)
+            ExprKind::Place(p, Use::Move) => {
+                let held = if p.proj.is_empty() { self.holds_loan(fr, p.local) } else { self.part_lent(fr, p, &e.ty) };
+                (self.eval(fr, e)?, held)
+            }
+            ExprKind::Coalesce(a, b) => {
+                let (v, lent) = self.eval_temp(fr, a)?;
+                if matches!(v.deref(), Value::Null) {
+                    self.eval_temp(fr, b)?
+                } else {
+                    (v, lent)
+                }
+            }
+            ExprKind::Present(a) => self.eval_temp(fr, a)?,
+            ExprKind::OrFail(a) => {
+                let (v, lent) = self.eval_temp(fr, a)?;
+                if v.is_failure() {
+                    return Err(Exit::Flow(Flow::Fail(v)));
+                }
+                (v, lent)
+            }
+            // the side that ran gives the value, and says what it gave: a try side that succeeded with the loan
+            // the callee returned leaves the temporary holding it, and the made replacement of a try side that
+            // failed is the temporary's own (7.9; D-451)
+            ExprKind::OrRecover(a, b) => {
+                let (v, lent) = self.eval_temp(fr, a)?;
+                self.hit(a.as_ref() as *const Expr as usize, v.is_failure() as u32);
+                if v.is_failure() {
+                    self.eval_temp(fr, b)?
+                } else {
+                    (v, lent)
+                }
+            }
+            ExprKind::Catch { value, bind, handler } => {
+                let (v, lent) = self.eval_temp(fr, value)?;
+                self.hit(value.as_ref() as *const Expr as usize, v.is_failure() as u32);
+                if !v.is_failure() {
+                    (v, lent)
+                } else {
+                    fr.locals[*bind as usize] = v;
+                    self.gave_lent = true;
+                    match self.block(fr, handler) {
+                        Err(Exit::Flow(Flow::Recover(r))) => (r, self.gave_lent),
+                        Ok(()) => return dynamic("catch block fell through without recover/return/fail"),
+                        Err(e) => return Err(e),
+                    }
+                }
+            }
+            ExprKind::If { .. } | ExprKind::Block(_) | ExprKind::Match { .. } => {
+                // the `give` (or a `match` arm's expression) that ends the branch taken says what it gave
+                self.gave_lent = true;
+                let v = self.eval(fr, e)?;
+                (v, self.gave_lent)
+            }
+            // a call lends only where its declared result is a loan (7.6): an intrinsic that hands back a value
+            // of its own (`pop`, `String.from`) lends nothing whatever `ret_lent` says, and where the result is
+            // declared `from` a parameter the callee's `return` says whether it gave the loan or a value of its
+            // own (7.9; D-373). The try side of an outcome is typed as the outcome, so its success type decides
+            ExprKind::Call { .. } => {
+                let v = self.eval(fr, e)?;
+                (v, Self::call_lends(&e.ty) && self.ret_lent)
+            }
+            _ => (self.eval(fr, e)?, false),
         };
         let carried = matches!(v.deref(), Value::Guard(_) | Value::Cursor(_));
         Ok((v, lent && !carried))
@@ -1668,7 +1755,9 @@ impl<'p> Vm<'p> {
     }
 
     /// One statement's temporary scope (5.7, 7.9): the values the statement creates and neither binds nor moves
-    /// out are destroyed at its end, in reverse creation order; a defect destroys nothing (10.8).
+    /// out are destroyed at its end, in reverse creation order; a defect destroys nothing (10.8). A temporary
+    /// that holds a loan is not the value's owner: it lets its handle go and destroys nothing, and the owner's
+    /// destruction is the last handle's (7.9; D-451).
     fn stmt(&mut self, fr: &mut Frame, s: &Stmt) -> R<()> {
         let mut r = self.stmt_kind(fr, s);
         if !s.temps.is_empty() && !matches!(r, Err(Exit::Halt(Halt::Defect(_) | Halt::Shutdown))) {
@@ -1678,7 +1767,8 @@ impl<'p> Vm<'p> {
                     Value::Cell(c) => std::mem::replace(&mut *c.borrow_mut(), Value::Moved),
                     v => v,
                 };
-                if matches!(v, Value::Moved | Value::Void) {
+                let lent = fr.lent.remove(&t);
+                if lent || matches!(v, Value::Moved | Value::Void) {
                     continue;
                 }
                 if let Some(ty) = self.cleanup_runs(&v) {
@@ -2038,10 +2128,17 @@ impl<'p> Vm<'p> {
             ForSource::Items(e) => {
                 // a plain read iterates a copy and leaves the collection intact. A move, or any fresh value
                 // (including a statement temporary), is owned by the loop (7.9).
-                let moving = matches!(e.kind, ExprKind::Place(_, Use::Move)) || !matches!(e.kind, ExprKind::Place(..));
                 let c = self.eval(fr, e)?;
+                // a cursor is what `iterate()` of a class that implements `Iterable` gave the loop (5.3, D-545): it lends
+                // its items, so the loop destroys none of them, as over a list it reads
+                let lends = matches!(c.deref(), Value::Cursor(_));
+                let moving = !lends && (matches!(e.kind, ExprKind::Place(_, Use::Move)) || !matches!(e.kind, ExprKind::Place(..)));
                 if !moving {
                     let items = match c.deref() {
+                        Value::Cursor(cur) => {
+                            let cur = cur.borrow();
+                            cur.0[cur.1.min(cur.0.len())..].to_vec()
+                        }
                         Value::List(xs) | Value::Array(xs) => xs.borrow().clone(),
                         Value::Set(m) => m.borrow().entries.iter().map(|(k, _)| k.clone()).collect(),
                         Value::Map(m) => m.borrow().entries.iter().map(|(k, v)| Value::Tuple(Rc::new(TupleVal::from(vec![k.clone(), v.clone()])))).collect(),
@@ -2678,7 +2775,11 @@ impl<'p> Vm<'p> {
                     ExprKind::Temp { local, .. } => Some(*local),
                     _ => None,
                 };
-                let owning = temp_local.is_some() || matches!(&scrutinee.kind, ExprKind::Place(_, Use::Move));
+                // `match move o` of a local that holds a loan (`let o = xs.get(0)`, the `Outcome` of a `try` call whose
+                // result is a loan) moves the loan: the arm's bindings hold loans of the owner's parts and destroy
+                // nothing when the arm ends (7.9; D-394)
+                let moved_loan = matches!(&scrutinee.kind, ExprKind::Place(p, Use::Move) if p.proj.is_empty() && self.holds_loan(fr, p.local));
+                let owning = temp_local.is_some() || (matches!(&scrutinee.kind, ExprKind::Place(_, Use::Move)) && !moved_loan);
                 for (ai, a) in arms.iter().enumerate() {
                     if !self.pattern(fr, &a.pattern, &v)? {
                         Self::end_loans(fr, &a.locals);
@@ -2757,6 +2858,15 @@ impl<'p> Vm<'p> {
                     }
                 };
                 if lo.map_or(false, |l| n < l) || hi.map_or(false, |h| n > h) {
+                    // A newtype validator takes its representation owned (or the legacy read form's copy).
+                    // Failure must discharge that ownership before its caller handles the outcome (X-552).
+                    if let fortis_types::types::Type::Named(outcome) = &e.ty {
+                        if let Some(fortis_types::types::Type::Named(target)) = outcome.args.first() {
+                            if self.prog.type_def(&target.name).map_or(false, |d| matches!(d.kind, TypeKind::Newtype { .. })) {
+                                self.destroy_typed(v, &value.ty)?;
+                            }
+                        }
+                    }
                     let origin = self.stack.last().cloned().unwrap_or_else(|| "main".into());
                     let b = |x: &Option<i128>| x.map_or(Value::Null, Value::Int);
                     return Ok(Value::Failure(shared(FailureVal {
@@ -2772,8 +2882,11 @@ impl<'p> Vm<'p> {
             }
             ExprKind::Temp { local, value } => {
                 // a statement temporary: the value lives in its local until the end of the statement, and the
-                // expression carries on with it (5.7, 7.9)
-                let v = self.eval(fr, value)?;
+                // expression carries on with it (5.7, 7.9). A temporary that holds a loan result is not the
+                // value's owner: the statement's end destroys nothing, and only a made replacement is destroyed
+                // there (7.9; D-451)
+                let (v, lent) = self.eval_temp(fr, value)?;
+                Self::hold(fr, *local, lent);
                 let boxed = self.prog.functions[fr.func].locals[*local as usize].boxed;
                 fr.locals[*local as usize] = if boxed { Value::Cell(shared(v.clone())) } else { v.clone() };
                 Ok(v)
@@ -2894,6 +3007,14 @@ impl<'p> Vm<'p> {
         let (a, b) = (a.deref(), b.deref());
         Ok(match (&a, &b) {
             (Value::Enum(x), Value::Enum(y)) => {
+                if let Some(t) = self.types.get(&*x.ty) {
+                    if let Some((_, f)) = t.methods.iter().find(|(m, _)| m == "equals") {
+                        let fi = self.func_index(f)?;
+                        let params: Vec<String> = self.prog.functions[fi].params.iter().map(|p| p.name.clone()).collect();
+                        let r = self.call(fi, vec![(params[0].clone(), a.clone()), (params.get(1).cloned().unwrap_or_default(), b.clone())], &[])?;
+                        return self.truth(&r);                  // the enum's own equals (X-516; D-84)
+                    }
+                }
                 if x.ty != y.ty || x.variant != y.variant {
                     return Ok(false);
                 }
@@ -2965,6 +3086,126 @@ impl<'p> Vm<'p> {
         })
     }
 
+    /// The order of two values (X-516; D-54.1, D-84): a type's own `compare` first, else declaration order (a
+    /// class's fields, an enum's variants and then its payload's fields), else the primitives' order. The checker
+    /// proved both sides are Comparable.
+    pub fn compare(&mut self, a: &Value, b: &Value) -> R<std::cmp::Ordering> {
+        use std::cmp::Ordering as O;
+        let (a, b) = (a.deref(), b.deref());
+        match (&a, &b) {
+            (Value::Obj(x), Value::Obj(y)) => {
+                let ty = x.borrow().ty.clone();
+                if let Some(t) = self.types.get(&*ty) {
+                    if let Some((_, f)) = t.methods.iter().find(|(m, _)| m == "compare") {
+                        let fi = self.func_index(f)?;
+                        let params: Vec<String> = self.prog.functions[fi].params.iter().map(|p| p.name.clone()).collect();
+                        let r = self.call(fi, vec![(params[0].clone(), a.clone()), (params.get(1).cloned().unwrap_or_default(), b.clone())], &[])?;
+                        return self.ordering_of(&r);
+                    }
+                }
+                if ty != y.borrow().ty {
+                    return dynamic("`compare` on values of different classes");
+                }
+                let order: Vec<String> = match self.types.get(&*ty).map(|t| &t.kind) {
+                    Some(TypeKind::Class { fields }) => fields.iter().map(|f| f.name.clone()).collect(),
+                    _ => x.borrow().fields.iter().map(|(k, _)| k.to_string()).collect(),
+                };
+                for k in order {
+                    let va = x.borrow().get(&k).cloned().unwrap_or(Value::Null);
+                    let vb = y.borrow().get(&k).cloned().unwrap_or(Value::Null);
+                    if self.equal(&va, &vb)? {
+                        continue;
+                    }
+                    return self.compare(&va, &vb);           // the first difference decides (R5)
+                }
+                Ok(O::Equal)
+            }
+            (Value::Enum(x), Value::Enum(y)) => {
+                if let Some(t) = self.types.get(&*x.ty) {
+                    if let Some((_, f)) = t.methods.iter().find(|(m, _)| m == "compare") {
+                        let fi = self.func_index(f)?;
+                        let params: Vec<String> = self.prog.functions[fi].params.iter().map(|p| p.name.clone()).collect();
+                        let r = self.call(fi, vec![(params[0].clone(), a.clone()), (params.get(1).cloned().unwrap_or_default(), b.clone())], &[])?;
+                        return self.ordering_of(&r);
+                    }
+                }
+                if x.ty != y.ty {
+                    return dynamic("`compare` on values of different enums");
+                }
+                // the variant order and this variant's payload fields, cloned out so the loop borrows only the
+                // values, not the type table (R5)
+                let (variant_order, payload): (Vec<String>, Vec<String>) = match self.types.get(&*x.ty).map(|t| &t.kind) {
+                    Some(TypeKind::Enum { variants }) => {
+                        let order: Vec<String> = variants.iter().map(|v| v.name.clone()).collect();
+                        let pay: Vec<String> = variants.iter().find(|v| v.name == &*x.variant).map(|v| v.fields.iter().map(|(n, _)| n.clone()).collect()).unwrap_or_default();
+                        (order, pay)
+                    }
+                    _ => (vec![], vec![]),
+                };
+                let (ia, ib) = (variant_order.iter().position(|n| n == &*x.variant), variant_order.iter().position(|n| n == &*y.variant));
+                match (ia, ib) {
+                    (Some(i), Some(j)) if i != j => return Ok(i.cmp(&j)),   // the variant order decides first (R5)
+                    (Some(_), Some(_)) => {}
+                    _ => return dynamic("`compare` on non-comparable enum values"),
+                }
+                for n in &payload {
+                    let va = x.fields.iter().find(|(k, _)| &**k == n.as_str()).map(|(_, v)| v.clone()).unwrap_or(Value::Null);
+                    let vb = y.fields.iter().find(|(k, _)| &**k == n.as_str()).map(|(_, v)| v.clone()).unwrap_or(Value::Null);
+                    if self.equal(&va, &vb)? {
+                        continue;
+                    }
+                    return self.compare(&va, &vb);           // then the payload's fields in order (R5)
+                }
+                Ok(O::Equal)
+            }
+            (Value::Bool(x), Value::Bool(y)) => Ok(x.cmp(y)),
+            (Value::Int(x), Value::Int(y)) => Ok(x.cmp(y)),
+            (Value::Float(x), Value::Float(y)) => match x.partial_cmp(y) {
+                Some(o) => Ok(o),
+                None => dynamic("`compare` on values that NaN makes non-comparable"),
+            },
+            (Value::F32(x), Value::F32(y)) => match x.partial_cmp(y) {
+                Some(o) => Ok(o),
+                None => dynamic("`compare` on values that NaN makes non-comparable"),
+            },
+            (Value::Str(x), Value::Str(y)) | (Value::Scalar(x), Value::Scalar(y)) | (Value::Path(x), Value::Path(y)) => Ok(x.as_ref().cmp(y.as_ref())),
+            (Value::Dec(x), Value::Dec(y)) => Ok(x.cmp(y)),
+            (Value::Dur(x), Value::Dur(y)) | (Value::Time(x), Value::Time(y)) => Ok(x.cmp(y)),
+            _ => dynamic(format!("`compare` on non-comparable values ({}, {})", a.type_name(), b.type_name())),
+        }
+    }
+
+    /// An `Ordering` value as its order (the result of a hand-written `compare`).
+    fn ordering_of(&self, v: &Value) -> R<std::cmp::Ordering> {
+        match v {
+            Value::Enum(e) => match &*e.variant {
+                "Less" => Ok(std::cmp::Ordering::Less),
+                "Equal" => Ok(std::cmp::Ordering::Equal),
+                "Greater" => Ok(std::cmp::Ordering::Greater),
+                _ => dynamic("compare returned a variant that is not Ordering's"),
+            },
+            _ => dynamic("compare returned a non-Ordering value"),
+        }
+    }
+
+    /// Whether `v`'s type writes its own `equals` or `hash`, or nests a value that does: a container then finds the
+    /// key by that equality, not by a structural key, because a hand-written `hash` writes nothing (`Hasher` has no
+    /// members in Language 1.0) and equal values must still be found by `equals` (6.10, X-516; D-84).
+    pub fn custom_equality(&self, v: &Value) -> bool {
+        let writes = |ty: &str| self.types.get(ty).map_or(false, |t| t.methods.iter().any(|(m, _)| m == "equals" || m == "hash"));
+        match v {
+            Value::Obj(o) => {
+                let o = o.borrow();
+                writes(&o.ty) || o.fields.iter().any(|(_, x)| self.custom_equality(x))
+            }
+            Value::Enum(e) => writes(&e.ty) || e.fields.iter().any(|(_, x)| self.custom_equality(x)),
+            Value::List(items) | Value::Array(items) => items.borrow().iter().any(|x| self.custom_equality(x)),
+            Value::Tuple(items) => items.iter().any(|x| self.custom_equality(x)),
+            Value::Cell(c) => self.custom_equality(&c.borrow()),
+            _ => false,
+        }
+    }
+
     pub fn binary(&mut self, op: BinOp, a: Value, b: Value) -> R<Value> {
         let (a, b) = (a.deref(), b.deref());
         if op == BinOp::Eq || op == BinOp::Ne {
@@ -2979,6 +3220,8 @@ impl<'p> Vm<'p> {
                 (Value::Str(x), Value::Str(y)) => x.partial_cmp(y),
                 (Value::Dec(x), Value::Dec(y)) => Some(x.cmp(y)),
                 (Value::Dur(x), Value::Dur(y)) | (Value::Time(x), Value::Time(y)) => x.partial_cmp(y),
+                // a derived Comparable's, or a type's own `compare` (X-516; D-54.1, D-84)
+                (Value::Obj(_), Value::Obj(_)) | (Value::Enum(_), Value::Enum(_)) => Some(self.compare(&a, &b)?),
                 _ => return dynamic(format!("`{}` on non-comparable values", op.symbol())),
             };
             let r = match ord {
@@ -3138,6 +3381,11 @@ impl<'p> Vm<'p> {
                 }
                 true
             }
+            Pattern::Range { lo, hi } => match &v {
+                // the folded inclusive interval of a range pattern (9.8, X-517); None leaves that end open
+                Value::Int(n) => lo.map_or(true, |l| *n >= l) && hi.map_or(true, |h| *n <= h),
+                _ => false,
+            },
         })
     }
 }

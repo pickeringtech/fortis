@@ -302,6 +302,18 @@ impl OrderedMap {
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+    /// Remove the entry at position `i`, keeping the others in order: the structural index of each later entry
+    /// moves up one place (6.7: `remove` costs O(n) in the entries after it).
+    pub fn remove_at(&mut self, i: usize) -> (Value, Value) {
+        let entry = self.entries.remove(i);
+        self.index.retain(|_, pos| *pos != i);
+        for pos in self.index.values_mut() {
+            if *pos > i {
+                *pos -= 1;
+            }
+        }
+        entry
+    }
 }
 
 impl Value {

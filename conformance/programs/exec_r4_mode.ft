@@ -1,0 +1,9 @@
+// execute: 3
+// requires: runtime
+// covers: LANG-08-04
+import fortis.host { Console }
+func size(s: owned String) Int => s.scalarCount()
+func main(console: Console) {
+  let f: fn(owned String) Int = size
+  console.print("${f("abc" as String)}")
+}

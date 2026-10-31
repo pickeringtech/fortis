@@ -1,0 +1,7 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-580, X-605: an owned container cannot retain a non-static loan.
+func use(a: Array[StringView, 1], b: Map[StringView, Int], c: Map[Int, StringView], d: Set[StringView], e: OrderedMap[Int, StringView], f: FixedList[StringView, 2], g: FixedMap[Int, StringView, 2], h: Shared[StringView], i: List[ListView[Int]], j: List[ListCursor[Int]]) {}
+enum Key { One
+  Two }
+func variant(v: VariantMap[Key, StringView]) {}

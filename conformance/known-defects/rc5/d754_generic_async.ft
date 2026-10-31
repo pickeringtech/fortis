@@ -1,0 +1,13 @@
+import fortis.host { Console }
+func work(console: Console) Int {
+  console.print("body")
+  return 3
+}
+func cast[F](value: owned F) async fn(Console) Int => move value
+async func main(console: Console) {
+  let f = cast(move work)
+  let pending = f(console)
+  console.print("before")
+  let n = await pending
+  console.print("${n}")
+}

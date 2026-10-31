@@ -1,0 +1,4 @@
+// D-590: structural tuple accepted by a general Hashable bound.
+import fortis.host { Console }
+func accepts[K](key: K) Int where K implements Hashable => 1
+func main(console: Console) { console.print("${accepts((1, 2))}") }

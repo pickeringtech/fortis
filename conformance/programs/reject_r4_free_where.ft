@@ -1,0 +1,4 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+func size[T](value: T) Int where T implements Copyable => 1
+func main() { let f = size }

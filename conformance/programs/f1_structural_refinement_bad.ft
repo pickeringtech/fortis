@@ -1,0 +1,5 @@
+// reject: E-REF-001
+// covers: LANG-06-01, LANG-06-02, LANG-06-08
+func tuple(value: (Int, Bool)) (Int<0..3>, Bool) { return value }
+func recordValue(value: { count: Int }) { count: Int<0..3> } { return value }
+func optional(value: Int?) Int<0..3>? { return value }

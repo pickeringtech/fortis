@@ -1,0 +1,11 @@
+// execute: -2147483648 5
+// requires: runtime
+// covers: LANG-06-01
+// D-245: native regression, R23.
+import fortis.host { Console }
+
+func main(console: Console) {
+  let x: Int32 = -2147483647 - 1
+  let y: Int32 = 2 + 3
+  console.print("${x} ${y}")
+}

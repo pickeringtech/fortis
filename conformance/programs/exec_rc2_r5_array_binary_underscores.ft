@@ -1,0 +1,8 @@
+// execute: 2
+// requires: runtime
+// covers: LANG-06-11
+import fortis.host { Console }
+func main(console: Console) {
+  let a = Array[Int, 0b1_0].filled(1)
+  console.print("${a.count()}")
+}

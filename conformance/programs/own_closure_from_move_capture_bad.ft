@@ -1,0 +1,63 @@
+// reject: E-OWN-051 (at the marked lines)
+// covers: LANG-07-06, LANG-08-02
+// D-379, 7.6, 7.9, 8.3: a closure's result may be declared `from` a parameter or an `alias` or `editable` capture,
+// loans the closure holds; a `move` or `copy` capture is the closure's own value, destroyed with the closure (when a
+// consuming call ends, 7.9), so a loan of it returned would outlive its owner, as a loan of a function's own value
+// would (E-OWN-051). Both checkers accepted it: the interpreter read the destroyed capture, the VM failed dynamically
+// and native code refused the program.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func returnedFallback(console: Shared[Console], empty: List[Token]) {
+  let d = make(console, "r-fb")
+  let t = empty.get(0) ?? move d
+  {
+    let f = fn once[move t, alias console]() Token from t {               // reject: E-OWN-051 — t is a move capture the closure owns
+      return move t
+    }
+    let r = move f()
+    console.print("returned ${r.label}")
+  }
+  console.print("after returned")
+}
+
+func returnedOwned(console: Shared[Console]) {
+  let t = make(console, "r-own")
+  {
+    let f = fn once[move t, alias console]() Token from t {               // reject: E-OWN-051 — the closure destroys t with the call
+      return alias t
+    }
+    let r = move f()
+    console.print("returned ${r.label}")
+  }
+  console.print("after owned")
+}
+
+func copiedCapture(console: Shared[Console]) {
+  let t = String.from("copied")
+  let f = fn[copy t]() StringView from t {                                // reject: E-OWN-051 — a copy capture is the closure's own
+    return alias t
+  }
+  console.print("view ${f()}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  returnedFallback(console, empty)
+  returnedOwned(console)
+  copiedCapture(console)
+  console.print("end")
+}

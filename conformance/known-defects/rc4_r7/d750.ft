@@ -1,0 +1,14 @@
+import fortis.host { Console }
+export error Bad {
+  code: "demo.bad"
+}
+try func bad() Int { fail Bad() }
+try func nested() Outcome[Int] {
+  let o: Outcome[Int] = bad()
+  return o
+}
+try recovers func main(console: Console) {
+  let inner: Outcome[Int] = nested() or fail
+  let n = move inner or recover 7
+  console.print("${n}")
+}

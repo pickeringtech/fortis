@@ -1,0 +1,11 @@
+// execute: kept|empty|2
+// requires: runtime
+// covers: LANG-06-08, LANG-07-01
+import fortis.host { Console }
+func main(console: Console) {
+  let xs: List[String?] = List.of("kept" as String)
+  console.print("${xs.get(0) ?? "empty"}")
+  console.print("${xs.get(9) ?? "empty"}")
+  let a = Array[Int?, 2].filled(2)
+  console.print("${a.get(0) ?? 0}")
+}

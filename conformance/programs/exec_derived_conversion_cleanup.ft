@@ -1,0 +1,46 @@
+// execute: 5
+// execute-trace: drop Item
+// reports: runtime-failure:code=derive.drop,reported_by=cleanup|runtime-failure:code=derive.drop,reported_by=cleanup
+// requires: runtime
+// covers: LANG-06-15
+// X-552: copied field temporaries are destroyed once after conversion, before the borrowed source owner.
+import fortis.host { Console }
+
+error Dropped {
+  code: "derive.drop"
+}
+
+try func dropped() {
+  fail Dropped()
+}
+
+class Item {
+  value: Int
+  convert to TargetItem {
+    return TargetItem(value: self.value)
+  }
+  cleanup(editable self) {
+    dropped() catch err {
+      report err
+      recover Void
+    }
+  }
+}
+
+class TargetItem {
+  value: Int
+}
+
+class Source {
+  item: Item
+}
+
+class Target derive convert from Source {
+  item: TargetItem
+}
+
+func main(console: Console) {
+  let source = Source(item: Item(value: 5))
+  let target = source as Target
+  console.print(target.item.value as String)
+}

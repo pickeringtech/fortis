@@ -4,7 +4,7 @@
 *Human mode. Each program is shown whole, with its output, and then explained piece by piece. Source of truth:
 the LR; the [tour](tour.md) has the worked module of LR 2.*
 
-> Preview: the ledger's `Sku` is a newtype (LR 6.9), which arrives in v0.1, and the last program is concurrent (LR 12.3, 12.5), which arrives in v0.3; both are checked and run today. The word tally and the expression evaluator are in v0.0.1.
+> Preview: the concurrent example uses async, scopes and join (LR 12.3, LR 12.5), which arrive in v0.3. The ledger's newtype (LR 6.9) is in v0.1.
 
 The chapters each show one construct at a time. Real programs use several at once, and the interesting part is
 how they fit together: who owns what, where a failure goes, which line is allowed to change which value. These
@@ -37,9 +37,9 @@ class Tally {
   export func add(editable self, word: StringView) {
     let seen = self.counts.get(word) ?? 0
     if seen == 0 {
-      self.order.push(String.from(word))
+      self.order.push(word as String)
     }
-    self.counts.set(String.from(word), Int.saturatingAdd(seen, 1))
+    self.counts.set(word as String, Int.saturatingAdd(seen, 1))
   }
 
   export pure func entries(self) List[Entry] {
@@ -127,8 +127,8 @@ is what allows `tally.add(word)` to change it, so a reader of `main` learns from
 changes (LR 7.5, LR 9.3). `entries` takes plain `self`, a read loan, so `tally.entries()` cannot change anything.
 
 `word` is a `StringView`, a borrowed piece of text. The map's keys are owned `String`s, so `add` makes each one
-with `String.from(word)`, which is where the allocation happens and is written down (LR 6.6). The two calls to
-`String.from` each produce a fresh value, and a fresh value is passed to an `owned` parameter such as `push`'s
+with `word as String`, which is where the allocation happens and is written down (LR 6.6, LR 6.13). The two
+conversions each produce a fresh value, and a fresh value is passed to an `owned` parameter such as `push`'s
 without any marker (LR 7.5).
 
 A lookup needs no owned key: a `Map` with `String` keys takes its `get` key as a `StringView`, so
@@ -172,7 +172,6 @@ The second program is a package: a library module with the ledger and its tests,
 uses it. It shows nominal ids, declared errors, and the ways a failure can be handled: propagated, recovered
 after a report, and left to end the program.
 
-> Preview: `Sku` is a newtype (LR 6.9), which arrives in v0.1.
 
 ```yaml
 # file: guide.ledger/project.yaml
@@ -244,7 +243,7 @@ export class Ledger {
     if wanted > item.quantity {
       fail Insufficient(sku: sku, held: item.quantity, wanted)
     }
-    let left = Int<0..10000>.validate(item.quantity - wanted) or fail
+    let left = (item.quantity - wanted) as Int<0..10000> or fail
     self.items.set(at, Item(sku, name: copy item.name, quantity: left)) or fail
     return left
   }
@@ -319,7 +318,7 @@ its tests.
 `type Sku = Int<1..999999>` declares a new nominal type over a refined `Int` (LR 6.9). A `Sku` is not an `Int`:
 a quantity can never be passed where a SKU is expected, or the other way round. `Sku(101)` is a literal the
 checker proves to be in range; a value from outside the program (a parsed line, a request) would go through
-`Sku.validate(raw)`, which fails when the value is out of range (LR 6.3, LR 6.9). Two `Sku`s compare with `==`
+`raw as Sku or fail`, which checks an unproved value and fails when it is out of range (LR 6.3, LR 6.9, LR 6.13). Two `Sku`s compare with `==`
 because a newtype over a trivial type is `Equatable` when its representation is (LR 6.9).
 
 ### Declared failures

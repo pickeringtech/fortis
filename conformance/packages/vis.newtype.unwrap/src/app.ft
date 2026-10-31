@@ -1,0 +1,8 @@
+// reject: E-NAM-004
+import vis.newtype.unwrap.money as money
+func reveal(p: money.Pence) Int {
+  return p as Int // reject: E-NAM-004
+}
+func refined(p: money.Pence) Int<0..100> {
+  return p as Int<0..100> // reject: E-NAM-004
+}

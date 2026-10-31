@@ -1,0 +1,31 @@
+// execute: 7|3|10|0|abc|true|false
+// requires: runtime
+// covers: LANG-06-01
+// `Name(x)` is judged and runs (6.9, X-511): a literal proved in range, a place the interval rules prove in range
+// (a refined binding, an `Int` narrowed by the guards before it), a newtype over text built from a literal or an owned
+// `String`; the value displays as its representation and compares as it does (D-131, D-63, D-50.1).
+import fortis.host { Console }
+
+type Small = Int<0..10>
+type Code = String<scalars: 1..5>
+type Label = String
+
+func clamp(n: Int) Small {
+  if n < 0 {
+    return Small(0)
+  }
+  if n > 10 {
+    return Small(10)
+  }
+  return Small(n)
+}
+
+func main(console: Console) {
+  let a = Small(7)
+  let n: Int<0..5> = 3
+  let b = Small(n)
+  console.print("${a}|${b}|${clamp(42)}|${clamp(-4)}")
+  let code = Code("abc")
+  let label = Label("abc" as String)
+  console.print("${code}|${code == Code("abc")}|${label == Label("xyz")}")
+}

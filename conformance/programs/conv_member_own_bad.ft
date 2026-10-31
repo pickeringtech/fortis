@@ -1,0 +1,26 @@
+// reject: E-OWN-001 (at the marked lines)
+// covers: LANG-06-15, LANG-07-01
+// 6.13 (X-551): an `owned` member consumes the source: the use site writes `move x as T` for a bare
+// ownership-bearing place, and a loan marker is the wrong marker for a consuming conversion.
+class Buffer {
+  bytes: Bytes
+
+  export try convert to Text(owned self) {
+    return Text(body: self.bytes as String or fail)
+  }
+}
+
+class Text {
+  body: String
+}
+
+try func uses(b: owned Buffer) Text {
+  let t1 = b as Text or fail                 // reject: E-OWN-001 — the member consumes: write `move b as Text`
+  discard t1
+  let t2 = alias b as Text or fail           // reject: E-OWN-001 — a loan cannot feed a consuming member
+  discard t2
+  let mut m = Buffer(bytes: "x" as Bytes)
+  let t3 = editable m as Text or fail        // reject: E-OWN-001 — a conversion reads or consumes: never editable
+  discard t3
+  return move b as Text or fail              // the form the member takes
+}

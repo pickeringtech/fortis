@@ -1,0 +1,9 @@
+// execute: 1
+// requires: runtime
+// covers: LANG-08-04
+import fortis.host { Console }
+func size[T](value: T) Int where T implements Copyable => 1
+func main(console: Console) {
+  let f = fn(n: Int) Int => size(n)
+  console.print("${f(42)}")
+}

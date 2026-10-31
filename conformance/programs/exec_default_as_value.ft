@@ -1,0 +1,17 @@
+// execute: 0
+// requires: runtime
+// covers: LANG-06-07
+// 6.10 (X-516): `Name.default` of a class deriving `Default`, written without its call, is that function's value: a
+// zero-capture function that builds the value when it is called, a field without an initialiser at its type's default.
+// The VM and native left it unbuilt (D-170.2).
+import fortis.host { Console }
+
+class Box derive Default {
+  export n: Int
+}
+
+func main(console: Console) {
+  let f = Box.default
+  let b = f()
+  console.print("${b.n}")
+}

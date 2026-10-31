@@ -1,0 +1,13 @@
+// execute: 3 false 1 3 2|1|2|3|6|4 4
+import fortis.host { Console }
+import g2.newtype.deque.read.defs as defs
+func main(console: Console) {
+  let mut queue = defs.make()
+  console.print("${queue.count()} ${queue.isEmpty()} ${queue.peekFront() ?? -1} ${queue.peekBack() ?? -1} ${queue.get(1) ?? -1}")
+  for n in queue { console.print("${n}") }
+  let mut total = 0
+  queue.each(fn(n) { total = Int.saturatingAdd(total, n) })
+  console.print("${total}")
+  defs.append(editable queue)
+  console.print("${queue.count()} ${queue.peekBack() ?? -1}")
+}

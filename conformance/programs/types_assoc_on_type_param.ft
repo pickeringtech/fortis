@@ -1,0 +1,51 @@
+// reject: E-TYP-170 (at the marked lines)
+// covers: LANG-06-12
+// Language 1.0 has no associated call on a type parameter (6.10, X-180; formerly D-80): a later release adds the
+// run-time type arguments it needs. Wherever a type parameter is in scope: a function's or method's body, a generic
+// class's cleanup, constants and field defaults, a parameter default, an aspect's hooks (its own `R`), with or without
+// type arguments applied.
+export interface Factory {
+  func create() Self
+}
+
+func fresh[T]() T where T implements Default {
+  return T.default()                        // reject: E-TYP-170 — `Default`'s associated function
+}
+
+try func decodeAs[T](text: StringView) T where T implements Decodable {
+  return T.fromText(text) or fail           // reject: E-TYP-170 — the canonical decoder
+}
+
+func make[T]() T where T implements Factory {
+  return T.create()                         // reject: E-TYP-170 — an interface's associated function
+}
+
+func applied[T]() T where T implements Factory {
+  return T[Int].create()                    // reject: E-TYP-170 — type arguments applied to the parameter
+}
+
+export class Holder[T] {
+  export value: T
+  cleanup(editable self) {
+    discard T.default()                     // reject: E-TYP-170 — in a generic class's cleanup
+  }
+}
+
+export aspect orDefault[R]() {
+  on failure(f: Failure) R {
+    report f
+    return R.default()                      // reject: E-TYP-170 — an aspect's own type parameter, in its hook
+  }
+}
+
+@orDefault()
+func count(n: Int) Int => n
+
+export class Store[T] {
+  const empty = T.default()                 // reject: E-TYP-170 — a generic class's constant
+  export kept: Int = T.default()            // reject: E-TYP-170 — a generic class's field default
+  export pure func take(self, x: T = T.default()) Int => 1   // reject: E-TYP-170 — a method's parameter default
+}
+
+func seeded[T](x: T = T.default()) where T implements Default {   // reject: E-TYP-170 — a parameter default
+}

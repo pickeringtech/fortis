@@ -41,6 +41,8 @@ def signatures(path: str) -> dict:
         sm = SIG.match(l)
         if not sm or kind == "interface":
             continue
+        if not sm.group(1):
+            continue                                      # a helper the module keeps to itself (X-576): no program can call it
         key = (owner + "." if owner else "") + sm.group(4)
         text = l.strip()
         body = False
@@ -67,9 +69,10 @@ def registered(key: str, receiver: bool) -> bool:
 def effect_data_problems(summaries: dict) -> list:
     """Each effect-data row names a declared operation of its module, and covers what the implementation's body proves
     when it has one (D-112). `summaries`: {core module: {label: Summary}} of the implementation modules."""
-    from checker.effects import DECLARABLE, TRUSTED_EFFECTS
+    from checker.effects import DECLARABLE, effect_data
+    trusted_effects = effect_data()
     out = []
-    for (module, owner, name), effs in sorted(TRUSTED_EFFECTS.items(), key=lambda kv: (kv[0][0], kv[0][1] or "", kv[0][2])):
+    for (module, owner, name), effs in sorted(trusted_effects.items(), key=lambda kv: (kv[0][0], kv[0][1] or "", kv[0][2])):
         key = (owner + "." if owner else "") + name
         short = module[len("fortis."):] if module.startswith("fortis.") else module
         if short in MODULES:
@@ -89,7 +92,7 @@ def effect_data_problems(summaries: dict) -> list:
             prof = os.path.join(ROOT, "reference", "library", "kits", module + ".ft")
             if not os.path.exists(prof) or key not in signatures(prof):
                 out.append(f"effect data: {module} {key} ({', '.join(effs)}) names no operation of the module")
-    print(f"effect data: {len(TRUSTED_EFFECTS)} rows, {len(out)} problems")
+    print(f"effect data: {len(trusted_effects)} rows, {len(out)} problems")
     return out
 
 

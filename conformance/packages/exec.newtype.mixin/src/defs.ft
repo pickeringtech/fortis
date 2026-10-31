@@ -1,0 +1,34 @@
+// accept
+// The applied body keeps its checked newtype conversions and legacy validator copy.
+class Raw {
+  n: Int
+}
+type Wrapped = Raw
+type Pence = Int<0..>
+class Count[T] implements From[T] {
+  n: Int
+  export pure func from(source: T) Count[T] { return Count[T](n: 9) }
+}
+export mixin Snapshot {
+  export try func read(self) Int {
+    let mut raw = Raw(n: 1)
+    let value = Wrapped.validate(raw) or fail
+    raw.n = 2
+    let saved = move value as Raw
+    return saved.n
+  }
+  export func direct(self) Int {
+    let raw = Raw(n: 3)
+    let wrapped = move raw as Wrapped
+    let again = move wrapped as Raw
+    return again.n
+  }
+  export func legacy(self) Int {
+    let count: Count[String] = ("old" as String).to()
+    return count.n
+  }
+  export func coin(self) Int {
+    let p = 42 as Pence
+    return p as Int
+  }
+}

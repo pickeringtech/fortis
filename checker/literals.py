@@ -188,10 +188,6 @@ def _nested_identity(t: Type) -> bool:
     return False
 
 
-def _origin_who(n: Named) -> str:
-    return n.package or n.origin or "this package"
-
-
 def origin_clash(have: Type, want: Type) -> str:
     """Why these types name different declarations, or "" when every origin agrees.
 
@@ -206,8 +202,10 @@ def origin_clash(have: Type, want: Type) -> str:
     if not known(have) or not known(want):
         return ""
     if isinstance(have, Named) and isinstance(want, Named):
-        if have.name == want.name and have.origin != want.origin:
-            return f"{have.name} of {_origin_who(have)} is not {want.name} of {_origin_who(want)}"
+        if have.name == want.name and (have.package != want.package or have.origin != want.origin):
+            from checker.types import diagnostic_types
+            actual, expected = diagnostic_types(have, want)
+            return f"{actual} is not {expected}"
         if have.name == want.name:
             for a, b in zip(have.args, want.args):
                 found = origin_clash(a, b)
@@ -243,20 +241,108 @@ def origin_clash(have: Type, want: Type) -> str:
     return ""
 
 
+def unrefined_full(t: Type) -> Type:
+    """An integer refinement spanning its base's whole range is the base itself: `Int<min..max>` is `Int` (6.3)."""
+    if isinstance(t, Refined) and t.kind == "range" and t.base.name in INT_TYPES and int_bounds(t) == INT_TYPES[t.base.name]:
+        return t.base
+    return t
+
+
+def refinement_differs(a: Type, b: Type) -> bool:
+    """Two type arguments that are assignable one way but differ in a refinement (6.3, X-514): `Int<0..3>` against
+    `Int<0..5>` or `Int`. A literal's exact type and a string literal are not refinements a value carries."""
+    a, b = unrefined_full(strip(a)), unrefined_full(strip(b))
+    if a == b or is_strlit(a) or is_strlit(b):
+        return False
+    ra = isinstance(a, Refined) and a.kind != "exact"
+    rb = isinstance(b, Refined) and b.kind != "exact"
+    if ra or rb:
+        return True
+    if isinstance(a, OptionalT) and isinstance(b, OptionalT):
+        return refinement_differs(a.inner, b.inner)
+    if isinstance(a, TupleT) and isinstance(b, TupleT):
+        return any(refinement_differs(x, y) for x, y in zip(a.items, b.items))
+    if isinstance(a, RecordT) and isinstance(b, RecordT):
+        bm = dict(b.fields)
+        return any(k in bm and refinement_differs(t, bm[k]) for k, t in a.fields)
+    if isinstance(a, Named) and isinstance(b, Named):
+        return any(refinement_differs(x, y) for x, y in zip(a.args, b.args))
+    return False
+
+
+def invariant_assignable(dc, have: Type, want: Type) -> Tuple[Optional[bool], str]:
+    """A writable place has the same type in both directions (6.3, 6.9; D-707)."""
+    have, want = strip(have), strip(want)
+    forward = assignable(dc, have, want)
+    if forward[0] is False:
+        return forward
+    backward = assignable(dc, want, have)
+    if backward[0] is False:
+        return False, f"writable types are invariant: {have.show()} is not {want.show()} (6.9)"
+    pairs = None
+    if isinstance(have, TupleT) and isinstance(want, TupleT):
+        pairs = zip(have.items, want.items)
+    elif isinstance(have, RecordT) and isinstance(want, RecordT):
+        wm = dict(want.fields)
+        pairs = ((t, wm[k]) for k, t in have.fields)
+    elif isinstance(have, OptionalT) and isinstance(want, OptionalT):
+        pairs = [(have.inner, want.inner)]
+    elif isinstance(have, Named) and isinstance(want, Named) and have.name == want.name and len(have.args) == len(want.args):
+        pairs = zip(have.args, want.args)
+    elif isinstance(have, FnT) and isinstance(want, FnT):
+        pairs = list(zip(have.params, want.params)) + [(have.ret, want.ret)]
+    if pairs is not None:
+        unknown = False
+        for a, b in pairs:
+            verdict, why = invariant_assignable(dc, a, b)
+            if verdict is False:
+                return False, why
+            unknown |= verdict is None
+        return (None, "") if unknown else (True, "")
+    if isinstance(have, DynamicT) or isinstance(want, DynamicT):
+        if have == want:
+            return True, ""
+        if not isinstance(have, (Unknown, TypeParam)) and not isinstance(want, (Unknown, TypeParam)):
+            return False, f"writable types are invariant: {have.show()} is not {want.show()} (6.9)"
+    if refinement_differs(have, want):
+        return False, f"writable types are invariant: {have.show()} is not {want.show()} (6.9)"
+    return (None, "") if forward[0] is None or backward[0] is None else (True, "")
+
+
+def contains_structural(t: Type) -> bool:
+    """Whether an editable loan exposes a record or tuple, including inside a container."""
+    t = strip(t)
+    if isinstance(t, (RecordT, TupleT)):
+        return True
+    if isinstance(t, Refined):
+        return contains_structural(t.base)
+    if isinstance(t, OptionalT):
+        return contains_structural(t.inner)
+    return isinstance(t, Named) and any(contains_structural(a) for a in t.args)
+
+
 def assignable(dc, have: Type, want: Type) -> Tuple[Optional[bool], str]:
     """(True, "") when have is assignable to want; (False, why) when not; (None, "") when unknown."""
+    if (isinstance(have, LoanT) and have.mode == "editable") or (isinstance(want, LoanT) and want.mode == "editable"):
+        # A length-refined collection is never editable: its existing E-REF-003 is decisive.
+        # Avoid a second type-mismatch record for the same forbidden loan.
+        core = strip(have)
+        if (contains_structural(have) or contains_structural(want)) and not (isinstance(core, Refined) and core.kind == "length"):
+            return invariant_assignable(dc, core, strip(want))
     have, want = strip(have), strip(want)
     if isinstance(have, (Unknown, TypeParam)) or isinstance(want, (Unknown, TypeParam)):
         return None, ""
+    if found := origin_clash(have, want):
+        return False, found
     if closure_conflict(have, want):
         return False, CLOSURE_WHY
     if isinstance(want, OptionalT):
         if isinstance(have, OptionalT):
             return assignable(dc, have.inner, want.inner)
-        if isinstance(have, Named) and have.name == "Never":      # null
+        if isinstance(have, Named) and not have.package and have.name == "Never":      # null
             return True, ""
         return assignable(dc, have, want.inner)
-    if isinstance(have, Named) and have.name == "Never":
+    if isinstance(have, Named) and not have.package and have.name == "Never":
         return True, ""
     if is_strlit(have):
         if isinstance(want, Refined) and want.kind == "scalars" and want.base in (STRING, STRING_VIEW) and isinstance(have, Refined):
@@ -286,11 +372,14 @@ def assignable(dc, have: Type, want: Type) -> Tuple[Optional[bool], str]:
         if isinstance(have, Named) and isinstance(want, Refined) and have == want.base: return None, ""   # unproved: DEL-13
         return False, f"{have.show()} is not {want.show()}"
     if isinstance(have, Refined) and isinstance(want, Refined):
+        if have.base == want.base and have.kind == want.kind and have.kind in ("scalars", "length"):
+            if (want.lo is None or (have.lo is not None and have.lo >= want.lo)) and (want.hi is None or (have.hi is not None and have.hi <= want.hi)):
+                return True, ""
         return None, ""
     if isinstance(have, Refined): return assignable(dc, have.base, want)
     if isinstance(want, Refined): return None, ""
     if isinstance(have, Named) and isinstance(want, Named):
-        if have.name == want.name and have.origin != want.origin:
+        if have.name == want.name and (have.package != want.package or have.origin != want.origin):
             return False, origin_clash(have, want)
         if have == want:
             # Equality ignores origins nested in the arguments. Reject before accepting.
@@ -298,14 +387,14 @@ def assignable(dc, have: Type, want: Type) -> Tuple[Optional[bool], str]:
             if found:
                 return False, found
             return True, ""
-        if have.name == "Never": return True, ""
-        if (have.name, want.name) in VIEW_OF and (not have.args or not want.args or have.args[0] == want.args[0]):
+        if not have.package and have.name == "Never": return True, ""
+        if not have.package and not want.package and (have.name, want.name) in VIEW_OF and (not have.args or not want.args or have.args[0] == want.args[0]):
             if have.args and want.args:          # an owned value where its view is expected (6.6, 7.4); the element still has an origin
                 found = origin_clash(have.args[0], want.args[0])
                 if found:
                     return False, found
             return True, ""
-        if have.name == want.name and have.origin == want.origin and (have.package == want.package or not have.package or not want.package):
+        if have.name == want.name and have.origin == want.origin and have.package == want.package:
             # arguments are invariant in the proved direction: one false argument makes the whole type false,
             # so `List[Bool]` is not `List[Int]` even when another argument is still a type parameter (6.1, 6.7).
             # Unknown stays unknown only while an argument itself is unproved (a type parameter, a tuple).
@@ -322,6 +411,10 @@ def assignable(dc, have: Type, want: Type) -> Tuple[Optional[bool], str]:
                 verdict, why = assignable(dc, a, b)
                 if verdict is False:
                     return False, why
+                if verdict is True and refinement_differs(a, b):
+                    # a type argument is invariant in its refinement (6.3, X-514; D-465): through an alias with the wider
+                    # element type a value the narrower one excludes could be stored
+                    return False, f"type arguments are invariant in their refinement: {a.show()} is not {b.show()} (6.3)"
                 if verdict is None:
                     unknown = True
             if unknown:
@@ -330,13 +423,32 @@ def assignable(dc, have: Type, want: Type) -> Tuple[Optional[bool], str]:
         if have.name == want.name: return False, f"{have.name} of {have.package or 'this package'} is not {want.name} of {want.package or 'this package'}"
         if want.name == "Self" or have.name == "Self": return None, ""
         return False, f"{have.show()} is not {want.show()}"
+    if isinstance(have, (TupleT, RecordT)) and type(have) is type(want):
+        if isinstance(have, TupleT):
+            if len(have.items) != len(want.items):
+                return False, "tuple element count differs"
+            pairs = zip(have.items, want.items)
+        else:
+            hm, wm = dict(have.fields), dict(want.fields)
+            if hm.keys() != wm.keys():
+                return False, "record field names differ"
+            pairs = ((hm[k], wm[k]) for k in hm)
+        unknown = False
+        for a, b in pairs:
+            verdict, why = assignable(dc, a, b)
+            if verdict is False:
+                return False, why
+            unknown |= verdict is None
+        return (None, "") if unknown else (True, "")
     if isinstance(have, FnT) and isinstance(want, FnT):
         order = {"fn": 0, "fn mut": 1, "fn once": 2}
         if order[have.kind] > order[want.kind]:
             return False, f"a `{have.kind}` closure cannot be used as `{want.kind}` (8.4)"
         if len(have.params) != len(want.params):
             return False, "parameter count differs"
-        for hp, wp in zip(have.params, want.params):
+        for i, (hp, wp) in enumerate(zip(have.params, want.params)):
+            if have.mode(i) != want.mode(i):
+                return False, f"parameter {i + 1} mode {have.mode(i) or 'read'} differs from {want.mode(i) or 'read'} (8.4)"
             if known(hp) and known(wp) and strip(hp) != strip(wp):
                 return False, f"parameter {hp.show()} differs from {wp.show()}"
             if known(hp) and known(wp):
@@ -344,8 +456,11 @@ def assignable(dc, have: Type, want: Type) -> Tuple[Optional[bool], str]:
                 if found:
                     return False, f"parameter {found}"
         hm, wm = set(have.modifiers), set(want.modifiers)
-        if "pure" in wm and "pure" not in hm:
-            return False, "the position requires `pure`"
+        if "async" in wm and "async" not in hm:
+            return False, "the position requires an async callable: declare the function `async`, or wrap the call in an async lambda (8.4, 12.3)"
+        for claim in ("pure", "noalloc"):
+            if claim in wm and claim not in hm:
+                return False, f"the position requires `{claim}`"
         for weak in ("try", "async", "recovers"):
             if weak in hm and weak not in wm:
                 return False, f"the closure is `{weak}` but the position is not"
@@ -357,4 +472,4 @@ def assignable(dc, have: Type, want: Type) -> Tuple[Optional[bool], str]:
         if isinstance(want, DynamicT) or isinstance(have, DynamicT): return None, ""
         # two known types of different kinds (`Light` against `fn`, `fn` against `Never?`) are not the same type (6.1)
         return False, f"{have.show()} is not {want.show()}"
-    return None, ""   # tuples and records are not compared structurally; identical ones stay unproved and are accepted
+    return None, ""

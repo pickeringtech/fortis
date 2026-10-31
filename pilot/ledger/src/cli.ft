@@ -64,7 +64,7 @@ commands:
 export pure try func parseArguments(args: ListView[String]) Invocation {
   let n = args.count()
   let mut i = 0
-  let mut file = String.from(defaultFile)
+  let mut file = defaultFile as String
   let first = wordAt(args, 0)
   if first == "--file" {
     if n < 2 {

@@ -33,8 +33,8 @@ func viewed(console: Shared[Console], v: ListView[Token]) {
 func main(out: Console) {
   let console = Shared.create(move out)
   let mut toks: List[Token] = List.default()
-  toks.push(Token(label: String.from("a"), console: console.retain()))
-  toks.push(Token(label: String.from("b"), console: console.retain()))
+  toks.push(Token(label: "a" as String, console: console.retain()))
+  toks.push(Token(label: "b" as String, console: console.retain()))
   viewed(console, toks)
   console.print("end")
 }

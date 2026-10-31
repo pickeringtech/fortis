@@ -1,0 +1,34 @@
+// execute: 5|5|12|hi ada
+// requires: runtime
+// covers: LANG-09-03
+// An interface method that takes a function, called on a `dynamic` value and through a `where` bound (9.5): natively
+// the trait takes the callback as `&dyn Fn`, so a `dyn` value dispatches it, and the implementing method keeps its
+// `impl Fn` parameter (D-88 (e)); a callback over a `String` and one returning a `String` too.
+import fortis.host { Console }
+
+export interface Mapper {
+  pure func apply(self, f: pure fn(Int) Int) Int
+  pure func greet(self, f: pure fn(StringView) String) String
+}
+
+export class Twice implements Mapper {
+  export base: Int
+  pure func apply(self, f: pure fn(Int) Int) Int => f(f(self.base))
+  pure func greet(self, f: pure fn(StringView) String) String => f("ada")
+}
+
+func viaDynamic(x: dynamic Mapper) Int => x.apply(pure fn(n: Int) Int => Int.wrappingAdd(n, 1))
+
+func viaBound[T](x: T) Int where T implements Mapper => x.apply(pure fn(n: Int) Int => Int.wrappingAdd(n, 1))
+
+func scaled(x: alias dynamic Mapper, k: Int) Int => x.apply(pure fn[k](n: Int) Int => Int.wrappingMul(n, k))
+
+func greeting(x: dynamic Mapper) String => x.greet(pure fn(name: StringView) String => "hi ${name}")
+
+func main(console: Console) {
+  let t = Twice(base: 3)
+  console.print("${viaDynamic(t)}")
+  console.print("${viaBound(t)}")
+  console.print("${scaled(t, 2)}")
+  console.print(greeting(t))
+}

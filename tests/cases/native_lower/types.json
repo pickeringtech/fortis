@@ -1,0 +1,854 @@
+[
+  {
+    "name": "c1_type_int",
+    "input": {
+      "kind": "named",
+      "name": "Int",
+      "args": []
+    },
+    "expect": "i64"
+  },
+  {
+    "name": "c1_type_int_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Int",
+      "args": []
+    },
+    "expect": "Option<i64>"
+  },
+  {
+    "name": "c1_type_int64",
+    "input": {
+      "kind": "named",
+      "name": "Int64",
+      "args": []
+    },
+    "expect": "i64"
+  },
+  {
+    "name": "c1_type_int64_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Int64",
+      "args": []
+    },
+    "expect": "Option<i64>"
+  },
+  {
+    "name": "c1_type_int32",
+    "input": {
+      "kind": "named",
+      "name": "Int32",
+      "args": []
+    },
+    "expect": "i32"
+  },
+  {
+    "name": "c1_type_int32_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Int32",
+      "args": []
+    },
+    "expect": "Option<i32>"
+  },
+  {
+    "name": "c1_type_int16",
+    "input": {
+      "kind": "named",
+      "name": "Int16",
+      "args": []
+    },
+    "expect": "i16"
+  },
+  {
+    "name": "c1_type_int16_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Int16",
+      "args": []
+    },
+    "expect": "Option<i16>"
+  },
+  {
+    "name": "c1_type_int8",
+    "input": {
+      "kind": "named",
+      "name": "Int8",
+      "args": []
+    },
+    "expect": "i8"
+  },
+  {
+    "name": "c1_type_int8_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Int8",
+      "args": []
+    },
+    "expect": "Option<i8>"
+  },
+  {
+    "name": "c1_type_uint",
+    "input": {
+      "kind": "named",
+      "name": "UInt",
+      "args": []
+    },
+    "expect": "u64"
+  },
+  {
+    "name": "c1_type_uint_optional",
+    "input": {
+      "kind": "optional",
+      "name": "UInt",
+      "args": []
+    },
+    "expect": "Option<u64>"
+  },
+  {
+    "name": "c1_type_uint64",
+    "input": {
+      "kind": "named",
+      "name": "UInt64",
+      "args": []
+    },
+    "expect": "u64"
+  },
+  {
+    "name": "c1_type_uint64_optional",
+    "input": {
+      "kind": "optional",
+      "name": "UInt64",
+      "args": []
+    },
+    "expect": "Option<u64>"
+  },
+  {
+    "name": "c1_type_uint32",
+    "input": {
+      "kind": "named",
+      "name": "UInt32",
+      "args": []
+    },
+    "expect": "u32"
+  },
+  {
+    "name": "c1_type_uint32_optional",
+    "input": {
+      "kind": "optional",
+      "name": "UInt32",
+      "args": []
+    },
+    "expect": "Option<u32>"
+  },
+  {
+    "name": "c1_type_uint16",
+    "input": {
+      "kind": "named",
+      "name": "UInt16",
+      "args": []
+    },
+    "expect": "u16"
+  },
+  {
+    "name": "c1_type_uint16_optional",
+    "input": {
+      "kind": "optional",
+      "name": "UInt16",
+      "args": []
+    },
+    "expect": "Option<u16>"
+  },
+  {
+    "name": "c1_type_uint8",
+    "input": {
+      "kind": "named",
+      "name": "UInt8",
+      "args": []
+    },
+    "expect": "u8"
+  },
+  {
+    "name": "c1_type_uint8_optional",
+    "input": {
+      "kind": "optional",
+      "name": "UInt8",
+      "args": []
+    },
+    "expect": "Option<u8>"
+  },
+  {
+    "name": "c1_type_byte",
+    "input": {
+      "kind": "named",
+      "name": "Byte",
+      "args": []
+    },
+    "expect": "u8"
+  },
+  {
+    "name": "c1_type_byte_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Byte",
+      "args": []
+    },
+    "expect": "Option<u8>"
+  },
+  {
+    "name": "c1_type_bool",
+    "input": {
+      "kind": "named",
+      "name": "Bool",
+      "args": []
+    },
+    "expect": "bool"
+  },
+  {
+    "name": "c1_type_bool_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Bool",
+      "args": []
+    },
+    "expect": "Option<bool>"
+  },
+  {
+    "name": "c1_type_float",
+    "input": {
+      "kind": "named",
+      "name": "Float",
+      "args": []
+    },
+    "expect": "f64"
+  },
+  {
+    "name": "c1_type_float_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Float",
+      "args": []
+    },
+    "expect": "Option<f64>"
+  },
+  {
+    "name": "c1_type_float32",
+    "input": {
+      "kind": "named",
+      "name": "Float32",
+      "args": []
+    },
+    "expect": "f32"
+  },
+  {
+    "name": "c1_type_float32_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Float32",
+      "args": []
+    },
+    "expect": "Option<f32>"
+  },
+  {
+    "name": "c1_type_decimal",
+    "input": {
+      "kind": "named",
+      "name": "Decimal",
+      "args": []
+    },
+    "expect": "rt::Decimal"
+  },
+  {
+    "name": "c1_type_decimal_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Decimal",
+      "args": []
+    },
+    "expect": "Option<rt::Decimal>"
+  },
+  {
+    "name": "c1_type_duration",
+    "input": {
+      "kind": "named",
+      "name": "Duration",
+      "args": []
+    },
+    "expect": "rt::Duration"
+  },
+  {
+    "name": "c1_type_duration_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Duration",
+      "args": []
+    },
+    "expect": "Option<rt::Duration>"
+  },
+  {
+    "name": "c1_type_timestamp",
+    "input": {
+      "kind": "named",
+      "name": "Timestamp",
+      "args": []
+    },
+    "expect": "rt::Timestamp"
+  },
+  {
+    "name": "c1_type_timestamp_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Timestamp",
+      "args": []
+    },
+    "expect": "Option<rt::Timestamp>"
+  },
+  {
+    "name": "c1_type_string",
+    "input": {
+      "kind": "named",
+      "name": "String",
+      "args": []
+    },
+    "expect": "String"
+  },
+  {
+    "name": "c1_type_string_optional",
+    "input": {
+      "kind": "optional",
+      "name": "String",
+      "args": []
+    },
+    "expect": "Option<String>"
+  },
+  {
+    "name": "c1_type_stringview",
+    "input": {
+      "kind": "named",
+      "name": "StringView",
+      "args": []
+    },
+    "expect": "String"
+  },
+  {
+    "name": "c1_type_stringview_optional",
+    "input": {
+      "kind": "optional",
+      "name": "StringView",
+      "args": []
+    },
+    "expect": "Option<String>"
+  },
+  {
+    "name": "c1_type_scalar",
+    "input": {
+      "kind": "named",
+      "name": "Scalar",
+      "args": []
+    },
+    "expect": "char"
+  },
+  {
+    "name": "c1_type_scalar_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Scalar",
+      "args": []
+    },
+    "expect": "Option<char>"
+  },
+  {
+    "name": "c1_type_bytes",
+    "input": {
+      "kind": "named",
+      "name": "Bytes",
+      "args": []
+    },
+    "expect": "Vec<u8>"
+  },
+  {
+    "name": "c1_type_bytes_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Bytes",
+      "args": []
+    },
+    "expect": "Option<Vec<u8>>"
+  },
+  {
+    "name": "c1_type_bytesview",
+    "input": {
+      "kind": "named",
+      "name": "BytesView",
+      "args": []
+    },
+    "expect": "Vec<u8>"
+  },
+  {
+    "name": "c1_type_bytesview_optional",
+    "input": {
+      "kind": "optional",
+      "name": "BytesView",
+      "args": []
+    },
+    "expect": "Option<Vec<u8>>"
+  },
+  {
+    "name": "c1_type_void",
+    "input": {
+      "kind": "named",
+      "name": "Void",
+      "args": []
+    },
+    "expect": "()"
+  },
+  {
+    "name": "c1_type_void_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Void",
+      "args": []
+    },
+    "expect": "Option<()>"
+  },
+  {
+    "name": "c1_type_never",
+    "input": {
+      "kind": "named",
+      "name": "Never",
+      "args": []
+    },
+    "expect": "()"
+  },
+  {
+    "name": "c1_type_never_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Never",
+      "args": []
+    },
+    "expect": "Option<()>"
+  },
+  {
+    "name": "c1_type_failure",
+    "input": {
+      "kind": "named",
+      "name": "Failure",
+      "args": []
+    },
+    "expect": "rt::Failure"
+  },
+  {
+    "name": "c1_type_failure_optional",
+    "input": {
+      "kind": "optional",
+      "name": "Failure",
+      "args": []
+    },
+    "expect": "Option<rt::Failure>"
+  },
+  {
+    "name": "c1_type_list_int",
+    "input": {
+      "kind": "named",
+      "name": "List",
+      "args": [
+        "Int"
+      ]
+    },
+    "expect": "Vec<i64>"
+  },
+  {
+    "name": "c1_type_list_string",
+    "input": {
+      "kind": "named",
+      "name": "List",
+      "args": [
+        "String"
+      ]
+    },
+    "expect": "Vec<String>"
+  },
+  {
+    "name": "c1_type_list_bool",
+    "input": {
+      "kind": "named",
+      "name": "List",
+      "args": [
+        "Bool"
+      ]
+    },
+    "expect": "Vec<bool>"
+  },
+  {
+    "name": "c1_type_array_int",
+    "input": {
+      "kind": "named",
+      "name": "Array",
+      "args": [
+        "Int"
+      ]
+    },
+    "expect": "Vec<i64>"
+  },
+  {
+    "name": "c1_type_array_string",
+    "input": {
+      "kind": "named",
+      "name": "Array",
+      "args": [
+        "String"
+      ]
+    },
+    "expect": "Vec<String>"
+  },
+  {
+    "name": "c1_type_array_bool",
+    "input": {
+      "kind": "named",
+      "name": "Array",
+      "args": [
+        "Bool"
+      ]
+    },
+    "expect": "Vec<bool>"
+  },
+  {
+    "name": "c1_type_listview_int",
+    "input": {
+      "kind": "named",
+      "name": "ListView",
+      "args": [
+        "Int"
+      ]
+    },
+    "expect": "Vec<i64>"
+  },
+  {
+    "name": "c1_type_listview_string",
+    "input": {
+      "kind": "named",
+      "name": "ListView",
+      "args": [
+        "String"
+      ]
+    },
+    "expect": "Vec<String>"
+  },
+  {
+    "name": "c1_type_listview_bool",
+    "input": {
+      "kind": "named",
+      "name": "ListView",
+      "args": [
+        "Bool"
+      ]
+    },
+    "expect": "Vec<bool>"
+  },
+  {
+    "name": "c1_type_set_int",
+    "input": {
+      "kind": "named",
+      "name": "Set",
+      "args": [
+        "Int"
+      ]
+    },
+    "expect": "rt::OrderedSet<i64>"
+  },
+  {
+    "name": "c1_type_set_string",
+    "input": {
+      "kind": "named",
+      "name": "Set",
+      "args": [
+        "String"
+      ]
+    },
+    "expect": "rt::OrderedSet<String>"
+  },
+  {
+    "name": "c1_type_set_bool",
+    "input": {
+      "kind": "named",
+      "name": "Set",
+      "args": [
+        "Bool"
+      ]
+    },
+    "expect": "rt::OrderedSet<bool>"
+  },
+  {
+    "name": "c1_type_outcome_int",
+    "input": {
+      "kind": "named",
+      "name": "Outcome",
+      "args": [
+        "Int"
+      ]
+    },
+    "expect": "rt::Outcome<i64>"
+  },
+  {
+    "name": "c1_type_outcome_string",
+    "input": {
+      "kind": "named",
+      "name": "Outcome",
+      "args": [
+        "String"
+      ]
+    },
+    "expect": "rt::Outcome<String>"
+  },
+  {
+    "name": "c1_type_outcome_bool",
+    "input": {
+      "kind": "named",
+      "name": "Outcome",
+      "args": [
+        "Bool"
+      ]
+    },
+    "expect": "rt::Outcome<bool>"
+  },
+  {
+    "name": "c1_type_shared_int",
+    "input": {
+      "kind": "named",
+      "name": "Shared",
+      "args": [
+        "Int"
+      ]
+    },
+    "expect": "rt::Shared<i64>"
+  },
+  {
+    "name": "c1_type_shared_string",
+    "input": {
+      "kind": "named",
+      "name": "Shared",
+      "args": [
+        "String"
+      ]
+    },
+    "expect": "rt::Shared<String>"
+  },
+  {
+    "name": "c1_type_shared_bool",
+    "input": {
+      "kind": "named",
+      "name": "Shared",
+      "args": [
+        "Bool"
+      ]
+    },
+    "expect": "rt::Shared<bool>"
+  },
+  {
+    "name": "c1_type_weak_int",
+    "input": {
+      "kind": "named",
+      "name": "Weak",
+      "args": [
+        "Int"
+      ]
+    },
+    "expect": "rt::WeakRef<i64>"
+  },
+  {
+    "name": "c1_type_weak_string",
+    "input": {
+      "kind": "named",
+      "name": "Weak",
+      "args": [
+        "String"
+      ]
+    },
+    "expect": "rt::WeakRef<String>"
+  },
+  {
+    "name": "c1_type_weak_bool",
+    "input": {
+      "kind": "named",
+      "name": "Weak",
+      "args": [
+        "Bool"
+      ]
+    },
+    "expect": "rt::WeakRef<bool>"
+  },
+  {
+    "name": "c1_type_mutex_int",
+    "input": {
+      "kind": "named",
+      "name": "Mutex",
+      "args": [
+        "Int"
+      ]
+    },
+    "expect": "rt::Mutex<i64>"
+  },
+  {
+    "name": "c1_type_mutex_string",
+    "input": {
+      "kind": "named",
+      "name": "Mutex",
+      "args": [
+        "String"
+      ]
+    },
+    "expect": "rt::Mutex<String>"
+  },
+  {
+    "name": "c1_type_mutex_bool",
+    "input": {
+      "kind": "named",
+      "name": "Mutex",
+      "args": [
+        "Bool"
+      ]
+    },
+    "expect": "rt::Mutex<bool>"
+  },
+  {
+    "name": "c1_type_listcursor_int",
+    "input": {
+      "kind": "named",
+      "name": "ListCursor",
+      "args": [
+        "Int"
+      ]
+    },
+    "expect": "rt::collections::Cursor<'_, i64>"
+  },
+  {
+    "name": "c1_type_listcursor_string",
+    "input": {
+      "kind": "named",
+      "name": "ListCursor",
+      "args": [
+        "String"
+      ]
+    },
+    "expect": "rt::collections::Cursor<'_, String>"
+  },
+  {
+    "name": "c1_type_listcursor_bool",
+    "input": {
+      "kind": "named",
+      "name": "ListCursor",
+      "args": [
+        "Bool"
+      ]
+    },
+    "expect": "rt::collections::Cursor<'_, bool>"
+  },
+  {
+    "name": "c1_type_mutexguard_int",
+    "input": {
+      "kind": "named",
+      "name": "MutexGuard",
+      "args": [
+        "Int"
+      ]
+    },
+    "expect": "rt::Guard<'_, i64>"
+  },
+  {
+    "name": "c1_type_mutexguard_string",
+    "input": {
+      "kind": "named",
+      "name": "MutexGuard",
+      "args": [
+        "String"
+      ]
+    },
+    "expect": "rt::Guard<'_, String>"
+  },
+  {
+    "name": "c1_type_mutexguard_bool",
+    "input": {
+      "kind": "named",
+      "name": "MutexGuard",
+      "args": [
+        "Bool"
+      ]
+    },
+    "expect": "rt::Guard<'_, bool>"
+  },
+  {
+    "name": "c1_type_map_int",
+    "input": {
+      "kind": "named",
+      "name": "Map",
+      "args": [
+        "Int",
+        "String"
+      ]
+    },
+    "expect": "rt::OrderedMap<i64, String>"
+  },
+  {
+    "name": "c1_type_map_string",
+    "input": {
+      "kind": "named",
+      "name": "Map",
+      "args": [
+        "String",
+        "Int"
+      ]
+    },
+    "expect": "rt::OrderedMap<String, i64>"
+  },
+  {
+    "name": "c1_type_map_bool",
+    "input": {
+      "kind": "named",
+      "name": "Map",
+      "args": [
+        "Bool",
+        "Int"
+      ]
+    },
+    "expect": "rt::OrderedMap<bool, i64>"
+  },
+  {
+    "name": "c1_type_variantmap_int",
+    "input": {
+      "kind": "named",
+      "name": "VariantMap",
+      "args": [
+        "Int",
+        "String"
+      ]
+    },
+    "expect": "Vec<(i64, String)>"
+  },
+  {
+    "name": "c1_type_variantmap_string",
+    "input": {
+      "kind": "named",
+      "name": "VariantMap",
+      "args": [
+        "String",
+        "Int"
+      ]
+    },
+    "expect": "Vec<(String, i64)>"
+  },
+  {
+    "name": "c1_type_variantmap_bool",
+    "input": {
+      "kind": "named",
+      "name": "VariantMap",
+      "args": [
+        "Bool",
+        "Int"
+      ]
+    },
+    "expect": "Vec<(bool, i64)>"
+  }
+]

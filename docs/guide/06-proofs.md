@@ -3,8 +3,6 @@
 <!-- covers: LR 6.3, LR 6.4, LR 6.7 -->
 *Human mode. Agent mode: [Proofs, by rule](../agent/06-proofs.md). Source of truth: LR 6.3, LR 6.4 and LR 6.7.*
 
-> Preview: predicate refinements (LR 6.3) arrive in v0.1. The interval rules for arithmetic and indexing (LR 6.4, 6.7) are in v0.0.1.
-
 An integer operator in Fortis never overflows, never divides by zero and never shifts out of range, and an index
 never falls outside its list. The checker guarantees this before the program runs, with a small, fixed set of
 rules about the range of values each integer can hold. This chapter explains those rules: where the checker
@@ -231,7 +229,7 @@ func main() {
 ```
 
 The repair accumulates into a plain `Int` with the checked operation, and converts once at the end with
-`validate`, which fails if the value does not fit (LR 6.3):
+`as`, which fails if the value does not fit (LR 6.3, LR 6.13):
 
 ```fortis
 // accept
@@ -242,7 +240,7 @@ pure try func sumTo(n: Int<0..1000>) Int<0..500500> {
   for i in 0..n {
     total = total + i or fail
   }
-  return Int<0..500500>.validate(total) or fail
+  return total as Int<0..500500> or fail
 }
 
 try func main(console: Console) {
@@ -348,7 +346,7 @@ func main() {
 fails with `collection.index`; neither needs a proof (LR 6.7).
 
 A collection refined by its length is a property of the value, so such a place cannot be loaned `editable` or
-changed, by `items.push(1)` any more than by `editable items.push(1)`: that is `E-REF-003` (LR 6.3, LR 7.5). Change an unrefined collection, then `validate` it into the refined type.
+changed, by `items.push(1)` any more than by `editable items.push(1)`: that is `E-REF-003` (LR 6.3, LR 7.5). Change an unrefined collection, then convert it into the refined type with `as`.
 
 ## The remainder
 
@@ -374,9 +372,10 @@ func main(console: Console) {
 ## When the value is outside the target's range
 
 Assigning or returning a value whose range lies partly outside the target's refinement is `E-REF-001` (LR 6.3),
-as in `sumTo` and `bump` above. The fix is a wider declared type, or an explicit `validate`, which is the point
+as in `sumTo` and `bump` above. The fix is a wider declared type, or the explicit `as` conversion (the retired
+`T.validate(x)` spelling still accepted in v0.1), which is the point
 where a value from the outside world, or from arithmetic the checker cannot follow, enters a refined type
 (LR 6.3, LANG-06-03).
 
 The rules in this chapter are the whole of what the checker proves. When they cannot reach a bound, the checked
-operations and `validate` always can, and they mark the line where a reader should look (LR 6.3, LR 6.4).
+operations and the `as` conversion always can, and they mark the line where a reader should look (LR 6.3, LR 6.4).

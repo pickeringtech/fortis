@@ -55,14 +55,18 @@ def main(argv):
         e = entries.get(f"interaction:{i}")
         expect(f"Programme 16 interaction `{i}` is Full", e is not None and e["class"] == "Full")
 
+    features = []  # features_check.py checks the whole tree, so one run serves every `features-check:` scenario
+
     def scenario_ok(s, backend):
         if s.startswith("release-results:"):
             be = s.split(":", 1)[1]
             rs = [r for (p, b), r in release.items() if b == be]
             return bool(rs) and all(r["status"] in ("PASS", "KNOWN") for r in rs), f"{sum(r['status'] == 'PASS' for r in rs)}/{len(rs)} pass"
         if s.startswith("features-check:"):
-            r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "features_check.py")], capture_output=True, text=True, cwd=ROOT, timeout=3600)
-            return r.returncode == 0, r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr[-200:]
+            if not features:
+                r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "features_check.py")], capture_output=True, text=True, cwd=ROOT, timeout=3600)
+                features.append((r.returncode == 0, r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr[-200:]))
+            return features[0]
         if s.startswith("acceptance/"):
             log = load(os.path.join(s, "run-log.json"))
             spec = load(os.path.join(s, "spec.json"))

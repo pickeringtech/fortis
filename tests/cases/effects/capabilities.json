@@ -1,0 +1,16 @@
+[
+  {"name":"lr_11_6_host_body_main","input":{"context":"body","entry":true,"called":true,"calls":1,"parameter":false},"expect":[]},
+  {"name":"lr_11_6_host_body_worker","input":{"context":"body","entry":false,"called":true,"calls":1,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_loop_main","input":{"context":"loop","entry":true,"called":true,"calls":1,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_loop_worker","input":{"context":"loop","entry":false,"called":true,"calls":1,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_whilecond_main","input":{"context":"whilecond","entry":true,"called":true,"calls":1,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_whilecond_worker","input":{"context":"whilecond","entry":false,"called":true,"calls":1,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_lambda_main","input":{"context":"lambda","entry":true,"called":true,"calls":1,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_lambda_worker","input":{"context":"lambda","entry":false,"called":true,"calls":1,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_hook_main","input":{"context":"hook","entry":true,"called":true,"calls":1,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_hook_worker","input":{"context":"hook","entry":false,"called":true,"calls":1,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_value_main","input":{"context":"body","entry":true,"called":false,"calls":1,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_value_worker","input":{"context":"body","entry":false,"called":false,"calls":1,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_twice","input":{"context":"body","entry":true,"called":true,"calls":2,"parameter":false},"expect":["E-EFF-010"]},
+  {"name":"lr_11_6_host_parameter","input":{"context":"body","entry":true,"called":true,"calls":1,"parameter":true},"expect":["E-EFF-010"]}
+]

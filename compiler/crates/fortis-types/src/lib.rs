@@ -2,6 +2,7 @@
 
 pub mod api;
 pub mod check;
+pub mod conversions;
 pub mod decls;
 pub mod effects;
 pub mod facts;

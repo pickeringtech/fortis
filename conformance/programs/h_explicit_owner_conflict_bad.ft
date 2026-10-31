@@ -1,0 +1,8 @@
+// reject: E-OWN-010
+// covers: LANG-08-02, LANG-07-05
+// D-551: a written capture participates in the call's loans too.
+func call(xs: editable List[Int], f: fn() Int) {}
+func demo() {
+  let mut xs = List.of(1)
+  call(editable xs, fn[alias xs]() Int => xs.count())
+}

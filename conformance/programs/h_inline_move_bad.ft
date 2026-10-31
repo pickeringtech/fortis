@@ -1,0 +1,7 @@
+// reject: E-FUN-010
+// covers: LANG-08-02
+func call(f: fn once() String) {}
+func demo() {
+  let text: String = "x"
+  call(fn() => move text)
+}

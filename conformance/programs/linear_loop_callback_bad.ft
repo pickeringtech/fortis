@@ -1,0 +1,17 @@
+// reject: E-OBL-001
+// covers: LANG-10-01, LANG-10-02
+func inferred(xs: owned List[Outcome[Int]]) {
+  move xs.consumeEach(fn(item) {})
+}
+func written(xs: owned List[Outcome[Int]]) {
+  move xs.consumeEach(fn mut(item: owned Outcome[Int]) Void { return })
+}
+func named(item: owned Outcome[Int]) {}
+func usingNamed(xs: owned List[Outcome[Int]]) { move xs.consumeEach(named) }
+class Bin[T] where T: linear {
+  items: List[T]
+  export func drop(owned self) {
+    let Bin(items: contents) = move self
+    move contents.consumeEach(fn(item) {})
+  }
+}

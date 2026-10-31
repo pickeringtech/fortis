@@ -1,0 +1,10 @@
+// reject: E-TYP-040
+// D-725: both checkers formerly accepted a StringView passed to Array[Int, 2].filled as a function value.
+// The declared array element type must constrain the constructor parameter to Int.
+import fortis.host { Console }
+func main(console: Console) {
+  let make = Array[Int, 2].filled
+  let a = make("wrong")
+  let n = a.get(0) ?? 0
+  console.print("${Int.wrappingAdd(n, 1)}")
+}

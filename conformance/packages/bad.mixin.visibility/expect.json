@@ -1,0 +1,60 @@
+{
+  "verdict": "reject",
+  "code": "E-NAM-004",
+  "covers": [
+    "LANG-04-05",
+    "LANG-09-04"
+  ],
+  "at": [
+    "bad.mixin.visibility/src/shapes.ft:8",
+    "bad.mixin.visibility/src/app.ft:5",
+    "bad.mixin.visibility/src/app.ft:7"
+  ],
+  "records": [
+    {
+      "class": "Names and modules",
+      "code": "E-NAM-004",
+      "column": 18,
+      "fields": {
+        "candidates": [],
+        "name": "secret"
+      },
+      "file": "app.ft",
+      "line": 5,
+      "message": "method `secret` of Vault is not exported; Vault is declared in bad.mixin.visibility.shapes",
+      "rule": "LANG-04-05",
+      "severity": "error",
+      "status": "violated"
+    },
+    {
+      "class": "Names and modules",
+      "code": "E-NAM-004",
+      "column": 30,
+      "fields": {
+        "candidates": [],
+        "name": "hidden"
+      },
+      "file": "app.ft",
+      "line": 7,
+      "message": "method `hidden` of HiddenVault is not exported; HiddenVault is declared in bad.mixin.visibility.shapes",
+      "rule": "LANG-04-05",
+      "severity": "error",
+      "status": "violated"
+    },
+    {
+      "class": "Names and modules",
+      "code": "E-NAM-004",
+      "column": 43,
+      "fields": {
+        "candidates": [],
+        "name": "secret"
+      },
+      "file": "shapes.ft",
+      "line": 8,
+      "message": "method `secret` of Vault is not exported; a mixin (Sneaks) sees only the exported members of Vault (9.6) (mixin Sneaks applied to bad.mixin.visibility.shapes.Vault)",
+      "rule": "LANG-04-05",
+      "severity": "error",
+      "status": "violated"
+    }
+  ]
+}

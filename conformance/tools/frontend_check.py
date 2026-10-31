@@ -19,6 +19,7 @@ build), whose observations must equal the release build's (PROG-VM-04).
 Writes build/rust-frontend/results.json (fixture -> {reference, frontend, slice, agree}) and the summary."""
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
@@ -31,6 +32,27 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, ROOT)
 FORTISC = os.path.join(ROOT, "compiler", "target", "release", "fortisc")
 OUT = os.path.join(ROOT, "build", "rust-frontend", "results.json")
+
+
+def canonical_tree_dump(text):
+    """Compare token values, not equivalent Python repr spellings (D-727).
+
+    Keep every node, token kind, indentation and source position. Only a valid
+    quoted string is normalised; malformed dumps still fail the comparison.
+    """
+    lines = []
+    for line in text.splitlines():
+        match = re.fullmatch(r"(\s*[A-Z_]+ )(.+)( \d+:\d+)", line)
+        if match:
+            try:
+                value = ast.literal_eval(match[2])
+            except (SyntaxError, ValueError):
+                pass
+            else:
+                if isinstance(value, str):
+                    line = match[1] + repr(value) + match[3]
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def chunk_num(c):
@@ -196,7 +218,7 @@ def main(argv):
         glines = []
         pydump(gen, 0, glines)
         parse_n += 1
-        if rust_parse.get(path) != "\n".join(lines) or "\n".join(glines) != "\n".join(lines):
+        if canonical_tree_dump(rust_parse.get(path, "")) != canonical_tree_dump("\n".join(lines)) or "\n".join(glines) != "\n".join(lines):
             parse_bad.append(path)
         if path in amb:
             continue

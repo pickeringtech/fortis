@@ -3,7 +3,7 @@
 // The `for` binding is fresh on every iteration, so moving it once per iteration is accepted.
 func take(s: owned String) Int => s.byteCount()
 func main() {
-  let items = List.of(String.from("a"), String.from("bc"))
+  let items = List.of("a" as String, "bc" as String)
   let mut total = 0
   for s in move items {
     total = Int.saturatingAdd(total, take(move s))

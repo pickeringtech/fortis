@@ -14,7 +14,7 @@ interpreter runs their bodies.
 """
 from __future__ import annotations
 
-import unicodedata
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -57,11 +57,13 @@ def func(*names: str):
 class MapVal:
     """`Map[K, V]`: a hash container; iteration order is first-insertion order (deterministic per build, 6.7)."""
     entries: Dict[Any, Tuple[Any, Any]] = field(default_factory=dict)
+    custom_seq: int = 0     # the next key of an entry whose type writes its own equality: never reused after a removal
 
 
 @dataclass
 class SetVal:
     items: Dict[Any, Any] = field(default_factory=dict)
+    custom_seq: int = 0
 
 
 @dataclass
@@ -142,7 +144,7 @@ def type_name(v) -> Optional[str]:
     return {"Scalar": "Scalar", "SharedVal": "Shared", "WeakVal": "Weak", "ScopeVal": "Scope", "TaskVal": "Task"}.get(n)
 
 
-ALIASES = {"String": ("StringView",), "List": ("ListView",)}
+ALIASES = {"String": ("StringView",), "List": ("ListView",), "Array": ("ListView",)}      # an `Array` read as a view (X-578)
 
 
 def lookup_method(v, name: str) -> Optional[Callable]:
@@ -177,6 +179,30 @@ def freeze(v):
     if type(v).__name__ == "Scalar":
         return ("scalar", v.text)
     raise FortisError(f"{display(v)} is not Hashable")
+
+
+def own_equality(it, v) -> bool:
+    """Whether `v`'s type writes its own `equals` or `hash`, or nests a value that does: a container then finds the
+    key by that equality, not by a structural key, because a hand-written `hash` writes nothing (`Hasher` has no
+    members in Language 1.0) and equal values must still be found by `equals` (6.10, X-516; D-84)."""
+    if isinstance(v, Instance):
+        if "equals" in v.cls.methods or "hash" in v.cls.methods:
+            return True
+        return any(own_equality(it, x) for x in v.fields.values())
+    if isinstance(v, EnumValue):
+        en = it.enums.get(v.enum) if v.enum else None
+        if en is None and not v.enum:
+            owners = [e for e in it.enums.values() if v.variant in e.variants]
+            en = owners[0] if len(owners) == 1 else None
+        if en is not None and ("equals" in en.methods or "hash" in en.methods):
+            return True
+        return any(own_equality(it, x) for x in v.payload.values())
+    if isinstance(v, ListVal):
+        return any(own_equality(it, x) for x in v.items)
+    if isinstance(v, tuple):
+        return any(own_equality(it, x) for x in v)
+    return False
+
 
 
 def fail(code: str, **payload) -> Failure:
@@ -278,6 +304,37 @@ def sv_scalar_at(it, v, p):
     return Scalar(v[i]) if 0 <= i < len(v) else fail("text.index", index=i)
 
 
+# Unicode White_Space (the property Rust's `char::is_whitespace` uses), spelled out because Python's `str.isspace`
+# and `str.split()` also take U+001C to U+001F: the three backends must trim and split at the same scalars (X-479).
+WHITE_SPACE = "\t\n\x0b\x0c\r \x85\xa0                　"
+ASCII_UPPER = {c: c - 32 for c in range(ord("a"), ord("z") + 1)}
+ASCII_LOWER = {c: c + 32 for c in range(ord("A"), ord("Z") + 1)}
+
+
+def split_lines(v: str) -> list:
+    """The lines of `v` (6.6): a line ends at `\\n`, and one `\\r` before that `\\n` ends with it; the text after the last
+    terminator is a line only when it is not empty. A `\\r` not before a `\\n` stays in the line."""
+    pieces = v.split("\n")
+    last = pieces.pop()
+    out = [x[:-1] if x.endswith("\r") else x for x in pieces]
+    if last:
+        out.append(last)
+    return out
+
+
+for _t in ("String", "StringView"):
+    METHODS[(_t, "trim")] = lambda it, v, p: v.strip(WHITE_SPACE)
+    METHODS[(_t, "trimStart")] = lambda it, v, p: v.lstrip(WHITE_SPACE)
+    METHODS[(_t, "trimEnd")] = lambda it, v, p: v.rstrip(WHITE_SPACE)
+    METHODS[(_t, "find")] = lambda it, v, p: (lambda i: None if i < 0 else i)(v.find(p[0]))
+    METHODS[(_t, "startsWith")] = lambda it, v, p: v.startswith(p[0])
+    METHODS[(_t, "endsWith")] = lambda it, v, p: v.endswith(p[0])
+    METHODS[(_t, "split")] = lambda it, v, p: ListVal([v] if p[0] == "" else v.split(p[0]))
+    METHODS[(_t, "lines")] = lambda it, v, p: ListVal(split_lines(v))
+    METHODS[(_t, "replace")] = lambda it, v, p: v if p[0] == "" else v.replace(p[0], p[1])
+    METHODS[(_t, "asciiUpper")] = lambda it, v, p: v.translate(ASCII_UPPER)
+    METHODS[(_t, "asciiLower")] = lambda it, v, p: v.translate(ASCII_LOWER)
+
 METHODS[("BytesView", "byteCount")] = lambda it, v, p: len(v.data)
 METHODS[("Bytes", "byteCount")] = lambda it, v, p: len(v.data)
 METHODS[("BytesView", "count")] = lambda it, v, p: len(v.data)
@@ -313,43 +370,14 @@ METHODS[("Builder", "appendScalar")] = lambda it, v, p: (v.parts.append(p[0].tex
 METHODS[("Builder", "finish")] = lambda it, v, p: "".join(v.parts)
 
 
-def _is_extend(c: str) -> bool:
-    return unicodedata.category(c) in ("Mn", "Me", "Mc") or 0xFE00 <= ord(c) <= 0xFE0F or 0x1F3FB <= ord(c) <= 0x1F3FF
-
-
-def _is_pictographic(c: str) -> bool:
-    o = ord(c)
-    return unicodedata.category(c) == "So" or 0x1F000 <= o <= 0x1FAFF or 0x2600 <= o <= 0x27BF
-
-
-def _is_ri(c: str) -> bool:
-    return 0x1F1E6 <= ord(c) <= 0x1F1FF
-
-
 @func("graphemes")
 def graphemes(it, p):
-    """Extended grapheme clusters for the rules named in the contract (GB3-GB9c, GB11-GB13)."""
-    text = p[0]
-    count, prev, ri_run = 0, None, 0
-    for c in text:
-        if prev is None:
-            count += 1
-        elif prev == "\r" and c == "\n":
-            pass                                              # GB3
-        elif _is_extend(c) or c == "‍":
-            pass                                              # GB9
-        elif prev == "‍" and _is_pictographic(c):
-            pass                                              # GB11 (approximation: no preceding-pictographic check)
-        elif _is_ri(c) and _is_ri(prev) and ri_run % 2 == 1:
-            pass                                              # GB12/GB13: regional indicators pair up
-        else:
-            count += 1
-        ri_run = ri_run + 1 if _is_ri(c) else 0
-        prev = c
-    return count
+    from interpreter.graphemes import count
+    return count(p[0])
 
 
-ASSOC[("Text", "words")] = lambda it, p: ListVal(p[0].split())
+WORD = re.compile("[^" + "".join(re.escape(c) for c in WHITE_SPACE) + "]+")
+ASSOC[("Text", "words")] = lambda it, p: ListVal(WORD.findall(p[0]))
 
 
 # ---------------------------------------------------------------- time (6.2; the full module is DEL-27)
@@ -415,6 +443,14 @@ def list_set(it, v, p):
     return VOID
 
 
+@method("List", "clear")
+def list_clear(it, v, p):
+    for x in v.items:
+        it.destroy(x)
+    v.items.clear()
+    return VOID
+
+
 METHODS[("List", "iterate")] = lambda it, v, p: CursorVal(v.items)
 
 
@@ -434,7 +470,12 @@ def array_filled(it, p, n: Optional[int] = None):
     return ArrayVal([deep_copy(p[0]) for _ in range(n)])
 
 
+# `Deque.iterate` (X-576): the library class keeps its items in two lists, `front` with the first item last and `back`
+# with the last item last, and the cursor walks them front to back
+METHODS[("Deque", "iterate")] = lambda it, v, p: CursorVal(list(reversed(v.fields["front"].items)) + list(v.fields["back"].items))
 METHODS[("Array", "count")] = lambda it, v, p: len(v.items)
+METHODS[("Array", "get")] = lambda it, v, p: v.items[p[0]] if 0 <= p[0] < len(v.items) else None
+METHODS[("Array", "asView")] = lambda it, v, p: v      # a view reads the array's own elements (X-578); ListView's methods reach it by ALIASES
 
 
 @method("Array", "set")
@@ -452,12 +493,24 @@ ASSOC[("Map", "default")] = lambda it, p: MapVal()
 
 @method("Map", "get")
 def map_get(it, v, p):
+    if own_equality(it, p[0]):
+        e = next((e for e in v.entries.values() if it.equal(e[0], p[0])), None)
+        return None if e is None else e[1]
     e = v.entries.get(freeze(p[0]))
     return None if e is None else e[1]
 
 
 @method("Map", "set")
 def map_set(it, v, p):
+    if own_equality(it, p[0]):
+        hit = next((fk for fk, e in v.entries.items() if it.equal(e[0], p[0])), None)
+        if hit is not None:
+            it.destroy(v.entries[hit][1])
+            v.entries[hit] = (v.entries[hit][0], p[1])     # replacing keeps the first insertion's position
+        else:
+            v.entries[("custom", v.custom_seq)] = (p[0], p[1])
+            v.custom_seq += 1
+        return VOID
     k = freeze(p[0])
     old = v.entries.get(k)
     if old is not None:
@@ -469,11 +522,41 @@ def map_set(it, v, p):
 
 
 METHODS[("Map", "count")] = lambda it, v, p: len(v.entries)
+
+
+def _map_slot(it, v, key):
+    """The dict key of the entry for `key`, or None: by its own equality when the type writes one, else structurally."""
+    if own_equality(it, key):
+        return next((fk for fk, e in v.entries.items() if it.equal(e[0], key)), None)
+    k = freeze(key)
+    return k if k in v.entries else None
+
+
+@method("Map", "containsKey")
+def map_contains_key(it, v, p):
+    return _map_slot(it, v, p[0]) is not None
+
+
+@method("Map", "remove")
+def map_remove(it, v, p):
+    """The removed entry's value, now the caller's; the key it held is dropped. The rest keep their order (6.7)."""
+    slot = _map_slot(it, v, p[0])
+    if slot is None:
+        return None
+    k, x = v.entries.pop(slot)
+    it.destroy(k)
+    return x
 ASSOC[("Set", "default")] = lambda it, p: SetVal()
 
 
 @method("Set", "add")
 def set_add(it, v, p):
+    if own_equality(it, p[0]):
+        if any(it.equal(x, p[0]) for x in v.items.values()):
+            return False
+        v.items[("custom", v.custom_seq)] = p[0]
+        v.custom_seq += 1
+        return True
     k = freeze(p[0])
     if k in v.items:
         return False
@@ -481,8 +564,21 @@ def set_add(it, v, p):
     return True
 
 
-METHODS[("Set", "contains")] = lambda it, v, p: freeze(p[0]) in v.items
+METHODS[("Set", "contains")] = lambda it, v, p: (any(it.equal(x, p[0]) for x in v.items.values()) if own_equality(it, p[0]) else freeze(p[0]) in v.items)
 METHODS[("Set", "count")] = lambda it, v, p: len(v.items)
+
+
+@method("Set", "remove")
+def set_remove(it, v, p):
+    if own_equality(it, p[0]):
+        slot = next((fk for fk, x in v.items.items() if it.equal(x, p[0])), None)
+    else:
+        k = freeze(p[0])
+        slot = k if k in v.items else None
+    if slot is None:
+        return False
+    it.destroy(v.items.pop(slot))
+    return True
 
 
 # ---------------------------------------------------------------- outcomes (10)

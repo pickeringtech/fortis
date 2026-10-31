@@ -1,0 +1,23 @@
+// accept
+// covers: LANG-06-12
+// An aspect's hook is written in the aspect's declaration, so only the aspect's own type parameter is in its scope,
+// never its target's: a class named `T` that the hook calls stays that class when the aspect is applied to a
+// function `f[T]`, and its associated call is no associated call on a type parameter (6.10, X-180).
+import fortis.host { Console }
+
+export class T {
+  export n: Int
+  export pure func value() Int => 7
+}
+
+export aspect counted(label: StringView) {
+  needs console: Console
+  before {
+    console.print("${label} ${T.value()}")
+  }
+}
+
+@counted("f")
+func f[T](console: Console, x: T) Int {
+  return 1
+}

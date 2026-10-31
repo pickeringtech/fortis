@@ -12,3 +12,6 @@ fortis-runtime = { path = "../fortis-runtime" }
 # the allocator probe of SP-04-async (PROG-CMP-08): a counting global allocator and phase accounting for the
 # futures of `noalloc` async functions; the only `unsafe` code of the runtime, absent from production builds
 alloc-probe = []
+
+[dev-dependencies]
+fortis-testkit = { path = "../fortis-testkit" }

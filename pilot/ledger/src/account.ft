@@ -59,7 +59,7 @@ export class AccountName derive Equatable {
     if found == null {
       fail BadAccountName(problem: UnknownClass, position: 0)
     }
-    return AccountName(full: String.from(text), parts: move pieces, accountClass: found)
+    return AccountName(full: text as String, parts: move pieces, accountClass: found)
   }
 
   // The full name, `assets:bank:current`.
@@ -276,14 +276,14 @@ pure try recovers func refusalOf(text: StringView) Refusal? {
 }
 
 test "malformed account names" cases {
-  "empty":          { text: "", problem: AccountProblem.Empty, position: 0 }
-  "empty segment":  { text: "assets::cash", problem: AccountProblem.EmptySegment, position: 7 }
-  "trailing colon": { text: "assets:", problem: AccountProblem.EmptySegment, position: 7 }
-  "upper case":     { text: "assets:Bank", problem: AccountProblem.BadCharacter, position: 7 }
-  "space":          { text: "assets:my bank", problem: AccountProblem.BadCharacter, position: 9 }
-  "digit first":    { text: "assets:1bank", problem: AccountProblem.BadCharacter, position: 7 }
-  "unknown class":  { text: "stuff:cash", problem: AccountProblem.UnknownClass, position: 0 }
-  "too deep":       { text: "assets:a:b:c:d:e:f:g:h", problem: AccountProblem.TooDeep, position: 0 }
+  "empty":          { text: "", problem: Empty, position: 0 }
+  "empty segment":  { text: "assets::cash", problem: EmptySegment, position: 7 }
+  "trailing colon": { text: "assets:", problem: EmptySegment, position: 7 }
+  "upper case":     { text: "assets:Bank", problem: BadCharacter, position: 7 }
+  "space":          { text: "assets:my bank", problem: BadCharacter, position: 9 }
+  "digit first":    { text: "assets:1bank", problem: BadCharacter, position: 7 }
+  "unknown class":  { text: "stuff:cash", problem: UnknownClass, position: 0 }
+  "too deep":       { text: "assets:a:b:c:d:e:f:g:h", problem: TooDeep, position: 0 }
 } as row {
   let refusal = refusalOf(row.text)
   expect refusal != null

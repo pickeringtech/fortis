@@ -1,0 +1,49 @@
+// illustrative
+// Deque[T]: the first item is at the front, the last at the back
+pure func default() Deque[T]
+pure func fromList(items: owned List[T]) Deque[T]
+pure func count(self) Int
+pure func isEmpty(self) Bool
+func pushBack(editable self, item: owned T)
+func pushFront(editable self, item: owned T)
+func popFront(editable self) T?
+func popBack(editable self) T?
+pure func get(self, index: Int) (alias T from self)?
+pure func peekFront(self) (alias T from self)?
+pure func peekBack(self) (alias T from self)?
+pure func iterate(self) ListCursor[T] from self
+func each(self, visit: editable fn mut(T) Void)
+try func tryEach(self, visit: editable fn mut(T) Outcome[Void])
+pure func map[U](self, f: pure fn(T) U) Deque[U]
+pure try func tryMap[U](self, f: pure fn(T) Outcome[U]) Deque[U]
+pure func filter(self, keep: pure fn(T) Bool) Deque[T] where T implements Copyable
+pure func fold[A](self, initial: owned A, step: pure fn(A, T) A) A
+pure try func tryFold[A](self, initial: owned A, step: pure fn(A, T) Outcome[A]) A
+pure func any(self, holds: pure fn(T) Bool) Bool
+pure func all(self, holds: pure fn(T) Bool) Bool
+pure func find(self, holds: pure fn(T) Bool) (alias T from self)?
+pure func indexWhere(self, holds: pure fn(T) Bool) Int?
+pure func contains(self, target: T) Bool where T implements Equatable
+pure func toList(self) List[T] where T implements Copyable
+// SortedSet[T]: the members are in ascending order, each once; every method that compares needs `T implements Comparable`
+pure func default() SortedSet[T] where T implements Comparable
+pure func fromList(items: owned List[T]) SortedSet[T] where T implements Comparable
+pure func count(self) Int
+pure func isEmpty(self) Bool
+func add(editable self, item: owned T) Bool where T implements Comparable
+pure func contains(self, item: T) Bool where T implements Comparable
+func remove(editable self, item: T) Bool where T implements Comparable
+pure func first(self) (alias T from self)?
+pure func last(self) (alias T from self)?
+pure func get(self, index: Int) (alias T from self)?
+pure func iterate(self) ListCursor[T] from self
+func each(self, visit: editable fn mut(T) Void)
+pure func fold[A](self, initial: owned A, step: pure fn(A, T) A) A
+pure func any(self, holds: pure fn(T) Bool) Bool
+pure func all(self, holds: pure fn(T) Bool) Bool
+pure func find(self, holds: pure fn(T) Bool) (alias T from self)?
+pure func toList(self) List[T] where T implements Copyable
+pure func between(self, low: T, high: T) List[T] where T implements Comparable, T implements Copyable
+pure func union(self, other: SortedSet[T]) SortedSet[T] where T implements Comparable, T implements Copyable
+pure func intersection(self, other: SortedSet[T]) SortedSet[T] where T implements Comparable, T implements Copyable
+pure func difference(self, other: SortedSet[T]) SortedSet[T] where T implements Comparable, T implements Copyable

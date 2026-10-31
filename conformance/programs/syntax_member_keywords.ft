@@ -3,7 +3,7 @@
 export class Parser {
   source: String
 
-  export pure func from(text: StringView) Parser => Parser(source: String.from(text))   // a keyword as a method name (LR 3.4)
+  export pure func from(text: StringView) Parser => Parser(source: text as String)   // a keyword as a method name (LR 3.4)
 
   export pure func where(self) Int => 0
 }

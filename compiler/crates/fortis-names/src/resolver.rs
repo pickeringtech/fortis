@@ -45,6 +45,7 @@ struct Scope {
     parent: Option<usize>,
     names: BTreeMap<String, Info>,
     lambda_outer: Option<usize>,
+    infer_captures: bool,
 }
 
 pub struct Resolver<'l> {
@@ -78,7 +79,7 @@ impl<'l> Resolver<'l> {
     }
 
     fn scope(&mut self, parent: Option<usize>) -> usize {
-        self.scopes.push(Scope { parent, names: BTreeMap::new(), lambda_outer: None });
+        self.scopes.push(Scope { parent, names: BTreeMap::new(), lambda_outer: None, infer_captures: false });
         self.scopes.len() - 1
     }
 
@@ -368,6 +369,30 @@ impl<'l> Resolver<'l> {
             return;
         }
         let empty = BTreeSet::new();
+        if let Some(cv) = m.find("convertDecl") {
+            // a `convert` member (6.13, X-551): its head type resolves as a signature's; its body resolves as a
+            // method body: `convert to T` has `self`, `convert from S(s)` binds the one parameter
+            let kids = cv.kids();
+            let tr_i = kids.iter().position(|c| c.is("typeRef")).unwrap();
+            self.check_types_in(kids[tr_i].node().unwrap(), s, &empty);
+            if kids[tr_i - 1].tok().map_or(false, |t| t.text == "to") {
+                self.declare(s, "self", info("self"));
+            } else {
+                let pname = kids[tr_i + 1..].iter().filter_map(|c| c.tok()).find(|t| t.kind == Kind::Lower).unwrap();
+                self.declare(s, &pname.text, info("param"));
+            }
+            if let Some(body) = cv.find("funcBody") {
+                match body.kid(0).and_then(|c| c.node()) {
+                    Some(b) if b.name() == "block" => self.resolve_block(b, s),
+                    _ => {
+                        if let Some(e) = body.find("expr") {
+                            self.resolve_expr(C::N(e), s);
+                        }
+                    }
+                }
+            }
+            return;
+        }
         if let Some(v) = m.find("variant") {
             self.check_types_in(v, s, &empty);
             return;
@@ -695,6 +720,13 @@ impl<'l> Resolver<'l> {
             return Some(i.clone());
         }
         if let Some(outer) = self.lambda_outer(scope) {
+            let mut nearest = scope;
+            while self.scopes[nearest].lambda_outer.is_none() {
+                nearest = self.scopes[nearest].parent.unwrap();
+            }
+            if self.scopes[nearest].infer_captures {
+                return self.check_root(tok, outer);
+            }
             if self.lookup(outer, &tok.text).is_some() {
                 self.rec(
                     "E-FUN-011",
@@ -907,6 +939,7 @@ impl<'l> Resolver<'l> {
                 let ms = self.module_scope;
                 let s = self.scope(Some(ms));
                 self.scopes[s].lambda_outer = Some(scope);
+                self.scopes[s].infer_captures = node.child_node("captureList").is_none();
                 // the lambda's own parts, not a nested lambda's (D-34)
                 if let Some(cl) = node.child_node("captureList") {
                     for cap in cl.find_all("capture") {
@@ -946,7 +979,7 @@ impl<'l> Resolver<'l> {
                 }
                 // an expression body written without a return type has no `funcBody`: its `=>` and expression are
                 // the lambda's own (8.2, X-345), and the first `expr` under the lambda is that body
-                let body = node.child_node("funcBody").or_else(|| node.direct_tokens().iter().any(|t| t.text == "=>").then_some(node));
+                let body = node.child_node("funcBody").or_else(|| node.child_node("lambdaBlock")).or_else(|| node.direct_tokens().iter().any(|t| t.text == "=>").then_some(node));
                 if let Some(body) = body {
                     let b = body.kid(0).and_then(|c| c.node()).filter(|n| n.name() == "block");
                     if let Some(b) = b {
@@ -1058,7 +1091,9 @@ impl<'l> Resolver<'l> {
                                     let has_members = !i.members.is_empty();
                                     let missing = has_members && !i.members.contains(&member.text);
                                     let cond = (missing && (i.kind == "class" || i.kind == "enum") && (i.origin == "prelude" || i.origin == "module")) || (missing && i.origin.starts_with("fortis."));
-                                    if cond && !["validate", "fromText", "fromBytes"].contains(&member.text.as_str()) {
+                                    // The typer checks eligibility and identity; a legacy `from` can be supplied
+                                    // by an implement block outside this declaration's own members (X-552).
+                                    if cond && !["validate", "fromText", "fromBytes", "from"].contains(&member.text.as_str()) {
                                         let cands: Vec<String> = i.members.iter().take(8).cloned().collect();
                                         self.rec("E-NAM-001", format!("`{}` has no member `{}`", up.text, member.text), "LANG-04-05", member, Self::nf(&format!("{}.{}", up.text, member.text), cands));
                                     }

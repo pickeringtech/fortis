@@ -1,0 +1,51 @@
+// reject: E-TYP-171 (at the marked lines)
+// covers: LANG-06-13
+// In Language 1.0 an `implement` block's target is a non-generic class or enum the program declares (9.5, X-180;
+// formerly D-81): a core type, a newtype or an optional has no run-time identity of its own, so `==`, interpolation,
+// the codec and dispatch through a type parameter could not honour the block, and one instantiation of a generic
+// type cannot yet be told apart from the others. A target is the type its spelling names: `money.Currency` through a
+// module alias is the core type, even beside a program class that is also called `Currency` (whose block stands).
+import fortis.money as money
+
+export interface Labelled {
+  pure func label(self) String
+}
+
+type OrderId = Int<1..>
+
+export class Tag {
+  export name: String
+}
+
+export class Pair[T] {
+  export first: T
+  export second: T
+}
+
+export class Currency {
+  export code: String
+}
+
+implement Labelled for Int {                // reject: E-TYP-171 — a core library type
+  pure func label(self) String => "int"
+}
+
+implement Labelled for OrderId {            // reject: E-TYP-171 — a newtype
+  pure func label(self) String => "order"
+}
+
+implement Labelled for Tag? {               // reject: E-TYP-171 — an optional
+  pure func label(self) String => "maybe"
+}
+
+implement Labelled for Pair[Int] {          // reject: E-TYP-171 — a generic class
+  pure func label(self) String => "pair"
+}
+
+implement Labelled for money.Currency {     // reject: E-TYP-171 — a core type through a module alias
+  pure func label(self) String => "core currency"
+}
+
+implement Labelled for Currency {
+  pure func label(self) String => "program currency"
+}

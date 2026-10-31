@@ -25,7 +25,7 @@ func first(xs: List[Item]) Item? {
 func firstNarrowed(xs: List[Item]) Item {
   let v = xs.get(0)
   if v == null {
-    return Item(name: String.from("none"), count: 0)
+    return Item(name: "none" as String, count: 0)
   }
   return copy v
 }
@@ -43,7 +43,7 @@ func firstMatch(xs: List[Item]) Item? {
 }
 
 func take(it: owned Item?) Int {
-  let mut c = move it ?? Item(name: String.from("z"), count: 0)
+  let mut c = move it ?? Item(name: "z" as String, count: 0)
   c.count = 99
   return c.count
 }
@@ -55,17 +55,17 @@ func orOwned(xs: List[Item], d: owned Item) Item {
 
 func main(console: Console) {
   let mut xs: List[Item] = List.default()
-  xs.push(Item(name: String.from("a"), count: 1))
+  xs.push(Item(name: "a" as String, count: 1))
   let none: List[Item] = List.default()
   let mut ts: List[String] = List.default()
-  ts.push(String.from("t"))
-  let mut r = first(xs) ?? Item(name: String.from("n"), count: 0)
+  ts.push("t" as String)
+  let mut r = first(xs) ?? Item(name: "n" as String, count: 0)
   r.count = 50
   console.print("ret ${r.count} ${xs.get(0)?.count ?? 0}")
   let mut n = firstNarrowed(xs)
   n.count = 51
   console.print("narrowed ${n.count} ${xs.get(0)?.count ?? 0} ${firstNarrowed(none).name}")
-  let mut m = firstMatch(xs) ?? Item(name: String.from("n"), count: 0)
+  let mut m = firstMatch(xs) ?? Item(name: "n" as String, count: 0)
   m.count = 52
   console.print("match ${m.count} ${xs.get(0)?.count ?? 0}")
   let v = xs.get(0)
@@ -77,8 +77,8 @@ func main(console: Console) {
   let mut ys: List[Item?] = List.default()
   ys.push(copy v)
   console.print("push ${ys.count()} ${xs.get(0)?.count ?? 0}")
-  let mut o = orOwned(xs, Item(name: String.from("d"), count: 7))
+  let mut o = orOwned(xs, Item(name: "d" as String, count: 7))
   o.count = 55
-  console.print("coalesce ${o.count} ${xs.get(0)?.count ?? 0} ${orOwned(none, Item(name: String.from("d"), count: 7)).count}")
+  console.print("coalesce ${o.count} ${xs.get(0)?.count ?? 0} ${orOwned(none, Item(name: "d" as String, count: 7)).count}")
   console.print("text ${firstText(ts) ?? "none"}")
 }

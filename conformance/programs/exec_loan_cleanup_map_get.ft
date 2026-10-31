@@ -37,7 +37,7 @@ func lookUp(console: Shared[Console], m: Map[String, Token], d: Token) {
 
 func sameBlock(console: Shared[Console]) {
   let mut m: Map[String, Token] = Map.default()
-  m.set(String.from("k"), Token(label: String.from("local"), console: console.retain()))
+  m.set("k" as String, Token(label: "local" as String, console: console.retain()))
   let t = m.get("k")
   console.print("local ${t?.label ?? "none"}")
 }
@@ -45,8 +45,8 @@ func sameBlock(console: Shared[Console]) {
 func main(out: Console) {
   let console = Shared.create(move out)
   let mut m: Map[String, Token] = Map.default()
-  m.set(String.from("k"), Token(label: String.from("mapped"), console: console.retain()))
-  let d = Token(label: String.from("spare"), console: console.retain())
+  m.set("k" as String, Token(label: "mapped" as String, console: console.retain()))
+  let d = Token(label: "spare" as String, console: console.retain())
   lookUp(console, m, d)
   sameBlock(console)
   console.print("end")

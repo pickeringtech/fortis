@@ -1,0 +1,93 @@
+// execute: 212.0|100.0|hi|7|conversion.out_of_range|5|wrapped|7
+// requires: runtime
+// covers: LANG-06-15
+// 6.13 (X-551): the declared conversions run alike on every backend: `convert to` and `convert from` members,
+// total and fallible with the failure's code, a consuming `owned self` at a `move` use site, an `owned` source
+// parameter, enum members, and a chain through a member and a built-in row.
+import fortis.host { Console }
+
+class Celsius {
+  degrees: Float
+
+  export convert to Fahrenheit {
+    return Fahrenheit(degrees: self.degrees * 9.0 / 5.0 + 32.0)
+  }
+  export convert from Fahrenheit(f) {
+    return Celsius(degrees: (f.degrees - 32.0) * 5.0 / 9.0)
+  }
+}
+
+class Fahrenheit {
+  degrees: Float
+}
+
+class Buffer {
+  bytes: Bytes
+
+  export try convert to Text(owned self) {
+    return Text(body: self.bytes as String or fail)
+  }
+}
+
+class Text {
+  body: String
+}
+
+class Wrapper {
+  inner: Text
+
+  export convert from Text(owned t) {
+    return Wrapper(inner: move t)
+  }
+}
+
+class Score {
+  points: Int
+
+  export try convert to Int8 {
+    return self.points as Int8 or fail
+  }
+  export convert from Int8(n) {
+    return Score(points: n as Int)
+  }
+}
+
+enum Coin {
+  Cent
+  Nickel
+
+  export convert to Int {
+    return match self {
+      Cent => 1
+      Nickel => 5
+    }
+  }
+  export convert from Int(n) {
+    return if n >= 5 { give Nickel } else { give Cent }
+  }
+}
+
+try recovers func main(console: Console) {
+  let c = Celsius(degrees: 100.0)
+  let f = c as Fahrenheit
+  console.print("${f.degrees}")
+  let back = f as Celsius
+  console.print("${back.degrees}")
+  let buf = Buffer(bytes: "hi" as Bytes)
+  let text = move buf as Text or fail
+  console.print(text.body)
+  let small = Score(points: 7) as Int8 or fail
+  console.print(small as String)
+  let big = Score(points: 300) as Int8 catch e {
+    console.print(e.code)
+    recover small                            // a variable, not a literal: D-515 lowers a literal with the wrong suffix
+  }
+  discard big
+  let coin = 5 as Coin
+  console.print(coin as Int as String)
+  let t2 = Text(body: "wrapped")
+  let w = move t2 as Wrapper
+  console.print(w.inner.body)
+  let score = small as Score
+  console.print(score.points as String)
+}

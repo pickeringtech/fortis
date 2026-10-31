@@ -1,0 +1,7 @@
+// reject: E-NAM-001
+import fortis.host { Console }
+import h.newtype.nested.defs as defs
+func main(console: Console) {
+  let n = defs.Nested(defs.make())
+  console.print("${n.count()}")
+}

@@ -139,6 +139,23 @@ class Closure:
 
 
 @dataclass
+class ConvertInfo:
+    """A declared `convert` member as the interpreter runs it (Language Reference 6.13, X-551): `convert to T`
+    binds `self` and gives a `T`; `convert from S(s)` binds the source `s` and gives a value of the declaring
+    type. `x as T` runs the one member the checker resolved for the pair."""
+    node: Any                       # the convertDecl node
+    direction: str                  # to | from
+    other: str                      # the type name the head spells (the target, or the source)
+    fallible: bool                  # `try`: a failure is the conversion's value, not a raise (10.2)
+    owned: bool                     # `owned self` / `owned s`: the member owns the value it converts (7.9)
+    pname: str                      # the parameter a `from` member binds ("self" for a `to` member)
+    body: Any                       # the funcBody node
+    derived_target: str = ""
+    derived_source_args: tuple = ()
+    legacy_head: Any = None
+
+
+@dataclass
 class ClassInfo:
     name: str
     fields: Dict[str, Any]          # name -> default constExpr node or None
@@ -150,6 +167,7 @@ class ClassInfo:
     field_types: Dict[str, Any] = field(default_factory=dict)   # name -> declared type node (decoding, 6.10)
     type_params: List[str] = field(default_factory=list)
     consts: Dict[str, Any] = field(default_factory=dict)        # associated constant -> its constExpr node (9.3)
+    converts: List[ConvertInfo] = field(default_factory=list)   # the declared conversions (6.13, X-551)
     # declared `trivial class` (6.11): its values are copied, never moved, as the checkers' `is_trivial` says (D-411)
     trivial: bool = False
 
@@ -184,6 +202,8 @@ class EnumInfo:
     payload_types: Dict[str, List[Any]] = field(default_factory=dict)   # variant -> [(field, type node)]
     type_params: List[str] = field(default_factory=list)
     consts: Dict[str, Any] = field(default_factory=dict)        # associated constant -> its constExpr node (9.3)
+    converts: List[ConvertInfo] = field(default_factory=list)   # the declared conversions (6.13, X-551)
+    node: Any = None
 
     def __deepcopy__(self, memo):
         return self          # declaration metadata: a copied value keeps its class (equality compares it by identity)

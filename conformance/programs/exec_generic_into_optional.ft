@@ -1,0 +1,27 @@
+// execute: 5|none|x
+// requires: runtime
+// covers: LANG-06-08
+// A value of a type parameter stored into a `T?` place is injected as present on every backend (6.8; D-55.5): the IR
+// builder wraps it as it wraps any other value.
+import fortis.host { Console }
+
+pure func wrap[T](value: T) T? where T implements Copyable {
+  let mut out: T? = null
+  out = copy value
+  return out
+}
+
+pure func orNone[T](value: T?) String where T implements Displayable {
+  return match value {
+    present(v) => "${v}"
+    null => "none"
+  }
+}
+
+func main(console: Console) {
+  let w: Int? = wrap(5)
+  console.print("${w ?? 0}")
+  let absent: String? = null
+  console.print(orNone(absent))
+  console.print(orNone(wrap("x" as String)))
+}

@@ -1,0 +1,38 @@
+// execute: 5|5|8
+// requires: runtime
+// covers: LANG-09-03, LANG-06-12
+// An interface's async member with a synchronous implementation (9.5: an implementation may do less), awaited through
+// a `where` bound and through a `dynamic` value: the implementation's result is the awaited value on every backend,
+// beside an implementation that is itself async (D-89 (a)).
+import fortis.host { Console }
+
+export interface Fetcher {
+  async func fetch(self) Int
+}
+
+export class Plain implements Fetcher {
+  export v: Int
+  func fetch(self) Int => self.v
+}
+
+export class Slow implements Fetcher {
+  export v: Int
+  async func fetch(self) Int {
+    return Int.wrappingAdd(self.v, 1)
+  }
+}
+
+async func viaBound[T](x: T) Int where T implements Fetcher {
+  return await x.fetch()
+}
+
+async func viaDynamic(x: dynamic Fetcher) Int {
+  return await x.fetch()
+}
+
+async func main(console: Console) {
+  let a = await viaBound(Plain(v: 5))
+  let b = await viaDynamic(Plain(v: 5))
+  let c = await viaBound(Slow(v: 7))
+  console.print("${a}|${b}|${c}")
+}

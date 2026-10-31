@@ -98,6 +98,60 @@ export class String {
   export trusted pure func scalarCount(self) Int
   // intrinsic: the UTF-8 length in bytes; O(1)
   export trusted pure func byteCount(self) Int
+  // intrinsic: the view without its leading and trailing Unicode White_Space (U+0009 to U+000D, U+0020, U+0085, U+00A0, U+1680, U+2000 to U+200A, U+2028, U+2029, U+202F, U+205F, U+3000) scalars; a view of the same text, no allocation; O(n) in bytes
+  export trusted pure func trim(self) StringView from self
+  // intrinsic: the view without its leading White_Space scalars (as trim); a view of the same text, no allocation; O(n) in bytes
+  export trusted pure func trimStart(self) StringView from self
+  // intrinsic: the view without its trailing White_Space scalars (as trim); a view of the same text, no allocation; O(n) in bytes
+  export trusted pure func trimEnd(self) StringView from self
+  // intrinsic: the scalar offset (the unit of slice and scalarAt) of the first occurrence of needle, null when it does not occur; an empty needle occurs at 0; no allocation; at most O(n * m) in bytes for a text of n bytes and a needle of m
+  export trusted pure func find(self, needle: StringView) Int<0..>?
+  // true exactly when find(needle) is present: an empty needle is contained in every text
+  export pure func contains(self, needle: StringView) Bool => self.find(needle) != null
+  // intrinsic: true exactly when the text begins with prefix (an empty prefix always does); no allocation; O(m) in bytes for a prefix of m
+  export trusted pure func startsWith(self, prefix: StringView) Bool
+  // intrinsic: true exactly when the text ends with suffix (an empty suffix always does); no allocation; O(m) in bytes for a suffix of m
+  export trusted pure func endsWith(self, suffix: StringView) Bool
+  // intrinsic: the pieces between the non-overlapping occurrences of separator, found left to right, as owned strings; a separator at either end gives an empty piece there, a text without the separator gives one piece (itself), and an empty separator occurs nowhere, so it gives one piece; allocates; O(n) in bytes
+  export trusted pure func split(self, separator: StringView) List[String]
+  // intrinsic: the lines of the text as owned strings, each ended by a line feed or by a carriage return and a line feed (neither stays in the line); the text after the last terminator is a line only when it is not empty, so "" has no lines and "a\n" has one; a carriage return not before a line feed stays in the line; allocates; O(n) in bytes
+  export trusted pure func lines(self) List[String]
+  // intrinsic: a copy of the text with every non-overlapping occurrence of old, found left to right, replaced by new; an empty old occurs nowhere, so the copy is unchanged; allocates; O(n) in bytes plus the find cost
+  export trusted pure func replace(self, old: StringView, new: StringView) String
+  // intrinsic: a copy with the ASCII letters a-z mapped to A-Z and every other scalar unchanged (not Unicode case mapping: that depends on the Unicode version and the language, and changes lengths); allocates; O(n) in bytes
+  export trusted pure func asciiUpper(self) String
+  // intrinsic: a copy with the ASCII letters A-Z mapped to a-z and every other scalar unchanged (as asciiUpper); allocates; O(n) in bytes
+  export trusted pure func asciiLower(self) String
+  // the text written times in a row: "" when times is 0 or the text is empty; allocates; O(times * n) in bytes
+  export pure func repeat(self, times: Int<0..>) String {
+    let mut out = Builder.create()
+    let mut i = 0
+    while i < times {
+      editable out.append(self)
+      i = Int.wrappingAdd(i, 1)
+    }
+    return out.finish()
+  }
+  // the parts in order with separator between neighbours: "" for no parts and the part itself for one; allocates; O(total length)
+  export pure func join(parts: ListView[String], separator: StringView) String {
+    let mut out = Builder.create()
+    let mut i = 0
+    let n = parts.count()
+    while i < n {
+      if i > 0 {
+        editable out.append(separator)
+      }
+      match parts.get(i) {
+        present(part) => {
+          editable out.append(part)
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return out.finish()
+  }
 }
 export class StringView {
   // intrinsic: the number of Unicode scalar values; O(n) in bytes
@@ -108,6 +162,40 @@ export class StringView {
   export trusted pure try func slice(self, start: Int, end: Int) StringView
   // intrinsic: the scalar at index; fails `text.index` past the end; O(n) in bytes
   export trusted pure try func scalarAt(self, index: Int) Scalar
+  // intrinsic: the view without its leading and trailing Unicode White_Space (U+0009 to U+000D, U+0020, U+0085, U+00A0, U+1680, U+2000 to U+200A, U+2028, U+2029, U+202F, U+205F, U+3000) scalars; a view of the same text, no allocation; O(n) in bytes
+  export trusted pure func trim(self) StringView from self
+  // intrinsic: the view without its leading White_Space scalars (as trim); a view of the same text, no allocation; O(n) in bytes
+  export trusted pure func trimStart(self) StringView from self
+  // intrinsic: the view without its trailing White_Space scalars (as trim); a view of the same text, no allocation; O(n) in bytes
+  export trusted pure func trimEnd(self) StringView from self
+  // intrinsic: the scalar offset (the unit of slice and scalarAt) of the first occurrence of needle, null when it does not occur; an empty needle occurs at 0; no allocation; at most O(n * m) in bytes for a text of n bytes and a needle of m
+  export trusted pure func find(self, needle: StringView) Int<0..>?
+  // true exactly when find(needle) is present: an empty needle is contained in every text
+  export pure func contains(self, needle: StringView) Bool => self.find(needle) != null
+  // intrinsic: true exactly when the text begins with prefix (an empty prefix always does); no allocation; O(m) in bytes for a prefix of m
+  export trusted pure func startsWith(self, prefix: StringView) Bool
+  // intrinsic: true exactly when the text ends with suffix (an empty suffix always does); no allocation; O(m) in bytes for a suffix of m
+  export trusted pure func endsWith(self, suffix: StringView) Bool
+  // intrinsic: the pieces between the non-overlapping occurrences of separator, found left to right, as owned strings; a separator at either end gives an empty piece there, a text without the separator gives one piece (itself), and an empty separator occurs nowhere, so it gives one piece; allocates; O(n) in bytes
+  export trusted pure func split(self, separator: StringView) List[String]
+  // intrinsic: the lines of the text as owned strings, each ended by a line feed or by a carriage return and a line feed (neither stays in the line); the text after the last terminator is a line only when it is not empty, so "" has no lines and "a\n" has one; a carriage return not before a line feed stays in the line; allocates; O(n) in bytes
+  export trusted pure func lines(self) List[String]
+  // intrinsic: a copy of the text with every non-overlapping occurrence of old, found left to right, replaced by new; an empty old occurs nowhere, so the copy is unchanged; allocates; O(n) in bytes plus the find cost
+  export trusted pure func replace(self, old: StringView, new: StringView) String
+  // intrinsic: a copy with the ASCII letters a-z mapped to A-Z and every other scalar unchanged (not Unicode case mapping: that depends on the Unicode version and the language, and changes lengths); allocates; O(n) in bytes
+  export trusted pure func asciiUpper(self) String
+  // intrinsic: a copy with the ASCII letters A-Z mapped to a-z and every other scalar unchanged (as asciiUpper); allocates; O(n) in bytes
+  export trusted pure func asciiLower(self) String
+  // the text written times in a row: "" when times is 0 or the text is empty; allocates; O(times * n) in bytes
+  export pure func repeat(self, times: Int<0..>) String {
+    let mut out = Builder.create()
+    let mut i = 0
+    while i < times {
+      editable out.append(self)
+      i = Int.wrappingAdd(i, 1)
+    }
+    return out.finish()
+  }
 }
 export class Bytes {
   // intrinsic: the length in bytes; O(1)
@@ -183,6 +271,8 @@ export class List[T] {
   export trusted pure try func at(self, index: Int) T
   // intrinsic: replaces the element at index, dropping the old value; fails `collection.index`; O(1)
   export trusted try func set(editable self, index: Int, value: owned T)
+  // intrinsic: removes and drops every element; rejected for a linear element type (10.7): consume them instead; O(n)
+  export trusted func clear(editable self)
   export pure func isEmpty(self) Bool => self.count() == 0
   export pure func first(self) (alias T from self)? => self.get(0)
   export pure func reversed(self) List[T] where T implements Copyable {
@@ -246,7 +336,7 @@ export class List[T] {
     }
     return kept
   }
-  export pure func map[U](self, f: pure fn(T) U) List[U] {
+  export pure func map[U](self, f: pure fn(T) U) List[U] where U: linear {
     let mut out: List[U] = List.default()
     let mut i = 0
     let n = self.count()
@@ -277,6 +367,294 @@ export class List[T] {
         }
       }
       i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  // calls visit with a read loan of every element in order (X-479); the callback may have effects, so `each` is not pure; O(n) plus the callback per element
+  export func each(self, visit: editable fn mut(T) Void) {
+    for item in self {
+      visit(item)
+    }
+  }
+  // as `each`, stopping at the first failure of the callback and returning it (X-479); O(n) plus the callback per element
+  export try func tryEach(self, visit: editable fn mut(T) Outcome[Void]) {
+    for item in self {
+      visit(item) or fail
+    }
+  }
+  // as `map`, stopping at the first failure of the callback and returning it, with the new list dropped (X-479); allocates; O(n) plus the callback per element
+  // U must be non-linear: failure drops earlier results (10.7, E-OBL-003).
+  export pure try func tryMap[U](self, f: pure fn(T) Outcome[U]) List[U] {
+    let mut out: List[U] = List.default()
+    for item in self {
+      out.push(f(item) or fail)
+    }
+    return move out
+  }
+  // step gets a read loan of the accumulator and an element, once per element in order, and returns the next accumulator (X-479); O(n) plus the callback per element
+  export pure func fold[A](self, initial: owned A, step: pure fn(A, T) A) A {
+    let mut acc = move initial
+    for item in self {
+      acc = step(acc, item)
+    }
+    return move acc
+  }
+  // as `fold`, stopping at the first failure of step and returning it (X-479); O(n) plus the callback per element
+  export pure try func tryFold[A](self, initial: owned A, step: pure fn(A, T) Outcome[A]) A {
+    let mut acc = move initial
+    for item in self {
+      acc = step(acc, item) or fail
+    }
+    return move acc
+  }
+  // whether holds is true for some element; stops at the first one that passes (X-479); O(n) plus the callback
+  export pure func any(self, holds: pure fn(T) Bool) Bool {
+    for item in self {
+      if holds(item) {
+        return true
+      }
+    }
+    return false
+  }
+  // whether holds is true for every element; stops at the first one that fails (X-479); O(n) plus the callback
+  export pure func all(self, holds: pure fn(T) Bool) Bool {
+    for item in self {
+      if !holds(item) {
+        return false
+      }
+    }
+    return true
+  }
+  // a read loan of the first element holds is true for, null when none does (X-479); O(n) plus the callback
+  export pure func find(self, holds: pure fn(T) Bool) (alias T from self)? {
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          if holds(item) {
+            return item
+          }
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return null
+  }
+  // the index of the first element holds is true for, null when none does (X-479); O(n) plus the callback
+  export pure func indexWhere(self, holds: pure fn(T) Bool) Int? {
+    let mut i = 0
+    for item in self {
+      if holds(item) {
+        return i
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return null
+  }
+  // whether some element equals target (X-479); O(n)
+  export pure func contains(self, target: T) Bool where T implements Equatable {
+    for item in self {
+      if item == target {
+        return true
+      }
+    }
+    return false
+  }
+  // each element copied with its index, in order (X-479); allocates; O(n)
+  export pure func enumerate(self) List[(Int, T)] where T implements Copyable {
+    let mut out: List[(Int, T)] = List.default()
+    let mut i = 0
+    for item in self {
+      out.push((i, copy item))
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  // pairs of copies of the elements at the same index of self and other, as many as the shorter has (X-479); allocates; O(min(n, m))
+  export pure func zip[U](self, other: ListView[U]) List[(T, U)] where T implements Copyable, U implements Copyable {
+    let mut out: List[(T, U)] = List.default()
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(a) => {
+          match other.get(i) {
+            present(b) => {
+              out.push((copy a, copy b))
+            }
+            null => {
+              return move out
+            }
+          }
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  // copies of the first n elements, all of them when n is at least count(), none when n is 0 or less (X-479); allocates; O(min(n, count))
+  export pure func take(self, n: Int) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = 0
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          out.push(copy item)
+        }
+        null => {
+          return move out
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  // copies of the elements after the first n, none when n is at least count(), all when n is 0 or less (X-479); allocates; O(count)
+  export pure func skip(self, n: Int) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = 0
+    for item in self {
+      if i >= n {
+        out.push(copy item)
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  // the lists f returns for each element, joined in order (X-479); allocates; O(n) plus the sizes of the lists plus the callback per element
+  export pure func flatMap[U](self, f: pure fn(T) List[U]) List[U] where U: linear {
+    let mut out: List[U] = List.default()
+    for item in self {
+      let produced = f(item)
+      for x in move produced {
+        out.push(move x)
+      }
+    }
+    return move out
+  }
+  // copies of the elements in lists of size elements, the last one shorter when size does not divide count() (X-479); allocates; O(n)
+  export pure func chunked(self, size: Int<1..>) List[List[T]] where T implements Copyable {
+    let mut out: List[List[T]] = List.default()
+    let mut current: List[T] = List.default()
+    for item in self {
+      current.push(copy item)
+      if current.count() >= size {
+        out.push(move current)
+        current = List.default()
+      }
+    }
+    if !current.isEmpty() {
+      out.push(move current)
+    }
+    return move out
+  }
+  // copies of the elements ordered by key(element), smaller keys first, elements with equal keys in their original order (a stable merge sort over indexes); key is called once per element (X-479); allocates; O(n log n) comparisons plus n callbacks
+  export pure func sortedBy[K](self, key: pure fn(T) K) List[T] where T implements Copyable, K implements Comparable {
+    let keys = self.map(key)
+    let n = keys.count()
+    let mut current: List[Int] = List.default()
+    let mut k = 0
+    while k < n {
+      current.push(k)
+      k = Int.wrappingAdd(k, 1)
+    }
+    let mut width = 1
+    while width < n {
+      let mut next: List[Int] = List.default()
+      let mut lo = 0
+      while lo < n {
+        let mut mid = Int.saturatingAdd(lo, width)
+        if mid > n {
+          mid = n
+        }
+        let mut hi = Int.saturatingAdd(mid, width)
+        if hi > n {
+          hi = n
+        }
+        let mut i = lo
+        let mut j = mid
+        while i < mid || j < hi {
+          let left = current.get(i) ?? 0
+          let right = current.get(j) ?? 0
+          let mut takeRight = false
+          if j < hi {
+            if i >= mid {
+              takeRight = true
+            } else {
+              match keys.get(right) {
+                present(x) => {
+                  match keys.get(left) {
+                    present(y) => {
+                      takeRight = x < y
+                    }
+                    null => {
+                    }
+                  }
+                }
+                null => {
+                }
+              }
+            }
+          }
+          if takeRight {
+            next.push(right)
+            j = Int.wrappingAdd(j, 1)
+          } else {
+            next.push(left)
+            i = Int.wrappingAdd(i, 1)
+          }
+        }
+        lo = hi
+      }
+      current = move next
+      width = Int.saturatingMul(width, 2)
+    }
+    let mut out: List[T] = List.default()
+    for at in current {
+      match self.get(at) {
+        present(item) => {
+          out.push(copy item)
+        }
+        null => {
+        }
+      }
+    }
+    return move out
+  }
+  // copies of the elements gathered by key(element) into a Map from each key to its elements in their original order; the keys are in the order they first appear (X-479); allocates; expected O(n) plus n callbacks
+  export pure func groupBy[K](self, key: pure fn(T) K) Map[K, List[T]] where T implements Copyable, K implements Copyable, K implements Hashable, K implements Equatable {
+    let mut scratch: Map[K, List[T]] = Map.default()
+    let mut order: List[K] = List.default()
+    for item in self {
+      let k = key(item)
+      match scratch.remove(k) {
+        present(group) => {
+          let mut grown = move group
+          grown.push(copy item)
+          scratch.set(move k, move grown)
+        }
+        null => {
+          let mut fresh: List[T] = List.default()
+          fresh.push(copy item)
+          order.push(copy k)
+          scratch.set(move k, move fresh)
+        }
+      }
+    }
+    let mut out: Map[K, List[T]] = Map.default()
+    for k in order {
+      match scratch.remove(k) {
+        present(group) => {
+          out.set(copy k, move group)
+        }
+        null => {
+        }
+      }
     }
     return move out
   }
@@ -311,6 +689,374 @@ export class ListView[T] {
     }
     return move out
   }
+  export pure func concat(self, other: ListView[T]) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          editable out.push(copy item)
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    let mut j = 0
+    let m = other.count()
+    while j < m {
+      match other.get(j) {
+        present(item) => {
+          editable out.push(copy item)
+        }
+        null => {
+        }
+      }
+      j = Int.wrappingAdd(j, 1)
+    }
+    return move out
+  }
+  export pure func countWhere(self, keep: pure fn(T) Bool) Int {
+    let mut kept = 0
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          if keep(item) {
+            kept = Int.wrappingAdd(kept, 1)
+          }
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return kept
+  }
+  export pure func map[U](self, f: pure fn(T) U) List[U] where U: linear {
+    let mut out: List[U] = List.default()
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          editable out.push(f(item))
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  export pure func filter(self, keep: pure fn(T) Bool) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          if keep(item) {
+            editable out.push(copy item)
+          }
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  // calls visit with a read loan of every element in order (X-479); the callback may have effects, so `each` is not pure; O(n) plus the callback per element
+  export func each(self, visit: editable fn mut(T) Void) {
+    for item in self {
+      visit(item)
+    }
+  }
+  // as `each`, stopping at the first failure of the callback and returning it (X-479); O(n) plus the callback per element
+  export try func tryEach(self, visit: editable fn mut(T) Outcome[Void]) {
+    for item in self {
+      visit(item) or fail
+    }
+  }
+  // as `map`, stopping at the first failure of the callback and returning it, with the new list dropped (X-479); allocates; O(n) plus the callback per element
+  // U must be non-linear: failure drops earlier results (10.7, E-OBL-003).
+  export pure try func tryMap[U](self, f: pure fn(T) Outcome[U]) List[U] {
+    let mut out: List[U] = List.default()
+    for item in self {
+      out.push(f(item) or fail)
+    }
+    return move out
+  }
+  // step gets a read loan of the accumulator and an element, once per element in order, and returns the next accumulator (X-479); O(n) plus the callback per element
+  export pure func fold[A](self, initial: owned A, step: pure fn(A, T) A) A {
+    let mut acc = move initial
+    for item in self {
+      acc = step(acc, item)
+    }
+    return move acc
+  }
+  // as `fold`, stopping at the first failure of step and returning it (X-479); O(n) plus the callback per element
+  export pure try func tryFold[A](self, initial: owned A, step: pure fn(A, T) Outcome[A]) A {
+    let mut acc = move initial
+    for item in self {
+      acc = step(acc, item) or fail
+    }
+    return move acc
+  }
+  // whether holds is true for some element; stops at the first one that passes (X-479); O(n) plus the callback
+  export pure func any(self, holds: pure fn(T) Bool) Bool {
+    for item in self {
+      if holds(item) {
+        return true
+      }
+    }
+    return false
+  }
+  // whether holds is true for every element; stops at the first one that fails (X-479); O(n) plus the callback
+  export pure func all(self, holds: pure fn(T) Bool) Bool {
+    for item in self {
+      if !holds(item) {
+        return false
+      }
+    }
+    return true
+  }
+  // a read loan of the first element holds is true for, null when none does (X-479); O(n) plus the callback
+  export pure func find(self, holds: pure fn(T) Bool) (alias T from self)? {
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          if holds(item) {
+            return item
+          }
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return null
+  }
+  // the index of the first element holds is true for, null when none does (X-479); O(n) plus the callback
+  export pure func indexWhere(self, holds: pure fn(T) Bool) Int? {
+    let mut i = 0
+    for item in self {
+      if holds(item) {
+        return i
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return null
+  }
+  // whether some element equals target (X-479); O(n)
+  export pure func contains(self, target: T) Bool where T implements Equatable {
+    for item in self {
+      if item == target {
+        return true
+      }
+    }
+    return false
+  }
+  // each element copied with its index, in order (X-479); allocates; O(n)
+  export pure func enumerate(self) List[(Int, T)] where T implements Copyable {
+    let mut out: List[(Int, T)] = List.default()
+    let mut i = 0
+    for item in self {
+      out.push((i, copy item))
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  // pairs of copies of the elements at the same index of self and other, as many as the shorter has (X-479); allocates; O(min(n, m))
+  export pure func zip[U](self, other: ListView[U]) List[(T, U)] where T implements Copyable, U implements Copyable {
+    let mut out: List[(T, U)] = List.default()
+    let mut i = 0
+    let n = self.count()
+    while i < n {
+      match self.get(i) {
+        present(a) => {
+          match other.get(i) {
+            present(b) => {
+              out.push((copy a, copy b))
+            }
+            null => {
+              return move out
+            }
+          }
+        }
+        null => {
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  // copies of the first n elements, all of them when n is at least count(), none when n is 0 or less (X-479); allocates; O(min(n, count))
+  export pure func take(self, n: Int) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = 0
+    while i < n {
+      match self.get(i) {
+        present(item) => {
+          out.push(copy item)
+        }
+        null => {
+          return move out
+        }
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  // copies of the elements after the first n, none when n is at least count(), all when n is 0 or less (X-479); allocates; O(count)
+  export pure func skip(self, n: Int) List[T] where T implements Copyable {
+    let mut out: List[T] = List.default()
+    let mut i = 0
+    for item in self {
+      if i >= n {
+        out.push(copy item)
+      }
+      i = Int.wrappingAdd(i, 1)
+    }
+    return move out
+  }
+  // the lists f returns for each element, joined in order (X-479); allocates; O(n) plus the sizes of the lists plus the callback per element
+  export pure func flatMap[U](self, f: pure fn(T) List[U]) List[U] where U: linear {
+    let mut out: List[U] = List.default()
+    for item in self {
+      let produced = f(item)
+      for x in move produced {
+        out.push(move x)
+      }
+    }
+    return move out
+  }
+  // copies of the elements in lists of size elements, the last one shorter when size does not divide count() (X-479); allocates; O(n)
+  export pure func chunked(self, size: Int<1..>) List[List[T]] where T implements Copyable {
+    let mut out: List[List[T]] = List.default()
+    let mut current: List[T] = List.default()
+    for item in self {
+      current.push(copy item)
+      if current.count() >= size {
+        out.push(move current)
+        current = List.default()
+      }
+    }
+    if !current.isEmpty() {
+      out.push(move current)
+    }
+    return move out
+  }
+  // copies of the elements ordered by key(element), smaller keys first, elements with equal keys in their original order (a stable merge sort over indexes); key is called once per element (X-479); allocates; O(n log n) comparisons plus n callbacks
+  export pure func sortedBy[K](self, key: pure fn(T) K) List[T] where T implements Copyable, K implements Comparable {
+    let keys = self.map(key)
+    let n = keys.count()
+    let mut current: List[Int] = List.default()
+    let mut k = 0
+    while k < n {
+      current.push(k)
+      k = Int.wrappingAdd(k, 1)
+    }
+    let mut width = 1
+    while width < n {
+      let mut next: List[Int] = List.default()
+      let mut lo = 0
+      while lo < n {
+        let mut mid = Int.saturatingAdd(lo, width)
+        if mid > n {
+          mid = n
+        }
+        let mut hi = Int.saturatingAdd(mid, width)
+        if hi > n {
+          hi = n
+        }
+        let mut i = lo
+        let mut j = mid
+        while i < mid || j < hi {
+          let left = current.get(i) ?? 0
+          let right = current.get(j) ?? 0
+          let mut takeRight = false
+          if j < hi {
+            if i >= mid {
+              takeRight = true
+            } else {
+              match keys.get(right) {
+                present(x) => {
+                  match keys.get(left) {
+                    present(y) => {
+                      takeRight = x < y
+                    }
+                    null => {
+                    }
+                  }
+                }
+                null => {
+                }
+              }
+            }
+          }
+          if takeRight {
+            next.push(right)
+            j = Int.wrappingAdd(j, 1)
+          } else {
+            next.push(left)
+            i = Int.wrappingAdd(i, 1)
+          }
+        }
+        lo = hi
+      }
+      current = move next
+      width = Int.saturatingMul(width, 2)
+    }
+    let mut out: List[T] = List.default()
+    for at in current {
+      match self.get(at) {
+        present(item) => {
+          out.push(copy item)
+        }
+        null => {
+        }
+      }
+    }
+    return move out
+  }
+  // copies of the elements gathered by key(element) into a Map from each key to its elements in their original order; the keys are in the order they first appear (X-479); allocates; expected O(n) plus n callbacks
+  export pure func groupBy[K](self, key: pure fn(T) K) Map[K, List[T]] where T implements Copyable, K implements Copyable, K implements Hashable, K implements Equatable {
+    let mut scratch: Map[K, List[T]] = Map.default()
+    let mut order: List[K] = List.default()
+    for item in self {
+      let k = key(item)
+      match scratch.remove(k) {
+        present(group) => {
+          let mut grown = move group
+          grown.push(copy item)
+          scratch.set(move k, move grown)
+        }
+        null => {
+          let mut fresh: List[T] = List.default()
+          fresh.push(copy item)
+          order.push(copy k)
+          scratch.set(move k, move fresh)
+        }
+      }
+    }
+    let mut out: Map[K, List[T]] = Map.default()
+    for k in order {
+      match scratch.remove(k) {
+        present(group) => {
+          out.set(copy k, move group)
+        }
+        null => {
+        }
+      }
+    }
+    return move out
+  }
 }
 export class Array[T, N] {
   // intrinsic: N copies of value; O(N), inline storage
@@ -319,31 +1065,126 @@ export class Array[T, N] {
   export trusted pure func count(self) Int
   // intrinsic: replaces the element at index; O(1)
   export trusted func set(editable self, index: Int, value: owned T)
+  // intrinsic: the array's elements as a read-only view, which has `get`, `each`, `map`, `fold` and the rest of ListView's methods (X-578, D-542); O(1), no copy
+  export trusted pure func asView(self) ListView[T] from self
+  // intrinsic: a read loan of the element at index, null outside [0, count) (X-578, D-542); O(1)
+  export trusted pure func get(self, index: Int) (alias T from self)?
 }
 export class Map[K, V] {
   // intrinsic: an empty map; O(1)
-  export trusted pure func default() Map[K, V]
+  export trusted pure func default() Map[K, V] where K implements Hashable
   // intrinsic: a read loan of the value for key, null when absent (on a Map[String, V] the key is a StringView, which hashes and compares as the String with its text: LR 6.7, X-345); expected O(1) under the release's fixed hash function
   export trusted pure func get(self, key: K) (alias V from self)?
   // intrinsic: inserts or replaces the value for key, dropping a replaced value; amortised expected O(1)
   export trusted func set(editable self, key: owned K, value: owned V)
   // intrinsic: the number of keys; O(1)
   export trusted pure func count(self) Int
+  // intrinsic: whether key has an entry (a StringView key on a Map[String, V], as `get`); expected O(1)
+  export trusted pure func containsKey(self, key: K) Bool
+  // intrinsic: removes the entry for key and returns its value, which the caller now owns; null when there is none. The entries after it keep their order and move up one place, so the cost is O(n) in the entries after it (a StringView key on a Map[String, V], as `get`)
+  export trusted func remove(editable self, key: K) V?
+  export pure func isEmpty(self) Bool where K implements Hashable => self.count() == 0
+  // calls visit with a read loan of every key and its value in first-insertion order (X-479); the callback may have effects, so `each` is not pure; O(n) plus the callback per entry
+  export func each(self, visit: editable fn mut(K, V) Void) where K implements Hashable {
+    for entry in self {
+      visit(entry.0, entry.1)
+    }
+  }
+  // copies of the keys in first-insertion order (X-479); allocates; O(n)
+  export pure func keys(self) List[K] where K implements Hashable, K implements Copyable {
+    let mut out: List[K] = List.default()
+    for entry in self {
+      match entry {
+        (k, v) => {
+          out.push(copy k)
+        }
+      }
+    }
+    return move out
+  }
+  // copies of the values in first-insertion order (X-479); allocates; O(n)
+  export pure func values(self) List[V] where K implements Hashable, V implements Copyable {
+    let mut out: List[V] = List.default()
+    for entry in self {
+      match entry {
+        (k, v) => {
+          out.push(copy v)
+        }
+      }
+    }
+    return move out
+  }
 }
 export class OrderedMap[K, V] {}
 export class Set[T] {
   // intrinsic: an empty set; O(1)
-  export trusted pure func default() Set[T]
+  export trusted pure func default() Set[T] where T implements Hashable
   // intrinsic: inserts item, true when it was absent; amortised expected O(1)
   export trusted func add(editable self, item: owned T) Bool
-  // intrinsic: membership; expected O(1)
+  // intrinsic: membership (a StringView item on a Set[String], as `Map.get`'s key); expected O(1)
   export trusted pure func contains(self, item: T) Bool
   // intrinsic: the number of items; O(1)
   export trusted pure func count(self) Int
+  // intrinsic: removes item, true when it was present. The items after it keep their order and move up one place, so the cost is O(n) in the items after it (a StringView item on a Set[String], as `Map.get`'s key)
+  export trusted func remove(editable self, item: T) Bool
+  export pure func isEmpty(self) Bool where T implements Hashable => self.count() == 0
+  // calls visit with a read loan of every item in first-insertion order (X-479); the callback may have effects, so `each` is not pure; O(n) plus the callback per item
+  export func each(self, visit: editable fn mut(T) Void) where T implements Hashable {
+    for item in self {
+      visit(item)
+    }
+  }
+  // copies of the items of self, then of the items of other that self lacks, in that order (X-479); allocates; expected O(n + m)
+  export pure func union(self, other: Set[T]) Set[T] where T implements Hashable, T implements Copyable {
+    let mut out: Set[T] = Set.default()
+    for item in self {
+      discard out.add(copy item)
+    }
+    for item in other {
+      discard out.add(copy item)
+    }
+    return move out
+  }
+  // copies of the items of self that other also holds, in self's order (X-479); allocates; expected O(n)
+  export pure func intersection(self, other: Set[T]) Set[T] where T implements Hashable, T implements Copyable {
+    let mut out: Set[T] = Set.default()
+    for item in self {
+      if other.contains(item) {
+        discard out.add(copy item)
+      }
+    }
+    return move out
+  }
+  // copies of the items of self that other lacks, in self's order (X-479); allocates; expected O(n)
+  export pure func difference(self, other: Set[T]) Set[T] where T implements Hashable, T implements Copyable {
+    let mut out: Set[T] = Set.default()
+    for item in self {
+      if !other.contains(item) {
+        discard out.add(copy item)
+      }
+    }
+    return move out
+  }
 }
 export class FixedList[T, N] {}
 export class FixedMap[K, V, N] {}
 export class VariantMap[E, V] {}
+
+// ---- optional values (6.8) ----
+// `Optional` is not a type a program names: it holds the helpers of a `T?` receiver, so `maybe.map(f)` is `Optional.map(maybe, f)`.
+export class Optional {
+  // the present value is lent to f and f's result is the present result; null stays null and f is not called (X-479); O(1) plus the callback
+  export pure func map[T, U](value: T?, f: pure fn(T) U) U? where U: linear {
+    match value {
+      present(x) => {
+        return f(x)
+      }
+      null => {
+        return null
+      }
+    }
+  }
+}
 
 // ---- outcomes and failures (10) ----
 export class Must {
@@ -357,8 +1198,20 @@ export class Outcome[T] {
   export trusted pure func success(value: owned T) Outcome[T]
   // intrinsic: an outcome holding f; O(1)
   export trusted pure func failure(f: owned Failure) Outcome[T]
-  // intrinsic: the successes in order when every element succeeds, otherwise the first failure in order, consuming every other element's obligation; O(n)
+  // intrinsic: the successes in order when every element succeeds, otherwise the first failure in order, consuming every other element's obligation; T must be non-linear (10.7, E-OBL-003); O(n)
   export trusted pure try func collect(list: owned List[Outcome[T]]) List[T]
+  // consumes the outcome; a success becomes the success of f applied to a read loan of its value, a failure passes through unchanged and f is not called (X-479); O(1) plus the callback
+  // T must be non-linear: the callback borrows a payload that is then dropped (10.7, E-OBL-003).
+  export pure func map[U](owned self, f: pure fn(T) U) Outcome[U] where U: linear {
+    match move self {
+      success(value) => {
+        return Outcome.success(f(value))
+      }
+      failure(why) => {
+        return Outcome.failure(move why)
+      }
+    }
+  }
 }
 export class Failure {
   export code: StringView from static
@@ -434,16 +1287,16 @@ export class AtomicBool {
 }
 export class Scope {
   // intrinsic: a task running work on the cooperative executor of this scope (12.5); O(1)
-  export trusted func launch[T](self, work: owned Future[T]) Task[T]
+  export trusted func launch[T](self, work: owned Future[T]) Task[T] where T: linear
   // intrinsic: a task running work on the parallel pool (12.5); the environment is Shareable; O(1)
-  export trusted func launchParallel[T](self, work: owned Future[T]) Task[T]
+  export trusted func launchParallel[T](self, work: owned Future[T]) Task[T] where T: linear
   // intrinsic: a task running work on the bounded blocking pool (12.5); O(1)
-  export trusted func launchBlocking[T](self, work: owned fn once() T) Task[T]
+  export trusted func launchBlocking[T](self, work: owned fn once() T) Task[T] where T: linear
   // intrinsic: removes task from the scope and hands its join obligation to supervisor (12.5); O(1)
   export trusted func detach[T](self, task: owned Task[T], supervisor: Supervisor)
 }
 // intrinsic: runs both futures to completion inside the parent and returns both results (12.5)
-export trusted async func join[A, B](a: owned Future[A], b: owned Future[B]) (A, B)
+export trusted async func join[A, B](a: owned Future[A], b: owned Future[B]) (A, B) where A: linear, B: linear
 // intrinsic: a cancellation point for parallel and blocking tasks (12.4); no effect in cooperative tasks
 export trusted func checkpoint()
 // Fault injection for the conformance corpus (10.8): a defect of the named class terminates the task at once.

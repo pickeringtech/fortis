@@ -16,7 +16,7 @@ export error Late {
 
 export error Moved {
   code: "demo.moved"
-  payload { who: String<scalars: ..16>, was: Int, now: Int }
+  payload { who: String<scalars:..16>, was: Int, now: Int }
   message: "${who} moved from ${was} to ${now}"
 }
 
@@ -33,7 +33,7 @@ try func late(n: Int) Int {
   fail Late(n: n)
 }
 
-try func moved(who: String<scalars: ..16>) Int {
+try func moved(who: String<scalars:..16>) Int {
   fail Moved(who: who, was: 4, now: 5)
 }
 

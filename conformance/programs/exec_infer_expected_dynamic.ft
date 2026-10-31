@@ -1,0 +1,28 @@
+// execute: 2|1|4
+// requires: runtime
+// covers: LANG-06-11
+// The expected type fixes a type argument first and every argument is checked against it (6.10, X-513; D-89.2):
+// `List[dynamic Shape]` takes a `Circle` and a `Square`, each boxed as it is made.
+import fortis.host { Console }
+
+interface Shape {
+  pure func area(self) Int
+}
+
+class Circle implements Shape {
+  r: Int
+  pure func area(self) Int => self.r
+}
+
+class Square implements Shape {
+  s: Int
+  pure func area(self) Int => self.s
+}
+
+func main(console: Console) {
+  let xs: List[dynamic Shape] = List.of(Circle(r: 1), Square(s: 4))
+  console.print("${xs.count()}")
+  for shape in xs {
+    console.print("${shape.area()}")
+  }
+}

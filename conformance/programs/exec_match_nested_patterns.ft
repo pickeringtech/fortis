@@ -114,6 +114,6 @@ func main(console: Console) {
   let tx = Top.T(mid: M(leaf: X))
   let ty = Top.T(mid: M(leaf: Y))
   let tn = Top.T(mid: N)
-  console.print("deep ${deep(tx)} ${deep(ty)} ${deep(tn)} ${deep(Top.U)}")
-  console.print("flat ${flat(tx)} ${flat(ty)} ${flat(tn)} ${flat(Top.U)}")
+  console.print("deep ${deep(tx)} ${deep(ty)} ${deep(tn)} ${deep(U)}")
+  console.print("flat ${flat(tx)} ${flat(ty)} ${flat(tn)} ${flat(U)}")
 }

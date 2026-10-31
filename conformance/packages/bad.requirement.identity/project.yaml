@@ -1,0 +1,6 @@
+schema: fortis.project/v1
+name: bad.requirement.identity
+version: 0.1.0
+exports: [lib]
+dependencies:
+  fortis: "1.0"

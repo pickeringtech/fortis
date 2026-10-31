@@ -1,0 +1,8 @@
+// accept
+// covers: LANG-08-02, LANG-08-03
+func call(f: editable fn mut() Void) { f() }
+func demo() {
+  let mut xs: List[Int] = List.default()
+  call(fn() { xs.push(1) })
+  call(fn mut[editable xs]() Void { xs.push(2) })
+}

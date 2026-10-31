@@ -1,0 +1,18 @@
+[
+  {"name": "prog_dia_05_null", "input": null, "expect": "null"},
+  {"name": "prog_dia_05_true", "input": true, "expect": "true"},
+  {"name": "prog_dia_05_false", "input": false, "expect": "false"},
+  {"name": "prog_dia_05_zero", "input": 0, "expect": "0"},
+  {"name": "prog_dia_05_negative", "input": -1, "expect": "-1"},
+  {"name": "prog_dia_05_i64_min", "input": -9223372036854775808, "expect": "-9223372036854775808"},
+  {"name": "prog_dia_05_i64_max", "input": 9223372036854775807, "expect": "9223372036854775807"},
+  {"name": "prog_dia_05_empty", "input": "", "expect": "\"\""},
+  {"name": "prog_dia_05_quotes", "input": "\"", "expect": "\"\\\"\""},
+  {"name": "prog_dia_05_backslash", "input": "\\", "expect": "\"\\\\\""},
+  {"name": "prog_dia_05_newline", "input": "\n", "expect": "\"\\n\""},
+  {"name": "prog_dia_05_tab", "input": "\t", "expect": "\"\\t\""},
+  {"name": "prog_dia_05_nul", "input": "\u0000", "expect": "\"\\u0000\""},
+  {"name": "prog_dia_05_unicode", "input": "café λ 🦀", "expect": "\"café λ 🦀\""},
+  {"name": "prog_dia_05_array", "input": [1, "x", null], "expect": "[1, \"x\", null]"},
+  {"name": "prog_dia_05_object", "input": {"z": 2, "a": 1}, "expect": "{\"a\": 1, \"z\": 2}"}
+]

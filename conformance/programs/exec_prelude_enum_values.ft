@@ -1,0 +1,19 @@
+// execute: later|true
+// requires: runtime
+// covers: LANG-09-05
+// A core-library enum's variant (`Ordering.Greater`) is an enum value on every backend: `match` finds its arm and `==`
+// compares it (D-87, which no longer reproduces on master).
+import fortis.host { Console }
+
+func word(o: Ordering) String {
+  return match o {
+    Less => "earlier"
+    Equal => "same"
+    Greater => "later"
+  }
+}
+
+func main(console: Console) {
+  let o = Ordering.Greater
+  console.print("${word(o)}|${o == Greater}")
+}

@@ -1,0 +1,13 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-584: a local loan cannot acquire a static origin through its annotation.
+import fortis.host { Console }
+func keep() List[alias StringView from static] {
+  let own = "hello" as String
+  let s: alias StringView from static = alias own
+  return List.of(move s)
+}
+func main(console: Console) {
+  let xs = keep()
+  console.print("${xs.count()}")
+}

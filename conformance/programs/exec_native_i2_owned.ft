@@ -1,0 +1,29 @@
+// execute: 4|5|tea|fresh|6|sum12|once|4
+// requires: runtime
+// covers: LANG-08-04, LANG-07-07
+// D-540: owned callback parameters keep their mode, including generic and fresh arguments.
+import fortis.host { Console }
+
+func apply[A](a: owned A, f: fn(owned A) A) A => f(move a)
+func fresh(f: fn(owned String) String) String => f("fresh")
+func option(f: fn(owned String?) Int) Int => f("some")
+func keep(x: owned Int) Int => x
+func foldOwned[A](xs: List[Int], initial: owned A, f: pure fn(owned A, Int) A) A {
+  let mut acc = move initial
+  for n in xs { acc = f(move acc, n) }
+  return acc
+}
+func callOnce(a: owned String, f: owned fn once(owned String) String) String => move f(move a)
+func main(console: Console) {
+  console.print("${apply(4, fn(x: owned Int) => x)}")
+  console.print("${apply(5, keep)}")
+  let text = "tea" as String
+  console.print(apply(move text, fn(x: owned String) => move x))
+  console.print(fresh(fn(x: owned String) => move x))
+  let f: fn(owned Int) Int = fn(x: owned Int) => x
+  console.print("${f(6)}")
+  let xs = List.of(1, 2)
+  console.print(foldOwned(xs, "sum" as String, fn(a: owned String, n: Int) => "${a}${n}"))
+  console.print(callOnce("once", fn once(a: owned String) => move a))
+  console.print("${option(fn(s: owned String?) => (s ?? "").scalarCount())}")
+}

@@ -4,7 +4,7 @@ fixture, and prints back every inferred fact (Programme 9.3, PROG-AGT-06, X-130)
 `python3 -I conformance/tools/fmt_check.py [--json]`
 
 For every `.ft` file of the corpus, the package fixtures, the library, the examples, the acceptance application and
-the benchmarks, `fortisc fmt` formats it once and then formats the result again. Three things must hold:
+the benchmarks, `fortisc fmt` formats it once and then formats the result again. The following must hold:
 
 1. the second formatting changes nothing: `fmt(fmt(x)) == fmt(x)`;
 2. the formatted text has the same parse tree as the original under the **reference** parser
@@ -39,6 +39,17 @@ the benchmarks, `fortisc fmt` formats it once and then formats the result again.
    so on standard error. Such a file's parse tree changes by design: its layout alone (`fmt --layout`) must keep the
    tree, the rewritten module must check (the formatter refuses otherwise), and the golden corpus
    `conformance/fmt/rewrites` must format to its `.formatted` files, idempotently, accepted.
+
+7. **conversion retirements** (X-552, X-553): `conformance/fmt/conversions` pins each resolved rewrite and names that
+   must stay. Both versions check with both checkers and every execute fixture runs on the interpreter, VM and
+   native backend against its expected output, with equal failure records. Proved validation retains its Outcome
+   wrapper where its consumer needs an outcome; a directly enclosing failure handler is dropped when proved
+   unreachable (X-542).
+   `--no-migrate` leaves these rewrites disabled for the existing corpus's snapshots.
+
+8. **Shipped programs are canonical** (D-730): examples, the ledger pilot and guide programs must already
+   satisfy `fmt(x) == x` with migrations enabled, exactly as `fortisc fmt --check`. Guide package modules are
+   checked together with their manifest; illustrative fragments and deliberately invalid syntax are excluded.
 
 A file the formatter refuses because it does not parse is listed with its header; each must be a fixture whose
 verdict expects a syntax error, or an illustrative fragment.
@@ -266,6 +277,85 @@ def migrations():
     return rows
 
 
+CONVERSIONS = os.path.join(ROOT, "conformance", "fmt", "conversions")
+
+
+def conversion_behaviour(path):
+    """Actual output and failure records on each backend, independent of source positions and build evidence."""
+    runs = {}
+    for backend, cmd in (
+        ("interpreter", [sys.executable, "-I", FORTIS, "run", path]),
+        ("vm", [FORTISC, "vm", path]),
+        ("native", [FORTISC, "native", path]),
+    ):
+        r = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, timeout=300)
+        observed = "|".join(r.stdout.splitlines()) if backend == "interpreter" else "\n".join(l[len("observed: "):] for l in r.stdout.splitlines() if l.startswith("observed: "))
+        records = []
+        for line in (r.stdout + "\n" + r.stderr).splitlines():
+            line = line.removeprefix("record: ")
+            if line.startswith("{"):
+                try:
+                    record = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if record.get("kind") in ("runtime-failure", "runtime-defect"):
+                    records.append({key: record.get(key) for key in ("kind", "code", "message", "payload", "reported_by")})
+        runs[backend] = {"exit": r.returncode, "observed": observed, "records": records}
+    # A conversion golden may also exercise a test body, where implicit handling and table-row facts differ
+    # from ordinary functions. Run those before and after on the same three backends too (D-505).
+    if re.search(r"^(test|property) ", open(path, encoding="utf-8").read(), re.M):
+        import tests_check
+        for backend, run in (("interpreter", tests_check.fortis_test), ("vm", tests_check.test), ("native", tests_check.native_tests)):
+            result = run(path)
+            recs = result[-1]
+            runs[backend]["tests"] = {
+                "exit": result[0],
+                "results": [(r["test"], r["case"], r["status"]) for r in recs if r.get("kind") == "test-result"],
+                "failures": [{key: r.get(key) for key in ("kind", "code", "message", "payload", "reported_by")}
+                             for r in recs if r.get("kind") in ("runtime-failure", "runtime-defect")],
+            }
+    return runs
+
+
+def conversions():
+    """Retirements are resolved by identity and preserve execution on all three backends (LR 6.13, X-552)."""
+    rows = []
+    for f in sorted(x for x in os.listdir(CONVERSIONS) if x.endswith(".ft")):
+        path = os.path.join(CONVERSIONS, f)
+        src = open(path, encoding="utf-8").read()
+        want = open(path[:-3] + ".formatted", encoding="utf-8").read()
+        code, once, err = fmt(src, migrate=True)
+        code2, twice, _ = fmt(once, migrate=True)
+        note_file = path[:-3] + ".notes"
+        expected_notes = open(note_file, encoding="utf-8").read().splitlines() if os.path.exists(note_file) else []
+        with tempfile.TemporaryDirectory(prefix="fortis-conversions-") as directory:
+            moved = os.path.join(directory, f)
+            with open(moved, "w", encoding="utf-8") as out:
+                out.write(once)
+            checks = [subprocess.run(cmd + [p], capture_output=True, text=True, timeout=120).returncode == 0
+                      for p in (path, moved)
+                      for cmd in ([sys.executable, "-I", FORTIS, "check"], [FORTISC, "check"])]
+            expected = re.search(r"^// execute: (.*)$", src, re.M)
+            was = conversion_behaviour(path) if all(checks) and expected else None
+            now = conversion_behaviour(moved) if all(checks) and expected else None
+            same = was == now
+            runs_ok = not expected or (was is not None and all(v["exit"] == 0 and v["observed"] == expected.group(1)
+                and ("tests" not in v or (v["tests"]["exit"] == 0 and all(r[2] == "pass" for r in v["tests"]["results"])))
+                for v in was.values()))
+            # The command requested by users is --write: start with the original, then check the written fixed point.
+            with open(moved, "w", encoding="utf-8") as out:
+                out.write(src)
+            write = subprocess.run([FORTISC, "fmt", "--write", moved], capture_output=True, text=True, timeout=120)
+            wrote = write.returncode == 0 and open(moved, encoding="utf-8").read() == once
+            write_again = subprocess.run([FORTISC, "fmt", "--write", moved], capture_output=True, text=True, timeout=120)
+            wrote = wrote and write_again.returncode == 0 and open(moved, encoding="utf-8").read() == once
+        ok = code == code2 == 0 and once == want and twice == once and all(checks) and same and runs_ok and wrote and all(note in err for note in expected_notes)
+        detail = "" if ok else (f"golden={once == want}, idempotent={twice == once}, checks={checks}, write={wrote}, "
+                                 f"before={was}, after={now}, stderr={err[:250]}")
+        rows.append({"conversion": f, "ok": ok, "ran": was is not None, "detail": detail})
+    return rows
+
+
 FACTS = os.path.join(ROOT, "conformance", "fmt", "facts")
 REWRITES = os.path.join(ROOT, "conformance", "fmt", "rewrites")
 # the 9.3 facts the checker requires: a fixture leaving each out, and its code
@@ -308,6 +398,47 @@ def fmt_layout(text):
         return subprocess.run([FORTISC, "fmt", "--layout", path], capture_output=True, text=True, timeout=120).stdout
     finally:
         os.unlink(path)
+
+
+def canonical(path, label):
+    """Use the shipped command, with migrations and package context, to require fmt(x) == x."""
+    result = subprocess.run([FORTISC, "fmt", "--check", path], capture_output=True, text=True,
+                            cwd=ROOT, timeout=600)
+    detail = (result.stdout + result.stderr).strip().replace(path, label)
+    return {"path": label, "ok": result.returncode == 0, "exit": result.returncode, "detail": detail}
+
+
+def shipped_sources():
+    """All shipped examples, the pilot and complete guide programs, including rejected typed programs."""
+    import docset_check
+    rows = [canonical(os.path.join(ROOT, path), path) for path in ("examples", "pilot/ledger")]
+    fixtures, problems = docset_check.collect([p for p in docset_check.doc_pages() if p.startswith("docs/guide/")])
+    rows.extend({"path": p["id"], "ok": False, "detail": p["detail"]} for p in problems)
+    with tempfile.TemporaryDirectory(prefix="fortis-fmt-guide-") as directory:
+        targets = []
+        for fixture in fixtures:
+            blocks = fixture.get("blocks", [fixture])
+            if fixture["verdict"] == "illustrative" or any(
+                    code.startswith("E-SYN-") for block in blocks for code in block["codes"]):
+                continue
+            page = os.path.join(directory, docset_check.slug(fixture["page"]))
+            if "package" in fixture:
+                target = os.path.join(page, fixture["package"])
+                sources = dict(fixture["files"])
+                sources[fixture["package"] + "/project.yaml"] = fixture["manifest"]
+            else:
+                name = fixture["id"].rsplit("#", 1)[1] + ".ft"
+                target = os.path.join(page, name)
+                sources = {name: fixture["src"]}
+            for name, source in sources.items():
+                dest = os.path.join(page, name)
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                with open(dest, "w", encoding="utf-8") as out:
+                    out.write(source)
+            targets.append((target, fixture["id"]))
+        # Write every package first, so page-local dependencies keep their ordinary relative paths.
+        rows.extend(canonical(path, label) for path, label in targets)
+    return rows
 
 
 def main(argv):
@@ -371,9 +502,17 @@ def main(argv):
     for m in migrated:
         print(f"{'PASS' if m['ok'] else 'FAIL'} migration {m['migration']}" + (f": {m['detail']}" if m["detail"] else ""))
         problems += not m["ok"]
+    converted = conversions()
+    for row in converted:
+        print(f"{'PASS' if row['ok'] else 'FAIL'} conversion {row['conversion']}" + (f": {row['detail']}" if row["detail"] else ""))
+        problems += not row["ok"]
+    shipped = shipped_sources()
+    for row in shipped:
+        print(f"{'PASS' if row['ok'] else 'FAIL'} canonical source {row['path']}" + (f": {row['detail']}" if row["detail"] else ""))
+        problems += not row["ok"]
     if "--json" in argv:
         os.makedirs(os.path.join(ROOT, "build"), exist_ok=True)
-        json.dump({"rows": rows, "facts": coverage, "migrations": migrated}, open(os.path.join(ROOT, "build", "fmt.json"), "w"), indent=1)
+        json.dump({"rows": rows, "facts": coverage, "migrations": migrated, "conversions": converted, "shipped": shipped}, open(os.path.join(ROOT, "build", "fmt.json"), "w"), indent=1)
     print("fmt check: " + ("OK" if problems == 0 else "FAILED"))
     return 1 if problems else 0
 

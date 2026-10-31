@@ -1,0 +1,436 @@
+[
+  {
+    "name": "lr5_break_outer",
+    "input": {
+      "kind": "break",
+      "arg": "outer"
+    },
+    "expect": [
+      "wf.control"
+    ]
+  },
+  {
+    "name": "lr5_break_loop",
+    "input": {
+      "kind": "break",
+      "arg": "loop"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr5_break_label",
+    "input": {
+      "kind": "break",
+      "arg": "label"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr5_break_wrong_label",
+    "input": {
+      "kind": "break",
+      "arg": "wrong_label"
+    },
+    "expect": [
+      "wf.control"
+    ]
+  },
+  {
+    "name": "lr5_break_nested_label",
+    "input": {
+      "kind": "break",
+      "arg": "nested_label"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr5_continue_outer",
+    "input": {
+      "kind": "continue",
+      "arg": "outer"
+    },
+    "expect": [
+      "wf.control"
+    ]
+  },
+  {
+    "name": "lr5_continue_loop",
+    "input": {
+      "kind": "continue",
+      "arg": "loop"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr5_continue_label",
+    "input": {
+      "kind": "continue",
+      "arg": "label"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr5_continue_wrong_label",
+    "input": {
+      "kind": "continue",
+      "arg": "wrong_label"
+    },
+    "expect": [
+      "wf.control"
+    ]
+  },
+  {
+    "name": "lr5_continue_nested_label",
+    "input": {
+      "kind": "continue",
+      "arg": "nested_label"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr5_give_outer",
+    "input": {
+      "kind": "give",
+      "arg": "outer"
+    },
+    "expect": [
+      "wf.control"
+    ]
+  },
+  {
+    "name": "lr5_give_nested",
+    "input": {
+      "kind": "give",
+      "arg": "nested"
+    },
+    "expect": [
+      "wf.control"
+    ]
+  },
+  {
+    "name": "lr5_give_value",
+    "input": {
+      "kind": "give",
+      "arg": "value"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr5_recover_outer",
+    "input": {
+      "kind": "recover",
+      "arg": "outer"
+    },
+    "expect": [
+      "wf.control"
+    ]
+  },
+  {
+    "name": "lr5_recover_nested",
+    "input": {
+      "kind": "recover",
+      "arg": "nested"
+    },
+    "expect": [
+      "wf.control"
+    ]
+  },
+  {
+    "name": "lr5_recover_handler",
+    "input": {
+      "kind": "recover",
+      "arg": "handler"
+    },
+    "expect": []
+  },
+  {
+    "name": "c1_undefined_call",
+    "input": {
+      "kind": "call",
+      "arg": "missing"
+    },
+    "expect": [
+      "wf.calls"
+    ]
+  },
+  {
+    "name": "c1_undefined_construct",
+    "input": {
+      "kind": "construct",
+      "arg": "missing"
+    },
+    "expect": [
+      "wf.calls"
+    ]
+  },
+  {
+    "name": "c1_undefined_variant",
+    "input": {
+      "kind": "variant",
+      "arg": "missing"
+    },
+    "expect": [
+      "wf.calls"
+    ]
+  },
+  {
+    "name": "c1_undefined_failure",
+    "input": {
+      "kind": "failure",
+      "arg": "missing"
+    },
+    "expect": [
+      "wf.calls"
+    ]
+  },
+  {
+    "name": "lr10_optional_or_fail_optional",
+    "input": {
+      "kind": "or_fail",
+      "arg": "optional"
+    },
+    "expect": [
+      "C1.optional"
+    ]
+  },
+  {
+    "name": "lr10_optional_or_fail_outcome",
+    "input": {
+      "kind": "or_fail",
+      "arg": "outcome"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr10_optional_or_recover_optional",
+    "input": {
+      "kind": "or_recover",
+      "arg": "optional"
+    },
+    "expect": [
+      "C1.optional"
+    ]
+  },
+  {
+    "name": "lr10_optional_or_recover_outcome",
+    "input": {
+      "kind": "or_recover",
+      "arg": "outcome"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr10_optional_coalesce_optional",
+    "input": {
+      "kind": "coalesce",
+      "arg": "optional"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr10_optional_coalesce_outcome",
+    "input": {
+      "kind": "coalesce",
+      "arg": "outcome"
+    },
+    "expect": [
+      "C1.optional"
+    ]
+  },
+  {
+    "name": "lr10_optional_opt_field_optional",
+    "input": {
+      "kind": "opt_field",
+      "arg": "optional"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr10_optional_opt_field_outcome",
+    "input": {
+      "kind": "opt_field",
+      "arg": "outcome"
+    },
+    "expect": [
+      "C1.optional"
+    ]
+  },
+  {
+    "name": "lr10_optional_present_optional",
+    "input": {
+      "kind": "present",
+      "arg": "optional"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr10_optional_present_outcome",
+    "input": {
+      "kind": "present",
+      "arg": "outcome"
+    },
+    "expect": [
+      "C1.optional"
+    ]
+  },
+  {
+    "name": "lr10_catch_empty",
+    "input": {
+      "kind": "catch",
+      "arg": "empty"
+    },
+    "expect": [
+      "C1.catch"
+    ]
+  },
+  {
+    "name": "lr10_catch_recover",
+    "input": {
+      "kind": "catch",
+      "arg": "recover"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr10_catch_return",
+    "input": {
+      "kind": "catch",
+      "arg": "return"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr10_catch_fail",
+    "input": {
+      "kind": "catch",
+      "arg": "fail"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr10_catch_if_both",
+    "input": {
+      "kind": "catch",
+      "arg": "if_both"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr10_catch_if_one",
+    "input": {
+      "kind": "catch",
+      "arg": "if_one"
+    },
+    "expect": [
+      "C1.catch"
+    ]
+  },
+  {
+    "name": "c3_growth_list_push",
+    "input": {
+      "kind": "growth",
+      "arg": "List.push"
+    },
+    "expect": [
+      "C3.growth"
+    ]
+  },
+  {
+    "name": "c3_growth_map_set",
+    "input": {
+      "kind": "growth",
+      "arg": "Map.set"
+    },
+    "expect": [
+      "C3.growth"
+    ]
+  },
+  {
+    "name": "c3_growth_set_add",
+    "input": {
+      "kind": "growth",
+      "arg": "Set.add"
+    },
+    "expect": [
+      "C3.growth"
+    ]
+  },
+  {
+    "name": "c3_growth_builder_append",
+    "input": {
+      "kind": "growth",
+      "arg": "Builder.append"
+    },
+    "expect": [
+      "C3.growth"
+    ]
+  },
+  {
+    "name": "c3_growth_list_default",
+    "input": {
+      "kind": "growth",
+      "arg": "List.default"
+    },
+    "expect": [
+      "C3.growth"
+    ]
+  },
+  {
+    "name": "c3_growth_array_filled",
+    "input": {
+      "kind": "growth",
+      "arg": "Array.filled"
+    },
+    "expect": [
+      "C3.growth"
+    ]
+  },
+  {
+    "name": "lr11_pure_alloc",
+    "input": {
+      "kind": "effect",
+      "arg": "alloc"
+    },
+    "expect": []
+  },
+  {
+    "name": "lr11_pure_io",
+    "input": {
+      "kind": "effect",
+      "arg": "io"
+    },
+    "expect": [
+      "C1.effects"
+    ]
+  },
+  {
+    "name": "lr11_pure_mutate",
+    "input": {
+      "kind": "effect",
+      "arg": "mutate"
+    },
+    "expect": [
+      "C1.effects"
+    ]
+  },
+  {
+    "name": "lr11_pure_nondet",
+    "input": {
+      "kind": "effect",
+      "arg": "nondet"
+    },
+    "expect": [
+      "C1.effects"
+    ]
+  },
+  {
+    "name": "lr11_pure_block",
+    "input": {
+      "kind": "effect",
+      "arg": "block"
+    },
+    "expect": [
+      "C1.effects"
+    ]
+  }
+]

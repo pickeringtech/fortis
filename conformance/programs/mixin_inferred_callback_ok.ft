@@ -1,0 +1,7 @@
+// accept
+// covers: LANG-06-08, LANG-09-04, LANG-11-01
+mixin Labelled {
+  export func label(self) String => "label"
+}
+class Item with Labelled {}
+func labels(value: Item?) String? => value.map(fn(x) => x.label())

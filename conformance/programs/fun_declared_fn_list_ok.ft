@@ -28,9 +28,9 @@ func passLambda() Int => apply(pure noalloc fn(x: Int) Int => x)
 
 func passDeclared() Int => apply(move id2)
 
-func foo[T](a: T, f: fn(Int) Int) T {
+func foo[T](a: owned T, f: fn(Int) Int) T {
   discard f
-  return copy a
+  return move a
 }
 
 pure func id3(n: Int) Int => n

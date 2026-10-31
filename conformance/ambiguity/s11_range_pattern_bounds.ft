@@ -1,0 +1,29 @@
+// accept — S11: range pattern bounds fold as refinement bounds (X-512): literals, negatives, consts, arithmetic, parentheses
+const low: Int = 2
+const high: Int = 9
+
+func classify(n: Int) Int {
+  match n {
+    -5..-1 => {
+      return 1
+    }
+    low..high => {
+      return 2
+    }
+    low * 2..high => {
+      return 3
+    }
+    (low + 1)..high => {
+      return 4
+    }
+    (0)..19 => {
+      return 5
+    }
+    ..(high - 1) => {
+      return 6
+    }
+    otherwise => {
+      return 0
+    }
+  }
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "name": "place",
+    "input": "func fromMove(s: owned String) String { return String.from(s) }\n",
+    "expect": "func fromMove(s: owned String) String { return (copy s) }\n"
+  },
+  {
+    "name": "moved",
+    "input": "func fromMove(s: owned String) String { return String.from(move s) }\n",
+    "expect": "func fromMove(s: owned String) String { return (copy s) }\n"
+  },
+  {
+    "name": "alias",
+    "input": "func fromMove(s: owned String) String { return String.from(alias s) }\n",
+    "expect": "func fromMove(s: owned String) String { return (copy s) }\n"
+  },
+  {
+    "name": "copy",
+    "input": "func fromMove(s: owned String) String { return String.from(copy s) }\n",
+    "expect": "func fromMove(s: owned String) String { return (copy s) }\n"
+  },
+  {
+    "name": "field",
+    "input": "class Holder { text: String }\nfunc fromMove(holder: owned Holder) String { return String.from(holder.text) }\n",
+    "expect": "class Holder { text: String }\nfunc fromMove(holder: owned Holder) String { return (copy holder.text) }\n"
+  },
+  {
+    "name": "aliased_field",
+    "input": "class Holder { text: String }\nfunc fromMove(holder: owned Holder) String { return String.from(alias holder.text) }\n",
+    "expect": "class Holder { text: String }\nfunc fromMove(holder: owned Holder) String { return (copy holder.text) }\n"
+  }
+]

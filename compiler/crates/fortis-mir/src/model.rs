@@ -24,6 +24,45 @@ pub struct Program {
     /// tests the builder could not lower (a construct outside what the IR builds yet), each with its title and
     /// the reason; runners report them as `unbuilt`, never as passed or failed
     pub unbuilt_tests: Vec<(String, String)>,
+    /// `implement` blocks not yet folded into their target's type: a block in one module for a class of another
+    /// waits here until the program is assembled (`fold_impls`)
+    pub impls: Vec<ImplDef>,
+}
+
+/// An `implement I for T { … }` block (9.5): in Language 1.0 its target is a class or enum the program declares
+/// (X-180), so it is exactly the target listing `I` in `implements` with these methods.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ImplDef {
+    pub iface: String,
+    /// the interface's type arguments (`implement Part[Int] for Box`)
+    pub args: Vec<Type>,
+    pub target: String,
+    /// method name to the qualified function implementing it
+    pub methods: Vec<(String, String)>,
+}
+
+/// Fold every `implement` block whose target type the program holds into that type: its interface joins the type's
+/// `implements` and its methods the type's methods, so dispatch, the validator and native lowering see one type.
+pub fn fold_impls(prog: &mut Program) {
+    let pending = std::mem::take(&mut prog.impls);
+    for imp in pending {
+        match prog.types.iter_mut().find(|t| t.name == imp.target) {
+            Some(t) => {
+                if !t.implements.contains(&imp.iface) {
+                    t.implements.push(imp.iface.clone());
+                }
+                if !imp.args.is_empty() && !t.iface_args.iter().any(|(i, _)| *i == imp.iface) {
+                    t.iface_args.push((imp.iface.clone(), imp.args.clone()));
+                }
+                for (m, f) in imp.methods {
+                    if !t.methods.iter().any(|(x, _)| *x == m) {
+                        t.methods.push((m, f));
+                    }
+                }
+            }
+            None => prog.impls.push(imp),
+        }
+    }
 }
 
 /// A module of the user's program (a single file's `main`, or a module of a package other than `fortis`).
@@ -46,12 +85,18 @@ pub struct TypeDef {
     pub name: String,
     pub module: String,
     pub type_params: Vec<String>,
+    /// the `where` bounds on its type parameters that name an interface: (parameter, interface, the interface's type
+    /// arguments); the native lowering gives each parameter exactly these as Rust bounds (6.10, X-515)
+    pub bounds: Vec<(String, String, Vec<Type>)>,
     pub kind: TypeKind,
     /// a trivial type lowers to a `Copy` value (Appendix C.1)
     pub trivial: bool,
     /// `copy p` is permitted (6.11)
     pub copyable: bool,
     pub implements: Vec<String>,
+    /// the interfaces it derives (`class K derive Equatable, Hashable`): the native lowering generates their traits
+    /// (`PartialOrd` for `Comparable`, `Eq` and `Hash` for `Hashable`) from the declaration order (6.10, X-516)
+    pub derives: Vec<String>,
     /// the mixins whose methods it receives (9.6)
     pub mixins: Vec<String>,
     /// its lifetime parameters (`[lifetime r]`, 7.6): at most one
@@ -60,6 +105,28 @@ pub struct TypeDef {
     pub cleanup: Option<String>,
     /// method name to the qualified function implementing it, for dispatch through an interface or type parameter
     pub methods: Vec<(String, String)>,
+    /// the type arguments of each parameterized interface it implements (or, for an interface, requires):
+    /// `Box implements Part[Int]` is `("Part", [Int])`; an interface without parameters has no entry
+    pub iface_args: Vec<(String, Vec<Type>)>,
+    /// for an interface: the interfaces it requires (9.5) and its methods' declared signatures, from which a
+    /// backend that needs them (native traits, D-82) builds the interface whether or not a type implements it
+    pub requires: Vec<String>,
+    pub sigs: Vec<MethodSig>,
+}
+
+/// An interface method's declared signature; `Self` is `Type::TypeParam("Self")` and the interface's own type
+/// parameters are `Type::TypeParam` too.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MethodSig {
+    pub name: String,
+    /// the receiver's mode; `None` for an associated function
+    pub receiver: Option<Mode>,
+    pub params: Vec<(String, Mode, Type)>,
+    pub ret: Type,
+    pub modifiers: Vec<String>,
+    pub type_params: Vec<String>,
+    /// the method's own `where` bounds: (type parameter, interface, its type arguments)
+    pub bounds: Vec<(String, String, Vec<Type>)>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -141,6 +208,9 @@ pub struct Function {
     /// the checker's label: `function f`, `method T.m`, `lambda@12:5`, `cleanup T`, `test "name"`
     pub label: String,
     pub module: String,
+    /// The lexical module of a contributed body, when it differs from the applying module that owns its symbol.
+    /// Private names and constructors are available according to this module (9.6, X-476).
+    pub body_module: Option<String>,
     pub line: u32,
     /// the parameters, in order; each is a local (`self` first for a method with a receiver)
     pub params: Vec<Param>,
@@ -156,9 +226,16 @@ pub struct Function {
     pub observe: Option<String>,
     /// a lambda's kind and environment: its captures are locals initialised from the closure value
     pub closure: Option<ClosureDef>,
+    /// the `where` bounds on its type parameters that name an interface: (parameter, interface, the
+    /// interface's type arguments); a method's include its class's bounds
+    pub bounds: Vec<(String, String, Vec<Type>)>,
 }
 
 impl Function {
+    pub fn lexical_module(&self) -> &str {
+        self.body_module.as_deref().unwrap_or(&self.module)
+    }
+
     pub fn is_try(&self) -> bool {
         self.modifiers.iter().any(|m| m == "try")
     }
@@ -404,6 +481,8 @@ pub enum Pattern {
     Record(Vec<(String, Pattern)>),
     /// `otherwise [ (name) ]`
     Otherwise(Option<LocalId>),
+    /// a range pattern (9.8, X-517): an integer value inside the folded, inclusive bounds; None leaves that end open
+    Range { lo: Option<i128>, hi: Option<i128> },
 }
 
 /// A place: a local (or `self`) and a path of projections.

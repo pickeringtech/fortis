@@ -25,7 +25,7 @@ class Token {
 }
 
 func make(console: Shared[Console], label: StringView) Token {
-  return Token(label: String.from(label), console: console.retain())
+  return Token(label: label as String, console: console.retain())
 }
 
 func show(console: Shared[Console], t: Token) {
@@ -153,7 +153,7 @@ func nested(console: Shared[Console], empty: List[Token]) {
 
 func copied(console: Shared[Console]) {
   let notes: List[Note] = List.default()
-  let n = Note(label: String.from("n"))
+  let n = Note(label: "n" as String)
   {
     let pair = (notes.get(0) ?? move n, 1)
     let c = copy pair

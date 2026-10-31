@@ -1,0 +1,7 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-580, X-605: an owned container cannot retain a non-static loan.
+pure func size(xs: List[Int]) Int {
+  let views = xs.map(fn(n: Int) => "v")
+  return views.count()
+}

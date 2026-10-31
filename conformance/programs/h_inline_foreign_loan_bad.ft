@@ -1,0 +1,9 @@
+// reject: E-OWN-010
+// covers: LANG-08-02, LANG-07-05
+func call(f: editable fn mut() Void) { f() }
+func demo() {
+  let mut xs = List.of(1)
+  let borrowed = alias xs
+  call(fn() { xs.push(2) })
+  let n = borrowed.count()
+}

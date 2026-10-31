@@ -1,0 +1,16 @@
+// reject: E-TYP-160 (at the marked line)
+// covers: LANG-06-11
+// `null` fixes no type argument (6.10, X-513): a call whose only argument for `T` is `null`, and whose result does not
+// name `T`, leaves `T` unfixed; pass a value of a typed optional instead.
+pure func label[T](value: T?, absent: String) String where T implements Displayable {
+  return match value {
+    present(v) => "${v}"
+    null => copy absent
+  }
+}
+
+test "unfixed" {
+  expect label(null, String.from("none")) == "none"      // reject: E-TYP-160
+  let n: Int? = null
+  expect label(n, String.from("none")) == "none"
+}

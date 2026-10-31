@@ -6,11 +6,11 @@ import fortis.host { Console }
 pure func wide(value: Int<0..200>) Int => value
 
 try recovers func main(console: Console) {
-  let small = Int<0..50>.validate(42) or fail
+  let small = 42
   console.print("${wide(small)}")
-  let big = Int<0..200>.validate(142) or fail
+  let big = 142
   console.print("${wide(big)}")
-  let bad = Int<0..50>.validate(142) catch e {
+  let bad = 142 as Int<0..50> catch e {
     console.print(e.code)
     recover 0
   }

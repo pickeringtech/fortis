@@ -1,0 +1,20 @@
+// execute: inside|drop|after
+// requires: runtime
+// covers: LANG-06-14, LANG-07-07
+// Wrapping and unwrapping an owned representation transfers its one cleanup obligation.
+import fortis.host { Console }
+class Token {
+  console: Shared[Console]
+  cleanup(editable self) { self.console.print("drop") }
+}
+type Wrapped = Token
+func main(out: Console) {
+  let console = Shared.create(move out)
+  {
+    let token = Token(console: console.retain())
+    let wrapped = move token as Wrapped
+    let restored = move wrapped as Token
+    console.print("inside")
+  }
+  console.print("after")
+}

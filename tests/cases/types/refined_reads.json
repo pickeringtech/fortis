@@ -1,0 +1,817 @@
+[
+  {
+    "name": "list_index",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Int => xs[2]\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_count",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Int => xs.count()\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_get",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Int => xs.get(1) ?? -1\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_empty",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Bool => xs.isEmpty()\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_map",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) List[Int] => xs.map(fn(n) => n)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_filter",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) List[Int] => xs.filter(fn(n) => n > 1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_count_where",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Int => xs.countWhere(fn(n) => n > 1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_any",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Bool => xs.any(fn(n) => n > 1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_all",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Bool => xs.all(fn(n) => n > 1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_find",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Int => xs.find(fn(n) => n > 1) ?? -1\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_index_where",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Int? => xs.indexWhere(fn(n) => n > 1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_contains",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Bool => xs.contains(2)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_enumerate",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) List[(Int, Int)] => xs.enumerate()\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_take",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) List[Int] => xs.take(2)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_skip",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) List[Int] => xs.skip(1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_flat_map",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) List[Int] => xs.flatMap(fn(n) => List.of(n))\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_chunked",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) List[List[Int]] => xs.chunked(2)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_sorted",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) List[Int] => xs.sortedBy(fn(n) => n)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_group",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Map[Int, List[Int]] => xs.groupBy(fn(n) => n)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_fold",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Int => xs.fold(0, fn(a, n) => Int.wrappingAdd(a, n))\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_reversed",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) List[Int] => xs.reversed()\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_iteration",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) Int { let mut sum = 0\n for n in xs { sum = Int.wrappingAdd(sum, n) }\n return sum }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_each",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) { xs.each(fn(n) { discard n }) }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_try_map",
+    "input": {
+      "source": "try func value(xs: List[Int]<length: 3..5>) List[Int] => xs.tryMap(fn(n) => Int.add(n, 0)) or fail\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_try_fold",
+    "input": {
+      "source": "try func value(xs: List[Int]<length: 3..5>) Int => xs.tryFold(0, fn(a, n) => Int.add(a, n)) or fail\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_try_each",
+    "input": {
+      "source": "try func visit(n: Int) { discard n }\ntry func value(xs: List[Int]<length: 3..5>) { xs.tryEach(fn(n) => visit(n)) or fail }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_concat",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>, other: ListView[Int]) List[Int] => xs.concat(other)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_zip",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>, other: ListView[Int]) List[(Int, Int)] => xs.zip(other)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_index_exact",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..3>) Int => xs[2]\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_index_minimum",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..>) Int => xs[2]\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_index_maximum_only",
+    "input": {
+      "source": "func value(xs: List[Int]<length: ..3>) Int => xs[0]\n"
+    },
+    "expect": [
+      "E-REF-002"
+    ]
+  },
+  {
+    "name": "list_index_empty_possible",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 0..3>) Int => xs[0]\n"
+    },
+    "expect": [
+      "E-REF-002"
+    ]
+  },
+  {
+    "name": "list_index_max_is_not_length",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 1..3>) Int => xs[1]\n"
+    },
+    "expect": [
+      "E-REF-002"
+    ]
+  },
+  {
+    "name": "list_index_at_length",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..3>) Int => xs[3]\n"
+    },
+    "expect": [
+      "E-REF-002"
+    ]
+  },
+  {
+    "name": "list_index_negative",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..3>) Int => xs[-1]\n"
+    },
+    "expect": [
+      "E-REF-002"
+    ]
+  },
+  {
+    "name": "list_index_guard",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 0..3>, i: Int<0..>) Int { if i < xs.count() { return xs[i] }\n return -1 }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_index_loan",
+    "input": {
+      "source": "func value(xs: alias List[Int]<length: 3..3> from caller) Int => xs[1]\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_index",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Int => xs[2]\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_count",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Int => xs.count()\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_get",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Int => xs.get(1) ?? -1\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_empty",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Bool => xs.isEmpty()\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_map",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) List[Int] => xs.map(fn(n) => n)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_filter",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) List[Int] => xs.filter(fn(n) => n > 1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_count_where",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Int => xs.countWhere(fn(n) => n > 1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_any",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Bool => xs.any(fn(n) => n > 1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_all",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Bool => xs.all(fn(n) => n > 1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_find",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Int => xs.find(fn(n) => n > 1) ?? -1\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_index_where",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Int? => xs.indexWhere(fn(n) => n > 1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_contains",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Bool => xs.contains(2)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_enumerate",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) List[(Int, Int)] => xs.enumerate()\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_take",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) List[Int] => xs.take(2)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_skip",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) List[Int] => xs.skip(1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_flat_map",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) List[Int] => xs.flatMap(fn(n) => List.of(n))\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_chunked",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) List[List[Int]] => xs.chunked(2)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_sorted",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) List[Int] => xs.sortedBy(fn(n) => n)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_group",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Map[Int, List[Int]] => xs.groupBy(fn(n) => n)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_fold",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Int => xs.fold(0, fn(a, n) => Int.wrappingAdd(a, n))\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_reversed",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) List[Int] => xs.reversed()\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_iteration",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) Int { let mut sum = 0\n for n in xs { sum = Int.wrappingAdd(sum, n) }\n return sum }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_each",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) { xs.each(fn(n) { discard n }) }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_try_map",
+    "input": {
+      "source": "try func value(xs: ListView[Int]<length: 3..5>) List[Int] => xs.tryMap(fn(n) => Int.add(n, 0)) or fail\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_try_fold",
+    "input": {
+      "source": "try func value(xs: ListView[Int]<length: 3..5>) Int => xs.tryFold(0, fn(a, n) => Int.add(a, n)) or fail\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_try_each",
+    "input": {
+      "source": "try func visit(n: Int) { discard n }\ntry func value(xs: ListView[Int]<length: 3..5>) { xs.tryEach(fn(n) => visit(n)) or fail }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_concat",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>, other: ListView[Int]) List[Int] => xs.concat(other)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_zip",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>, other: ListView[Int]) List[(Int, Int)] => xs.zip(other)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_index_exact",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..3>) Int => xs[2]\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_index_minimum",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..>) Int => xs[2]\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_index_maximum_only",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: ..3>) Int => xs[0]\n"
+    },
+    "expect": [
+      "E-REF-002"
+    ]
+  },
+  {
+    "name": "listview_index_empty_possible",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 0..3>) Int => xs[0]\n"
+    },
+    "expect": [
+      "E-REF-002"
+    ]
+  },
+  {
+    "name": "listview_index_max_is_not_length",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 1..3>) Int => xs[1]\n"
+    },
+    "expect": [
+      "E-REF-002"
+    ]
+  },
+  {
+    "name": "listview_index_at_length",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..3>) Int => xs[3]\n"
+    },
+    "expect": [
+      "E-REF-002"
+    ]
+  },
+  {
+    "name": "listview_index_negative",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..3>) Int => xs[-1]\n"
+    },
+    "expect": [
+      "E-REF-002"
+    ]
+  },
+  {
+    "name": "listview_index_guard",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 0..3>, i: Int<0..>) Int { if i < xs.count() { return xs[i] }\n return -1 }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_index_loan",
+    "input": {
+      "source": "func value(xs: alias ListView[Int]<length: 3..3> from caller) Int => xs[1]\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_first",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..3>) Int => xs.first() ?? -1\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_at",
+    "input": {
+      "source": "try func value(xs: List[Int]<length: 3..3>) Int => xs.at(1) or fail\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_mutation_push",
+    "input": {
+      "source": "try func value(xs: editable List[Int]<length: 3..3>) { xs.push(4) }\n"
+    },
+    "expect": [
+      "E-REF-003"
+    ]
+  },
+  {
+    "name": "list_mutation_pop",
+    "input": {
+      "source": "try func value(xs: editable List[Int]<length: 3..3>) { discard xs.pop() }\n"
+    },
+    "expect": [
+      "E-REF-003"
+    ]
+  },
+  {
+    "name": "list_mutation_clear",
+    "input": {
+      "source": "try func value(xs: editable List[Int]<length: 3..3>) { xs.clear() }\n"
+    },
+    "expect": [
+      "E-REF-003"
+    ]
+  },
+  {
+    "name": "list_mutation_set",
+    "input": {
+      "source": "try func value(xs: editable List[Int]<length: 3..3>) { xs.set(1, 4) or fail }\n"
+    },
+    "expect": [
+      "E-REF-003"
+    ]
+  },
+  {
+    "name": "list_editable_loan",
+    "input": {
+      "source": "func edit(xs: editable List[Int]) {}\nfunc value(xs: editable List[Int]<length: 3..3>) { edit(editable xs) }\n"
+    },
+    "expect": [
+      "E-REF-003"
+    ]
+  },
+  {
+    "name": "list_index_assignment",
+    "input": {
+      "source": "func value(xs: editable List[Int]<length: 3..3>) { xs[1] = 4 }\n"
+    },
+    "expect": [
+      "E-REF-003"
+    ]
+  },
+  {
+    "name": "bytes_get",
+    "input": {
+      "source": "func value(xs: Bytes<length: 3..3>) Byte? => xs.get(1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "bytes_count",
+    "input": {
+      "source": "func value(xs: Bytes<length: 3..3>) Int => xs.byteCount()\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "bytesview_get",
+    "input": {
+      "source": "func value(xs: BytesView<length: 3..3>) Byte? => xs.get(1)\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "bytesview_count",
+    "input": {
+      "source": "func value(xs: BytesView<length: 3..3>) Int => xs.byteCount()\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "text_no_string_float",
+    "input": {
+      "source": "func value(text: String) { discard text as Float }\n"
+    },
+    "expect": [
+      "E-TYP-180"
+    ]
+  },
+  {
+    "name": "text_no_stringview_float",
+    "input": {
+      "source": "func value(text: StringView) { discard text as Float }\n"
+    },
+    "expect": [
+      "E-TYP-180"
+    ]
+  },
+  {
+    "name": "text_no_string_float32",
+    "input": {
+      "source": "func value(text: String) { discard text as Float32 }\n"
+    },
+    "expect": [
+      "E-TYP-180"
+    ]
+  },
+  {
+    "name": "text_no_stringview_float32",
+    "input": {
+      "source": "func value(text: StringView) { discard text as Float32 }\n"
+    },
+    "expect": [
+      "E-TYP-180"
+    ]
+  },
+  {
+    "name": "text_no_string_bigint",
+    "input": {
+      "source": "func value(text: String) { discard text as BigInt }\n"
+    },
+    "expect": [
+      "E-TYP-180"
+    ]
+  },
+  {
+    "name": "text_no_stringview_bigint",
+    "input": {
+      "source": "func value(text: StringView) { discard text as BigInt }\n"
+    },
+    "expect": [
+      "E-TYP-180"
+    ]
+  },
+  {
+    "name": "text_no_string_int_refined",
+    "input": {
+      "source": "func value(text: String) { discard text as Int<0..10> }\n"
+    },
+    "expect": [
+      "E-TYP-180"
+    ]
+  },
+  {
+    "name": "text_no_stringview_int_refined",
+    "input": {
+      "source": "func value(text: StringView) { discard text as Int<0..10> }\n"
+    },
+    "expect": [
+      "E-TYP-180"
+    ]
+  },
+  {
+    "name": "text_refine_in_steps",
+    "input": {
+      "source": "try func value(text: StringView) Int<0..10> { let n = text as Int or fail\n return n as Int<0..10> or fail }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_zip_refined_inference",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..5>) List[(Int, Int)] { let zipped = xs.zip(xs)\n return zipped }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_zip_refined_inference",
+    "input": {
+      "source": "func value(xs: ListView[Int]<length: 3..5>) List[(Int, Int)] { let zipped = xs.zip(xs)\n return zipped }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_cursor",
+    "input": {
+      "source": "func value(xs: List[Int]<length: 3..3>) ListCursor[Int] from xs => xs.iterate()\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "list_index_field_assignment",
+    "input": {
+      "source": "class Box { export xs: List[Int]<length: 3..3> }\nfunc value(box: editable Box) { box.xs[1] = 4 }\n"
+    },
+    "expect": [
+      "E-REF-003"
+    ]
+  },
+  {
+    "name": "listview_refine_read",
+    "input": {
+      "source": "try func value(xs: ListView[Int]) Int { let held = xs as ListView[Int]<length: 3..3> or fail\n return held[1] }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_refine_return_origin",
+    "input": {
+      "source": "try func value(xs: ListView[Int]) ListView[Int]<length: 3..3> from xs => xs as ListView[Int]<length: 3..3> or fail\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "listview_refine_missing_origin",
+    "input": {
+      "source": "try func value(xs: ListView[Int]) ListView[Int]<length: 3..3> => xs as ListView[Int]<length: 3..3> or fail\n"
+    },
+    "expect": [
+      "E-OWN-002",
+      "E-OWN-053"
+    ]
+  },
+  {
+    "name": "bytesview_refine_read",
+    "input": {
+      "source": "try func value(xs: BytesView) Int { let held = xs as BytesView<length: 3..3> or fail\n return held.byteCount() }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "bytesview_refine_return_origin",
+    "input": {
+      "source": "try func value(xs: BytesView) BytesView<length: 3..3> from xs => xs as BytesView<length: 3..3> or fail\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "bytesview_refine_missing_origin",
+    "input": {
+      "source": "try func value(xs: BytesView) BytesView<length: 3..3> => xs as BytesView<length: 3..3> or fail\n"
+    },
+    "expect": [
+      "E-OWN-002",
+      "E-OWN-053"
+    ]
+  },
+  {
+    "name": "stringview_refine_read",
+    "input": {
+      "source": "try func value(xs: StringView) Int { let held = xs as StringView<scalars: 3..3> or fail\n return held.scalarCount() }\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "stringview_refine_return_origin",
+    "input": {
+      "source": "try func value(xs: StringView) StringView<scalars: 3..3> from xs => xs as StringView<scalars: 3..3> or fail\n"
+    },
+    "expect": []
+  },
+  {
+    "name": "stringview_refine_missing_origin",
+    "input": {
+      "source": "try func value(xs: StringView) StringView<scalars: 3..3> => xs as StringView<scalars: 3..3> or fail\n"
+    },
+    "expect": [
+      "E-OWN-002",
+      "E-OWN-053"
+    ]
+  }
+]

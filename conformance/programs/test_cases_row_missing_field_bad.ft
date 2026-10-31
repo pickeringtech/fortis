@@ -1,0 +1,12 @@
+// reject: E-TYP-050 (at the marked line)
+// covers: LANG-14-01
+// Every row of a `cases` table has the fields the body reads (14; D-50.3): a row without `expected` is rejected at the
+// row, as a constructor call lacking a field is.
+pure func percent(part: Int<0..100>) Int => part
+
+test "percent" cases {
+  "low":  { part: 0, expected: 0 }
+  "bare": { part: 5 }                          // reject: E-TYP-050
+} as row {
+  expect percent(row.part) == row.expected
+}

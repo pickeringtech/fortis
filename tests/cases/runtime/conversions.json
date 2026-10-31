@@ -1,0 +1,1191 @@
+[
+  {
+    "name": "lr6_13_int8_below",
+    "input": {
+      "kind": "int",
+      "target": "Int8",
+      "value": "-129",
+      "low": "-128",
+      "high": "127"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "-129",
+        "low": "-128",
+        "high": "127"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_int8_low",
+    "input": {
+      "kind": "int",
+      "target": "Int8",
+      "value": "-128",
+      "low": "-128",
+      "high": "127"
+    },
+    "expect": "-128"
+  },
+  {
+    "name": "lr6_13_int8_high",
+    "input": {
+      "kind": "int",
+      "target": "Int8",
+      "value": "127",
+      "low": "-128",
+      "high": "127"
+    },
+    "expect": "127"
+  },
+  {
+    "name": "lr6_13_int8_above",
+    "input": {
+      "kind": "int",
+      "target": "Int8",
+      "value": "128",
+      "low": "-128",
+      "high": "127"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "128",
+        "low": "-128",
+        "high": "127"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_uint8_below",
+    "input": {
+      "kind": "int",
+      "target": "UInt8",
+      "value": "-1",
+      "low": "0",
+      "high": "255"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "-1",
+        "low": "0",
+        "high": "255"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_uint8_low",
+    "input": {
+      "kind": "int",
+      "target": "UInt8",
+      "value": "0",
+      "low": "0",
+      "high": "255"
+    },
+    "expect": "0"
+  },
+  {
+    "name": "lr6_13_uint8_high",
+    "input": {
+      "kind": "int",
+      "target": "UInt8",
+      "value": "255",
+      "low": "0",
+      "high": "255"
+    },
+    "expect": "255"
+  },
+  {
+    "name": "lr6_13_uint8_above",
+    "input": {
+      "kind": "int",
+      "target": "UInt8",
+      "value": "256",
+      "low": "0",
+      "high": "255"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "256",
+        "low": "0",
+        "high": "255"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_int16_below",
+    "input": {
+      "kind": "int",
+      "target": "Int16",
+      "value": "-32769",
+      "low": "-32768",
+      "high": "32767"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "-32769",
+        "low": "-32768",
+        "high": "32767"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_int16_low",
+    "input": {
+      "kind": "int",
+      "target": "Int16",
+      "value": "-32768",
+      "low": "-32768",
+      "high": "32767"
+    },
+    "expect": "-32768"
+  },
+  {
+    "name": "lr6_13_int16_high",
+    "input": {
+      "kind": "int",
+      "target": "Int16",
+      "value": "32767",
+      "low": "-32768",
+      "high": "32767"
+    },
+    "expect": "32767"
+  },
+  {
+    "name": "lr6_13_int16_above",
+    "input": {
+      "kind": "int",
+      "target": "Int16",
+      "value": "32768",
+      "low": "-32768",
+      "high": "32767"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "32768",
+        "low": "-32768",
+        "high": "32767"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_uint16_below",
+    "input": {
+      "kind": "int",
+      "target": "UInt16",
+      "value": "-1",
+      "low": "0",
+      "high": "65535"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "-1",
+        "low": "0",
+        "high": "65535"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_uint16_low",
+    "input": {
+      "kind": "int",
+      "target": "UInt16",
+      "value": "0",
+      "low": "0",
+      "high": "65535"
+    },
+    "expect": "0"
+  },
+  {
+    "name": "lr6_13_uint16_high",
+    "input": {
+      "kind": "int",
+      "target": "UInt16",
+      "value": "65535",
+      "low": "0",
+      "high": "65535"
+    },
+    "expect": "65535"
+  },
+  {
+    "name": "lr6_13_uint16_above",
+    "input": {
+      "kind": "int",
+      "target": "UInt16",
+      "value": "65536",
+      "low": "0",
+      "high": "65535"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "65536",
+        "low": "0",
+        "high": "65535"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_int32_below",
+    "input": {
+      "kind": "int",
+      "target": "Int32",
+      "value": "-2147483649",
+      "low": "-2147483648",
+      "high": "2147483647"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "-2147483649",
+        "low": "-2147483648",
+        "high": "2147483647"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_int32_low",
+    "input": {
+      "kind": "int",
+      "target": "Int32",
+      "value": "-2147483648",
+      "low": "-2147483648",
+      "high": "2147483647"
+    },
+    "expect": "-2147483648"
+  },
+  {
+    "name": "lr6_13_int32_high",
+    "input": {
+      "kind": "int",
+      "target": "Int32",
+      "value": "2147483647",
+      "low": "-2147483648",
+      "high": "2147483647"
+    },
+    "expect": "2147483647"
+  },
+  {
+    "name": "lr6_13_int32_above",
+    "input": {
+      "kind": "int",
+      "target": "Int32",
+      "value": "2147483648",
+      "low": "-2147483648",
+      "high": "2147483647"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "2147483648",
+        "low": "-2147483648",
+        "high": "2147483647"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_uint32_below",
+    "input": {
+      "kind": "int",
+      "target": "UInt32",
+      "value": "-1",
+      "low": "0",
+      "high": "4294967295"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "-1",
+        "low": "0",
+        "high": "4294967295"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_uint32_low",
+    "input": {
+      "kind": "int",
+      "target": "UInt32",
+      "value": "0",
+      "low": "0",
+      "high": "4294967295"
+    },
+    "expect": "0"
+  },
+  {
+    "name": "lr6_13_uint32_high",
+    "input": {
+      "kind": "int",
+      "target": "UInt32",
+      "value": "4294967295",
+      "low": "0",
+      "high": "4294967295"
+    },
+    "expect": "4294967295"
+  },
+  {
+    "name": "lr6_13_uint32_above",
+    "input": {
+      "kind": "int",
+      "target": "UInt32",
+      "value": "4294967296",
+      "low": "0",
+      "high": "4294967295"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "4294967296",
+        "low": "0",
+        "high": "4294967295"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_int_below",
+    "input": {
+      "kind": "int",
+      "target": "Int",
+      "value": "-9223372036854775809",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "-9223372036854775809",
+        "low": "-9223372036854775808",
+        "high": "9223372036854775807"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_int_low",
+    "input": {
+      "kind": "int",
+      "target": "Int",
+      "value": "-9223372036854775808",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": "-9223372036854775808"
+  },
+  {
+    "name": "lr6_13_int_high",
+    "input": {
+      "kind": "int",
+      "target": "Int",
+      "value": "9223372036854775807",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": "9223372036854775807"
+  },
+  {
+    "name": "lr6_13_int_above",
+    "input": {
+      "kind": "int",
+      "target": "Int",
+      "value": "9223372036854775808",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "9223372036854775808",
+        "low": "-9223372036854775808",
+        "high": "9223372036854775807"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_uint64_below",
+    "input": {
+      "kind": "int",
+      "target": "UInt64",
+      "value": "-1",
+      "low": "0",
+      "high": "18446744073709551615"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "-1",
+        "low": "0",
+        "high": "18446744073709551615"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_uint64_low",
+    "input": {
+      "kind": "int",
+      "target": "UInt64",
+      "value": "0",
+      "low": "0",
+      "high": "18446744073709551615"
+    },
+    "expect": "0"
+  },
+  {
+    "name": "lr6_13_uint64_high",
+    "input": {
+      "kind": "int",
+      "target": "UInt64",
+      "value": "18446744073709551615",
+      "low": "0",
+      "high": "18446744073709551615"
+    },
+    "expect": "18446744073709551615"
+  },
+  {
+    "name": "lr6_13_uint64_above",
+    "input": {
+      "kind": "int",
+      "target": "UInt64",
+      "value": "18446744073709551616",
+      "low": "0",
+      "high": "18446744073709551615"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "18446744073709551616",
+        "low": "0",
+        "high": "18446744073709551615"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_0",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": ""
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_1",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "+1",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "+1"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_2",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "01",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "01"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_3",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "-0",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "-0"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_4",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": " 1",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": " 1"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_5",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "1 ",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "1 "
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_6",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "1\n",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "1\n"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_7",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "1_0",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "1_0"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_8",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "1.0",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "1.0"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_9",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "0x10",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "0x10"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_10",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "--1",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "--1"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_invalid_11",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "١",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "١"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_int_valid_0",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "0",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": "0"
+  },
+  {
+    "name": "lr6_13_parse_int_valid_1",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "-1",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": "-1"
+  },
+  {
+    "name": "lr6_13_parse_int_valid_2",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "-9223372036854775808",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": "-9223372036854775808"
+  },
+  {
+    "name": "lr6_13_parse_int_valid_3",
+    "input": {
+      "kind": "text",
+      "target": "Int",
+      "value": "9223372036854775807",
+      "low": "-9223372036854775808",
+      "high": "9223372036854775807"
+    },
+    "expect": "9223372036854775807"
+  },
+  {
+    "name": "lr6_13_parse_decimal_0",
+    "input": {
+      "kind": "text",
+      "target": "Decimal",
+      "value": "0"
+    },
+    "expect": "0"
+  },
+  {
+    "name": "lr6_13_parse_decimal_1",
+    "input": {
+      "kind": "text",
+      "target": "Decimal",
+      "value": "1.50"
+    },
+    "expect": "1.50"
+  },
+  {
+    "name": "lr6_13_parse_decimal_2",
+    "input": {
+      "kind": "text",
+      "target": "Decimal",
+      "value": "-3.25"
+    },
+    "expect": "-3.25"
+  },
+  {
+    "name": "lr6_13_parse_decimal_3",
+    "input": {
+      "kind": "text",
+      "target": "Decimal",
+      "value": "-0"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "-0"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_decimal_4",
+    "input": {
+      "kind": "text",
+      "target": "Decimal",
+      "value": "-0.00"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "-0.00"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_decimal_5",
+    "input": {
+      "kind": "text",
+      "target": "Decimal",
+      "value": "1."
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "1."
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_decimal_6",
+    "input": {
+      "kind": "text",
+      "target": "Decimal",
+      "value": "01.2"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "01.2"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_decimal_7",
+    "input": {
+      "kind": "text",
+      "target": "Decimal",
+      "value": "1.0\n"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "1.0\n"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_decimal_8",
+    "input": {
+      "kind": "text",
+      "target": "Decimal",
+      "value": "1.00000000000000000000000000000"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "1.00000000000000000000000000000"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_bool_0",
+    "input": {
+      "kind": "text",
+      "target": "Bool",
+      "value": "true"
+    },
+    "expect": "true"
+  },
+  {
+    "name": "lr6_13_parse_bool_1",
+    "input": {
+      "kind": "text",
+      "target": "Bool",
+      "value": "false"
+    },
+    "expect": "false"
+  },
+  {
+    "name": "lr6_13_parse_bool_2",
+    "input": {
+      "kind": "text",
+      "target": "Bool",
+      "value": "True"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "True"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_bool_3",
+    "input": {
+      "kind": "text",
+      "target": "Bool",
+      "value": "FALSE"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "FALSE"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_bool_4",
+    "input": {
+      "kind": "text",
+      "target": "Bool",
+      "value": ""
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": ""
+      }
+    }
+  },
+  {
+    "name": "lr6_13_parse_bool_5",
+    "input": {
+      "kind": "text",
+      "target": "Bool",
+      "value": "true\n"
+    },
+    "expect": {
+      "code": "conversion.parse",
+      "payload": {
+        "text": "true\n"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_scalar_0",
+    "input": {
+      "kind": "int",
+      "target": "Scalar",
+      "value": "-1"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "-1",
+        "low": "0",
+        "high": "1114111"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_scalar_1",
+    "input": {
+      "kind": "int",
+      "target": "Scalar",
+      "value": "0"
+    },
+    "expect": "\u0000"
+  },
+  {
+    "name": "lr6_13_scalar_2",
+    "input": {
+      "kind": "int",
+      "target": "Scalar",
+      "value": "65"
+    },
+    "expect": "A"
+  },
+  {
+    "name": "lr6_13_scalar_3",
+    "input": {
+      "kind": "int",
+      "target": "Scalar",
+      "value": "55295"
+    },
+    "expect": "퟿"
+  },
+  {
+    "name": "lr6_13_scalar_4",
+    "input": {
+      "kind": "int",
+      "target": "Scalar",
+      "value": "55296"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "55296",
+        "low": "0",
+        "high": "1114111"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_scalar_5",
+    "input": {
+      "kind": "int",
+      "target": "Scalar",
+      "value": "57343"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "57343",
+        "low": "0",
+        "high": "1114111"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_scalar_6",
+    "input": {
+      "kind": "int",
+      "target": "Scalar",
+      "value": "57344"
+    },
+    "expect": ""
+  },
+  {
+    "name": "lr6_13_scalar_7",
+    "input": {
+      "kind": "int",
+      "target": "Scalar",
+      "value": "1114111"
+    },
+    "expect": "􏿿"
+  },
+  {
+    "name": "lr6_13_scalar_8",
+    "input": {
+      "kind": "int",
+      "target": "Scalar",
+      "value": "1114112"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "1114112",
+        "low": "0",
+        "high": "1114111"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_decimal_to_int_0",
+    "input": {
+      "kind": "decimal",
+      "value": "1.00",
+      "target": "Int8",
+      "low": "-128",
+      "high": "127"
+    },
+    "expect": "1"
+  },
+  {
+    "name": "lr6_13_decimal_to_int_1",
+    "input": {
+      "kind": "decimal",
+      "value": "-7.0",
+      "target": "Int8",
+      "low": "-128",
+      "high": "127"
+    },
+    "expect": "-7"
+  },
+  {
+    "name": "lr6_13_decimal_to_int_2",
+    "input": {
+      "kind": "decimal",
+      "value": "0.01",
+      "target": "Int8",
+      "low": "-128",
+      "high": "127"
+    },
+    "expect": {
+      "code": "conversion.not_integral",
+      "payload": {
+        "value": "0.01"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_decimal_to_int_3",
+    "input": {
+      "kind": "decimal",
+      "value": "128",
+      "target": "Int8",
+      "low": "-128",
+      "high": "127"
+    },
+    "expect": {
+      "code": "conversion.out_of_range",
+      "payload": {
+        "value": "128",
+        "low": "-128",
+        "high": "127"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_utf8_0",
+    "input": {
+      "kind": "bytes",
+      "value": [],
+      "target": "String"
+    },
+    "expect": ""
+  },
+  {
+    "name": "lr6_13_utf8_1",
+    "input": {
+      "kind": "bytes",
+      "value": [
+        65
+      ],
+      "target": "String"
+    },
+    "expect": "A"
+  },
+  {
+    "name": "lr6_13_utf8_2",
+    "input": {
+      "kind": "bytes",
+      "value": [
+        195,
+        169
+      ],
+      "target": "String"
+    },
+    "expect": "é"
+  },
+  {
+    "name": "lr6_13_utf8_3",
+    "input": {
+      "kind": "bytes",
+      "value": [
+        65,
+        255
+      ],
+      "target": "String"
+    },
+    "expect": {
+      "code": "conversion.not_utf8",
+      "payload": {
+        "position": "1"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_utf8_4",
+    "input": {
+      "kind": "bytes",
+      "value": [
+        240,
+        159
+      ],
+      "target": "String"
+    },
+    "expect": {
+      "code": "conversion.not_utf8",
+      "payload": {
+        "position": "0"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_utf8_5",
+    "input": {
+      "kind": "bytes",
+      "value": [
+        237,
+        160,
+        128
+      ],
+      "target": "String"
+    },
+    "expect": {
+      "code": "conversion.not_utf8",
+      "payload": {
+        "position": "0"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_float_0",
+    "input": {
+      "kind": "int",
+      "target": "Float",
+      "value": "0"
+    },
+    "expect": "0"
+  },
+  {
+    "name": "lr6_13_float_1",
+    "input": {
+      "kind": "int",
+      "target": "Float",
+      "value": "9007199254740992"
+    },
+    "expect": "9007199254740992"
+  },
+  {
+    "name": "lr6_13_float_2",
+    "input": {
+      "kind": "int",
+      "target": "Float",
+      "value": "9007199254740993"
+    },
+    "expect": {
+      "code": "conversion.not_exact",
+      "payload": {
+        "value": "9007199254740993"
+      }
+    }
+  },
+  {
+    "name": "lr6_13_float_3",
+    "input": {
+      "kind": "int",
+      "target": "Float",
+      "value": "-9223372036854775808"
+    },
+    "expect": "-9223372036854775808"
+  },
+  {
+    "name": "lr6_13_float_4",
+    "input": {
+      "kind": "int",
+      "target": "Float",
+      "value": "9223372036854775807"
+    },
+    "expect": {
+      "code": "conversion.not_exact",
+      "payload": {
+        "value": "9223372036854775807"
+      }
+    }
+  }
+]

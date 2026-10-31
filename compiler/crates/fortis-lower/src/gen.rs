@@ -37,6 +37,7 @@ fn refutable(p: &Pattern) -> bool {
 fn pure_discard(p: &Pattern) -> bool {
     match p {
         Pattern::Wildcard | Pattern::Otherwise(None) => true,
+        Pattern::Range { .. } => true, // a range pattern binds no name (9.8)
         Pattern::Present(i) | Pattern::Success(i) | Pattern::Failure(i) => pure_discard(i),
         Pattern::Tuple(ps) => ps.iter().all(pure_discard),
         Pattern::Variant { fields, .. } | Pattern::Class { fields, .. } | Pattern::Record(fields) => fields.iter().all(|(_, sp)| pure_discard(sp)),
@@ -190,6 +191,7 @@ pub struct FnGen<'p> {
     give_ty: Vec<Type>,
     /// the value type of each open `catch` (what its `recover` gives)
     recover_ty: Vec<Type>,
+    recover_held: Vec<bool>,
     /// the Abandonable locals of each open block (abandoned when a failure leaves the function, 12.4)
     abandonable: Vec<Vec<LocalId>>,
     /// for each open block (aligned with `abandonable`): owned locals that own a cleanup, directly or through a
@@ -233,6 +235,9 @@ pub struct FnGen<'p> {
     /// the Rust of each statement temporary's value. The slot is `Option`, initialised where the operand is
     /// evaluated, so a skipped `&&`/`||` operand is never created and a second lowering initialises once (5.7)
     temp_inits: HashMap<LocalId, String>,
+    /// statement temporaries that hold the `MaybeOwned` of an `or recover` whose try side succeeds with a loan
+    /// (D-446): the slot owns the replacement its fallback made, and announces only that one when it drops
+    mo_temps: HashSet<LocalId>,
     /// a `let` bound to a lent `??` that can give a value of its own (its fallback moved or made): the name of the
     /// `MaybeOwned` that holds that value beside the binding, so a move of the binding into a tuple moves what it
     /// owns with it (7.9; D-367)
@@ -298,7 +303,7 @@ impl<'p> FnGen<'p> {
             }
         }
         let manual = manual_locals(prog, f);
-        FnGen { prog, f, names, forms, is_try: f.is_try(), is_async: f.has("async"), scopes: vec![None], quiet: vec![false], pending_scope: None, deferred_lets: vec![], deferred_binds: vec![], future_fns: HashMap::new(), deferred_decls: vec![], detachable: detached_tasks(f), launch_detachable: false, closure_as_future: false, box_result: false, test: f.label.starts_with("test "), labels: 0, await_lets: vec![], await_depth: 0, give: vec![], recover: vec![], arm_prelude: vec![], arm_guards: vec![], boxed_locals: vec![], last_box: None, guard_prelude: vec![], pat_guards: vec![], pat_ref: false, in_guard: false, guard_as_ref: vec![], closure_refs: None, closure_generic: None, give_ty: vec![], recover_ty: vec![], abandonable: vec![vec![]], cleanups: vec![owned_cleanup_params(prog, f)], discards: vec![vec![]], arm_discards: vec![], discard_ord: vec![], defers: vec![vec![]], loops: vec![], give_depth: vec![], recover_depth: vec![], moved: Default::default(), partial: HashSet::new(), manual, hoist: vec![], hoist_owners: vec![], emitted_temps: vec![], temp_inits: HashMap::new(), held: HashMap::new(), split_hoisted: HashSet::new(), transfer_drops: vec![], in_transfer: false, audit, fn_names, errors: vec![] }
+        FnGen { prog, f, names, forms, is_try: f.is_try(), is_async: f.has("async"), scopes: vec![None], quiet: vec![false], pending_scope: None, deferred_lets: vec![], deferred_binds: vec![], future_fns: HashMap::new(), deferred_decls: vec![], detachable: detached_tasks(f), launch_detachable: false, closure_as_future: false, box_result: false, test: f.label.starts_with("test "), labels: 0, await_lets: vec![], await_depth: 0, give: vec![], recover: vec![], arm_prelude: vec![], arm_guards: vec![], boxed_locals: vec![], last_box: None, guard_prelude: vec![], pat_guards: vec![], pat_ref: false, in_guard: false, guard_as_ref: vec![], closure_refs: None, closure_generic: None, give_ty: vec![], recover_ty: vec![], recover_held: vec![], abandonable: vec![vec![]], cleanups: vec![owned_cleanup_params(prog, f)], discards: vec![vec![]], arm_discards: vec![], discard_ord: vec![], defers: vec![vec![]], loops: vec![], give_depth: vec![], recover_depth: vec![], moved: Default::default(), partial: HashSet::new(), manual, hoist: vec![], hoist_owners: vec![], emitted_temps: vec![], temp_inits: HashMap::new(), mo_temps: HashSet::new(), held: HashMap::new(), split_hoisted: HashSet::new(), transfer_drops: vec![], in_transfer: false, audit, fn_names, errors: vec![] }
     }
 
     pub fn err_pub(&mut self, line: u32, m: impl Into<String>) -> String {
@@ -432,8 +437,10 @@ impl<'p> FnGen<'p> {
         if !matches!(strip(&a.ty), Type::Optional(i) if i.is_loan()) {
             return None;
         }
-        let text = matches!(ty, Type::Loan { inner, .. } if is_string(inner));
+        let text = matches!(ty, Type::Loan { inner, .. } if is_string(inner, self.prog));
         let fb = match &b.kind {
+            _ if name_of(&b.ty) == Some("Never") => self.expr(b, Want::Value),
+            ExprKind::Const(Const::Str(s)) if text => format!("{s:?}"),
             ExprKind::Place(_, Use::Read | Use::Alias) if text => format!("AsRef::<str>::as_ref({})", self.expr(b, Want::Str)),
             ExprKind::Place(_, Use::Read | Use::Alias) => self.expr(b, Want::Ref),
             ExprKind::Coalesce(ba, bb) if lent_coalesce_ty(&b.ty, self.prog) => {
@@ -458,7 +465,7 @@ impl<'p> FnGen<'p> {
     /// reference into them) or the left side is an optional read parameter (lowered on its own).
     fn holds_fallback(&self, a: &Expr, b: &Expr, ty: &Type) -> bool {
         lent_coalesce_ty(ty, self.prog)
-            && !matches!(ty, Type::Loan { inner, .. } if is_string(inner))
+            && !matches!(ty, Type::Loan { inner, .. } if is_string(inner, self.prog))
             && !matches!(&a.kind, ExprKind::Place(p, _) if p.proj.is_empty() && self.forms[p.local as usize] == Form::OptRef)
             && !(matches!(strip(&a.ty), Type::Optional(i) if i.is_loan()) && wholly_borrowed(b, self.prog))
     }
@@ -491,7 +498,7 @@ impl<'p> FnGen<'p> {
             ExprKind::Coalesce(ba, bb) if lent_coalesce_ty(&b.ty, self.prog) => Some(self.lent_coalesce(ba, bb, &b.ty)),
             _ => None,
         };
-        if matches!(ty, Type::Loan { inner, .. } if is_string(inner)) {
+        if matches!(ty, Type::Loan { inner, .. } if is_string(inner, self.prog)) {
             let fb = match (&b.kind, nested) {
                 (_, Some(n)) => n,
                 (ExprKind::Const(Const::Str(s)), None) => format!("std::borrow::Cow::Borrowed({s:?})"),
@@ -506,6 +513,52 @@ impl<'p> FnGen<'p> {
             None => format!("rt::MaybeOwned::Owned({})", self.expr(b, Want::Value)),
         };
         format!("(match {l} {{ Some(__v) => rt::IntoMaybeOwned::into_maybe_owned(__v), None => {fb} }})")
+    }
+
+    /// Keep ownership at each recovery join, including nested replacements. No branch borrows
+    /// a holder created inside that branch: the holder itself reaches the enclosing owner.
+    fn holder_value(&mut self, e: &Expr, inner: &Type) -> String {
+        if recovery_holder_inner(e, self.prog).is_some() {
+            return self.recovery_holder(e);
+        }
+        if let ExprKind::Coalesce(a, b) = &e.kind {
+            if lent_coalesce_ty(&e.ty, self.prog) { return self.lent_coalesce(a, b, &e.ty); }
+        }
+        if let ExprKind::Place(p, Use::Move) = &e.kind {
+            if p.proj.is_empty() && self.held.contains_key(&p.local) { return self.tuple_part(e); }
+        }
+        let borrowed = matches!(e.kind, ExprKind::Place(_, Use::Read | Use::Alias)) || e.ty.is_loan();
+        let value = self.expr(e, if borrowed { Want::Ref } else { Want::Value });
+        let holder = if is_string(inner, self.prog) { "std::borrow::Cow" } else { "rt::MaybeOwned" };
+        let variant = if borrowed { "Borrowed" } else { "Owned" };
+        format!("{holder}::{variant}({value})")
+    }
+
+    fn recovery_holder(&mut self, e: &Expr) -> String {
+        let inner = recovery_holder_inner(e, self.prog).unwrap();
+        let holder = if is_string(&inner, self.prog) { "std::borrow::Cow" } else { "rt::MaybeOwned" };
+        match &e.kind {
+            ExprKind::OrRecover(a, b) => {
+                let value = self.expr(a, Want::Value);
+                let fallback = self.holder_value(b, &inner);
+                format!("(match {value} {{ Ok(__v) => {holder}::Borrowed(__v), Err(_) => {fallback} }})")
+            }
+            ExprKind::Catch { value, bind, handler } => {
+                let value = self.expr(value, Want::Value);
+                let label = self.label();
+                self.recover.push(label.clone());
+                self.recover_ty.push(e.ty.clone());
+                self.recover_held.push(true);
+                self.recover_depth.push(self.defers.len());
+                let body = self.block_stmts(handler);
+                self.recover_depth.pop();
+                self.recover_held.pop();
+                self.recover_ty.pop();
+                self.recover.pop();
+                format!("(match {value} {{ Ok(__v) => {holder}::Borrowed(__v), Err({}) => {label}: {{\n{}\n}} }})", self.binding(*bind), indent(&body, 1))
+            }
+            _ => unreachable!(),
+        }
     }
 
     fn place_expr(&mut self, p: &Place, u: Use, ty: &Type, want: Want, line: u32) -> String {
@@ -558,7 +611,7 @@ impl<'p> FnGen<'p> {
         let triv = trivial(ty, self.prog);
         // a tuple's element whose type is a loan is a reference, or the `MaybeOwned` of a lent `??` the tuple holds
         // (D-367): read through `&*`, it is the reference either way, and an optional one through `as_deref()`
-        let element_loan = |t: &Type| matches!(t, Type::Loan { inner, .. } if !is_string(inner) && !trivial(inner, self.prog)) && !loan_is_value(t, self.prog);
+        let element_loan = |t: &Type| matches!(t, Type::Loan { inner, .. } if !is_string(inner, self.prog) && !trivial(inner, self.prog)) && !loan_is_value(t, self.prog);
         let element = !whole && matches!(want, Want::Value | Want::Any) && matches!(p.proj.last(), Some(Proj::Tuple(_)));
         let code = if element && matches!(u, Use::Read | Use::Copy) && element_loan(strip(&declared)) {
             format!("(&*{code})")
@@ -574,7 +627,7 @@ impl<'p> FnGen<'p> {
                         return if whole && form != Form::Owned { format!("(*{code})") } else { code };
                     }
                     self.audit.clone_at(&self.f.name, line, "copy");
-                    if is_string(ty) {
+                    if is_string(ty, self.prog) {
                         format!("{code}.to_string() /* copy */")
                     } else {
                         format!("{code}.clone() /* copy */")
@@ -613,6 +666,11 @@ impl<'p> FnGen<'p> {
                     }
                     if triv && whole && form != Form::Owned {
                         format!("(*{code})")
+                    } else if u == Use::Read && (!whole || form != Form::Owned) && matches!(strip(ty), Type::TypeParam(_)) && !self.f.has("noalloc") {
+                        // a generic value read through a loan where a value is wanted (`return b` for `b: T`, which
+                        // the checker admits since `T` may be any type): its clone, the value a read loan shows (D-82)
+                        self.audit.clone_at(&self.f.name, line, "generic value");
+                        format!("{code}.clone()")
                     } else {
                         code
                     }
@@ -672,7 +730,7 @@ impl<'p> FnGen<'p> {
             (_, Use::Move) => take,
             (Want::Value, Use::Copy) => {
                 self.audit.clone_at(&self.f.name, line, "copy");
-                if is_string(ty) {
+                if is_string(ty, self.prog) {
                     format!("{name}.as_ref().unwrap().to_string() /* copy */")
                 } else {
                     format!("{name}.as_ref().unwrap().clone() /* copy */")
@@ -696,10 +754,10 @@ impl<'p> FnGen<'p> {
             self.audit.clone_at(&self.f.name, line, "copy");
         }
         match (narrowed, copy) {
-            (true, true) if is_string(ty) => format!("{code}.unwrap().to_string() /* copy */"),
+            (true, true) if is_string(ty, self.prog) => format!("{code}.unwrap().to_string() /* copy */"),
             (true, true) => format!("{code}.unwrap().clone() /* copy */"),
             (true, false) => format!("{code}.unwrap()"),
-            (false, true) if matches!(strip(ty), Type::Optional(i) if is_string(i)) => format!("{code}.map(|v| v.to_string()) /* copy */"),
+            (false, true) if matches!(strip(ty), Type::Optional(i) if is_string(i, self.prog)) => format!("{code}.map(|v| v.to_string()) /* copy */"),
             (false, true) => format!("{code}.cloned() /* copy */"),
             (false, false) => code,
         }
@@ -708,7 +766,7 @@ impl<'p> FnGen<'p> {
     /// An argument for an optional read parameter, which is `Option<&T>` (D-2): a present value is lent (`Some(&x)`),
     /// `null` is `None`, such a parameter passes itself on, and any other optional is lent with `as_ref`.
     fn opt_read_arg(&mut self, e: &Expr, inner: &Type) -> String {
-        let text = is_string(inner);
+        let text = is_string(inner, self.prog);
         match &e.kind {
             ExprKind::Present(x) => {
                 if text {
@@ -722,9 +780,12 @@ impl<'p> FnGen<'p> {
             ExprKind::Place(p, _) if p.proj.is_empty() && self.forms[p.local as usize] == Form::OptRef => self.place(p),
             // an optional loan of a value that is not trivial (`xs.get(0)`, `m.get(k)`, a binding of one) is already
             // `Option<&T>`: it passes on as it is (D-338)
-            _ if !text && matches!(&e.ty, Type::Optional(i) if matches!(&**i, Type::Loan { inner: li, .. } if !trivial(li, self.prog) && !is_string(li))) => {
+            _ if !text && matches!(&e.ty, Type::Optional(i) if matches!(&**i, Type::Loan { inner: li, .. } if !trivial(li, self.prog) && !is_string(li, self.prog))) => {
                 self.expr(e, Want::Any)
             }
+            // an optional loan of text lent to a parameter whose present type is a type parameter (`Optional.map`,
+            // X-479) is `Option<&String>` already
+            _ if !text && crate::types::opt_loan_text(&e.ty, self.prog) => self.expr(e, Want::Any),
             // a present value the call did not wrap (a closure call's arguments are not coerced)
             _ if fortis_types::types::known(&e.ty) && !matches!(strip(&e.ty), Type::Optional(_)) => {
                 if text {
@@ -749,6 +810,19 @@ impl<'p> FnGen<'p> {
 
     /// An expression where a value of type `ty` is expected: a variant-keyed record literal is a `VariantMap`.
     pub fn expr_as(&mut self, e: &Expr, ty: &Type) -> String {
+        if let Type::Optional(inner) = strip(ty) {
+            if !matches!(strip(&e.ty), Type::Optional(_)) && !matches!(e.kind, ExprKind::Const(Const::Null)) && name_of(&e.ty) != Some("Never") {
+                return format!("Some({})", self.expr_as(e, inner));
+            }
+        }
+        if let (ExprKind::Record(fs), Type::Record(shape)) = (&e.kind, strip(ty)) {
+            self.audit.records.push(shape.clone());
+            let parts: Vec<_> = fs.iter().map(|(n, v)| {
+                let ty = shape.iter().find(|(f, _)| f == n).map(|(_, t)| t).unwrap_or(&v.ty);
+                format!("{}: {}", ident(n), self.expr_as(v, ty))
+            }).collect();
+            return format!("({} {{ {} }})", record_name(shape), parts.join(", "));
+        }
         if let (ExprKind::Record(fs), Some("VariantMap")) = (&e.kind, name_of(ty)) {
             let k = args_of(ty).first().map(|k| self.ty(k)).unwrap_or_default();
             let items: Vec<String> = fs.iter().map(|(n, v)| format!("({k}::{}, {})", ident(n), self.expr(v, Want::Value))).collect();
@@ -778,10 +852,23 @@ impl<'p> FnGen<'p> {
         match want {
             Want::Ref | Want::Str if !is_place && !formed && !field_ref => match &e.kind {
                 ExprKind::Const(Const::Str(_)) => code,
-                _ if matches!(e.ty, Type::Loan { .. }) && !loan_is_value(&e.ty, self.prog) => code,
+                // a loan-typed code is the reference already, except a field read: that is the place of the
+                // field behind its receiver's reference, and a reference wanted of it is the borrow of that
+                // place (D-449). A field of a statement temporary is borrowed by the field arm itself
+                // (`field_ref` above), and a text field read for an interpolation keeps its place form
+                _ if matches!(e.ty, Type::Loan { .. }) && !loan_is_value(&e.ty, self.prog)
+                    && !(matches!(want, Want::Ref) && matches!(&e.kind, ExprKind::Field(..))) => code,
                 _ => format!("&{code}"),
             },
-            Want::RefMut if !is_place && !formed => format!("&mut {code}"),
+            Want::RefMut if !is_place && !formed => {
+                // a call whose result is an exclusive loan is the `&mut` itself: reborrow it (`&mut *r`), as the
+                // alias arm above passes the reference on, instead of wrapping a second reference around it (D-185)
+                if matches!(&e.ty, Type::Loan { mode, .. } if mode == "editable") && !loan_is_value(&e.ty, self.prog) {
+                    format!("&mut *{code}")
+                } else {
+                    format!("&mut {code}")
+                }
+            }
             _ => code,
         }
     }
@@ -814,12 +901,15 @@ impl<'p> FnGen<'p> {
             ExprKind::Or(a, b) => format!("({} || {})", self.expr(a, Want::Value), self.expr(b, Want::Value)),
             ExprKind::Call { callee, args } => self.call(callee, args, &e.ty, line),
             ExprKind::Construct { ty, fields } => {
-                let mut fs: Vec<String> = fields.iter().map(|(n, v)| format!("{}: {}", ident(n), self.expr(v, Want::Value))).collect();
+                let mut fs: Vec<String> = fields.iter().map(|(n, v)| {
+                    let ft = self.member_ty(&e.ty, n);
+                    format!("{}: {}", ident(n), self.expr_as(v, &ft))
+                }).collect();
                 if self.prog.type_def(ty).map_or(false, |d| crate::phantom_ty(self.prog, d).is_some()) {
                     fs.push("__phantom: std::marker::PhantomData".into());
                 }
                 if crate::recursive_class(self.prog, ty) {
-                    return format!("{}(Box::new({}_ {{ {} }}))", ident(ty), ident(ty), fs.join(", "));
+                    return format!("{}(::std::boxed::Box::new({}_ {{ {} }}))", ident(ty), ident(ty), fs.join(", "));
                 }
                 // A struct literal is not an operand of `match` or `if`. The parentheses keep a field
                 // projection of a constructed temporary legal inside `or recover` (Rust grammar).
@@ -886,13 +976,25 @@ impl<'p> FnGen<'p> {
                 s
             }
             ExprKind::Tuple(es) => {
-                let parts: Vec<String> = es.iter().map(|x| self.tuple_part(x)).collect();
+                let types = match strip(&e.ty) { Type::Tuple(ts) => ts.clone(), _ => vec![] };
+                let parts: Vec<String> = es.iter().enumerate().map(|(i, x)| {
+                    let code = self.tuple_part(x);
+                    if types.get(i).map_or(false, |t| matches!(strip(t), Type::Optional(_))) && !matches!(strip(&x.ty), Type::Optional(_)) && !matches!(x.kind, ExprKind::Const(Const::Null)) {
+                        format!("Some({code})")
+                    } else { code }
+                }).collect();
                 format!("({}{})", parts.join(", "), if parts.len() == 1 { "," } else { "" })
             }
             ExprKind::Record(fs) => {
-                let shape: Vec<(String, Type)> = fs.iter().map(|(n, v)| (n.clone(), v.ty.clone())).collect();
+                let shape: Vec<(String, Type)> = match strip(&e.ty) {
+                    Type::Record(fields) => fields.clone(),
+                    _ => fs.iter().map(|(n, v)| (n.clone(), v.ty.clone())).collect(),
+                };
                 self.audit.records.push(shape.clone());
-                let parts: Vec<String> = fs.iter().map(|(n, v)| format!("{}: {}", ident(n), self.expr(v, Want::Value))).collect();
+                let parts: Vec<String> = fs.iter().map(|(n, v)| {
+                    let ty = shape.iter().find(|(field, _)| field == n).map(|(_, t)| t).unwrap_or(&v.ty);
+                    format!("{}: {}", ident(n), self.expr_as(v, ty))
+                }).collect();
                 // Same parentheses as a class constructor: `{ ... }.field` can sit in a `match` scrutinee.
                 format!("({} {{ {} }})", record_name(&shape), parts.join(", "))
             }
@@ -947,6 +1049,17 @@ impl<'p> FnGen<'p> {
                 };
                 let ft = self.member_ty(&inner, n);
                 let src = self.expr(a, Want::Any);
+                if matches!(strip(&e.ty), Type::Optional(i) if i.is_loan() && !trivial(i, self.prog)) {
+                    // The projection retains its source loan (7.9). Consuming an Option<&T> keeps the
+                    // referent's lifetime; borrowing that option would lend a temporary wrapper instead.
+                    // An owned option is lent in place. Neither case clones the projected field.
+                    let src = if matches!(strip(&a.ty), Type::Optional(i) if i.is_loan()) { src } else { format!("{src}.as_ref()") };
+                    return if matches!(strip(&ft), Type::Optional(_)) {
+                        format!("{src}.and_then(|v| v.{}.as_ref())", ident(n))
+                    } else {
+                        format!("{src}.map(|v| &v.{})", ident(n))
+                    };
+                }
                 let read = if trivial(&ft, self.prog) { format!("v.{}", ident(n)) } else { format!("v.{}.clone()", ident(n)) };
                 if matches!(strip(&ft), Type::Optional(_)) {
                     format!("{src}.as_ref().and_then(|v| {read})")
@@ -954,8 +1067,20 @@ impl<'p> FnGen<'p> {
                     format!("{src}.as_ref().map(|v| {read})")
                 }
             }
-            ExprKind::Present(a) => self.wrap_owned("Some", a),
-            ExprKind::Success(a) => self.wrap_owned("Ok", a),
+            ExprKind::Present(a) => {
+                // a literal wrapped into an optional borrowed text is the static text itself (D-390): the
+                // option is `Option<&str>` (D-353)
+                if opt_loan_text(&e.ty, self.prog) {
+                    if let ExprKind::Const(Const::Str(s)) = &a.kind {
+                        format!("Some({s:?})")
+                    } else {
+                        self.wrap_owned("Some", a)
+                    }
+                } else {
+                    self.wrap_owned("Some", a)
+                }
+            }
+            ExprKind::Success(a) => self.wrap_owned("rt::Outcome::Ok", a),
             // a borrowed element with a default (`xs.get(i) ?? ""`): the result is a loan, so the default is borrowed too
             // the canonical codec (6.10): generated `rt::codec::Codec` impls; refinements travel as descriptors
             ExprKind::Codec { op, target, arg } => {
@@ -988,7 +1113,11 @@ impl<'p> FnGen<'p> {
                     ExprKind::Place(p, _) => self.place(p),
                     _ => unreachable!(),
                 };
-                let text = matches!(strip(&a.ty), Type::Optional(i) if is_string(i));
+                let text = matches!(strip(&a.ty), Type::Optional(i) if is_string(i, self.prog));
+                if e.ty.is_loan() && name_of(&b.ty) == Some("Never") {
+                    let fallback = self.expr(b, Want::Value);
+                    return format!("(match {l} {{ Some(__v) => __v, None => {fallback} }})");
+                }
                 // a lent result is a reference to the place the arm reads (`&*…`); an owned one reads the place (D-341)
                 let deref = if matches!(&e.ty, Type::Loan { .. }) { "&*" } else { "*" };
                 if matches!(b.kind, ExprKind::Place(_, Use::Read | Use::Alias)) {
@@ -1012,7 +1141,7 @@ impl<'p> FnGen<'p> {
                 }
                 // a value that cannot be copied is borrowed, fallback and all, for the statement (as `&T`)
                 let copyable = match strip(&a.ty) {
-                    Type::Optional(i) => is_string(i) || trivial(i, self.prog) || name_of(i).and_then(|n| self.prog.type_def(n)).map_or(false, |d| d.copyable),
+                    Type::Optional(i) => is_string(i, self.prog) || trivial(i, self.prog) || name_of(i).and_then(|n| self.prog.type_def(n)).map_or(false, |d| d.copyable),
                     _ => false,
                 };
                 if matches!(&e.ty, Type::Loan { .. }) || !copyable {
@@ -1081,6 +1210,32 @@ impl<'p> FnGen<'p> {
                     let left = self.expr(a, Want::RefMut);
                     let right = self.expr(b, Want::RefMut);
                     format!("(match {left} {{ Some(ref mut __v) => __v, None => {right} }})")
+                } else if matches!(&a.kind, ExprKind::Place(_, Use::Read))
+                    && matches!(strip(&a.ty), Type::Optional(i) if !trivial(i, self.prog) && !i.is_loan())
+                    && (matches!(want, Want::Ref | Want::Str) || matches!(strip(&a.ty), Type::Optional(i) if is_string(i, self.prog)))
+                {
+                    // lent for a call or an interpolation, a bare owned place on the left is a read loan of it
+                    // (D-357, 7.5): the result borrows the value in the place or the fallback, a temporary of the
+                    // statement, and the place keeps its value for the uses that follow (D-354). Text borrows
+                    // through a `Cow`, as for an optional read parameter above; the rest is a reference into the
+                    // place or into the fallback's statement slot, which holds a made or moved value for the
+                    // statement's own traced drop (7.9). An owned result of a bare left place is rejected before
+                    // the lowering (D-357), so a text one reaches here only as an interpolation part, which reads
+                    // the `Cow` as its `&str`
+                    let l = self.expr(a, Want::Any);
+                    let text = matches!(strip(&a.ty), Type::Optional(i) if is_string(i, self.prog));
+                    let lc = l.clone();
+                    let cow = move |fb: String| format!("(match {lc}.as_deref() {{ Some(__v) => std::borrow::Cow::Borrowed(__v), None => std::borrow::Cow::Owned({fb}) }})");
+                    match (&b.kind, text) {
+                        (ExprKind::Const(Const::Str(s)), true) => format!("({l}.as_deref().unwrap_or({s:?}))"),
+                        (_, true) if !matches!(want, Want::Ref | Want::Str) => format!("(&*{})", cow(self.expr(b, Want::Value))),
+                        (_, true) => cow(self.expr(b, Want::Value)),
+                        // every fallback lends as the present value does: a place lends itself, and a value the
+                        // fallback makes or moves stays in its statement's slot, which the statement's drop
+                        // destroys and announces; taking it into a holder of the statement would drop it
+                        // unannounced (D-354)
+                        _ => format!("(&*(match {l}.as_ref() {{ Some(__v) => __v, None => {} }}))", self.expr(b, Want::Ref)),
+                    }
                 } else {
                     let l = self.expr(a, Want::Value);
                     let fb = self.expr(b, Want::Value);
@@ -1123,16 +1278,34 @@ impl<'p> FnGen<'p> {
                     format!("{{ let {tmp} = {v}; if {tmp}.is_err() {{ let {err} = rt::outcome_err({tmp}); {ab} {}; }} match {tmp} {{ Ok(v) => v, Err(_) => unreachable!() }} }}", self.fail_ret(&format!("{err}.into()")))
                 }
             }
-            ExprKind::OrRecover(a, b) => format!("(match {} {{ Ok(v) => v, Err(_) => {} }})", self.expr(a, Want::Value), self.expr(b, Want::Value)),
+            ExprKind::OrRecover(a, b) => {
+                if recovery_holder_inner(e, self.prog).is_some() {
+                    return format!("(&*{})", self.recovery_holder(e));
+                }
+                // a literal recovered where the result is a borrowed text is the static text itself (D-390),
+                // as the `recover` statement's is; where the result is an optional borrowed text it is
+                // wrapped (`Option<&str>`, D-353)
+                let fb = match &b.kind {
+                    ExprKind::Const(Const::Str(s)) if matches!(&e.ty, Type::Loan { inner, origin, .. } if is_string(inner, self.prog) && !origin.is_empty() && origin != "static") => format!("{s:?}"),
+                    ExprKind::Const(Const::Str(s)) if opt_loan_text(&e.ty, self.prog) => format!("Some({s:?})"),
+                    _ => self.expr(b, Want::Value),
+                };
+                format!("(match {} {{ Ok(v) => v, Err(_) => {fb} }})", self.expr(a, Want::Value))
+            }
             ExprKind::Catch { value, bind, handler } => {
+                if recovery_holder_inner(e, self.prog).is_some() {
+                    return format!("(&*{})", self.recovery_holder(e));
+                }
                 let v = self.expr(value, Want::Value);
                 let l = self.label();
+                self.recover_held.push(false);
                 self.recover.push(l.clone());
                 self.recover_ty.push(e.ty.clone());
                 self.recover_depth.push(self.defers.len());
                 let h = self.block_stmts(handler);
                 self.recover_depth.pop();
                 self.recover_ty.pop();
+                self.recover_held.pop();
                 self.recover.pop();
                 let inner_ty = match strip(&value.ty) {
                     Type::Named(n) if n.name == "Outcome" => n.args.first().cloned(),
@@ -1166,7 +1339,7 @@ impl<'p> FnGen<'p> {
             }
             ExprKind::Validate { value, lo, hi, length } => {
                 let v = self.expr(value, Want::Value);
-                let n = if *length && is_string(&value.ty) {
+                let n = if *length && is_string(&value.ty, self.prog) {
                     "rt::text::scalar_count(&__v) as i128".to_string()
                 } else if *length {
                     "__v.len() as i128".to_string()
@@ -1178,10 +1351,18 @@ impl<'p> FnGen<'p> {
             }
             ExprKind::Wrap { value, .. } => self.expr(value, Want::Value),
             ExprKind::ToDynamic { iface, value, borrowed } => {
+                let tr = match strip(&e.ty) {
+                    Type::Dynamic(n) => dyn_name(n, self.prog),
+                    Type::Loan { inner, .. } => match &**inner {
+                        Type::Dynamic(n) => dyn_name(n, self.prog),
+                        _ => ident(iface),
+                    },
+                    _ => ident(iface),
+                };
                 if *borrowed {
-                    format!("({} as &dyn {})", self.expr(value, Want::Ref), ident(iface))
+                    format!("({} as &dyn {tr})", self.expr(value, Want::Ref))
                 } else {
-                    format!("(Box::new({}) as Box<dyn {}>)", self.expr(value, Want::Value), ident(iface))
+                    format!("(::std::boxed::Box::new({}) as ::std::boxed::Box<dyn {tr}>)", self.expr(value, Want::Value))
                 }
             }
             ExprKind::Await(x) => {
@@ -1207,7 +1388,22 @@ impl<'p> FnGen<'p> {
                 // once, including when an intrinsic lowers the expression twice. A read reborrows; an owned
                 // use moves the value out, and the statement drop's `take` then finds `None`.
                 let n = self.names[*local as usize].clone();
+                let holder = if self.temp_inits.contains_key(local) { None } else { recovery_holder_inner(value, self.prog) };
                 let v = if let Some(code) = self.temp_inits.get(local).cloned() {
+                    code
+                } else if let Some(inner) = holder {
+                    let code = self.recovery_holder(value);
+                    let ann = if is_string(&inner, self.prog) {
+                        "std::borrow::Cow<str>".to_string()
+                    } else {
+                        self.mo_temps.insert(*local);
+                        format!("rt::MaybeOwned<{}>", self.ty(&inner))
+                    };
+                    self.emitted_temps.push(*local);
+                    self.hoist.push(format!("let mut {n}: Option<{ann}> = None;"));
+                    self.hoist_owners.push(*local);
+                    self.forms[*local as usize] = Form::Owned;
+                    self.temp_inits.insert(*local, code.clone());
                     code
                 } else {
                     self.emitted_temps.push(*local);
@@ -1252,7 +1448,7 @@ impl<'p> FnGen<'p> {
             }
             let ty = self.f.locals[t as usize].ty.clone();
             let name = self.names[t as usize].clone();
-            out.push(self.temp_drop_slot(&name, &ty));
+            out.push(if self.mo_temps.contains(&t) { self.temp_holder_drop_slot(&name, &ty) } else { self.temp_drop_slot(&name, &ty) });
             if moved_fields.contains(&t) {
                 if let Some(fields) = self.splittable_fields(&ty) {
                     for (fname, _) in fields {
@@ -1286,7 +1482,7 @@ impl<'p> FnGen<'p> {
         match (want, u) {
             (Want::Value, Use::Copy) if !trivial(ty, self.prog) => {
                 self.audit.clone_at(&self.f.name, line, "copy");
-                if is_string(ty) {
+                if is_string(ty, self.prog) {
                     format!("{borrow}.to_string() /* copy */")
                 } else {
                     format!("{borrow}.clone() /* copy */")
@@ -1381,7 +1577,7 @@ impl<'p> FnGen<'p> {
         match (want, u) {
             (Want::Value, Use::Copy) if !trivial(ty, self.prog) => {
                 self.audit.clone_at(&self.f.name, line, "copy");
-                if is_string(ty) {
+                if is_string(ty, self.prog) {
                     format!("{borrow}.to_string() /* copy */")
                 } else {
                     format!("{borrow}.clone() /* copy */")
@@ -1484,6 +1680,14 @@ impl<'p> FnGen<'p> {
         format!("if let Some(__slot) = {name}.take() {{ {body} }}")
     }
 
+    /// The drop of a slot that holds an `or recover`'s `MaybeOwned` (D-446): the replacement is announced and
+    /// destroyed only when it was made; a borrowed success belongs to what the try expression borrows, and its
+    /// end announces nothing (7.9).
+    fn temp_holder_drop_slot(&self, name: &str, ty: &Type) -> String {
+        let trace = self.cleanup_trace(ty).map(|n| format!("if matches!(__slot, rt::MaybeOwned::Owned(_)) {{ rt::trace::event(\"drop {n}\"); }} ")).unwrap_or_default();
+        format!("if let Some(__slot) = {name}.take() {{ {trace}drop(__slot); }}")
+    }
+
     /// Drop an owned value. Optional layers are peeled: only a present payload is announced, and an absent
     /// optional announces nothing (7.9).
     fn drop_owned(&self, expr: &str, ty: &Type) -> String {
@@ -1565,12 +1769,17 @@ impl<'p> FnGen<'p> {
                 let (o, p) = if ao { (a, b) } else { (b, a) };
                 let x = self.expr(o, Want::Any);
                 let y = self.expr(p, Want::Value);
-                let cmp = if is_string(&p.ty) { format!("{x}.as_ref().map(|v| rt::show::s(v)) {sym} Some(rt::show::s(&{y}))") } else { format!("{x}.clone() {sym} Some({y})") };
+                let cmp = if is_string(&p.ty, self.prog) { format!("{x}.as_ref().map(|v| rt::show::s(v)) {sym} Some(rt::show::s(&{y}))") } else { format!("{x}.clone() {sym} Some({y})") };
                 return format!("({cmp})");
             }
         }
         if op.is_comparison() {
-            if is_string(&a.ty) || is_string(&b.ty) {
+            if fortis_types::types::int_bounds(&a.ty).is_some() && fortis_types::types::int_bounds(&b.ty).is_some() && int_suffix(&a.ty) != int_suffix(&b.ty) {
+                // All Fortis integer values fit i128. Compare accepted operands of different
+                // machine widths without changing either value (a Byte and an Int literal, D-560).
+                return format!("(({} as i128) {sym} ({} as i128))", self.expr(a, Want::Value), self.expr(b, Want::Value));
+            }
+            if is_string(&a.ty, self.prog) || is_string(&b.ty, self.prog) {
                 let x = self.expr(a, Want::Any);
                 let y = self.expr(b, Want::Any);
                 return format!("(rt::show::s(&{x}) {sym} rt::show::s(&{y}))");
@@ -1603,7 +1812,7 @@ impl<'p> FnGen<'p> {
             // an optional read parameter is `Option<&T>` (D-2): narrowed, it is the `&T`
             let code = self.place(p);
             return Some(match u {
-                Use::Copy if is_string(inner) => format!("{code}.unwrap().to_string()"),
+                Use::Copy if is_string(inner, self.prog) => format!("{code}.unwrap().to_string()"),
                 Use::Copy => format!("{code}.unwrap().clone()"),
                 _ => format!("{code}.unwrap()"),
             });
@@ -1629,11 +1838,11 @@ impl<'p> FnGen<'p> {
         }
         let t = pty.unwrap_or(&a.value.ty).clone();
         let t = &t;
-        if let Type::Fn { params, .. } = strip(t) {
+        if let Type::Fn { params, param_modes, .. } = strip(t) {
             // a closure value (not a literal) passed where `fn(T) U` takes generic parameters by reference: adapt it
             if !matches!(a.value.kind, ExprKind::Closure { .. }) {
                 if let Type::Fn { params: have, .. } = strip(&a.value.ty) {
-                    let adapt: Vec<bool> = params.iter().zip(have.iter()).map(|(want, h)| !trivial(want, self.prog) && trivial(h, self.prog)).collect();
+                    let adapt: Vec<bool> = params.iter().zip(have.iter()).enumerate().map(|(i, (want, h))| fn_param_mode(param_modes, i) == Mode::Read && !trivial(want, self.prog) && trivial(h, self.prog)).collect();
                     if adapt.iter().any(|x| *x) {
                         let f = self.expr(&a.value, Want::Any);
                         let ps: Vec<String> = adapt.iter().enumerate().map(|(i, by_ref)| if *by_ref { format!("__a{i}: &{}", rust_ty(&have[i], self.prog)) } else { format!("__a{i}") }).collect();
@@ -1646,8 +1855,8 @@ impl<'p> FnGen<'p> {
                 }
             }
             // a closure passed for `fn(T) U` takes each non-trivial (or generic) parameter by reference
-            self.closure_refs = Some(params.iter().map(|p| !trivial(p, self.prog)).collect());
-            self.closure_generic = Some(params.iter().map(|p| matches!(strip(p), Type::TypeParam(_))).collect());
+            self.closure_refs = Some(params.iter().enumerate().map(|(i, p)| fn_param_mode(param_modes, i) == Mode::Read && !trivial(p, self.prog)).collect());
+            self.closure_generic = Some(params.iter().enumerate().map(|(i, p)| fn_param_mode(param_modes, i) == Mode::Read && matches!(strip(p), Type::TypeParam(_))).collect());
             // a read-mode plain `fn` borrows (`&impl Fn`). `fn mut`, `fn once` and `owned` take the value.
             let want = if a.mode == Mode::Editable {
                 Want::RefMut
@@ -1677,6 +1886,13 @@ impl<'p> FnGen<'p> {
             Mode::Editable => self.expr(&a.value, Want::RefMut),
             // a generic parameter is a reference in the generated signature (`x: &T`), whatever the instantiation
             Mode::Read if matches!(strip(t), Type::TypeParam(_)) && pty.is_some() => {
+                // a read `String` parameter is a `&str`, but a `T` instantiated with `String` is read as `&String`:
+                // the text is copied (outside `noalloc`, which keeps the plain loan)
+                if let ExprKind::Place(p, _) = &a.value.kind {
+                    if is_string(&a.value.ty, self.prog) && p.proj.is_empty() && self.forms[p.local as usize] != Form::Owned && !self.f.has("noalloc") {
+                        return format!("&{}.to_string()", self.expr(&a.value, Want::Str));
+                    }
+                }
                 // A function item has no `PartialEq` or `Show`, so it cannot instantiate `T`. Coerce it to a
                 // function pointer, which has both and is still called as `T` (8.4).
                 if let Some(fp) = fn_pointer_ty(strip(&a.value.ty), self.prog) {
@@ -1693,12 +1909,32 @@ impl<'p> FnGen<'p> {
                     format!("&({})", self.expr(&a.value, Want::Value))
                 }
             }
+            // a value converted to `dynamic I` for a read parameter is lent as `&dyn I`: boxing it would pass a
+            // `&Box<dyn I>`, which Rust unsizes (needing `Box<dyn I>: I`) instead of dereferencing (D-148)
+            Mode::Read if matches!(strip(t), Type::Dynamic(_)) && matches!(a.value.kind, ExprKind::ToDynamic { .. }) => {
+                let ExprKind::ToDynamic { value, .. } = &a.value.kind else { unreachable!() };
+                let Type::Dynamic(n) = strip(t) else { unreachable!() };
+                format!("({} as &dyn {})", self.expr(value, Want::Ref), dyn_name(n, self.prog))
+            }
+            // a `dynamic I` value (a box, a lent `&dyn I`, an element of a list of them) lent where `&dyn I` is read:
+            // borrowed as the trait object, whichever it is (D-148)
+            Mode::Read if matches!(strip(t), Type::Dynamic(_)) && matches!(strip(&a.value.ty), Type::Dynamic(_)) => {
+                let Type::Dynamic(n) = strip(t) else { unreachable!() };
+                let Type::Dynamic(have) = strip(&a.value.ty).clone() else { unreachable!() };
+                let r = self.expr(&a.value, Want::Ref);
+                if have.name == n.name {
+                    format!("::std::borrow::Borrow::<dyn {}>::borrow({r})", dyn_name(n, self.prog))
+                } else {
+                    // a `dynamic B` read as the `dynamic A` that `B` requires: borrowed as `dyn B`, then upcast
+                    format!("(::std::borrow::Borrow::<dyn {}>::borrow({r}) as &dyn {})", dyn_name(&have, self.prog), dyn_name(n, self.prog))
+                }
+            }
             Mode::Read => {
                 // the parameter's type decides the passing form (the argument's may be a refinement or a literal's)
                 let decide = if fortis_types::types::known(t) && !matches!(strip(t), Type::TypeParam(_)) { t.clone() } else { a.value.ty.clone() };
                 if trivial(&decide, self.prog) || loan_is_value(&decide, self.prog) {
                     self.expr(&a.value, Want::Value)
-                } else if is_string(&decide) {
+                } else if is_string(&decide, self.prog) {
                     self.expr(&a.value, Want::Str)
                 } else {
                     self.expr(&a.value, Want::Ref)
@@ -1772,14 +2008,34 @@ impl<'p> FnGen<'p> {
                 format!("{rust}({})", ordered.join(", "))
             }
             Callee::Virtual { method } => {
+                // through a type parameter: the bound's trait, named, so neither another bound's method of the same
+                // name nor a Rust trait's can capture the call (D-82)
+                if let Some(Type::TypeParam(p)) = args.first().map(|r| strip(&r.value.ty).clone()) {
+                    if let Some(code) = self.bound_call(&p, method, args, ty) {
+                        return code;
+                    }
+                }
                 let recv = match args.first() {
                     // a method of the value behind a `Shared` handle is dispatched on that value (7.8)
                     Some(r) if name_of(&r.value.ty) == Some("Shared") => format!("(*{}.read())", self.expr(&r.value, Want::Any)),
                     Some(r) => self.expr(&r.value, Want::Any),
                     None => return self.err(line, "a virtual call without a receiver"),
                 };
-                let rest: Vec<String> = args[1..].iter().map(|a| self.arg(a, None)).collect();
-                format!("{recv}.{}({})", ident(method), rest.join(", "))
+                // the trait takes each argument as the interface declares its parameter, in its order; an async
+                // method of a `dyn` value is its boxed-future twin
+                let declared = match args.first().map(|r| strip(&r.value.ty)) {
+                    Some(Type::Dynamic(n)) => self.declared_sig(&n.name, method),
+                    _ => None,
+                };
+                let rest = match &declared {
+                    Some(ms) => self.declared_args(ms, &args[1..]),
+                    None => args[1..].iter().map(|a| self.arg(a, None)).collect(),
+                };
+                let name = match &declared {
+                    Some(ms) if ms.modifiers.iter().any(|m| m == "async") => format!("{}__dyn", ident(method)),
+                    _ => ident(method),
+                };
+                format!("{recv}.{name}({})", rest.join(", "))
             }
             Callee::Value(f) => {
                 // `move f(…)` of an async closure: the future owns the closure and its temporary arguments (X-250, X-251)
@@ -1832,6 +2088,76 @@ impl<'p> FnGen<'p> {
                 }
                 format!("({fc})({})", rest.join(", "))
             }
+        }
+    }
+
+    /// The declared signature of an interface method (the program's interfaces, D-82): `Self` and the interface's
+    /// parameters stay type parameters, so an argument is passed as the trait takes it.
+    fn declared_sig(&self, iface: &str, method: &str) -> Option<MethodSig> {
+        for x in iface_closure(self.prog, iface) {
+            if let Some(d) = self.prog.type_def(&x) {
+                if is_user_iface(self.prog, &x) {
+                    if let Some(ms) = d.sigs.iter().find(|s| s.name == method) {
+                        return Some(ms.clone());
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// The arguments of a call through a trait, in the declared parameters' order (a named argument may come in
+    /// any order), each passed as its declared type is.
+    fn declared_args(&mut self, ms: &MethodSig, args: &[Arg]) -> Vec<String> {
+        let by_name = ms.params.iter().all(|(n, _, _)| args.iter().filter(|a| a.param == *n).count() <= 1) && args.iter().all(|a| ms.params.iter().any(|(n, _, _)| *n == a.param));
+        if by_name {
+            ms.params.iter().filter_map(|(n, _, t)| args.iter().find(|a| a.param == *n).map(|a| (a.clone(), t.clone()))).collect::<Vec<_>>().into_iter().map(|(a, t)| self.arg(&a, Some(&t))).collect()
+        } else {
+            args.iter().enumerate().map(|(k, a)| { let t = ms.params.get(k).map(|(_, _, t)| t.clone()); self.arg(a, t.as_ref()) }).collect()
+        }
+    }
+
+    /// A call through a type parameter `p`: the trait of the bound interface that declares the method, by path; or
+    /// a core interface's comparison through `PartialEq`/`PartialOrd`, which every implementation honours (D-82).
+    fn bound_call(&mut self, p: &str, method: &str, args: &[Arg], ty: &Type) -> Option<String> {
+        let bounds = self.f.bounds.clone();
+        let recv = |g: &mut Self| match args[0].mode {
+            Mode::Read => g.expr(&args[0].value, Want::Ref),
+            Mode::Editable => g.expr(&args[0].value, Want::RefMut),
+            Mode::Owned => g.expr(&args[0].value, Want::Value),
+        };
+        for (_, i, _) in bounds.iter().filter(|(bp, _, _)| bp == p) {
+            for x in iface_closure(self.prog, i) {
+                if !is_user_iface(self.prog, &x) {
+                    continue;
+                }
+                let ms = match self.prog.type_def(&x).and_then(|d| d.sigs.iter().find(|s| s.name == method && s.receiver.is_some()).cloned()) {
+                    Some(ms) => ms,
+                    None => continue,
+                };
+                let r = recv(self);
+                let mut all = vec![r];
+                all.extend(self.declared_args(&ms, &args[1..]));
+                return Some(format!("{}::{}({})", ident(&x), ident(method), all.join(", ")));
+            }
+        }
+        let tp = Type::TypeParam(p.to_string());
+        match (method, args.len()) {
+            ("equals", 2) => {
+                let r = recv(self);
+                let o = self.arg(&args[1], Some(&tp));
+                Some(format!("::std::cmp::PartialEq::eq({r}, {o})"))
+            }
+            ("compare", 2) => {
+                let r = recv(self);
+                let o = self.arg(&args[1], Some(&tp));
+                let ord = rust_ty(ty, self.prog);
+                let (less, equal, greater) = (ident("Less"), ident("Equal"), ident("Greater"));
+                Some(format!(
+                    "(match ::std::cmp::PartialOrd::partial_cmp({r}, {o}) {{ Some(::std::cmp::Ordering::Less) => {ord}::{less}, Some(::std::cmp::Ordering::Greater) => {ord}::{greater}, _ => {ord}::{equal} }})"
+                ))
+            }
+            _ => None,
         }
     }
 
@@ -1960,7 +2286,7 @@ impl<'p> FnGen<'p> {
                     } else if !trivial(&t, self.prog) {
                         sub.forms[p.local as usize] = Form::Ref;
                     }
-                    param_ty_in_fn(&t, self.prog)
+                    param_ty_in_fn(&t, Mode::Read, self.prog)
                 }
             };
             params.push(format!("{}: {pt}", sub.names[p.local as usize]));
@@ -2253,7 +2579,7 @@ impl<'p> FnGen<'p> {
                 let live = |ls: Option<&Vec<LocalId>>, moved: &HashSet<LocalId>| ls.map_or(false, |v| v.iter().any(|l| !moved.contains(l)));
                 // a manual local's flag, not the flow-insensitive `moved` set, says whether it is still there
                 let declares = |l: &LocalId| crate::declares_cleanup(self.prog, &self.f.locals[*l as usize].ty);
-                let own_live = self.cleanups.get(depth).map_or(false, |v| v.iter().any(|l| !self.manual.contains(l) && !self.moved.contains(l) && declares(l)));
+                let own_live = self.cleanups.get(depth).map_or(false, |v| v.iter().any(|l| !self.manual.contains(l) && !self.held.contains_key(l) && self.forms[*l as usize] == Form::Owned && !self.moved.contains(l) && declares(l)));
                 let manual_live: Vec<String> = self
                     .cleanups
                     .get(depth)
@@ -2270,6 +2596,22 @@ impl<'p> FnGen<'p> {
                             .collect()
                     })
                     .unwrap_or_default();
+                // an owned optional place ends loans observably only while it holds a value (7.9): its null is
+                // silent, as the interpreter's cell of an absent value is
+                let opt_live: Vec<String> = self
+                    .cleanups
+                    .get(depth)
+                    .map(|v| {
+                        v.iter()
+                            .filter(|l| {
+                                !self.manual.contains(l) && !self.held.contains_key(l) && !self.moved.contains(l) && !self.partial.contains(l)
+                                    && self.forms[**l as usize] == Form::Owned
+                                    && matches!(strip(&self.f.locals[**l as usize].ty), Type::Optional(i) if !i.is_loan() && crate::declares_cleanup(self.prog, i))
+                            })
+                            .map(|l| format!("{}.is_some()", self.names[*l as usize]))
+                            .collect()
+                    })
+                    .unwrap_or_default();
                 if depth > 0 && ((unwinding && live(self.abandonable.get(depth), &self.moved)) || own_live) {
                     noisy = vec!["true".into()];
                 }
@@ -2278,6 +2620,7 @@ impl<'p> FnGen<'p> {
                 if depth > 0 {
                     noisy.extend(manual_live);
                     noisy.extend(held_live);
+                    noisy.extend(opt_live);
                 }
                 if !noisy.is_empty() {
                     out.push(format!("if {} {{ rt::trace::event(\"loans-end\"); }}", noisy.join(" || ")));
@@ -2325,7 +2668,7 @@ impl<'p> FnGen<'p> {
                         continue;
                     }
                     let inner = loan_inner(&self.f.locals[*l as usize].ty).clone();
-                    let trace = if crate::declares_cleanup(self.prog, &inner) { name_of(&inner).map(|n| format!("rt::trace::event(\"drop {n}\"); ")).unwrap_or_default() } else { String::new() };
+                    let trace = crate::cleanup_name(self.prog, &inner).map(|n| format!("rt::trace::event(\"drop {n}\"); ")).unwrap_or_default();
                     out.push(format!("if let rt::MaybeOwned::Owned(__v) = {holder} {{ {trace}drop(__v); }}"));
                     continue;
                 }
@@ -2339,10 +2682,8 @@ impl<'p> FnGen<'p> {
                     }
                     let name = self.names[*l as usize].clone();
                     let mut body = String::new();
-                    if crate::declares_cleanup(self.prog, &self.f.locals[*l as usize].ty) {
-                        if let Some(n) = name_of(&self.f.locals[*l as usize].ty) {
-                            body.push_str(&format!("rt::trace::event(\"drop {n}\"); "));
-                        }
+                    if let Some(n) = crate::cleanup_name(self.prog, &self.f.locals[*l as usize].ty) {
+                        body.push_str(&format!("rt::trace::event(\"drop {n}\"); "));
                     }
                     body.push_str("drop(__held);");
                     out.push(format!("if let Some(__held) = {name}.take() {{ {body} }}"));
@@ -2351,10 +2692,23 @@ impl<'p> FnGen<'p> {
                 if self.moved.contains(l) || self.partial.contains(l) || abandoned {
                     continue;
                 }
-                if crate::declares_cleanup(self.prog, &self.f.locals[*l as usize].ty) {
-                    if let Some(n) = name_of(&self.f.locals[*l as usize].ty) {
-                        out.push(format!("rt::trace::event(\"drop {n}\");"));
+                // an owned optional place is destroyed by taking the value it holds: the drop is announced for
+                // that value alone, as the interpreter announces the cell's instance alone, and its null drops
+                // in silence (7.9)
+                if let Type::Optional(inner) = strip(&self.f.locals[*l as usize].ty) {
+                    if !inner.is_loan() {
+                        let name = self.names[*l as usize].clone();
+                        let mut body = String::new();
+                        if let Some(n) = crate::cleanup_name(self.prog, inner) {
+                            body.push_str(&format!("rt::trace::event(\"drop {n}\"); "));
+                        }
+                        body.push_str("drop(__held);");
+                        out.push(format!("if let Some(__held) = {name}.take() {{ {body} }}"));
+                        continue;
                     }
+                }
+                if let Some(n) = crate::cleanup_name(self.prog, &self.f.locals[*l as usize].ty) {
+                    out.push(format!("rt::trace::event(\"drop {n}\");"));
                 }
                 out.push(format!("drop({});", self.names[*l as usize]));
             }
@@ -2391,18 +2745,49 @@ impl<'p> FnGen<'p> {
         }
     }
 
+    /// A returned expression that is already `Option<&str>`: a call of a function, method or closure whose own
+    /// result is an optional loan of text (its signature is concrete), or a read of an optional read parameter
+    /// (D-2's `Option<&str>`); anything else (an intrinsic, a generic prelude call, a binding of one, `null`, an
+    /// `if`, `match` or value block of them) is `Option<&String>` and bridges in `ret` (D-353).
+    fn answers_opt_text(&self, e: &Expr) -> bool {
+        match &e.kind {
+            ExprKind::Call { callee: Callee::Func(name), .. } => self.prog.function(name).map_or(false, |g| opt_loan_text(&g.ret, self.prog)),
+            ExprKind::Call { callee: Callee::Value(head), .. } => matches!(&head.ty, Type::Fn { ret, .. } if opt_loan_text(ret, self.prog)),
+            ExprKind::Place(p, _) if p.proj.is_empty() && self.forms[p.local as usize] == Form::OptRef => true,
+            _ => false,
+        }
+    }
+
     fn ret(&mut self, v: Option<&Expr>) -> String {
         let by_ref = matches!(&self.f.ret, Type::Loan { .. }) && !loan_is_value(&self.f.ret, self.prog);
-        let text_loan = matches!(&self.f.ret, Type::Loan { inner, .. } if is_string(inner));
+        // a returned exclusive loan is the `&mut` itself, reborrowed from the editable parameter or receiver it
+        // comes from (`&mut *c`): the signature is `&mut T`, which a read reference does not match (D-185)
+        let by_mut = by_ref && matches!(&self.f.ret, Type::Loan { mode, .. } if mode == "editable");
+        let text_loan = matches!(&self.f.ret, Type::Loan { inner, .. } if is_string(inner, self.prog));
+        // a byte string returned as a bytes view is the static slice itself (D-390): the signature is `&[u8]`,
+        // which the literal's `&[..]` is, where the owned `vec!` would be a reference to a temporary
+        let bytes_view = matches!(&self.f.ret, Type::Loan { inner, .. } if name_of(inner) == Some("BytesView"));
         let view = match v {
             Some(e) if by_ref && text_loan => self.text_view(e),
             _ => None,
         };
         let mut val = match (view, v) {
             (Some(code), _) => code,
-            (None, Some(e)) => self.expr(e, if by_ref { Want::Ref } else { Want::Value }),
+            (None, Some(e)) if bytes_view && matches!(&e.kind, ExprKind::Const(Const::Bytes(_))) => {
+                let ExprKind::Const(Const::Bytes(b)) = &e.kind else { unreachable!() };
+                format!("&{b:?}")
+            }
+            (None, Some(e)) => self.expr(e, if by_mut { Want::RefMut } else if by_ref { Want::Ref } else { Want::Value }),
             (None, None) => "()".into(),
         };
+        // an optional loan of text is `Option<&str>` in the signature; a value that is not already one bridges
+        // here (D-353). A `null` needs no bridge: its `None` is the option the signature says, and a bare `None`
+        // gives the bridge's generic referent nothing to infer (D-390)
+        if let Some(e) = v {
+            if opt_loan_text(&self.f.ret, self.prog) && !self.answers_opt_text(e) && !matches!(e.kind, ExprKind::Const(Const::Null)) {
+                val = format!("rt::text::opt_view({val})");
+            }
+        }
         if self.box_result && v.is_some() {
             // any callable boxes to the closure's `Box<dyn Fn…>` result (an already boxed one, as a `Box<Box<…>>`)
             val = format!("Box::new({val})");
@@ -2434,6 +2819,10 @@ impl<'p> FnGen<'p> {
         let transferred = self.in_transfer;
         self.in_transfer = saved;
         self.transfer_drops.pop();
+        // the drop text is built before the body lowers, and an `or recover`'s holder slot is known only once
+        // the body has lowered its temporary (D-446): rebuilt here, the drop of that slot announces a made
+        // replacement only (7.9)
+        let drops = if s.temps.iter().any(|t| self.mo_temps.contains(t)) { self.temp_drops(s, &rust_moved_temps(s)) } else { drops };
         let inits_all = self.hoist.split_off(mark);
         let owners = self.hoist_owners.split_off(mark);
         let mut inits = Vec::new();
@@ -2468,7 +2857,8 @@ impl<'p> FnGen<'p> {
             StmtKind::Let { local, init } => {
                 self.launch_detachable = self.detachable.contains(local);
                 let t = self.local_ty(*local).clone();
-                let value_loan = trivial(&t, self.prog) || loan_is_value(&t, self.prog);
+                let editable = matches!(&t, Type::Loan { mode, .. } if mode == "editable") || matches!(&init.kind, ExprKind::Place(_, Use::Editable));
+                let value_loan = !editable && (trivial(&t, self.prog) || loan_is_value(&t, self.prog));
                 let form = match &init.kind {
                     _ if value_loan => Form::Owned,
                     // a loan of an optional read parameter is its `Option<&T>` (D-2)
@@ -2484,15 +2874,20 @@ impl<'p> FnGen<'p> {
                 // a binding of a lent `??` that can give a value of its own names that value's holder beside it, so a
                 // move of the binding into a tuple moves what it owns with it (7.9; D-367). The binding is the
                 // holder's reference, as the statement's temporary was.
-                if let ExprKind::Coalesce(a, b) = &init.kind {
-                    if form == Form::Ref && !self.f.locals[*local as usize].mutable && !self.deferred_lets.contains(local) && self.holds_fallback(a, b, &init.ty) {
-                        let held = self.lent_coalesce(a, b, &init.ty);
-                        let holder = format!("__held{local}");
-                        let name = self.names[*local as usize].clone();
-                        self.held.insert(*local, holder.clone());
-                        self.note_future(*local, init);
-                        return format!("let {holder} = {held}; let {name} = &*{holder};");
-                    }
+                let holds = match &init.kind {
+                    ExprKind::Coalesce(a, b) => self.holds_fallback(a, b, &init.ty),
+                    _ => recovery_holder_inner(init, self.prog).is_some_and(|t| !is_string(&t, self.prog)),
+                };
+                if form == Form::Ref && !self.f.locals[*local as usize].mutable && !self.deferred_lets.contains(local) && holds {
+                    let held = match &init.kind {
+                        ExprKind::Coalesce(a, b) => self.lent_coalesce(a, b, &init.ty),
+                        _ => self.recovery_holder(init),
+                    };
+                    let holder = format!("__held{local}");
+                    let name = self.names[*local as usize].clone();
+                    self.held.insert(*local, holder.clone());
+                    self.note_future(*local, init);
+                    return format!("let {holder} = {held}; let {name} = &*{holder};");
                 }
                 // a binding moved from such a binding (`let q = move t`) takes the holder with it, so the value is
                 // destroyed with the new binding's block, in its order (7.9; D-380)
@@ -2667,10 +3062,8 @@ impl<'p> FnGen<'p> {
                         let manual = self.manual.contains(&p.local);
                         if *u == Use::Move {
                             let mut trace = String::new();
-                            if crate::declares_cleanup(self.prog, &self.f.locals[p.local as usize].ty) {
-                                if let Some(n) = name_of(&self.f.locals[p.local as usize].ty) {
-                                    trace = format!("rt::trace::event(\"drop {n}\"); ");
-                                }
+                            if let Some(n) = crate::cleanup_name(self.prog, &self.f.locals[p.local as usize].ty) {
+                                trace = format!("rt::trace::event(\"drop {n}\"); ");
                             }
                             if manual {
                                 return format!("if let Some(__held) = {name}.take() {{ {trace}drop(__held); }}");
@@ -2737,8 +3130,10 @@ impl<'p> FnGen<'p> {
                         format!("{}{}{}", self.expr(lo, Want::Value), if *inclusive { "..=" } else { ".." }, self.expr(hi, Want::Value))
                     }
                     ForSource::Items(e) => {
-                        let moving = matches!(e.kind, ExprKind::Place(_, Use::Move)) || !matches!(e.kind, ExprKind::Place(..));
                         let kind = name_of(&e.ty).unwrap_or("");
+                        // a cursor is what `iterate()` of a class that implements `Iterable` gave the loop (5.3, D-545):
+                        // it lends its items, so the loop owns none of them
+                        let moving = kind != "ListCursor" && (matches!(e.kind, ExprKind::Place(_, Use::Move)) || !matches!(e.kind, ExprKind::Place(..)));
                         if let Some(b) = binding {
                             let et = self.local_ty(*b).clone();
                             self.forms[*b as usize] = if moving || trivial(&et, self.prog) { Form::Owned } else { Form::Ref };
@@ -2748,6 +3143,8 @@ impl<'p> FnGen<'p> {
                         let src = self.expr(e, if moving || matches!(e.kind, ExprKind::Temp { .. }) { Want::Value } else { Want::Any });
                         let triv = binding.map_or(true, |b| trivial(&self.local_ty(b).clone(), self.prog));
                         match (kind, moving) {
+                            ("ListCursor", _) if triv => format!("{src}.copied()"),
+                            ("ListCursor", _) => src,
                             ("Map", true) => format!("{src}.into_entries()"),
                             ("Set", true) => format!("{src}.into_items()"),
                             ("Map", false) | ("Set", false) if triv => format!("{src}.iter().cloned()"),
@@ -2793,7 +3190,20 @@ impl<'p> FnGen<'p> {
             }
             StmtKind::Return(v) => self.ret(v.as_ref()),
             StmtKind::Give(e) => {
-                let mut v = self.expr(e, Want::Value);
+                // a literal given into a borrowed text value is the static text itself (D-390), as a literal
+                // recovered into one is; an owned text (`StringView` with no origin, or `static`) keeps the
+                // owned `String::from`. A `present` into an optional borrowed text (`Option<&str>`, D-353) is
+                // wrapped as the option the signature says, its value read as a `str`
+                let give_opt_text = self.give_ty.last().map_or(false, |t| opt_loan_text(t, self.prog));
+                let borrowed_text = give_opt_text || self.give_ty.last().map_or(false, |t| matches!(t, Type::Loan { inner, origin, .. } if is_string(inner, self.prog) && !origin.is_empty() && origin != "static"));
+                let mut v = match &e.kind {
+                    ExprKind::Const(Const::Str(s)) if borrowed_text => format!("{s:?}"),
+                    ExprKind::Present(a) if give_opt_text => match &a.kind {
+                        ExprKind::Const(Const::Str(s)) => format!("Some({s:?})"),
+                        _ => format!("Some(AsRef::<str>::as_ref({}))", self.expr(a, Want::Str)),
+                    },
+                    _ => self.expr(e, Want::Value),
+                };
                 if let Some(t) = self.give_ty.last() {
                     if matches!(strip(t), Type::Optional(_)) && !matches!(strip(&e.ty), Type::Optional(_)) && !matches!(e.kind, ExprKind::Const(Const::Null)) && fortis_types::types::known(&e.ty) && name_of(&e.ty) != Some("Never") {
                         v = format!("Some({v})");
@@ -2809,10 +3219,15 @@ impl<'p> FnGen<'p> {
             }
             StmtKind::Recover(e) => {
                 // a literal recovered into a borrowed text value is the static text itself
-                let borrowed_text = self.recover_ty.last().map_or(false, |t| matches!(t, Type::Loan { inner, .. } if is_string(inner)) || name_of(t) == Some("StringView"));
-                let v = match &e.kind {
-                    ExprKind::Const(Const::Str(s)) if borrowed_text => format!("{s:?}"),
-                    _ => self.expr(e, Want::Value),
+                let borrowed_text = self.recover_ty.last().map_or(false, |t| matches!(t, Type::Loan { inner, .. } if is_string(inner, self.prog)) || name_of(t) == Some("StringView"));
+                let v = if self.recover_held.last() == Some(&true) {
+                    let ty = self.recover_ty.last().unwrap().clone();
+                    self.holder_value(e, loan_inner(&ty))
+                } else {
+                    match &e.kind {
+                        ExprKind::Const(Const::Str(s)) if borrowed_text => format!("{s:?}"),
+                        _ => self.expr(e, Want::Value),
+                    }
                 };
                 let drops = self.pull_drops();
                 let pre = self.recover_depth.last().copied().map(|d| self.exit_code(d, false)).unwrap_or_default();
@@ -2847,7 +3262,7 @@ impl<'p> FnGen<'p> {
                         let base = name_of(&v.ty).unwrap_or("");
                         let val = if matches!(base, "Int" | "Bool") {
                             format!("&({}) as &dyn rt::records::Value", self.expr(v, Want::Value))
-                        } else if is_string(&v.ty) {
+                        } else if is_string(&v.ty, self.prog) {
                             format!("&({}) as &dyn rt::records::Value", self.expr(v, Want::Str))
                         } else {
                             format!("&rt::records::Shown(&{}) as &dyn rt::records::Value", self.expr(v, Want::Any))
@@ -2903,12 +3318,12 @@ impl<'p> FnGen<'p> {
                 } else if ao != bo {
                     let (o, p) = if ao { (&ra, &rb) } else { (&rb, &ra) };
                     let pe = if ao { b } else { a };
-                    if is_string(&pe.ty) {
+                    if is_string(&pe.ty, self.prog) {
                         format!("({o}.as_ref().map(|v| rt::show::s(v)) {} Some(rt::show::s({p})))", op.symbol())
                     } else {
                         format!("({o}.as_ref() {} Some({p}))", op.symbol())
                     }
-                } else if is_string(&a.ty) || is_string(&b.ty) {
+                } else if is_string(&a.ty, self.prog) || is_string(&b.ty, self.prog) {
                     format!("(rt::show::s({ra}) {} rt::show::s({rb}))", op.symbol())
                 } else {
                     format!("(*{ra} {} *{rb})", op.symbol())
@@ -2978,10 +3393,19 @@ impl<'p> FnGen<'p> {
             (s, by_ref)
         };
         let mut out = Vec::new();
+        // a match on an optional loan of a type parameter (`match items.get(i) { present(x) => … }`, `Option<&T>`) binds
+        // `x` as the `&T` itself, so a comparison or a call reads it as the reference it is, not as `&&T` (X-577)
+        let loan_of_param = !by_ref && matches!(&scrutinee.ty, Type::Optional(i) if matches!(&**i, Type::Loan { inner, .. } if matches!(&**inner, Type::TypeParam(_))));
         for a in arms {
             for l in &a.locals {
                 let lt = self.local_ty(*l).clone();
-                self.forms[*l as usize] = if by_ref && !trivial(&lt, self.prog) { Form::Ref } else if by_ref { Form::Ref } else { Form::Owned };
+                self.forms[*l as usize] = if by_ref && !trivial(&lt, self.prog) {
+                    Form::Ref
+                } else if by_ref || (loan_of_param && matches!(strip(&lt), Type::TypeParam(_))) {
+                    Form::Ref
+                } else {
+                    Form::Owned
+                };
             }
             self.arm_prelude.clear();
             self.arm_guards.clear();
@@ -3129,7 +3553,19 @@ impl<'p> FnGen<'p> {
             let body = match &a.body {
                 ArmBody::Expr(e) => {
                     if value {
-                        let v = self.expr(e, Want::Value);
+                        // a literal arm of a value match into a borrowed text is the static text itself
+                        // (D-390), as a given one is; a `present` into an optional borrowed text is wrapped
+                        // as the option the signature says, its value read as a `str`
+                        let opt_text = opt_loan_text(ty, self.prog);
+                        let borrowed_text = opt_text || matches!(ty, Type::Loan { inner, origin, .. } if is_string(inner, self.prog) && !origin.is_empty() && origin != "static");
+                        let v = match &e.kind {
+                            ExprKind::Const(Const::Str(s)) if borrowed_text => format!("{s:?}"),
+                            ExprKind::Present(a) if opt_text => match &a.kind {
+                                ExprKind::Const(Const::Str(s)) => format!("Some({s:?})"),
+                                _ => format!("Some(AsRef::<str>::as_ref({}))", self.expr(a, Want::Str)),
+                            },
+                            _ => self.expr(e, Want::Value),
+                        };
                         if want_opt && !matches!(strip(&e.ty), Type::Optional(_)) && !matches!(e.kind, ExprKind::Const(Const::Null)) && fortis_types::types::known(&e.ty) && name_of(&e.ty) != Some("Never") {
                             format!("Some({v})")
                         } else {
@@ -3360,6 +3796,8 @@ impl<'p> FnGen<'p> {
                 Const::Bool(b) => b.to_string(),
                 other => self.konst(other, t, Want::Value),
             },
+            // a range pattern's closed interval (9.8, X-517); the build clipped its open ends to the base's range
+            Pattern::Range { lo, hi } => format!("{}..={}", lo.unwrap_or(i128::MIN), hi.unwrap_or(i128::MAX)),
             Pattern::Null => "None".into(),
             Pattern::Present(i) => {
                 let inner = match strip(t) {
@@ -3866,6 +4304,8 @@ impl<'p> FnGen<'p> {
                 Const::Bool(b) => b.to_string(),
                 _ => "_".into(),
             },
+            // a range pattern's closed interval (9.8, X-517); the build clipped its open ends to the base's range
+            Pattern::Range { lo, hi } => format!("{}..={}", lo.unwrap_or(i128::MIN), hi.unwrap_or(i128::MAX)),
             Pattern::Null => "None".into(),
             Pattern::Present(i) => {
                 let inner = match strip(t) {
@@ -3980,10 +4420,43 @@ fn spelled(prog: &Program, t: &Type) -> bool {
 /// whose own fallback is wholly borrowed (D-345).
 fn wholly_borrowed(b: &Expr, prog: &Program) -> bool {
     match &b.kind {
+        _ if name_of(&b.ty) == Some("Never") => true,
+        ExprKind::Const(Const::Str(_)) => true,
         ExprKind::Place(_, Use::Read | Use::Alias) => true,
         ExprKind::Coalesce(ba, bb) => lent_coalesce_ty(&b.ty, prog) && matches!(strip(&ba.ty), Type::Optional(i) if i.is_loan()) && wholly_borrowed(bb, prog),
+        ExprKind::OrRecover(_, fallback) => b.ty.is_loan() && wholly_borrowed(fallback, prog),
+        ExprKind::Catch { handler, .. } => b.ty.is_loan() && !recover_owns(handler, prog),
+        ExprKind::Call { .. } | ExprKind::OrFail(_) => b.ty.is_loan(),
         _ => false,
     }
+}
+
+/// The inner type of a recovery's successful loan when a replacement may own a value
+/// (D-446, R23): the statement temporary of it holds a `MaybeOwned` (a `Cow` for text), so a borrowed success and an
+/// owned replacement sit in one slot, and the statement's drop destroys and announces a made replacement as the
+/// interpreter does (7.9). A wholly borrowed replacement needs no value of the statement's own.
+fn recovery_holder_inner(e: &Expr, prog: &Program) -> Option<Type> {
+    let (value, owns) = match &e.kind {
+        ExprKind::OrRecover(a, b) => (&**a, !wholly_borrowed(b, prog)),
+        ExprKind::Catch { value, handler, .. } => (&**value, recover_owns(handler, prog)),
+        _ => return None,
+    };
+    let Type::Named(n) = strip(&value.ty) else { return None };
+    if n.name != "Outcome" || !owns { return None; }
+    let Type::Loan { inner, mode, .. } = n.args.first()? else { return None };
+    if mode == "editable" || trivial(inner, prog) { return None; }
+    Some((**inner).clone())
+}
+
+/// Inspect only this handler's recover statements, never those of a nested catch expression.
+fn recover_owns(b: &Block, prog: &Program) -> bool {
+    b.stmts.iter().any(|s| match &s.kind {
+        StmtKind::Recover(e) => !wholly_borrowed(e, prog),
+        StmtKind::Block(b) | StmtKind::Loop { body: b, .. } | StmtKind::For { body: b, .. } | StmtKind::Scope { body: b, .. } => recover_owns(b, prog),
+        StmtKind::If { then, els, .. } => recover_owns(then, prog) || els.as_ref().is_some_and(|b| recover_owns(b, prog)),
+        StmtKind::Match { arms, .. } => arms.iter().any(|a| matches!(&a.body, ArmBody::Block(b) if recover_owns(b, prog))),
+        _ => false,
+    })
 }
 
 /// Whether a `??` of this type is lent: its result borrows a non-trivial value (D-246).

@@ -2,164 +2,14 @@
  "about": "Written by conformance/tools/docset_check.py from the defect register: the open release-blocking defects that name documentation examples, with what each records of the example's failure. A checkout without the register matches failures against this copy. Do not edit it by hand.",
  "defects": [
   {
-   "id": "D-50",
-   "backends": [
-    "checker"
-   ],
-   "fixtures": [
-    "docset:docs/agent/14-tests.md#5",
-    "docset:docs/guide/14-tests.md#6",
-    "docset:docs/guide/from-typescript.md#1"
-   ],
-   "docset": {
-    "docs/agent/14-tests.md#5": {
-     "source": "a2e5ff485017",
-     "failing": [
-      "checker: fortisc check reports exactly the marked lines",
-      "checker: the reference checker reports exactly the marked lines"
-     ],
-     "details": "ca95594a906a"
-    },
-    "docs/guide/14-tests.md#6": {
-     "source": "a2e5ff485017",
-     "failing": [
-      "checker: fortisc check reports exactly the marked lines",
-      "checker: the reference checker reports exactly the marked lines"
-     ],
-     "details": "ca95594a906a"
-    },
-    "docs/guide/from-typescript.md#1": {
-     "source": "867ddb9b0c38",
-     "failing": [
-      "checker: fortisc check reports exactly the marked lines",
-      "checker: the reference checker reports exactly the marked lines"
-     ],
-     "details": "ca95594a906a"
-    }
-   }
-  },
-  {
-   "id": "D-51",
-   "backends": [
-    "checker"
-   ],
-   "fixtures": [
-    "docset:docs/guide/05-statements.md#20",
-    "docset:docs/agent/05-statements.md#16"
-   ],
-   "docset": {
-    "docs/guide/05-statements.md#20": {
-     "source": "3ce21115bd5f",
-     "failing": [
-      "checker: fortisc check reports exactly the marked lines",
-      "checker: the reference checker reports exactly the marked lines"
-     ],
-     "details": "ca95594a906a"
-    },
-    "docs/agent/05-statements.md#16": {
-     "source": "7e13b59bc5b8",
-     "failing": [
-      "checker: fortisc check reports exactly the marked lines",
-      "checker: the reference checker reports exactly the marked lines"
-     ],
-     "details": "ca95594a906a"
-    }
-   }
-  },
-  {
-   "id": "D-52",
-   "backends": [
-    "checker",
-    "interpreter",
-    "native",
-    "vm"
-   ],
-   "fixtures": [
-    "docset:docs/guide/10-outcomes.md#6"
-   ],
-   "docset": {
-    "docs/guide/10-outcomes.md#6": {
-     "source": "37beba3e49fd",
-     "failing": [
-      "checker: fortisc check reports nothing",
-      "checker: the reference checker reports nothing",
-      "interpreter: exits with status 0",
-      "interpreter: prints the shown output",
-      "native: exits with status 0",
-      "native: prints the shown output",
-      "vm: exits with status 0",
-      "vm: prints the shown output"
-     ],
-     "details": "fab3f126f2ef"
-    }
-   }
-  },
-  {
-   "id": "D-54",
-   "backends": [
-    "interpreter",
-    "native",
-    "vm"
-   ],
-   "fixtures": [
-    "docset:docs/guide/06-types.md#20",
-    "docset:docs/guide/06-types.md#21",
-    "docset:docs/guide/09-classes.md#14"
-   ],
-   "docset": {
-    "docs/guide/06-types.md#20": {
-     "source": "c281448b6b7c",
-     "failing": [
-      "interpreter: exits with status 0",
-      "interpreter: prints the shown output",
-      "vm: exits with status 0",
-      "vm: prints the shown output"
-     ],
-     "details": "91466cd386b0"
-    },
-    "docs/guide/06-types.md#21": {
-     "source": "2a8aeb18e029",
-     "failing": [
-      "interpreter: every test passes",
-      "native: every test passes",
-      "vm: every test passes"
-     ],
-     "details": "e8309b4eed2c"
-    },
-    "docs/guide/09-classes.md#14": {
-     "source": "ed8351270612",
-     "failing": [
-      "interpreter: exits with status 0",
-      "interpreter: prints the shown output",
-      "native: exits with status 0",
-      "native: prints the shown output",
-      "vm: exits with status 0",
-      "vm: prints the shown output"
-     ],
-     "details": "13ccd615344f"
-    }
-   }
-  },
-  {
    "id": "D-55",
    "backends": [
     "native"
    ],
    "fixtures": [
-    "docset:docs/guide/06-types.md#17",
-    "docset:docs/guide/08-functions.md#16",
-    "docset:docs/guide/09-classes.md#12",
-    "docset:docs/guide/from-rust.md#11"
+    "docset:docs/guide/08-functions.md#16"
    ],
    "docset": {
-    "docs/guide/06-types.md#17": {
-     "source": "16037d47b188",
-     "failing": [
-      "native: exits with status 0",
-      "native: prints the shown output"
-     ],
-     "details": "438121a52465"
-    },
     "docs/guide/08-functions.md#16": {
      "source": "209b92d8469c",
      "failing": [
@@ -167,21 +17,6 @@
       "native: prints the shown output"
      ],
      "details": "771fdb1075d4"
-    },
-    "docs/guide/09-classes.md#12": {
-     "source": "84ef7bb65b5f",
-     "failing": [
-      "native: exits with status 0",
-      "native: prints the shown output"
-     ],
-     "details": "19c78e02f2d6"
-    },
-    "docs/guide/from-rust.md#11": {
-     "source": "8ca544727ed7",
-     "failing": [
-      "native: every test passes"
-     ],
-     "details": "f9e0980923e0"
     }
    }
   }

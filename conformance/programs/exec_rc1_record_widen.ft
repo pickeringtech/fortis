@@ -1,0 +1,11 @@
+// execute: 2 3
+// requires: runtime
+// covers: LANG-06-02, LANG-07-06, LANG-10-01
+import fortis.host { Console }
+func read(s: { n: Int }) Int => s.n
+func take(s: owned { n: Int }) Int => s.n
+func main(console: Console) {
+  let s: { n: Int<0..3> } = { n: 2 }
+  let t: { n: Int<0..3> } = { n: 3 }
+  console.print("${read(s)} ${take(move t)}")
+}

@@ -1,0 +1,7 @@
+// reject: E-NAM-004
+import fortis.host { Console }
+import h.newtype.consume.defs as defs
+func main(console: Console) {
+  let b = defs.make()
+  move b.consumeEach(fn(n) {})
+}

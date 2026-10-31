@@ -1,0 +1,14 @@
+[
+  {"name":"lr_5_3_remainders_return","input":{"exit":"return","depth":0,"unwind":false},"expect":[["item1","E-OBL-001"],["item2","E-OBL-001"],["item3","E-OBL-001"]]},
+  {"name":"lr_5_3_remainders_break_outer","input":{"exit":"break_outer","depth":1,"unwind":false},"expect":[["item1","E-OBL-001"],["item2","E-OBL-001"],["item3","E-OBL-001"]]},
+  {"name":"lr_5_3_remainders_break_middle","input":{"exit":"break_middle","depth":2,"unwind":false},"expect":[["item2","E-OBL-001"],["item3","E-OBL-001"]]},
+  {"name":"lr_5_3_remainders_break_inner","input":{"exit":"break_inner","depth":3,"unwind":false},"expect":[["item3","E-OBL-001"]]},
+  {"name":"lr_5_3_remainders_continue_outer","input":{"exit":"continue_outer","depth":2,"unwind":false},"expect":[["item2","E-OBL-001"],["item3","E-OBL-001"]]},
+  {"name":"lr_5_3_remainders_continue_middle","input":{"exit":"continue_middle","depth":3,"unwind":false},"expect":[["item3","E-OBL-001"]]},
+  {"name":"lr_5_3_remainders_continue_inner","input":{"exit":"continue_inner","depth":4,"unwind":false},"expect":[]},
+  {"name":"lr_5_3_remainders_fail","input":{"exit":"fail","depth":0,"unwind":true},"expect":[["item1","E-OBL-005"],["item2","E-OBL-005"],["item3","E-OBL-005"]]},
+  {"name":"lr_5_3_remainders_or_fail","input":{"exit":"or_fail","depth":0,"unwind":true},"expect":[["item1","E-OBL-005"],["item2","E-OBL-005"],["item3","E-OBL-005"]]},
+  {"name":"lr_5_3_remainders_await","input":{"exit":"await","depth":0,"unwind":true},"expect":[["item1","E-OBL-005"],["item2","E-OBL-005"],["item3","E-OBL-005"]]},
+  {"name":"lr_5_3_remainders_recover_outer","input":{"exit":"recover_outer","depth":1,"unwind":false},"expect":[["item1","E-OBL-001"],["item2","E-OBL-001"],["item3","E-OBL-001"]]},
+  {"name":"lr_5_3_remainders_recover_inner","input":{"exit":"recover_inner","depth":4,"unwind":false},"expect":[]}
+]

@@ -10,7 +10,9 @@ what can fail and who handles it, what a function is allowed to do, is written i
 file or a diff can see it at a glance and trust what they approve.
 
 [Website](https://fortis.picktech.co.uk) · [Tour](docs/guide/tour.md) · [Guide](docs/guide/README.md) ·
-[For agents](docs/agent/README.md) · [Release notes](docs/releases/v0.0.2.md)
+[For agents](docs/agent/README.md) · [Release notes](docs/releases/v0.1.0.md)
+
+**Latest: [Model a domain](docs/releases/v0.1.0.md)** (v0.1.0).
 
 ## Why Fortis
 
@@ -117,15 +119,17 @@ Fortis is released in steps. Each release is a usable piece of the language, wit
 | Release | What it gives you |
 |---|---|
 | v0.0.1 | Real programs: modules, functions, classes, enums, ownership and failures, checked, run, built, formatted and tested |
-| **v0.0.2** (now) | Code that says only what matters: fewer markers, capabilities as `main`'s parameters, built-in logging |
-| v0.1 | Domain modelling: interfaces, generics, refinements and contracts |
-| v0.2 | Effects you can trust, property tests, packages with dependencies |
-| v0.3 | Concurrency: async, tasks and structured scopes |
-| v0.4 | A complete standard library |
-| v0.5 and v0.6 | Production and scale: observation, runtime kits, an incremental compiler |
+| v0.0.2 | Code that says only what matters: fewer markers, capabilities as `main`'s parameters, built-in logging |
+| **v0.1.0** (latest) | Model a domain: refinements, newtypes, conversions, interfaces, generics, contracts, text and collections |
+| v0.2 | Trust effects and test properly: checked effects and capabilities, property tests |
+| v0.3 | Build a web service: an HTTP server with health, readiness and metrics built in, SQLite and typed queries |
+| v0.4 | Build web apps: HTML, forms, sessions, authentication, Postgres and migrations |
+| v0.5 | Run it in production: telemetry, connection pools, timeouts, rate limits and containers |
+| v0.6 | Organise and extend code: packages with dependencies, checked architecture, extensions |
+| v0.7 to v0.9 | Async in your own code, a complete standard library, and tooling for large code bases |
 | v1.0 | Stability: editions and migrations, and performance measured against Rust |
 
-v0.0.2 is an early release. Its [known limitations](docs/guide/known-limitations.md) are listed in full, and the
+v0.1.0's [known limitations](docs/guide/known-limitations.md) are listed in full, and the
 tier-1 platform is Linux x86-64.
 
 ## Learn more

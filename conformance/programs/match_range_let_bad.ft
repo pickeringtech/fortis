@@ -1,0 +1,15 @@
+// reject: E-MAT-004 (at the marked line)
+// covers: LANG-05-01
+// X-517: a range pattern is refutable, so a destructuring `let` rejects it — the message shows the whole range
+// — as it rejects any pattern that can fail to match; `match` handles the refutable case.
+import fortis.host { Console }
+
+recovers func main(console: Console) {
+  match Int<0..100>.validate(7) {
+    success(n) => {
+      let 0..9 = move n                         // reject: E-MAT-004 — a range pattern can fail to match
+      console.print("done")
+    }
+    failure(f) => { report f }
+  }
+}

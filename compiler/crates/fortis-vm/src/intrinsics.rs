@@ -204,6 +204,30 @@ fn splitmix(state: u64) -> (u64, u64) {
 
 pub fn call(vm: &mut Vm, name: &str, a: Vec<Value>) -> R<Value> {
     let arg = |i: usize| -> Value { a.get(i).cloned().unwrap_or(Value::Void) };
+    if let Some(target) = name.strip_prefix("enum_parse:") {
+        let value = text(&arg(0))?;
+        let Some(def) = vm.types.get(target) else { return dynamic("enum parse target missing") };
+        let fortis_mir::model::TypeKind::Enum { variants } = &def.kind else { return dynamic("enum parse target is not an enum") };
+        for variant in variants {
+            if value.eq_ignore_ascii_case(&variant.name) {
+                return Ok(Value::Enum(Rc::new(EnumVal { ty: Rc::from(target), variant: Rc::from(variant.name.as_str()), fields: vec![] })));
+            }
+        }
+        let names = variants.iter().map(|v| v.name.as_str()).collect::<Vec<_>>().join(", ");
+        let failed = failure("conversion.parse", vec![("text", Value::Str(value)), ("variants", Value::str(&names))]);
+        if let Value::Failure(f) = &failed {
+            f.borrow_mut().origin = Rc::from(vm.stack.last().map(String::as_str).unwrap_or("main"));
+        }
+        return Ok(failed);
+    }
+    // `x as T` (6.13, X-475): a row of the built-in conversion table, named `as:<kind>:<source>:<target>`
+    if let Some(row) = name.strip_prefix("as:") {
+        let value = crate::convert::convert(row, arg(0))?;
+        if let Value::Failure(f) = &value {
+            f.borrow_mut().origin = Rc::from(vm.stack.last().map(String::as_str).unwrap_or("main"));
+        }
+        return Ok(value);
+    }
     Ok(match name {
         // ---- Int (6.4)
         "Int.add" => checked(int(&arg(0))? + int(&arg(1))?, "add"),
@@ -355,6 +379,21 @@ pub fn call(vm: &mut Vm, name: &str, a: Vec<Value>) -> R<Value> {
             _ => return dynamic("finish of a non-builder"),
         },
         "Text.words" => Value::list(text(&arg(0))?.split_whitespace().map(Value::str).collect()),
+        // the everyday text operations (6.6, X-479), implemented once in fortis-runtime for the VM and native code
+        "String.trim" | "StringView.trim" => Value::str(fortis_runtime::text::trim(&text(&arg(0))?)),
+        "String.trimStart" | "StringView.trimStart" => Value::str(fortis_runtime::text::trim_start(&text(&arg(0))?)),
+        "String.trimEnd" | "StringView.trimEnd" => Value::str(fortis_runtime::text::trim_end(&text(&arg(0))?)),
+        "String.find" | "StringView.find" => match fortis_runtime::text::find(&text(&arg(0))?, &text(&arg(1))?) {
+            Some(offset) => Value::Int(offset as i128),
+            None => Value::Null,
+        },
+        "String.startsWith" | "StringView.startsWith" => Value::Bool(text(&arg(0))?.starts_with(&*text(&arg(1))?)),
+        "String.endsWith" | "StringView.endsWith" => Value::Bool(text(&arg(0))?.ends_with(&*text(&arg(1))?)),
+        "String.split" | "StringView.split" => Value::list(fortis_runtime::text::split(&text(&arg(0))?, &text(&arg(1))?).iter().map(|p| Value::str(p)).collect()),
+        "String.lines" | "StringView.lines" => Value::list(fortis_runtime::text::lines(&text(&arg(0))?).iter().map(|p| Value::str(p)).collect()),
+        "String.replace" | "StringView.replace" => Value::str(&fortis_runtime::text::replace(&text(&arg(0))?, &text(&arg(1))?, &text(&arg(2))?)),
+        "String.asciiUpper" | "StringView.asciiUpper" => Value::str(&fortis_runtime::text::ascii_upper(&text(&arg(0))?)),
+        "String.asciiLower" | "StringView.asciiLower" => Value::str(&fortis_runtime::text::ascii_lower(&text(&arg(0))?)),
         "graphemes" => Value::Int(graphemes(&text(&arg(0))?)),
         // ---- time
         "Duration.days" => dur(int(&arg(0))? * 86_400_000_000_000),
@@ -409,7 +448,9 @@ pub fn call(vm: &mut Vm, name: &str, a: Vec<Value>) -> R<Value> {
         "List.default" => Value::list(vec![]),
         "List.of" => Value::list(a.clone()),
         "List.count" | "ListView.count" | "Array.count" => Value::Int(items(&arg(0))?.borrow().len() as i128),
-        "List.get" | "ListView.get" => {
+        // a view reads the array's own elements (X-578)
+        "Array.asView" => arg(0),
+        "List.get" | "ListView.get" | "Array.get" => {
             let xs = items(&arg(0))?;
             let i = int(&arg(1))?;
             let b = xs.borrow();
@@ -449,7 +490,32 @@ pub fn call(vm: &mut Vm, name: &str, a: Vec<Value>) -> R<Value> {
                 Value::Void
             }
         }
+        "List.clear" => {
+            let xs = items(&arg(0))?;
+            let old = std::mem::take(&mut *xs.borrow_mut());
+            for v in old {
+                vm.destroy(v)?;
+            }
+            Value::Void
+        }
         "List.iterate" => Value::Cursor(shared((items(&arg(0))?.borrow().clone(), 0))),
+        // `Deque.iterate` (X-576): the library class keeps `front`, the first item last, and `back`, the last item last;
+        // the cursor walks them from the front to the back
+        "Deque.iterate" => {
+            let o = match arg(0).deref() {
+                Value::Obj(o) => o,
+                _ => return dynamic("Deque receiver"),
+            };
+            let o = o.borrow();
+            let mut all: Vec<Value> = Vec::new();
+            if let Some(f) = o.get("front") {
+                all.extend(items(f)?.borrow().iter().rev().cloned());
+            }
+            if let Some(b) = o.get("back") {
+                all.extend(items(b)?.borrow().iter().cloned());
+            }
+            Value::Cursor(shared((all, 0)))
+        }
         "ListCursor.next" => match arg(0) {
             Value::Cursor(c) => {
                 let mut c = c.borrow_mut();
@@ -478,21 +544,115 @@ pub fn call(vm: &mut Vm, name: &str, a: Vec<Value>) -> R<Value> {
         "Map.default" => Value::Map(shared(OrderedMap::default())),
         "Map.get" => match arg(0) {
             Value::Map(m) => {
-                let k = freeze(&arg(1)).map_err(|e| Exit::Halt(Halt::Dynamic(e)))?;
-                m.borrow().get(&k).map(|(_, v)| v.clone()).unwrap_or(Value::Null)
+                let key = arg(1);
+                if vm.custom_equality(&key) {
+                    // a key whose type writes its own `equals`/`hash`: found by that equality, not a structural key
+                    let entries = m.borrow().entries.clone();
+                    let mut found = Value::Null;
+                    for (k, v) in entries {
+                        if vm.equal(&k, &key)? {
+                            found = v;
+                            break;
+                        }
+                    }
+                    found
+                } else {
+                    let k = freeze(&key).map_err(|e| Exit::Halt(Halt::Dynamic(e)))?;
+                    m.borrow().get(&k).map(|(_, v)| v.clone()).unwrap_or(Value::Null)
+                }
             }
             _ => return dynamic("Map.get"),
         },
         "Map.set" => match arg(0) {
             Value::Map(m) => {
-                let k = freeze(&arg(1)).map_err(|e| Exit::Halt(Halt::Dynamic(e)))?;
-                let old = m.borrow_mut().insert(k, arg(1), arg(2));
-                if let Some(o) = old {
-                    vm.destroy(o)?;
+                let (key, val) = (arg(1), arg(2));
+                if vm.custom_equality(&key) {
+                    let entries = m.borrow().entries.clone();
+                    let mut hit = None;
+                    for (i, (k, _)) in entries.iter().enumerate() {
+                        if vm.equal(k, &key)? {
+                            hit = Some(i);
+                            break;
+                        }
+                    }
+                    match hit {
+                        Some(i) => {
+                            let old = std::mem::replace(&mut m.borrow_mut().entries[i].1, val);
+                            vm.destroy(old)?;               // replacing keeps the first insertion's position
+                        }
+                        None => m.borrow_mut().entries.push((key, val)),
+                    }
+                    Value::Void
+                } else {
+                    let k = freeze(&key).map_err(|e| Exit::Halt(Halt::Dynamic(e)))?;
+                    let old = m.borrow_mut().insert(k, key, val);
+                    if let Some(o) = old {
+                        vm.destroy(o)?;
+                    }
+                    Value::Void
                 }
-                Value::Void
             }
             _ => return dynamic("Map.set"),
+        },
+        "Map.containsKey" => match arg(0) {
+            Value::Map(m) => {
+                let key = arg(1);
+                if vm.custom_equality(&key) {
+                    let entries = m.borrow().entries.clone();
+                    let mut found = false;
+                    for (k, _) in entries.iter() {
+                        if vm.equal(k, &key)? {
+                            found = true;
+                            break;
+                        }
+                    }
+                    Value::Bool(found)
+                } else {
+                    let k = freeze(&key).map_err(|e| Exit::Halt(Halt::Dynamic(e)))?;
+                    Value::Bool(m.borrow().get(&k).is_some())
+                }
+            }
+            _ => return dynamic("Map.containsKey"),
+        },
+        // `Map.remove` gives the removed value to the caller (null when absent); `Set.remove` says whether the item was there
+        "Map.remove" | "Set.remove" => match arg(0) {
+            Value::Map(m) | Value::Set(m) => {
+                let key = arg(1);
+                let pos = if vm.custom_equality(&key) {
+                    let entries = m.borrow().entries.clone();
+                    let mut hit = None;
+                    for (i, (k, _)) in entries.iter().enumerate() {
+                        if vm.equal(k, &key)? {
+                            hit = Some(i);
+                            break;
+                        }
+                    }
+                    hit
+                } else {
+                    let k = freeze(&key).map_err(|e| Exit::Halt(Halt::Dynamic(e)))?;
+                    m.borrow().index.get(&k).copied()
+                };
+                let is_set = name == "Set.remove";
+                match pos {
+                    None => {
+                        if is_set {
+                            Value::Bool(false)
+                        } else {
+                            Value::Null
+                        }
+                    }
+                    Some(i) => {
+                        let (k, v) = m.borrow_mut().remove_at(i);
+                        vm.destroy(k)?;
+                        if is_set {
+                            Value::Bool(true)
+                        } else {
+                            v
+                        }
+                    }
+                }
+            }
+            _ => return dynamic(name.to_string()),
         },
         "Map.count" | "Set.count" => match arg(0) {
             Value::Map(m) | Value::Set(m) => Value::Int(m.borrow().len() as i128),
@@ -501,20 +661,45 @@ pub fn call(vm: &mut Vm, name: &str, a: Vec<Value>) -> R<Value> {
         "Set.default" => Value::Set(shared(OrderedMap::default())),
         "Set.add" => match arg(0) {
             Value::Set(m) => {
-                let k = freeze(&arg(1)).map_err(|e| Exit::Halt(Halt::Dynamic(e)))?;
-                if m.borrow().get(&k).is_some() {
-                    Value::Bool(false)
-                } else {
-                    m.borrow_mut().insert(k, arg(1), Value::Void);
+                let key = arg(1);
+                if vm.custom_equality(&key) {
+                    let entries = m.borrow().entries.clone();
+                    for (k, _) in entries.iter() {
+                        if vm.equal(k, &key)? {
+                            return Ok(Value::Bool(false));
+                        }
+                    }
+                    m.borrow_mut().entries.push((key, Value::Void));
                     Value::Bool(true)
+                } else {
+                    let k = freeze(&key).map_err(|e| Exit::Halt(Halt::Dynamic(e)))?;
+                    if m.borrow().get(&k).is_some() {
+                        Value::Bool(false)
+                    } else {
+                        m.borrow_mut().insert(k, key, Value::Void);
+                        Value::Bool(true)
+                    }
                 }
             }
             _ => return dynamic("Set.add"),
         },
         "Set.contains" => match arg(0) {
             Value::Set(m) => {
-                let k = freeze(&arg(1)).map_err(|e| Exit::Halt(Halt::Dynamic(e)))?;
-                Value::Bool(m.borrow().get(&k).is_some())
+                let key = arg(1);
+                if vm.custom_equality(&key) {
+                    let entries = m.borrow().entries.clone();
+                    let mut found = false;
+                    for (k, _) in entries.iter() {
+                        if vm.equal(k, &key)? {
+                            found = true;
+                            break;
+                        }
+                    }
+                    Value::Bool(found)
+                } else {
+                    let k = freeze(&key).map_err(|e| Exit::Halt(Halt::Dynamic(e)))?;
+                    Value::Bool(m.borrow().get(&k).is_some())
+                }
             }
             _ => return dynamic("Set.contains"),
         },
@@ -906,40 +1091,36 @@ pub fn call(vm: &mut Vm, name: &str, a: Vec<Value>) -> R<Value> {
                 let (module, tname) = rest.split_once(':').unwrap_or((rest, ""));
                 return dynamic(format!("kit not available: `{tname}` comes from {module}, which this kernel does not implement"));
             }
+            // a type's own `equals`/`compare` that its declaration does not provide: a core type's, or a derived
+            // Equatable/Comparable's, run by the kernel (X-516; D-84, D-85). The checker proved the receiver's type
+            // implements the interface; a program type is an object or enum, a core type names it in the table.
+            if let Some((tname, m)) = other.rsplit_once('.') {
+                if (m == "equals" || m == "compare") && a.len() == 2 {
+                    let recv = arg(0);
+                    let core_ok = (m == "equals" && fortis_types::decls::builtin_implements(tname, "Equatable"))
+                        || (m == "compare" && fortis_types::decls::builtin_implements(tname, "Comparable"));
+                    if matches!(recv, Value::Obj(_) | Value::Enum(_)) || core_ok {
+                        return if m == "equals" {
+                            Ok(Value::Bool(vm.equal(&recv, &arg(1))?))
+                        } else {
+                            let variant = match vm.compare(&recv, &arg(1))? {
+                                std::cmp::Ordering::Less => "Less",
+                                std::cmp::Ordering::Equal => "Equal",
+                                std::cmp::Ordering::Greater => "Greater",
+                            };
+                            Ok(Value::Enum(Rc::new(EnumVal { ty: Rc::from("Ordering"), variant: Rc::from(variant), fields: vec![] })))
+                        };
+                    }
+                }
+            }
             return dynamic(format!("`{other}` is not implemented in the VM"));
         }
     })
 }
 
-/// Extended grapheme clusters for the rules the contract names (GB3, GB9, GB11, GB12/13), as the interpreter
-/// approximates them.
+/// The shared Unicode grapheme implementation (D-713).
 fn graphemes(s: &str) -> i128 {
-    fn is_extend(c: char) -> bool {
-        let o = c as u32;
-        (0x0300..=0x036F).contains(&o) || (0x1AB0..=0x1AFF).contains(&o) || (0x1DC0..=0x1DFF).contains(&o) || (0x20D0..=0x20FF).contains(&o) || (0xFE20..=0xFE2F).contains(&o) || (0xFE00..=0xFE0F).contains(&o) || (0x1F3FB..=0x1F3FF).contains(&o)
-    }
-    fn is_pict(c: char) -> bool {
-        let o = c as u32;
-        (0x1F000..=0x1FAFF).contains(&o) || (0x2600..=0x27BF).contains(&o)
-    }
-    fn is_ri(c: char) -> bool {
-        (0x1F1E6..=0x1F1FF).contains(&(c as u32))
-    }
-    let (mut count, mut prev, mut ri_run) = (0i128, None::<char>, 0u32);
-    for c in s.chars() {
-        match prev {
-            None => count += 1,
-            Some(p) => {
-                if p == '\r' && c == '\n' || is_extend(c) || c == '\u{200D}' || p == '\u{200D}' && is_pict(c) || is_ri(c) && is_ri(p) && ri_run % 2 == 1 {
-                } else {
-                    count += 1;
-                }
-            }
-        }
-        ri_run = if is_ri(c) { ri_run + 1 } else { 0 };
-        prev = Some(c);
-    }
-    count
+    fortis_runtime::graphemes::count(s) as i128
 }
 
 #[cfg(test)]

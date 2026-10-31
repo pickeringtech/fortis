@@ -1,0 +1,4 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+interface I { func size(self) Int }
+func f(x: dynamic I) { let m = x.size }

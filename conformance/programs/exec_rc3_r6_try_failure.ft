@@ -1,0 +1,11 @@
+// execute: fail:conversion.parse
+// reports: runtime-failure:conversion.parse
+// failure-records: exact
+// requires: runtime
+// covers: LANG-08-01
+try func parse(s: String) Int => s as Int or fail
+try func main() {
+  let f = parse
+  let n = f("no") or fail
+  discard n
+}

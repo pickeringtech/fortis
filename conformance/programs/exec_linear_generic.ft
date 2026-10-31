@@ -1,0 +1,19 @@
+// execute: 3
+// requires: runtime
+// covers: LANG-10-02
+// X-519, X-520: a `T: linear` generic instantiated at a linear type runs: the call is accepted, the body's
+// `return move x` forwards the obligation, the caller's match consumes it, and the interpreter, the VM and
+// native agree on the output.
+import fortis.host { Console }
+
+func id[T](x: owned T) T where T: linear {
+  return move x
+}
+
+recovers func main(console: Console) {
+  let r = 3 as Int<0..10>
+  match id(move r) {
+    success(n) => console.print("${n}")
+    failure(f) => { report f }
+  }
+}

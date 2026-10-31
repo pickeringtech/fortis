@@ -43,10 +43,10 @@ async func main(out: Console) {
     let t = tasks.launch(make(console.retain()))
     let n = await t
     console.print("task ${n}")
-    let w = tasks.launch(Word(s: String.from("abc")).size())
+    let w = tasks.launch(Word(s: "abc" as String).size())
     let wn = await w
     console.print("word ${wn}")
-    let name = String.from("ada")
+    let name = "ada" as String
     let c = tasks.launch(greet(copy name))
     let cn = await c
     console.print("copy ${cn}")
@@ -58,7 +58,7 @@ async func main(out: Console) {
     console.print("pair ${qn}")
     let mut counter = Counter(n: 1)
     scope edits {
-      let e = edits.launch(bump(editable counter, String.from("abc"), counter.n))
+      let e = edits.launch(bump(editable counter, "abc" as String, counter.n))
       let en = await e
       console.print("edited ${en}")
     }

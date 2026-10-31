@@ -1,0 +1,11 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-06-01, LANG-08-02
+// D-420: Void has one value and no constructor.
+import fortis.host { Console }
+func main(console: Console) {
+  let o = ("21" as Int).map(fn(n) => Void()) // reject: E-TYP-040
+  match move o {
+    success(v) => console.print("ok")
+    failure(f) => { report f }
+  }
+}

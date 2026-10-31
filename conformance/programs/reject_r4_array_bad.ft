@@ -1,0 +1,4 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+func main() { let make = Array[Int, 2].filled
+  let a = make("wrong") }

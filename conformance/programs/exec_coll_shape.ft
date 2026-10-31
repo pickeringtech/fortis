@@ -1,0 +1,66 @@
+// execute: 0:ada,1:bo,2:cy|2 pairs|take [1,2] [] [1,2,3,4,5] []|skip [3,4,5] [1,2,3,4,5] []|flat [1,1,2,2,3,3]|chunks 3 [1,2],[3,4],[5]|by length bo,cy,ada,lena|stable bo,cy|groups 2 3=ada,2=cy,bo
+// requires: runtime
+// covers: LANG-06-16
+// The List methods that build a new list (6.7, X-479): `enumerate`, `zip`, `take`, `skip`, `flatMap`, `chunked`,
+// `sortedBy` (a stable sort by a key) and `groupBy` (groups in the order their keys first appear). Each copies its
+// elements, so the element type is Copyable, and each says so in its signature. A count below 0 is 0.
+import fortis.host { Console }
+
+func show(xs: ListView[Int]) String {
+  let mut out = "["
+  let mut i = 0
+  while i < xs.count() {
+    if i > 0 {
+      out = "${out},"
+    }
+    out = "${out}${xs.get(i) ?? 0}"
+    i = Int.wrappingAdd(i, 1)
+  }
+  return "${out}]"
+}
+
+func join(xs: ListView[String]) String {
+  let mut out = String.empty()
+  let mut i = 0
+  while i < xs.count() {
+    if i > 0 {
+      out = "${out},"
+    }
+    out = "${out}${xs.get(i) ?? ""}"
+    i = Int.wrappingAdd(i, 1)
+  }
+  return out
+}
+
+func main(console: Console) {
+  let names = List.of("ada" as String, "bo" as String, "cy" as String)
+  let numbered = names.enumerate()
+  let mut lines: List[String] = List.default()
+  for pair in numbered {
+    lines.push("${pair.0}:${pair.1}")
+  }
+  console.print(join(lines))
+  let pairs = names.zip(List.of(10, 20))
+  console.print("${pairs.count()} pairs")
+  let xs = List.of(1, 2, 3, 4, 5)
+  console.print("take ${show(xs.take(2))} ${show(xs.take(0))} ${show(xs.take(9))} ${show(xs.take(-3))}")
+  console.print("skip ${show(xs.skip(2))} ${show(xs.skip(-1))} ${show(xs.skip(9))}")
+  console.print("flat ${show(List.of(1, 2, 3).flatMap(fn(n) => List.of(n, n)))}")
+  let chunks = xs.chunked(2)
+  let mut shown: List[String] = List.default()
+  for chunk in chunks {
+    shown.push(show(chunk))
+  }
+  console.print("chunks ${shown.count()} ${join(shown)}")
+  let words = List.of("lena" as String, "ada" as String, "bo" as String, "cy" as String)
+  let ordered = words.sortedBy(fn(w) => w.byteCount())
+  console.print("by length ${join(ordered)}")
+  let firstTwo = words.skip(2).sortedBy(fn(w) => w.byteCount())
+  console.print("stable ${join(firstTwo)}")
+  let grouped = List.of("ada" as String, "cy" as String, "bo" as String).groupBy(fn(w) => w.byteCount())
+  let mut sizes: List[String] = List.default()
+  for entry in grouped {
+    sizes.push("${entry.0}=${join(entry.1)}")
+  }
+  console.print("groups ${grouped.count()} ${join(sizes)}")
+}

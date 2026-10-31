@@ -19,9 +19,9 @@ the records the tools print and the corrections that fix them. It restates the L
 3. This agent mode and the human guide are derived from them. A page that contradicts them is a defect in the page.
 
 Decisions are logged as register rows `X-nnn`, and known toolchain defects as `D-nn`, in the maintainers'
-planning records; pages cite them by ID. What v0.0.2 runs, and what it still refuses, is
+planning records; pages cite them by ID. What v0.1.0 runs, and what it still refuses, is
 [Known limitations](known-limitations.md); the release note is
-[v0.0.2](../releases/v0.0.2.md).
+[v0.1.0](../releases/v0.1.0.md).
 
 ## Tools
 
@@ -35,7 +35,7 @@ Run from the repository root after `cd compiler && cargo build --release`. `fort
 | `fortis test FILE.ft\|DIR --format json` | `test-result` records on standard error, then one `test-summary` on standard output | run tests and properties on the interpreter |
 | `fortisc test FILE.ft\|DIR --format json` | the same records, on the same streams | run tests on the development VM |
 | `fortisc vm FILE.ft\|DIR` | `observed: line\|line\|…` (the conformance form) | run `main` on the development VM |
-| `fortis build FILE.ft\|DIR --out APP` | one `build` record (`binary`, `manifest`) | native executable through safe Rust |
+| `fortis build FILE.ft\|DIR --out APP [--emit-only]` | one `build` record (`binary`, `manifest`); `--emit-only`: one `emit` record (`program`, `crate`) | native executable through safe Rust; `--emit-only` writes the generated crate where the build would compile it (`build/native-build/`) and builds nothing |
 | `fortis fmt --check PATH` / `--write PATH` | files not in canonical layout / rewritten | canonical layout, after rewriting older forms into the forms these pages teach where the module checks and the meaning is unchanged (`--no-migrate`: layout only) |
 
 Every finding and runtime report is a record first; text is rendered from it, and the stream chooses the form
@@ -134,6 +134,7 @@ above it, with the file named `example.ft` (LR 0).
 | [Records](records.md): diagnostic, runtime, test, view and build records | 0 |
 | [Codes](codes.md): every diagnostic code with its class, rule, section and correction | all |
 | [Glossary](glossary.md): kit, package, toolchain component, head, binding, verifier | E |
-| [Core library](library.md): every exported operation of the seven core modules with its contract (generated) | LR 15 |
+| [Coffee shop worked example](worked-example.md): construction order, rules and backend checks | LR 6, LR 8, LR 9, LR 10, LR 11.5, LR 14 |
+| [Core library](library.md): every exported operation of the seven core modules with its effects and contract (generated; human mode: [The core library](../guide/library.md)) | LR 15 |
 
 The skill `skills/fortis-code` (installed with `fortis skill install`) points agents here.

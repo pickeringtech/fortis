@@ -1,0 +1,16 @@
+// execute: 2|1
+// requires: runtime
+// covers: LANG-07-06
+// D-580: a stored loan explicitly from static borrows from no owner.
+import fortis.host { Console }
+pure func literal() StringView from static => "hello"
+func main(console: Console) {
+  let mut xs: List[alias StringView from static] = List.default()
+  xs.push(literal())
+  let text: alias StringView from static = "literal"
+  xs.push(move text)
+  console.print("${xs.count()}")
+  let optional: (alias StringView from static)? = literal()
+  let nested: List[(alias StringView from static)?] = List.of(move optional)
+  console.print("${nested.count()}")
+}

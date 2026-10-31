@@ -1,11 +1,11 @@
-// reject: E-NAM-001 (at the marked line)
+// reject: E-NAM-001, E-TYP-040 (at the marked lines)
 // covers: LANG-04-06
 // 4.6's entry signature names the prelude's Void. A module-level enum of that spelling matches the tokens and is
-// still not one of the forms (D-51.2). The body returns that enum, so the only finding is the entry check.
+// still not one of the forms (D-51.2). Returning the enum also differs from the implicit prelude Void (D-592).
 export enum Void {
   Unit
 }
 
 func main() {    // reject: E-NAM-001 — main's Void is not the prelude Void
-  return Void.Unit
+  return Void.Unit // reject: E-TYP-040
 }

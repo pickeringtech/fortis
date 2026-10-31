@@ -1,0 +1,19 @@
+// Requiring a private method grants access only to that mixin's bodies.
+export mixin NeedsSecret {
+  requires pure func secret(self) Int
+  export pure func value(self) Int => self.secret()
+}
+
+export mixin Sneaks {
+  export pure func peek(self) Int => self.secret() // reject: E-NAM-004
+}
+
+export class Vault with NeedsSecret, Sneaks {
+  pure func secret(self) Int => 42
+}
+
+export mixin Hidden {
+  pure func hidden(self) Int => 7
+}
+
+export class HiddenVault with Hidden {}

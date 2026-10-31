@@ -1,0 +1,71 @@
+// reject: E-OWN-011 (at the marked lines)
+// covers: LANG-07-05, LANG-07-07
+// D-369, 7.9: a binding of a `??` whose fallback is a value of its own (`let t = empty.get(0) ?? move d`) lends on
+// one path and owns on the other: it owns a part of what it holds, and a loan drawn from it is a loan of that binding,
+// which ends with it. A binding of an outer block that keeps such a loan (`keep = present(t)`) would read the
+// fallback after its cleanup has run. The same holds for a tuple built around a value of its own and for the value
+// of an `if` one of whose branches gives one. Both checkers typed the binding as a loan of the list alone.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func fallbackEscapes(console: Shared[Console]) {
+  let empty: List[Token] = List.default()
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  let d = make(console, "fallback")
+  let mut keep = xs.get(0)
+  {
+    let t = empty.get(0) ?? move d
+    keep = present(t)                                                     // reject: E-OWN-011 — keep would outlive t, which owns the fallback
+  }
+  console.print("keep ${keep?.label ?? "none"}")
+}
+
+func tupleEscapes(console: Shared[Console]) {
+  let empty: List[Token] = List.default()
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  let d = make(console, "fallback")
+  let mut keep = xs.get(0)
+  {
+    let pair = (empty.get(0) ?? move d, 2)
+    keep = present(pair.0)                                                // reject: E-OWN-011 — pair owns the fallback
+  }
+  console.print("keep ${keep?.label ?? "none"}")
+}
+
+func branchEscapes(console: Shared[Console], flag: Bool) {
+  let empty: List[Token] = List.default()
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  let d = make(console, "own")
+  let mut keep = xs.get(0)
+  {
+    let v = if flag {
+      give xs.get(0) ?? make(console, "z")
+    } else {
+      give move d
+    }
+    keep = present(v)                                                     // reject: E-OWN-011 — v owns the `else` branch's value
+  }
+  console.print("keep ${keep?.label ?? "none"}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  fallbackEscapes(console)
+  tupleEscapes(console)
+  branchEscapes(console, true)
+}

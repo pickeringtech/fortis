@@ -1,0 +1,49 @@
+// execute: 1|2|3|4|5|6|7|8|done
+// requires: runtime
+// covers: LANG-10-01, LANG-10-02
+import fortis.host { Console }
+class Bin[T] where T: linear {
+  items: List[T]
+  export func take(owned self) List[T] {
+    let Bin(items: contents) = move self
+    return move contents
+  }
+}
+func drain[T](xs: owned List[T], use: fn(owned T) Void) where T: linear {
+  for item in move xs { use(move item) }
+}
+recovers func main(console: Console) {
+  let b = Bin(items: List[Outcome[Int]].of(Outcome.success(1), Outcome.success(2), Outcome.success(3)))
+  let xs = move b.take()
+  for item in move xs {
+    let n = item or recover 0
+    if n == 2 {
+      console.print("${n}")
+      continue
+    }
+    loop { break }
+    console.print("${n}")
+  }
+  let ys = List[Outcome[Int]].of(Outcome.success(4), Outcome.success(5))
+  move ys.consumeEach(fn(item) {
+    let n = item or recover 0
+    console.print("${n}")
+    return
+  })
+  let zs = List[Outcome[Int]].of(Outcome.success(6), Outcome.success(7))
+  drain(move zs, fn(item) {
+    let n = item or recover 0
+    console.print("${n}")
+  })
+  let ms = Map[Int, Outcome[Int]].default()
+  let mut map = move ms
+  map.set(0, Outcome.success(8))
+  for pair in move map {
+    let (key, item) = move pair
+    let n = item or recover 0
+    console.print("${n}")
+  }
+  let empty: List[Outcome[Int]] = List.default()
+  for item in move empty { discard item or recover 0 }
+  console.print("done")
+}

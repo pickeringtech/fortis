@@ -1,0 +1,43 @@
+// D-450: a `try` function whose result is a loan and whose body returns a `??` with a failing fallback
+// (`return xs.get(0) ?? fail Missing()`, result `alias Token from xs`) passes both checkers and runs on the
+// interpreter and the VM, and native code does not build it: rustc E0515, cannot return value referencing
+// temporary value, at the lowering of the loan `??` into a `MaybeOwned` holder that is a return-expression
+// rvalue returned by reference. A loud refusal of a program two backends run; a sibling of D-445, where the
+// same `??` is bound by `let` (rustc E0282 there). The same program also shows D-451: on the success path the
+// interpreter and the VM destroy the borrowed element at different times. Pre-existing since v0.0.1. Found by
+// the v0.1 stream A fix of D-446, in a success-path probe.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func show(console: Shared[Console], t: Token) {
+  console.print("show ${t.label}")
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func find(xs: List[Token]) alias Token from xs {
+  return xs.get(0) ?? fail Missing()
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  let d = make(console, "held")
+  show(console, find(alias xs) or recover move d)
+  console.print("after")
+}

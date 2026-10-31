@@ -1,0 +1,55 @@
+// reject: E-OBL-001
+// covers: LANG-10-01, LANG-10-02
+recovers func continuing(xs: owned List[Outcome[Int]]) {
+  for item in move xs { continue }
+}
+recovers func breaking(xs: owned List[Outcome[Int]]) {
+  for item in move xs {
+    discard item or recover 0
+    break
+  }
+}
+recovers func returning(xs: owned List[Outcome[Int]]) {
+  for item in move xs {
+    discard item or recover 0
+    return
+  }
+}
+func wildcard(xs: owned List[Outcome[Int]]) {
+  for _ in move xs {}
+}
+recovers func recovering(r: owned Outcome[Int]) Int {
+  return r catch why {
+    let xs = List[Outcome[Int]].of(Outcome.success(1))
+    for item in move xs {
+      discard item or recover 0
+      recover 1
+    }
+    recover 0
+  }
+}
+recovers func giving(choose: Bool) Int {
+  return if choose {
+    let xs = List[Outcome[Int]].of(Outcome.success(1))
+    for item in move xs {
+      discard item or recover 0
+      give 1
+    }
+    give 0
+  } else { give 2 }
+}
+recovers func outerContinue() {
+  outer: for n in 0..<2 {
+    let xs = List[Outcome[Int]].of(Outcome.success(n))
+    for item in move xs {
+      discard item or recover 0
+      continue outer
+    }
+  }
+}
+func array(xs: owned Array[Outcome[Int], 2]) {
+  for item in move xs {}
+}
+func map(xs: owned Map[Int, Outcome[Int]]) {
+  for item in move xs {}
+}

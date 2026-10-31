@@ -1,0 +1,19 @@
+// execute: recovered
+// requires: runtime
+// covers: LANG-06-14, LANG-06-15
+// reports: runtime-failure:conversion.parse
+import fortis.host { Console }
+
+enum Size derive convert from String {
+  Small
+  Medium
+  Large
+}
+recovers func main(console: Console) {
+  let size = " many " as Size catch e {
+    report e
+    recover Small
+  }
+  discard size
+  console.print("recovered")
+}

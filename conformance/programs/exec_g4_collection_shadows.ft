@@ -1,0 +1,47 @@
+// execute: 1|2|3|4|5|6|2|99|10|9
+// requires: runtime
+// covers: LANG-04-04, LANG-06-06
+// D-592, X-640: local collection spellings are ordinary classes, not intrinsics.
+import fortis.host { Console }
+import fortis.prelude
+class List { export n: Int }
+class Array {
+  export n: Int
+  export func filled(n: Int) Int => n
+}
+class Set { export n: Int }
+class Map { export n: Int }
+class Deque { export n: Int }
+class SortedSet { export n: Int }
+class Cursor[T] implements prelude.Consumer[T] where T: linear {
+  items: prelude.List[T]
+  export func next(editable self) T? => self.items.pop()
+}
+class ListView[T] implements prelude.Consumable[T, Cursor[T]] where T: linear {
+  items: prelude.List[T]
+  export func consume(owned self) Cursor[T] {
+    let ListView(items: contents) = move self
+    return Cursor(items: move contents)
+  }
+}
+func main(console: Console) {
+  let v1 = List(n: 1)
+  console.print("${v1.n}")
+  let v2 = Array(n: 2)
+  console.print("${v2.n}")
+  let v3 = Set(n: 3)
+  console.print("${v3.n}")
+  let v4 = Map(n: 4)
+  console.print("${v4.n}")
+  let v5 = Deque(n: 5)
+  console.print("${v5.n}")
+  let v6 = SortedSet(n: 6)
+  console.print("${v6.n}")
+  let xs: prelude.List[Int] = prelude.List.of(7, 8)
+  console.print("${xs.count()}")
+  console.print("${Array.filled(99)}")
+  let ownedView = ListView(items: prelude.List[Int].of(9, 10))
+  for item in move ownedView {
+    console.print("${item}")
+  }
+}

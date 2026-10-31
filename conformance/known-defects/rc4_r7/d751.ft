@@ -1,0 +1,7 @@
+import fortis.host { Console }
+try func parse(s: String) Int => s as Int or fail
+try func apply(op: try fn(String) Int, s: String) Int => op(s) or fail
+try func main(console: Console) {
+  let n = apply(parse, "3") or fail
+  console.print("${n}")
+}

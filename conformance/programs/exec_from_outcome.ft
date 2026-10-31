@@ -17,7 +17,7 @@ class Token {
 }
 
 func make(console: Shared[Console], label: StringView) Token {
-  return Token(label: String.from(label), console: console.retain())
+  return Token(label: label as String, console: console.retain())
 }
 
 error Missing {

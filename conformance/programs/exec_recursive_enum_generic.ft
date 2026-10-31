@@ -53,7 +53,7 @@ func trees(f: Forest) Int {
 
 func main(console: Console) {
   let c = Chain.Next(tail: Next(tail: End(value: 4)))
-  let t = Tree.Node(child: Hold(value: Tree.Leaf))
+  let t = Tree.Node(child: Hold(value: Leaf))
   let f = Forest.Many(trees: List.of(None, None))
   console.print("chain ${depth(c)}")
   console.print("held ${held(move t)}")

@@ -1,0 +1,43 @@
+// execute: 3|4 7|2|3|5
+// requires: runtime
+// covers: LANG-06-11
+// A type parameter only the arguments fix, named inside a type argument of the result, takes an integer argument's
+// base type, as an unannotated `let` widens its initialiser (5.1, 6.10, X-513): `List.of(i)` with `i` known to be 4 is
+// a `List[Int]`, so it can grow past 4 and goes where a `List[Int]` is expected, though type arguments are invariant
+// in their refinement (6.3). A refined element type is written as the expected type; a result that is the parameter
+// itself keeps the argument's interval.
+import fortis.host { Console }
+
+class Box[T] {
+  value: T
+}
+
+pure func pick[T](a: T, b: T) T where T implements Copyable => copy a
+
+func total(xs: List[Int]) Int => xs.count()
+
+func keep(xs: List[Int<0..9>]) Int => xs.count()
+
+func unbox(b: Box[Int]) Int => b.value
+
+func main(console: Console) {
+  let mut outer: List[List[Int]] = List.default()
+  for i in List.of(1, 3) {
+    let inner = List.of(i)
+    outer.push(move inner)
+  }
+  let i = 4
+  let mut xs = List.of(i)
+  xs.push(7)
+  outer.push(copy xs)
+  console.print("${outer.count()}")
+  console.print("${xs.get(0) ?? 0} ${xs.get(1) ?? 0}")
+  let small: Int<0..3> = 1
+  let big: Int<0..9> = 7
+  let ys: List[Int<0..9>] = List.of(small, big)
+  console.print("${keep(ys)}")
+  let zs = List.of(small, big)
+  console.print("${Int.wrappingAdd(total(zs), 1)}")
+  let n: Int<0..9> = pick(big, small)
+  console.print("${Int.wrappingAdd(unbox(Box(value: i)), n - 6)}")
+}

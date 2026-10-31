@@ -12,6 +12,58 @@ pub const AUTHORITIES: &[&str] = &["FileSystem", "Network", "Clock", "Random", "
 /// `recovers` change a function's type, so only its modifiers give them (11.2).
 pub const DECLARABLE: &[&str] = &["nondet", "block", "mutate", "alloc", "io"];
 
+/// A modifier and the effect it permits (11.2): `forbids` of that effect beside the modifier is a contradiction (11.5).
+pub const PERMITS: &[(&str, &str)] = &[("async", "suspend"), ("try", "fail"), ("recovers", "recovers")];
+
+/// One contradiction among a declaration's claims (11.5, E-EFF-050): its kind (`pure` beside a required capability,
+/// a modifier beside `forbids` of the effect it permits, or one authority both required and excluded: "pure",
+/// "forbids", "excludes"), the origins of its two sides (a contract's name, or "" for a function's written modifiers),
+/// the claim (the capability or the modifier) and the effect.
+pub struct Contradiction {
+    pub kind: &'static str,
+    pub first: String,
+    pub second: String,
+    pub claim: String,
+    pub effect: String,
+}
+
+/// The contradictions among a declaration's claims (11.5, E-EFF-050), shared by the contract check and the function
+/// check: a port of checker/effects.py `contract_contradictions`. `parts` lists (origin, items), items being a
+/// contract's `modifiers`, `forbids`, `requires` and `excludes`. With `skip_own`, a pair whose two sides are one
+/// contract's is left out, since that contract's own check reports it. Each is listed once, the written modifiers'
+/// side first.
+pub fn contract_contradictions(parts: &[(String, BTreeMap<String, BTreeSet<String>>)], skip_own: bool) -> Vec<Contradiction> {
+    let empty = BTreeSet::new();
+    let get = |m: &'_ BTreeMap<String, BTreeSet<String>>, k: &str| -> BTreeSet<String> { m.get(k).unwrap_or(&empty).clone() };
+    let mut out = vec![];
+    let mut seen: BTreeSet<(&'static str, String, String)> = BTreeSet::new();
+    for (oa, a) in parts {
+        for (ob, b) in parts {
+            if skip_own && !oa.is_empty() && oa == ob {
+                continue;
+            }
+            let (amods, areq) = (get(a, "modifiers"), get(a, "requires"));
+            let (bforbids, breq, bexcl) = (get(b, "forbids"), get(b, "requires"), get(b, "excludes"));
+            let mut found: Vec<(&'static str, String, String)> = vec![];
+            if amods.contains("pure") {
+                found.extend(breq.iter().map(|cap| ("pure", cap.clone(), "io".to_string())));
+            }
+            for (m, e) in PERMITS {
+                if amods.contains(*m) && bforbids.contains(*e) {
+                    found.push(("forbids", m.to_string(), e.to_string()));
+                }
+            }
+            found.extend(areq.intersection(&bexcl).map(|cap| ("excludes", cap.clone(), "io".to_string())));
+            for (kind, claim, effect) in found {
+                if seen.insert((kind, ob.clone(), claim.clone())) {
+                    out.push(Contradiction { kind, first: oa.clone(), second: ob.clone(), claim, effect });
+                }
+            }
+        }
+    }
+    out
+}
+
 /// An operation as the effect data names it: (module, owner or None for a free function, name).
 pub type OpKey = (String, Option<String>, String);
 

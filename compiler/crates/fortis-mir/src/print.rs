@@ -282,6 +282,7 @@ pub fn pattern(p: &Pattern) -> String {
         Pattern::Tuple(ps) => format!("({})", ps.iter().map(pattern).collect::<Vec<_>>().join(", ")),
         Pattern::Record(fs) => format!("{{{}}}", fields(fs)),
         Pattern::Otherwise(b) => format!("otherwise{}", b.map_or(String::new(), |b| format!("(_{b})"))),
+        Pattern::Range { lo, hi } => format!("{}..{}", lo.map_or(String::new(), |n| n.to_string()), hi.map_or(String::new(), |n| n.to_string())),
     }
 }
 

@@ -1,0 +1,9 @@
+// execute: 3 true
+// requires: runtime
+// covers: LANG-06-02, LANG-07-06
+import fortis.host { Console }
+func reorder(value: { flag: Bool, count: Int }) { count: Int, flag: Bool } { return value }
+func main(console: Console) {
+  let value = reorder({ flag: true, count: 3 })
+  console.print("${value.count} ${value.flag}")
+}

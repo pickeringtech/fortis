@@ -1,0 +1,15 @@
+// execute: tag b|3
+// requires: runtime
+// covers: LANG-06-13, LANG-06-10
+// A module that imports `Tag` sees the `implement` blocks its module declares (D-132): interpolation uses the
+// `Displayable` block, and a `where` bound is met through the `Measured` block, on every backend.
+import fortis.host { Console }
+import exec.implement.import.tags { Tag, Measured }
+
+func measure[T](x: T) Int where T implements Measured => x.size()
+
+func main(console: Console) {
+  let t = Tag(name: "b")
+  console.print("${t}")
+  console.print("${measure(t)}")
+}

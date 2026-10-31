@@ -1,0 +1,12 @@
+// execute: fail:conversion.parse
+// reports: runtime-failure:conversion.parse
+// failure-records: exact
+// requires: runtime
+// covers: LANG-06-14
+try func sample(s: StringView) Int {
+  return s as Int or fail
+}
+try func main() {
+  let n = sample("1x") or fail
+  discard n
+}

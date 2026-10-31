@@ -1,0 +1,10 @@
+// accept
+import exec.mixin.lexical.shapes as mixins
+
+const factor = 77
+pure func helper(n: Int) Int => 77
+
+export class Crate with mixins.Doubled {
+  export n: Int
+  pure func base(self) Int => self.n
+}

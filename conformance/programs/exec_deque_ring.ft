@@ -1,0 +1,86 @@
+// execute: steps 1200 mismatches 0 largest 441 checkpoints 12|ends 224 224 373 373 706|window 4 47 50 dropped 1081
+// requires: runtime
+// covers: LANG-06-16
+// A queue used from both ends for a long run (6.7, X-576): a growing phase and a draining phase of pseudo-random pushes
+// and pops at the front and the back, each step checked against a plain list that is rebuilt by hand. The deque turns
+// over its two halves many times in the run (an end that runs dry takes half of the other end's items), which is where
+// an off-by-one in the order would show. A sliding window then pushes at the back and pops at the front, one for one,
+// over a deque that never gets empty.
+import fortis.collections { Deque }
+import fortis.host { Console }
+
+func sameOrder(d: Deque[Int], shadow: ListView[Int]) Bool {
+  if d.count() != shadow.count() {
+    return false
+  }
+  let mut i = 0
+  for x in d {
+    if (shadow.get(i) ?? -2) != x {
+      return false
+    }
+    i = Int.wrappingAdd(i, 1)
+  }
+  return true
+}
+
+func main(console: Console) {
+  let mut d: Deque[Int] = Deque.default()
+  let mut shadow: List[Int] = List.default()
+  let mut seed = 7
+  let mut step = 0
+  let mut mismatches = 0
+  let mut largest = 0
+  let mut rebuilt = 0
+  while step < 1200 {
+    seed = Int.wrappingAdd(Int.wrappingMul(seed, 1103515245), 12345) % 2147483648
+    let pick = (seed / 65536) % 7
+    let growing = step < 600
+    let value = (seed / 256) % 1000
+    if (growing && pick < 3) || (!growing && pick == 0) {
+      d.pushBack(value)
+      shadow.push(value)
+    } else if (growing && pick < 6) || (!growing && pick == 1) {
+      d.pushFront(value)
+      shadow = List.of(value).concat(shadow)
+    } else if pick % 2 == 0 {
+      let want = shadow.get(0) ?? -1
+      let got = d.popFront() ?? -1
+      if want != got {
+        mismatches = Int.wrappingAdd(mismatches, 1)
+      }
+      shadow = shadow.skip(1)
+    } else {
+      let want = shadow.get(Int.wrappingSub(shadow.count(), 1)) ?? -1
+      let got = d.popBack() ?? -1
+      if want != got {
+        mismatches = Int.wrappingAdd(mismatches, 1)
+      }
+      if shadow.count() > 0 {
+        discard shadow.pop()
+      }
+    }
+    if !sameOrder(d, shadow) {
+      mismatches = Int.wrappingAdd(mismatches, 1)
+    }
+    if d.count() > largest {
+      largest = d.count()
+    }
+    if step % 100 == 99 {
+      rebuilt = Int.wrappingAdd(rebuilt, 1)
+    }
+    step = Int.wrappingAdd(step, 1)
+  }
+  console.print("steps ${step} mismatches ${mismatches} largest ${largest} checkpoints ${rebuilt}")
+  console.print("ends ${d.count()} ${shadow.count()} ${d.peekFront() ?? -1} ${shadow.get(0) ?? -1} ${d.peekBack() ?? -1}")
+  let mut window: Deque[Int] = Deque.default()
+  let mut sum = 0
+  let mut n = 1
+  while n <= 50 {
+    window.pushBack(n)
+    if window.count() > 4 {
+      sum = Int.wrappingAdd(sum, window.popFront() ?? 0)
+    }
+    n = Int.wrappingAdd(n, 1)
+  }
+  console.print("window ${window.count()} ${window.peekFront() ?? -1} ${window.peekBack() ?? -1} dropped ${sum}")
+}

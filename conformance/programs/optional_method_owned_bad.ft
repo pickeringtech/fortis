@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// covers: LANG-06-08
+class Cell { func take(owned self) {} }
+func bad() { let c: Cell? = Cell()
+  discard c?.take() }

@@ -4,8 +4,8 @@ shard that started before the build ended (`gate.py --toolchain`, ci.yml).
 
     python3 -I .github/scripts/fetch_tools.py [--deadline SECONDS]
 
-It waits for the artifact, checking every 10 seconds, and stops at the deadline (25 minutes by default) or as soon
-as the build job ends without one, and says which. Every `gh` call has its own deadline. It needs GH_TOKEN (a token
+It waits for the artifact, checking every 10 seconds, retries a failed download up to five times with a growing
+wait, and stops at the deadline (25 minutes by default) or as soon as the build job ends without one, and says which. Every `gh` call has its own deadline. It needs GH_TOKEN (a token
 that may read the run's artifacts), GITHUB_REPOSITORY and GITHUB_RUN_ID, which a workflow job has.
 """
 import os
@@ -47,11 +47,19 @@ def main(argv):
             return 1
         time.sleep(10)
     dest = os.path.join(ROOT, "build", "tools-download")
-    shutil.rmtree(dest, ignore_errors=True)
-    code, out = gh(["run", "download", run, "--name", "tools", "--dir", dest], timeout=600)
-    if code != 0:
-        print(f"fetch_tools: downloading the `tools` artifact failed: {out[:300]}")
-        return 1
+    # GitHub's artifact storage throttles now and then ("HTTP 503: Egress is over the account limit", 30 Oct 2026,
+    # about 15 minutes): wait and try again, five times at most and within the deadline, before failing the shard
+    for attempt in range(1, 6):
+        shutil.rmtree(dest, ignore_errors=True)
+        code, out = gh(["run", "download", run, "--name", "tools", "--dir", dest], timeout=600)
+        if code == 0:
+            break
+        wait = 60 * attempt
+        if attempt == 5 or time.time() - start + wait > deadline:
+            print(f"fetch_tools: downloading the `tools` artifact failed (attempt {attempt}): {out[:300]}")
+            return 1
+        print(f"fetch_tools: downloading the `tools` artifact failed (attempt {attempt}), retrying in {wait} s: {out[:200]}")
+        time.sleep(wait)
     with tarfile.open(os.path.join(dest, "tools.tar")) as t:
         t.extractall(ROOT, filter="data")
     shutil.rmtree(dest, ignore_errors=True)

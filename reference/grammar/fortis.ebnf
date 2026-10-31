@@ -29,19 +29,27 @@ typeDecl        = "type" upperIdent "=" type ;                     (* always nom
 (* ---------- Classes, enums, errors ---------- *)
 
 classDecl       = [ "trivial" ] "class" upperIdent [ typeParams ] [ lifetimeParam ]
-                  [ "derive" upperIdentList ] [ "implements" typeList ] [ "with" typeList ]
+                  [ "derive" upperIdentList ] [ "implements" typeList ] [ "with" typeList ] [ linearWhereClause ]
                   "{" { NL } [ classMember { NL { NL } classMember } { NL } ] "}" ;
+linearWhereClause = "where" linearConstraint { "," linearConstraint } ;
+linearConstraint = upperIdent ":" "linear" ;
 typeParams      = "[" upperIdent { "," upperIdent } "]" ;
 lifetimeParam   = "[" "lifetime" lowerIdent "]" ;                  (* parsed so that the checker can name it: stored loans are not in v1, E-OWN-053 (X-137) *)
-upperIdentList  = upperIdent [ typeArgs ] { "," upperIdent [ typeArgs ] } ;   (* derive From[Customer] *)
+upperIdentList  = ( upperIdent [ typeArgs ] | "convert" "from" typeRef )
+                  { "," ( upperIdent [ typeArgs ] | "convert" "from" typeRef ) } ; (* derive convert from Customer *)
 typeList        = type { "," type } ;
-classMember     = { aspectUse NL } [ "export" ] ( fieldDecl | constDecl | methodHead [ funcBody ] ) | [ "export" ] injectDecl | cleanupDecl ;
-                                                                   (* a method body is absent exactly when the head is trusted (LR 8.1): signature modules *)
+classMember     = { aspectUse NL } [ "export" ] ( fieldDecl | constDecl | methodHead [ funcBody ] | convertDecl ) | [ "export" ] injectDecl | cleanupDecl ;
+                                                                    (* a method body is absent exactly when the head is trusted (LR 8.1): signature modules *)
+convertDecl     = [ "try" ] "convert" ( "to" typeRef [ "(" [ "owned" ] "self" ")" ] funcBody
+                                      | "from" typeRef "(" [ "owned" ] lowerIdent ")" funcBody ) ;
+                                                                    (* a declared conversion (LR 6.13, X-475, X-551): the head is the what,
+                                                                       the body the how; `try` makes it fallible; `owned self` / `owned s`
+                                                                       makes it consume, and the use site writes `move x as T` *)
 fieldDecl       = lowerIdent ":" type [ "=" constExpr ] ;
 injectDecl      = "inject" [ "lazy" ] lowerIdent ":" type ;        (* DI kit; slot 2; `export inject` exports the field it becomes (X-138) *)
 cleanupDecl     = "cleanup" "(" "editable" "self" ")" [ "Void" ] block ;    (* `Void` may be left out (LR 8.1, X-345) *)
 
-enumDecl        = "enum" upperIdent [ typeParams ] [ "derive" upperIdentList ] [ "implements" typeList ]
+enumDecl        = "enum" upperIdent [ typeParams ] [ "derive" upperIdentList ] [ "implements" typeList ] [ linearWhereClause ]
                   "{" { NL } [ enumMember { NL { NL } enumMember } { NL } ] "}" ;
 enumMember      = variant | classMember ;                          (* variants first, then members *)
 variant         = upperIdent [ "(" fieldList ")" ] ;
@@ -61,7 +69,7 @@ implementMember = [ "export" ] methodHead funcBody
                 | "const" lowerIdent "=" constExpr ;
 
 mixinDecl       = "mixin" upperIdent "{" { NL } [ mixinMember { NL { NL } mixinMember } { NL } ] "}" ;
-mixinMember     = "requires" ( methodHead | typeList ) | [ "export" ] methodHead funcBody ;
+mixinMember     = "requires" methodHead | [ "export" ] methodHead funcBody ;
 
 contractDecl    = "contract" upperIdent "{" { NL } [ contractItem { NL { NL } contractItem } { NL } ] "}" ;
 contractItem    = "pure" | "noalloc" | "async" | "try" | "recovers"
@@ -165,13 +173,16 @@ equalityExpr    = relationalExpr [ ( "==" | "!=" ) relationalExpr ] ;
 relationalExpr  = shiftExpr [ ( "<" | "<=" | ">" | ">=" ) shiftExpr ] ;
 shiftExpr       = additiveExpr { ( "<<" | ">>" ) additiveExpr } ;
 additiveExpr    = multiplicativeExpr { ( "+" | "-" ) multiplicativeExpr } ;
-multiplicativeExpr = unaryExpr { ( "*" | "/" | "%" ) unaryExpr } ;
+multiplicativeExpr = asExpr { ( "*" | "/" | "%" ) asExpr } ;
+asExpr          = unaryExpr { "as" typeRef } ;                     (* a conversion (LR 6.13, X-475): `x as T`, left to right, tighter
+                                                                      than arithmetic; `move x as T` for a consuming one; the target is
+                                                                      a type name, so a following "<" opens a refinement (lexer note 2) *)
 unaryExpr       = ( "-" | "!" | "await" ) unaryExpr | markerExpr | postfixExpr ;
 markerExpr      = marker place [ ( methodCall | "(" [ argList ] ")" ) { postfix } ] ;
                                                                    (* marker on a place, on a receiver, or on a closure being called;
                                                                       `await editable db.insert(x)` is await applied to the marked call *)
 marker          = "copy" | "alias" | "editable" | "move" ;
-methodCall      = "." memberName "(" [ argList ] ")" ;
+methodCall      = ( "." | "?." ) memberName "(" [ argList ] ")" ;
 postfixExpr     = primaryExpr { postfix } ;
 postfix         = methodCall | "." memberName | "." INTEGER | "?." memberName      (* P3: `.name(` is a method call (LR 3.2) *)
                 | "(" [ argList ] ")"
@@ -193,7 +204,8 @@ tupleLit        = "(" expr "," [ expr { "," expr } ] ")" ;
 recordLit       = "{" { NL } ident ":" expr { "," ident ":" expr } [ "," ] { NL } "}" ;   (* uppercase keys: a variant map *)
 
 lambda          = modifiers "fn" [ "mut" | "once" ] [ "[" captureList "]" ] "(" [ lambdaParams ] ")"
-                  ( type funcBody | "=>" expr ) ;                (* an expression body may leave out its return type: inferred (LR 8.2, X-345) *)
+                  ( type funcBody | "=>" expr | lambdaBlock ) ;                (* P3: try a written result type first; a bare block returns Void (LR 8.2, X-580) *)
+lambdaBlock     = block ;
 captureList     = capture { "," capture } ;
 capture         = marker place | lowerIdent ;                      (* bare name: trivial value, copied *)
 lambdaParams    = lambdaParam { "," lambdaParam } ;
@@ -205,7 +217,10 @@ matchArm        = pattern { "|" pattern } [ "when" expr ] "=>" ( expr | block ) 
                                                                       of an or-pattern, which bind no names (LR 9.8, X-345) *)
 ifExpr          = "if" expr block "else" ( ifExpr | block ) ;      (* every block ends in give *)
 
-pattern         = "_" | lowerIdent | literal
+pattern         = rangePattern                                      (* tried first (P3, LR 3.2): a parenthesised range
+                                                                       bound is not a tuple pattern, and a const bound is
+                                                                       not a binding, a literal or a variant *)
+                | "_" | lowerIdent | literal
                 | upperIdent [ "(" patternFields ")" ]              (* enum variant, or class destructure under move *)
                 | "present" "(" pattern ")" | "null"
                 | "success" "(" pattern ")" | "failure" "(" pattern ")"
@@ -213,6 +228,11 @@ pattern         = "_" | lowerIdent | literal
                 | "(" pattern { "," pattern } ")"
                 | "{" lowerIdent ":" pattern { "," lowerIdent ":" pattern } "}"
                 | "otherwise" [ "(" lowerIdent ")" ] ;
+rangePattern    = constExpr ( ".." | "..<" ) [ constExpr ] | ( ".." | "..<" ) constExpr ;
+                                                                    (* an integer range pattern (LR 9.8, X-347): the range
+                                                                       forms of a refinement (LR 6.3) plus the exclusive
+                                                                       one-sided "..<" constExpr; bounds fold at compile
+                                                                       time as refinement bounds do (X-512) *)
 patternFields   = patternField { "," patternField } ;
 patternField    = [ lowerIdent ":" ] pattern ;
 
@@ -272,7 +292,9 @@ NL              = ? newline not suppressed by the continuation rules ? ;
       expression-position exception is typeRef in primaryExpr, where "<" directly after "Name" or "Name[...]"
       opens a refinement (Int<0..9>.validate(x)); it is closed before "." or "(". The refinement "<" and its
       closing ">" are distinct tokens (REF_OPEN, REF_CLOSE) from the comparison operators and are not
-      continuation tokens, so a refined type at the end of a line does not join it to the next.
+      continuation tokens, so a refined type at the end of a line does not join it to the next. The target of
+      "as" is a type name, so `n as Int<0..100>` is a refinement and `a as Decimal < b` is not a comparison:
+      a converted value is compared in parentheses, `(a as Decimal) < b` (LR 5.6, X-475).
    3. "[" after an upperIdent is a type-argument list; after a lowercase-rooted postfix expression it is an
       index; after "fn", "fn mut" or "fn once" it is a capture list.
    4. A ";" token anywhere outside strings, comments and raw template regions (LR 16) is E-SYN-001.

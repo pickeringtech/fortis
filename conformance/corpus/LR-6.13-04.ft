@@ -1,0 +1,32 @@
+// reject: E-TYP-182, E-TYP-183, E-TYP-184 (at the marked lines)
+class Celsius {
+  degrees: Int
+
+  export convert to Fahrenheit {
+    return Fahrenheit(degrees: self.degrees)
+  }
+  export convert to Celsius {                // reject: E-TYP-183 — the pair is the identity: the table already decides it
+    return Celsius(degrees: 0)
+  }
+}
+
+class Fahrenheit {
+  degrees: Int
+
+  export convert from Celsius(c) {           // reject: E-TYP-182 — (Celsius, Fahrenheit) is declared twice
+    return Fahrenheit(degrees: c.degrees)
+  }
+}
+
+class Pair[T] {
+  first: T
+  second: T
+
+  export convert to Text {                   // reject: E-TYP-184 — a generic class declares no convert member
+    return Text(body: "")
+  }
+}
+
+class Text {
+  body: String
+}

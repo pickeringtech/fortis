@@ -1,0 +1,9 @@
+// reject: E-TYP-090, E-OBL-003
+// covers: LANG-06-07, LANG-10-02
+func duplicate[T](x: T) T where T implements Copyable => copy x
+func demo() {
+  let first = Must.create()
+  let second = duplicate(first)
+  Must.discharge(move first)
+  Must.discharge(move second)
+}

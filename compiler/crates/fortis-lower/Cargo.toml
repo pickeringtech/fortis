@@ -8,3 +8,8 @@ license.workspace = true
 [dependencies]
 fortis-mir = { path = "../fortis-mir" }
 fortis-types = { path = "../fortis-types" }
+
+[dev-dependencies]
+fortis-testkit = { path = "../fortis-testkit" }
+fortis-names = { path = "../fortis-names" }
+fortis-syntax = { path = "../fortis-syntax" }

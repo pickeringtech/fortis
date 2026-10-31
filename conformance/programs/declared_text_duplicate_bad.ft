@@ -1,0 +1,7 @@
+// reject: E-TYP-182 (at the marked line)
+// covers: LANG-06-15
+// D-421: both declarations supply the same two text pairs.
+class Drink {
+  convert from String(line) { return Drink() }
+  convert from StringView(line) { return Drink() } // reject: E-TYP-182
+}

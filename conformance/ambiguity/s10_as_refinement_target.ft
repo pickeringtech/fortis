@@ -1,0 +1,6 @@
+// accept: S10: the target of `as` is a type name, so `<` after it opens a refinement; a comparison takes parentheses
+try func bounded(n: Int, limit: Int) Bool {
+  let p = n as Int<0..100> or fail
+  discard p
+  return (n as Decimal) < (limit as Decimal)
+}

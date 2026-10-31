@@ -1,0 +1,6 @@
+// accept
+// D-638: Both checkers reject a valid if or match refinement join instead of taking the interval hull (LR 6.3).
+func choose(x: Int<0..9>) Int {
+  let y = if x < 4 { give x } else { give 4 }
+  return y
+}

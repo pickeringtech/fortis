@@ -1,0 +1,21 @@
+// execute: 0 3 1
+// requires: runtime
+// covers: LANG-06-02, LANG-07-06, LANG-10-01
+import fortis.host { Console }
+class Cell {
+  export func text(self, s: owned String) Int => s.scalarCount()
+  export func take(self, m: owned Must) Int { Must.discharge(move m)
+    return 1 }
+}
+func main(console: Console) {
+  let absent: Cell? = null
+  let cellOption: Cell? = Cell()
+  let a: String = "abc"
+  let b: String = "abc"
+  let x = absent?.text(move a) ?? 0
+  let y = cellOption?.text(move b) ?? 0
+  let cell = Cell()
+  let m = Must.create()
+  let z = cell.take(move m)
+  console.print("${x} ${y} ${z}")
+}

@@ -1,0 +1,60 @@
+// execute: 3|3|8|-128|conversion.out_of_range|conversion.parse|false|2000.0|-0.5|12.000|0|conversion.parse|conversion.out_of_range|true|conversion.parse|abc|hi
+// requires: runtime
+// covers: LANG-06-14
+// 6.13 (X-475): the operand as a call's argument (a moved String, a copied one, a loaned one), a chain left to
+// right, widening between the sized types, the canonical texts: Float, Decimal, Bool and the parsers' refusals of
+// a non-canonical form and of a canonical integer beyond the type, a Bool parsed from its canonical text, and the
+// total copies: a view into a String and a byte string into a String.
+import fortis.host { Console }
+
+try recovers func main(console: Console) {
+  let s = "abc" as String
+  let moved = move s as Bytes
+  console.print("${moved.byteCount()}")
+  let t = "abc" as String
+  let copied = copy t as Bytes
+  console.print("${copied.byteCount()}")
+  let n: Int8 = 8
+  console.print(n as Int as Decimal as String)
+  let u: UInt8 = 128
+  let i = u as Int16
+  let wide = i as Int
+  let neg = 0 - wide or fail
+  console.print(neg as String)
+  let tooBig = i as Int8 catch e {
+    console.print(e.code)
+    recover n
+  }
+  discard tooBig
+  let yes = "yes" as Bool catch e {
+    console.print(e.code)
+    recover false
+  }
+  console.print(yes as String)
+  console.print(2e3 as String)
+  console.print(-0.5 as String)
+  console.print(("12.000" as Decimal or fail) as String)
+  console.print(("0" as Decimal or fail) as String)
+  let leading = "007" as Int catch e {
+    console.print(e.code)
+    recover 7
+  }
+  discard leading
+  let beyond = "300" as UInt8 catch e {
+    console.print(e.code)
+    recover u
+  }
+  discard beyond
+  let flag = "true" as Bool or fail          // a Bool parsed from its canonical text
+  console.print(flag as String)
+  let malformed = "1.2.3" as Decimal catch e {
+    console.print(e.code)
+    recover 0d
+  }
+  discard malformed
+  let sv: StringView = "abc"
+  let mine = sv as String                    // total: an owned copy of the view
+  console.print(mine)
+  let bs = b"hi" as String or fail           // a byte string that is UTF-8: its text
+  console.print(bs)
+}

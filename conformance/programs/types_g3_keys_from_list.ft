@@ -1,0 +1,6 @@
+// reject: E-TYP-090
+// covers: LANG-06-06
+// D-549, X-615: hash-container key requirements.
+import fortis.collections { Deque }
+class Plain { export n: Int }
+func probe() { let bad = Deque.fromList(List.of(Map[Plain, Int].default())) }

@@ -1,0 +1,20 @@
+[
+  {"name": "f1_field_field_duplicate", "input": "class Item { value: Int\nvalue: Int }", "expect": ["E-TYP-070"]},
+  {"name": "f1_field_field_distinct", "input": "class Item { value: Int\nother: Int }", "expect": []},
+  {"name": "f1_field_method_duplicate", "input": "class Item { value: Int\nfunc value(self) Int => 1 }", "expect": ["E-TYP-070"]},
+  {"name": "f1_field_method_distinct", "input": "class Item { value: Int\nfunc other(self) Int => 1 }", "expect": []},
+  {"name": "f1_field_constant_duplicate", "input": "class Item { value: Int\nconst value = 1 }", "expect": ["E-TYP-070"]},
+  {"name": "f1_field_constant_distinct", "input": "class Item { value: Int\nconst other = 1 }", "expect": []},
+  {"name": "f1_method_field_duplicate", "input": "class Item { func value(self) Int => 1\nvalue: Int }", "expect": ["E-TYP-070"]},
+  {"name": "f1_method_field_distinct", "input": "class Item { func value(self) Int => 1\nother: Int }", "expect": []},
+  {"name": "f1_method_method_duplicate", "input": "class Item { func value(self) Int => 1\nfunc value(self) Int => 1 }", "expect": ["E-TYP-070"]},
+  {"name": "f1_method_method_distinct", "input": "class Item { func value(self) Int => 1\nfunc other(self) Int => 1 }", "expect": []},
+  {"name": "f1_method_constant_duplicate", "input": "class Item { func value(self) Int => 1\nconst value = 1 }", "expect": ["E-TYP-070"]},
+  {"name": "f1_method_constant_distinct", "input": "class Item { func value(self) Int => 1\nconst other = 1 }", "expect": []},
+  {"name": "f1_constant_field_duplicate", "input": "class Item { const value = 1\nvalue: Int }", "expect": ["E-TYP-070"]},
+  {"name": "f1_constant_field_distinct", "input": "class Item { const value = 1\nother: Int }", "expect": []},
+  {"name": "f1_constant_method_duplicate", "input": "class Item { const value = 1\nfunc value(self) Int => 1 }", "expect": ["E-TYP-070"]},
+  {"name": "f1_constant_method_distinct", "input": "class Item { const value = 1\nfunc other(self) Int => 1 }", "expect": []},
+  {"name": "f1_constant_constant_duplicate", "input": "class Item { const value = 1\nconst value = 1 }", "expect": ["E-TYP-070"]},
+  {"name": "f1_constant_constant_distinct", "input": "class Item { const value = 1\nconst other = 1 }", "expect": []}
+]

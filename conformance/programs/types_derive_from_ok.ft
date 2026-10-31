@@ -5,7 +5,7 @@ export class Customer {
   export email: String
 }
 
-export class Summary derive From[Customer] {
+export class Summary derive convert from Customer {
   export name: String
   export age: Int
 }

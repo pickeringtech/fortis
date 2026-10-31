@@ -1,0 +1,36 @@
+// reject: E-MAT-005, E-TYP-040 (at the marked lines)
+// covers: LANG-09-05, LANG-06-01
+// X-517: range patterns match integer scrutinees only — `Int` or a sized integer type, refined or not — and
+// every bound folds as a refinement's bound folds. A `String` scrutinee is E-TYP-040 (a refinement alias or a
+// newtype would be too: the nominal type carries no interval the pattern could read); an inverted interval, a
+// bound that does not fold, and a bound outside the scrutinee type's own range are each E-MAT-005.
+import fortis.host { Console }
+
+const lo: Int = 0
+
+recovers func main(console: Console) {
+  let s: String = "abc"
+  match s {
+    "a"..=> console.print("starts a")          // reject: E-TYP-040 — a String is not an integer scrutinee
+    _ => console.print("other")
+  }
+  match Int<0..100>.validate(7) {
+    success(n) => {
+      match n {
+        10..5 => console.print("never")         // reject: E-MAT-005 — 10..5 is empty, its interval inverted
+        _ => console.print("other")
+      }
+      let k: Int = 5
+      match n {
+        lo..k => console.print("bad bound")     // reject: E-MAT-005 — `k` is no constant, the bound does not fold
+        _ => console.print("other")
+      }
+    }
+    failure(f) => { report f }
+  }
+  let b: Int8 = 3
+  match b {
+    200..=> console.print("never")             // reject: E-MAT-005 — 200 lies outside Int8's own range
+    _ => console.print("other")
+  }
+}

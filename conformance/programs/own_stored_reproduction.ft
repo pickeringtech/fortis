@@ -1,0 +1,16 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-580, X-605: an owned container cannot retain a non-static loan.
+import fortis.host { Console }
+pure try func head(text: StringView) StringView from text => text.slice(0, 1) or fail
+recovers func keep() List[StringView] {
+  let own = "hello" as String
+  let mut parts: List[StringView] = List.default()
+  let h = head(alias own) or recover "x"
+  parts.push(move h)
+  return move parts
+}
+recovers func main(console: Console) {
+  let kept = keep()
+  console.print("${kept.count()}")
+}

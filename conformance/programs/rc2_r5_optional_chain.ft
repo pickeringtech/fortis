@@ -1,0 +1,6 @@
+// reject: E-OBL-001
+// covers: LANG-06-09, LANG-10-01
+class Cell { export func take(self, n: Int) Int => n }
+class Link { export func cell(self) Cell? => null }
+try func f(c: Link?) { let out = "1x" as Int
+  let n = c?.cell()?.take(out or fail) }

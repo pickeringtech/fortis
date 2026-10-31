@@ -1,0 +1,11 @@
+// reject: E-OWN-010
+// covers: LANG-08-02, LANG-08-03
+class Pair { left: List[Int]
+  right: List[Int] }
+func call(f: editable fn mut() Void) { f() }
+func demo() {
+  let mut pair = Pair(left: List.of(1), right: List.of(2))
+  call(fn() {
+    pair.left.push(pair.right.count())
+  })
+}

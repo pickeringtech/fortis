@@ -1,0 +1,12 @@
+// execute: 3 4
+// requires: runtime
+// covers: LANG-08-01, LANG-06-11
+import fortis.host { Console }
+try func parse(s: String) Int => s as Int or fail
+try func main(console: Console) {
+  let f = parse
+  let v = f("3") or fail
+  let n: Outcome[Int] = f("4")
+  let w = n or fail
+  console.print("${v} ${w}")
+}

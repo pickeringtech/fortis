@@ -1,0 +1,36 @@
+// accept
+// covers: LANG-06-12
+// The Language 1.0 forms of what an associated call on a type parameter would do (6.10, X-180): the caller passes a
+// value of `T`, or a function that makes one, and a concrete type's associated functions stay callable, including a
+// class whose name is a type parameter's in another function (`Item` below), outside that function.
+export class Point derive Codec {
+  export x: Int = 0
+}
+
+export class Item derive Codec {
+  export name: String = ""
+}
+
+pure func firstOr[T](items: ListView[T], fallback: T) T where T implements Copyable {
+  let v = items.get(0) ?? copy fallback
+  return copy v
+}
+
+pure func firstItemOr[Item](items: ListView[Item], fallback: Item) Item where Item implements Copyable {
+  let v = items.get(0) ?? copy fallback
+  return copy v
+}
+
+func build[T](make: fn() T) T {
+  return make()
+}
+
+try func origin() Point {
+  let p: Point = Point.fromText("{\"x\":0}") or fail
+  return p
+}
+
+try func load(text: StringView) Item {
+  let item: Item = Item.fromText(text) or fail
+  return item
+}

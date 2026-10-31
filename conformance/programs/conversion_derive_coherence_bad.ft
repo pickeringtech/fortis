@@ -1,0 +1,8 @@
+// reject: E-TYP-182
+// covers: LANG-06-15
+class Source {}
+class Target derive convert from Source {
+  convert from Source(s) {
+    return Target()
+  }
+}

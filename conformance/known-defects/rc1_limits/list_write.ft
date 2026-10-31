@@ -1,0 +1,14 @@
+// execute: 2 3 1
+// requires: runtime
+// covers: LANG-06-02, LANG-07-06, LANG-10-01
+import fortis.host { Console }
+func replace[T](xs: editable List[T], value: owned T) { xs[0] = move value }
+func main(console: Console) {
+  let mut xs: List[Int<0..3>] = List.of(1)
+  xs[0] = 2
+  let mut ys: List[Int<0..3>?] = List.of(1)
+  ys[0] = 3
+  let mut zs: List[Int] = List.of(0)
+  replace(editable zs, 1)
+  console.print("${xs.get(0) ?? 0} ${ys.get(0) ?? 0} ${zs.get(0) ?? 0}")
+}

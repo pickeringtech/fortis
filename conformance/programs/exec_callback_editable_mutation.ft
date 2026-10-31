@@ -1,0 +1,19 @@
+// execute: 3 9 12
+// requires: runtime
+// covers: LANG-08-04, LANG-08-02
+// D-561: written and inferred editable lambda parameters can change the lent value.
+import fortis.host { Console }
+class Counter {
+  value: Int
+}
+func edit(a: editable Counter, f: fn(editable Counter) Void) { f(editable a) }
+func assign(x: editable Counter) { x.value = 3 }
+func main(console: Console) {
+  let mut n = Counter(value: 1)
+  edit(editable n, assign)
+  let a = n.value
+  edit(editable n, fn(x: editable Counter) Void { x.value = 9 })
+  let b = n.value
+  edit(editable n, fn(x) { x.value = 12 })
+  console.print("${a} ${b} ${n.value}")
+}

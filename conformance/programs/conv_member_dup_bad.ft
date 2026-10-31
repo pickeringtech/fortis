@@ -1,0 +1,47 @@
+// reject: E-TYP-182 (at the marked lines)
+// covers: LANG-06-15
+// 6.13 (X-551): one conversion per pair. A pair declared twice is rejected at the later declaration and at an
+// `as` that would have to choose: a `convert to` on the source and a `convert from` on the target are two
+// declarations of one pair, keyed by the whole type as `implement` coherence keys its pairs (9.5).
+class Celsius {
+  degrees: Int
+
+  export convert to Fahrenheit {
+    return Fahrenheit(degrees: self.degrees)
+  }
+}
+
+class Fahrenheit {
+  degrees: Int
+
+  export convert from Celsius(c) {           // reject: E-TYP-182 — (Celsius, Fahrenheit) is declared by Celsius already
+    return Fahrenheit(degrees: c.degrees)
+  }
+}
+
+class Wrap {
+  n: Int
+
+  export convert to Text {
+    return Text(body: "")
+  }
+  export convert from Text(t) {
+    return Wrap(n: 0)
+  }
+}
+
+class Text {
+  body: String
+
+  export convert from Wrap(w) {              // reject: E-TYP-182 — (Wrap, Text) is declared by Wrap already
+    return Text(body: "")
+  }
+}
+
+func uses(c: Celsius, w: Wrap) Int {
+  let f = c as Fahrenheit                    // reject: E-TYP-182 — two members convert the pair: the `as` cannot choose
+  let t = w as Text                          // reject: E-TYP-182 — the same pair declared on both of its sides
+  discard f
+  discard t
+  return 0
+}

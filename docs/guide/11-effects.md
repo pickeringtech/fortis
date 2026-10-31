@@ -3,7 +3,7 @@
 <!-- covers: LR 11 -->
 *Human mode. Agent mode: [Effects and contracts, by rule](../agent/11-effects.md). Source of truth: LR 11.*
 
-> Preview: contracts (LR 11.5) arrive in v0.1. Effects, claims, noalloc and capabilities (LR 11.1, 11.2, 11.3, 11.4 and 11.6) arrive in v0.2. The observation plane and aspects (LR 11.7, 11.8) arrive in v0.5, except the diagnostic plane that `report` and the `log` statements write to (LR 11.7, LR 13), which is in v0.0.2. `main`'s capability parameters (LR 4.6, 11.6) and the core aspect `@ignorable` (LR 5.5, 11.8) are in v0.0.2.
+> Preview: effects, claims, noalloc and capabilities (LR 11.1, 11.2, 11.3, 11.4 and 11.6) arrive in v0.2. The observation plane and aspects (LR 11.7, 11.8) arrive in v0.5, except the diagnostic plane that `report` and the `log` statements write to (LR 11.7, LR 13), which is in v0.0.2. Contracts (LR 11.5) are in v0.1 over the effect modifiers v0.0.1 already checks. `main`'s capability parameters (LR 4.6, 11.6) and the core aspect `@ignorable` (LR 5.5, 11.8) are in v0.0.2.
 
 A reader of a Fortis function wants to know what it may do besides compute its result: allocate, touch the
 outside world, change something it was not handed, read the clock, wait, fail, or quietly swallow a failure. The
@@ -334,11 +334,15 @@ The formatter keeps the contract's name and prints the modifiers it expands to a
 formatted code sees both (LR 11.5).
 
 A contract only subtracts: applying one never changes what a function does; it makes the checker reject a body
-that does something the contract rules out (LR 11.5). Here `NoSilentRecovery` forbids the `recovers` effect, so
-the function must handle the failure some other way:
+that does something the contract rules out (LR 11.5). The `NoSilentRecovery` contract below forbids the
+`recovers` effect, and the function breaks it twice over: its written `recovers` modifier contradicts the
+contract it carries, which is reported at the function (`E-EFF-050`, LR 11.5, X-526), and its body's `or
+recover` discards a failure without reporting it, the very effect the contract forbids (`E-EFF-001`). A
+function under this contract must handle the failure some other way: pass it on with `or fail` from a `try`
+function, or `catch` it and `report` it:
 
 ```fortis
-// reject: E-EFF-001
+// reject: E-EFF-001, E-EFF-050
 export error Odd {
   code: "demo.odd"
 }
@@ -354,7 +358,7 @@ contract NoSilentRecovery {
   forbids recovers
 }
 
-NoSilentRecovery recovers func quiet(n: Int) Int => half(n) or recover 0   // reject: E-EFF-001
+NoSilentRecovery recovers func quiet(n: Int) Int => half(n) or recover 0   // reject: E-EFF-001, E-EFF-050
 
 recovers func main() {
   discard quiet(4)
@@ -381,10 +385,20 @@ func main(network: Network) {
 }
 ```
 
-Contracts compose by conjunction, and contradictory ones are rejected; a `pure` function may not take a
-capability parameter at all, so `pure` together with `requires capability` is a contradiction (LR 11.5).
-Project configuration never attaches or selects a contract: a contract applies to a function only by appearing
-in its head (LR 11.5).
+Contracts compose by conjunction, and contradictory contracts are rejected (`E-EFF-050`, LR 11.5, X-526): a
+`pure` function may not take a capability parameter at all, so `pure` with `requires capability` is a
+contradiction, and so is a modifier that permits an effect beside `forbids` of that effect (`async` with
+`forbids suspend`, `try` with `forbids fail`, `recovers` with `forbids recovers`), and one authority both
+required and excluded. A contradiction within one contract is reported at the contract; one between a
+function's written modifiers and a contract it carries, or between two contracts it carries, at the function,
+with the side the function then breaks (`E-EFF-001`).
+
+The type a `capability` clause names must be an Authority type, or the clause is `E-TYP-040`: a name in scope
+by its declaration, and a name not in scope by being one of the capabilities LR 11.6 lists, exactly as the type
+of an authority parameter is judged. So `excludes capability Network` needs no import, and `excludes
+capability Netwrok` is refused (LR 11.5, LR 11.6). The origin of every obligation — a modifier, a contract, an
+interface, a mixin, an aspect — is recorded for diagnostics, and project configuration never attaches or
+selects a contract: a contract applies to a function only by appearing in its head (LR 11.5).
 
 ## Capabilities
 
@@ -710,4 +724,89 @@ func main(console: Console) {
 ```output
 enter work at depth 0
 3
+```
+
+## Contract clauses and callback effects in v0.1
+
+A contract's clauses must agree before a body is checked (LR 11.5). A clause naming a capability must
+resolve to an Authority type, not merely a class with a plausible name (LR 11.6).
+
+```fortis
+// reject: E-EFF-050
+contract Impossible {                      // reject: E-EFF-050
+  try
+  forbids fail
+}
+```
+
+A calculation that promises not to fail can name that promise consistently:
+
+```fortis
+// accept
+contract Infallible {
+  forbids fail
+}
+Infallible pure func identity(n: Int) Int => n
+
+test "identity" {
+  expect identity(7) == 7
+}
+```
+
+```fortis
+// reject: E-TYP-040
+class Configuration {}
+contract Configured {
+  requires capability Configuration       // reject: E-TYP-040
+}
+```
+
+Name the authority used by the operation:
+
+```fortis
+// accept
+import fortis.host { Console }
+contract WritesConsole {
+  requires capability Console
+}
+WritesConsole func write(console: Console) {
+  console.print("ready")
+}
+func main(console: Console) {
+  write(console)
+}
+```
+
+```output
+ready
+```
+
+Callback effects come from the parameter's function type (LR 11.3, X-610). `pure fn` still permits
+allocation; only `pure noalloc fn` excludes it as well as I/O, mutation and nondeterminism. A particular
+argument with fewer effects does not narrow that signature. Consequently `countWhere`, `any` and `fold`
+prevent a caller from claiming `noalloc`, even when their callback does not allocate. Use a loop whose
+body's inferred effects meet the claim:
+
+```fortis
+// reject: E-EFF-001
+pure noalloc func countPositive(items: List[Int]) Int {
+  return items.countWhere(fn(n) => n > 0)  // reject: E-EFF-001
+}
+```
+
+```fortis
+// accept
+pure noalloc func countPositive(items: List[Int]) Int {
+  let mut total = 0
+  for n in items {
+    if n > 0 {
+      total = Int.saturatingAdd(total, 1)
+    }
+  }
+  return total
+}
+
+test "two positive values" {
+  expect countPositive(List.of(1, -2, 3)) == 2
+}
 ```

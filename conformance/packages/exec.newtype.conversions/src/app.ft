@@ -1,0 +1,7 @@
+// execute: 42
+import fortis.host { Console }
+import exec.newtype.conversions.money as money
+func main(console: Console) {
+  let p = 42 as money.Pence
+  console.print(money.value(p) as String)
+}

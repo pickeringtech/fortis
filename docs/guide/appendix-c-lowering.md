@@ -158,13 +158,13 @@ A `fn mut` closure holds an exclusive loan or mutable state, and a `Shared` hand
 holds, so the combination has no lowering: `E-OWN-090` (LR 7.8, LR C.2):
 
 ```fortis
-// reject: E-OWN-090
+// reject: E-OWN-090, E-OWN-053
 func main() {
   let mut count = 0
   let bump = fn mut[editable count]() Void {
     count = Int.saturatingAdd(count, 1)
   }
-  let shared = Shared.create(move bump)     // reject: E-OWN-090
+  let shared = Shared.create(move bump)     // reject: E-OWN-090, E-OWN-053
 }
 ```
 

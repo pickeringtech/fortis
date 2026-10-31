@@ -1,0 +1,12 @@
+// execute: 7|8|true
+import fortis.host { Console }
+import fortis.prelude
+import g4.identity.defs as defs
+class Bool { export n: Int }
+func main(console: Console) {
+  let m = defs.make()
+  for k in m.keys() { console.print("${k.n}") }
+  let b = Bool(n: 8)
+  console.print("${b.n}")
+  if defs.truth() { console.print("true") }
+}

@@ -1,0 +1,58 @@
+// accept
+// covers: LANG-09-05
+// X-518: narrowing — inside an unguarded range arm the tracked scrutinee place narrows to the arm's interval,
+// so the assignments below the arms type; a later unguarded arm sees the earlier arms' intervals removed from
+// the scrutinee's known interval, a residual trimmed at its endpoints (`Int<50..100>` below). An unrefined
+// scrutinee narrows too, and a guarded arm beside a re-armed interval stays exhaustive: the guard contributes
+// no interval, the unguarded `..<50` arm does.
+import fortis.host { Console }
+
+func halves(n: Int<0..100>, console: Console) {
+  match n {
+    ..<50 => {
+      let m: Int<0..60> = n
+      console.print("${m}")
+    }
+    _ => console.print("other")
+  }
+}
+
+func residual(n: Int<0..100>, console: Console) {
+  match n {
+    ..<50 => console.print("low")
+    _ => {
+      let m: Int<50..100> = n
+      console.print("${m}")
+    }
+  }
+}
+
+func guarded(n: Int<0..100>, console: Console) {
+  match n {
+    ..<50 when n < 25 => console.print("a")
+    50..100 => console.print("b")
+    ..<50 => console.print("c")
+  }
+}
+
+func unrefined(n: Int, console: Console) {
+  match n {
+    0..9 => {
+      let m: Int<0..20> = n
+      console.print("${m}")
+    }
+    _ => console.print("other")
+  }
+}
+
+recovers func main(console: Console) {
+  match 7 as Int<0..100> {
+    success(n) => {
+      halves(n, console)
+      residual(n, console)
+      guarded(n, console)
+      unrefined(n, console)
+    }
+    failure(f) => { report f }
+  }
+}

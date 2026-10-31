@@ -1,0 +1,9 @@
+// execute: 2
+// D-726: qualified function values formerly had unknown type in both checkers.
+// The interpreter prints 2; MIR formerly called graphemes without arguments while binding f.
+import fortis.text as words
+import fortis.host { Console }
+func main(console: Console) {
+  let f = words.graphemes
+  console.print("${f("aé")}")
+}

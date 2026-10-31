@@ -10,7 +10,7 @@ pure try func prefix(text: StringView, n: Int<0..>) StringView from text => text
 pure try func middle(text: StringView, start: Int<0..>, end: Int<0..>) StringView from text => text.slice(start, end) or fail
 
 try func main(console: Console) {
-  let line = String.from("fortis reads like prose")
+  let line = "fortis reads like prose" as String
   let word = prefix(alias line, 6) or fail
   console.print("${word}")
   let measure = fn[alias word]() Int => word.scalarCount()

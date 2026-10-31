@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+// D-707: an editable record reached through a collection element is invariant.
+func poke(s: editable { n: Int }) {}
+func f(xs: editable List[{ n: Int<0..3> }]) { poke(editable xs[0]) }

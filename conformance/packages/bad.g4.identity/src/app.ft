@@ -1,0 +1,8 @@
+// reject: E-TYP-040 (at the marked lines)
+import fortis.host { Console }
+import fortis.prelude
+import bad.g4.identity.defs as defs
+class Bool { export n: Int }
+func wrong(xs: owned List[defs.Bool]) List[prelude.Bool] => move xs // reject: E-TYP-040
+func other(xs: owned List[defs.Bool]) List[Bool] => move xs // reject: E-TYP-040
+func main(console: Console) {}

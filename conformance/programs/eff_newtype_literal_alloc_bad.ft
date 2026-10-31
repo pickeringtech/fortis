@@ -1,0 +1,9 @@
+// reject: E-EFF-001
+// covers: LANG-11-03, LANG-06-14
+// D-521: a literal creates an owned String representation, including through the retained constructor.
+type Text = String
+type Code = String<scalars: 1..8>
+noalloc func cast() Text { return "x" as Text } // reject: E-EFF-001
+noalloc func construct() Text { return Text("x") } // reject: E-EFF-001
+noalloc func refined() Code { return "x" as Code } // reject: E-EFF-001
+noalloc func refinedConstruct() Code { return Code("x") } // reject: E-EFF-001

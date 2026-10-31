@@ -1,0 +1,14 @@
+// execute: K|conversion.parse|K
+// requires: runtime
+// covers: LANG-06-14, LANG-06-15
+import fortis.host { Console }
+enum Letter derive Displayable, convert from String { K }
+try recovers func main(console: Console) {
+  let small = "k" as Letter or fail
+  console.print("${small}")
+  let unicode = "K" as Letter catch e {
+    console.print(e.code)
+    recover K
+  }
+  console.print("${unicode}")
+}

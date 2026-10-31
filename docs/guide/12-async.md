@@ -522,9 +522,9 @@ static text, and views are never `Shareable`:
 ```fortis
 // reject: E-ASY-003
 async func pools() Int {
-  let words = List.of("a", "b", "c")
+  let words: StringView = "abc"
   scope tasks {
-    let blocking = tasks.launchBlocking(fn once[move words]() Int => words.count())   // reject: E-ASY-003
+    let blocking = tasks.launchBlocking(fn once[move words]() Int => words.scalarCount())   // reject: E-ASY-003
     return await blocking
   }
 }

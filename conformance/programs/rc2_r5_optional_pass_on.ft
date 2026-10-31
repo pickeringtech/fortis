@@ -1,0 +1,6 @@
+// reject: E-OBL-001
+// covers: LANG-06-09, LANG-10-01
+class Cell { export func take(self, out: owned Outcome[Int]) Int => out catch e { report e
+  return 0 } }
+func f(c: Cell?) { let out = "1x" as Int
+  let n = c?.take(move out) }

@@ -1,0 +1,56 @@
+// execute: hello/7/hello|7/hello|9
+// requires: runtime
+// covers: LANG-06-15
+// X-552: both opt-in spellings, expected-target to(), copied and converted fields.
+import fortis.host { Console }
+
+class Source {
+  export label: String
+  export count: Int32
+}
+
+class Target derive convert from Source {
+  export count: Int
+  export label: String
+}
+
+class Legacy derive From[Source] {
+  export label: String
+  export count: Int
+}
+
+trivial class Small {
+  value: Int
+}
+
+class Big {
+  value: Int
+  convert from Small(s) {
+    return Big(value: s.value)
+  }
+}
+
+class Input {
+  payload: Small
+}
+
+class Output derive convert from Input {
+  payload: Big
+}
+
+func toLegacy(source: Source) Legacy {
+  return source.to()
+}
+
+try func main(console: Console) {
+  let count = 7 as Int32 or fail
+  let src = Source(label: "hello", count: count)
+  let a = Legacy.from(src)
+  let b: Target = src.to()
+  let c = src as Target
+  console.print("${a.label}/${b.count}/${c.label}")
+  let old = toLegacy(src)
+  console.print("${old.count}/${old.label}")
+  let nested = Input(payload: Small(value: 9)) as Output
+  console.print(nested.payload.value as String)
+}

@@ -1,0 +1,20 @@
+// reject: E-OWN-010 (at the marked line)
+// covers: LANG-07-05, LANG-07-06
+// D-401, 7.5, 7.7: after `c = alias ys.iterate()` the binding holds the new cursor's loan of `ys` until the end
+// of its own block, so `ys` is frozen against `push` while `c` lives: the reassignment attaches the new value's
+// loan to the binding as the first binding did. exec_cursor_reassign.ft runs the accepted reassignment; there
+// the old owner is free again, its stored loan having ended with the old cursor (7.9).
+import fortis.host { Console }
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Int] = List.default()
+  xs.push(1)
+  let mut ys: List[Int] = List.default()
+  ys.push(2)
+  let mut c = alias xs.iterate()
+  discard c.next()
+  c = alias ys.iterate()
+  ys.push(3)
+  console.print("done")
+}

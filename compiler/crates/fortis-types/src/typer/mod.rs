@@ -6,6 +6,17 @@ mod aspects;
 pub mod expr;
 mod patterns;
 mod stmts;
+mod storage;
+mod temporaries;
+
+#[cfg(test)]
+mod test_ownership;
+
+#[cfg(test)]
+mod test_obligations;
+
+#[cfg(test)]
+mod test_effects;
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -19,7 +30,7 @@ use crate::decls::{Decl, DeclChecker, DeclRef, Sig};
 use crate::effects::{library_summary, Summary, AUTHORITIES};
 use crate::intervals::{self as iv, Facts, Interval};
 use crate::literals::{is_interp, is_strlit};
-use crate::owners::{overlaps, root_of, Loan, LoanData, Owners};
+use crate::owners::{loan_eq, overlaps, root_of, Loan, LoanData, Owners};
 use crate::types::*;
 
 #[derive(Clone, Debug)]
@@ -129,6 +140,20 @@ impl Unit {
     }
 }
 
+/// Lowering facts for one applied mixin method. The same syntax nodes can have different types at two
+/// applications, and source positions belong to the mixin's file rather than the applying class's file.
+#[derive(Default, Clone)]
+pub struct MixinBodyFacts {
+    pub legacy_conversions: HashMap<(usize, usize), crate::migrate::LegacyConversion>,
+    pub legacy_conversion_sources: HashMap<(usize, usize), Type>,
+    pub node_types: HashMap<usize, Type>,
+    pub closure_info: HashMap<usize, ClosureInfo>,
+    pub implicit_moves: BTreeSet<usize>,
+    pub checked_ops: BTreeSet<(usize, usize)>,
+    pub implied_fails: BTreeSet<(usize, usize)>,
+    pub implied_regions: BTreeSet<(usize, usize)>,
+}
+
 pub struct Typer<'a> {
     pub dc: DeclChecker<'a>,
     pub module: String,
@@ -153,6 +178,9 @@ pub struct Typer<'a> {
     /// `copy` markers already E-OWN-002, by line and column (D-341)
     pub copy_refused: std::collections::HashSet<(usize, usize)>,
     pub res_stack: Vec<Vec<(String, String)>>,
+    pub infer_capture_node: Option<usize>,
+    pub capture_probe_node: Option<usize>,
+    pub capture_uses: Vec<(String, String, Token)>,
     pub lambda_kind: Vec<String>,
     pub last_closure: Option<ClosureInfo>,
     pub last_closure_eff: Option<Summary>,
@@ -164,6 +192,10 @@ pub struct Typer<'a> {
     pub summaries: BTreeMap<String, Summary>,
     /// the summary labels the pass looked up (an incremental check depends on exactly these, DEL-46)
     pub requested: RefCell<BTreeSet<String>>,
+    pub storage_substitution: BTreeMap<String, Type>,
+    pub storage_calls: BTreeSet<String>,
+    pub storage_failed: bool,
+    pub storage_expected: Option<Box<Type>>,
     pub current_label: String,
     pub call_decl: Option<DeclRef<'a>>,
     pub call_label: String,
@@ -176,6 +208,8 @@ pub struct Typer<'a> {
     /// the type parameters of the body being typed, and its owner's and its own `where` bounds with arguments (6.10)
     pub tparams_in_scope: BTreeSet<String>,
     pub where_in_scope: Vec<(String, NamedT)>,
+    /// the body's own `X: linear` parameters (6.12, 10.7): each is a linear type inside its body
+    pub linear_in_scope: BTreeSet<String>,
     /// a generic class's bounds, for the method call checked next (D-171)
     pub pending_owner_where: Vec<(String, NamedT)>,
     /// constants whose value is being typed (a cycle guard; D-149)
@@ -207,6 +241,12 @@ pub struct Typer<'a> {
     pub unresolved_args: usize,
     /// rewrites into the v0.0.2 forms that mean the same, found while typing (X-345; `crate::migrate`)
     pub migrations: Vec<crate::migrate::Edit>,
+    /// Retired conversions resolved by identity, for the formatter (X-552).
+    pub legacy_conversions: HashMap<(usize, usize), crate::migrate::LegacyConversion>,
+    /// Checked sources for retired to and validate calls; unknown is never proof of a total rewrite (X-542).
+    pub legacy_conversion_sources: HashMap<(usize, usize), Type>,
+    /// A call argument whose expected target comes from an inferred type parameter, not a written type.
+    pub inferred_conversion_target: bool,
     /// `Int.add(a, b)` and its family by call node: whether the operator form would be unproved (6.4, X-345)
     pub int_calls: HashMap<usize, bool>,
     pub guards: Vec<(String, i64, Token)>,
@@ -217,8 +257,22 @@ pub struct Typer<'a> {
     /// (depth, states) per if-expression branch, match arm and catch block: the states at each `give`/`recover`, after
     /// the cleanup they run (D-76)
     pub exit_frames: Vec<(i64, Vec<Facts>)>,
-    /// (label, depth, states) per loop: the states at each `break` (D-72)
-    pub break_frames: Vec<(Option<String>, i64, Vec<Facts>)>,
+    /// (label, depth, states, break owners, continue owners) per loop: the states at each `break` (D-72), and the
+    /// ownership at each `break` and each `continue`, whose loans are live at the loop's exit (D-362)
+    pub break_frames: Vec<(Option<String>, i64, Vec<Facts>, Vec<Owners>, Vec<Owners>)>,
+    /// Hidden owned linear remainders: loop depth and item token (D-588).
+    pub linear_loops: Vec<(i64, Token)>,
+    /// per if-expression branch, match arm and catch block: the loans each `give`/`recover` value carries, handed to
+    /// the expression's consumer (7.3; D-355, D-395)
+    pub arm_loans: Vec<Vec<Loan>>,
+    /// per branch: whether a `give`/`recover` value is one of the function's own (D-389)
+    pub arm_owned: Vec<bool>,
+    /// the id of each expression node whose value owns a bearing part beside a loan it holds (7.9; D-369)
+    pub owned_parts: std::collections::HashSet<usize>,
+    /// the bindings that own such a part: a loan drawn from one is a loan of it (D-369, D-388)
+    pub part_owners: BTreeSet<String>,
+    /// the id of each `p ?? v` node whose value may be the bare owned place `p`'s, with `p` (D-357)
+    pub coalesced_places: HashMap<usize, String>,
     /// the statements after the one being walked, in its block (D-75)
     pub block_rest: Vec<N<'a>>,
     /// every place whose facts were discarded, in order, for the module check (D-74, D-77)
@@ -228,6 +282,11 @@ pub struct Typer<'a> {
     /// temporaries an async call's future lends, until their statement ends (12.3; D-31)
     pub carried_temps: Vec<(Token, usize)>,
     /// calls being checked, innermost last: a temporary is recorded with the depth of the call it is lent to
+    pub temporary_values: std::collections::HashSet<usize>,
+    pub temporary_borrows: Vec<Token>,
+    pub temporary_receiver: bool,
+    pub optional_arguments: bool,
+    pub optional_scopes: Vec<(BTreeMap<String, (Token, i64)>, Token)>,
     pub call_depth: usize,
     pub use_ok: bool,
     /// expected type of the call about to be checked, consumed by it
@@ -246,6 +305,19 @@ pub struct Typer<'a> {
     pub call_sigs: HashMap<(usize, usize), (bool, bool)>,
     /// typing a test or property body: `or fail` is implied (14, X-345)
     pub test_body: bool,
+    /// inside a test or property body, lambdas included: `expect` is allowed (14)
+    pub in_test_code: bool,
+    /// typing a mixin's body at an application: only the class's exported members (9.6)
+    pub mixin_view: Option<String>,
+    /// (applying class identity, class name, method name) -> facts for this application (9.6, X-476).
+    pub mixin_body_facts: BTreeMap<(String, String, String), MixinBodyFacts>,
+    /// Ordinary lexical bodies' inferred effects, shared by this module's foreign mixin applications.
+    pub mixin_home_summaries: BTreeMap<(usize, String), BTreeMap<String, Summary>>,
+    /// False only while seeding a lexical module's ordinary bodies, so mixin applications cannot recurse.
+    pub check_mixin_applications: bool,
+    /// the `as` binding of a `cases` table being typed, and the types the body expects of each row field (14, D-50.3)
+    pub row_name: Option<String>,
+    pub row_uses: BTreeMap<String, Vec<Type>>,
     /// nodes that `or`, `catch` or `match` consume (14)
     pub consumed_ops: std::collections::HashSet<usize>,
     /// the name-token positions of the calls of a test body with an implied `or fail` (14); the IR builder reads them
@@ -281,6 +353,9 @@ impl<'a> Typer<'a> {
             pending: None,
             copy_refused: Default::default(),
             res_stack: vec![],
+            infer_capture_node: None,
+            capture_probe_node: None,
+            capture_uses: vec![],
             lambda_kind: vec![],
             last_closure: None,
             last_closure_eff: None,
@@ -291,6 +366,10 @@ impl<'a> Typer<'a> {
             editable_params: BTreeSet::new(),
             summaries: BTreeMap::new(),
             requested: RefCell::new(BTreeSet::new()),
+            storage_substitution: BTreeMap::new(),
+            storage_calls: BTreeSet::new(),
+            storage_failed: false,
+            storage_expected: None,
             current_label: String::new(),
             call_decl: None,
             call_label: String::new(),
@@ -302,6 +381,7 @@ impl<'a> Typer<'a> {
             caps_calls: 0,
             tparams_in_scope: BTreeSet::new(),
             where_in_scope: vec![],
+            linear_in_scope: BTreeSet::new(),
             pending_owner_where: vec![],
             const_stack: BTreeSet::new(),
             elaborations: vec![],
@@ -317,6 +397,9 @@ impl<'a> Typer<'a> {
             checked_ops: BTreeSet::new(),
             unresolved_args: 0,
             migrations: Vec::new(),
+            legacy_conversions: HashMap::new(),
+            legacy_conversion_sources: HashMap::new(),
+            inferred_conversion_target: false,
             int_calls: HashMap::new(),
             guards: vec![],
             scope_depths: vec![],
@@ -324,11 +407,22 @@ impl<'a> Typer<'a> {
             defer_bodies: vec![],
             exit_frames: vec![],
             break_frames: vec![],
+            linear_loops: vec![],
+            arm_loans: vec![],
+            arm_owned: vec![],
+            owned_parts: std::collections::HashSet::new(),
+            part_owners: BTreeSet::new(),
+            coalesced_places: HashMap::new(),
             block_rest: vec![],
             inval_log: vec![],
             catch_bound: vec![],
             carried: vec![],
             carried_temps: vec![],
+            temporary_values: std::collections::HashSet::new(),
+            temporary_borrows: Vec::new(),
+            temporary_receiver: false,
+            optional_arguments: false,
+            optional_scopes: vec![],
             call_depth: 0,
             use_ok: true,
             pending_call_expected: None,
@@ -340,6 +434,13 @@ impl<'a> Typer<'a> {
             hole_trees: vec![],
             call_sigs: HashMap::new(),
             test_body: false,
+            in_test_code: false,
+            mixin_view: None,
+            mixin_body_facts: BTreeMap::new(),
+            mixin_home_summaries: BTreeMap::new(),
+            check_mixin_applications: true,
+            row_name: None,
+            row_uses: BTreeMap::new(),
             consumed_ops: std::collections::HashSet::new(),
             implied_fails: BTreeSet::new(),
             implied_regions: BTreeSet::new(),
@@ -419,7 +520,14 @@ impl<'a> Typer<'a> {
                 return true;
             }
         } else {
-            return true;
+            // A contributed method retains its visibility on the applying class. The absence of a method
+            // in the class's own declarations does not make a private mixin implementation public (4.4, 9.6).
+            let provided = d.mixins.iter().filter_map(|mx| self.dc.resolve_named(mx, None))
+                .filter_map(|md| md.methods.get(member).cloned()).last();
+            match provided {
+                Some(m) if !m.exported => {},
+                _ => return true,
+            }
         }
         for iface in &d.implements {
             if let Some(id) = self.dc.resolve_named(iface, None) {
@@ -427,13 +535,16 @@ impl<'a> Typer<'a> {
                     return true;
                 }
             }
-            if iface.name == "Abandonable" && member == "abandon" {
+            if iface.interface_key() == "Abandonable" && member == "abandon" {
                 return true;
             }
         }
-        for mx in &d.mixins {
-            if let Some(md) = self.dc.resolve_named(mx, None) {
-                if md.methods.contains(&format!("requires:{member}")) {
+        // A requirement grants this mixin access to its applying class's method. It neither exports that
+        // method to foreign callers nor grants another mixin access through a sibling's requirement (9.6).
+        let owner = self.self_type.as_ref().and_then(|t| self.decl_of(t));
+        if owner.as_ref().map_or(false, |o| o.name == d.name && o.type_identity() == d.type_identity()) {
+            if let Some(md) = self.mixin_view.as_ref().and_then(|name| self.dc.table.get(name)) {
+                if md.kind == "mixin" && md.module == self.module && md.methods.contains(&format!("requires:{member}")) {
                     return true;
                 }
             }
@@ -442,7 +553,9 @@ impl<'a> Typer<'a> {
     }
 
     pub fn check_member(&mut self, d: &Decl<'a>, member: &str, tok: &Token, what: &str) {
-        if self.foreign(d) && !self.member_visible(d, member) {
+        // a mixin body sees only the exported members of the class it is applied to, in the same module too (9.6)
+        let through_mixin = self.mixin_view.is_some() && self.self_type.as_ref().and_then(|t| self.decl_of(t)).map_or(false, |owner| owner.name == d.name && owner.type_identity() == d.type_identity());
+        if (self.foreign(d) || through_mixin) && !self.member_visible(d, member) {
             let mut cands: Vec<String> = d.fields.iter().filter(|(_, v)| v.1).map(|(k, _)| k.clone()).collect();
             cands.sort();
             let mut ms: Vec<String> = d.methods.iter().filter(|(_, s)| s.exported).map(|(k, _)| k.clone()).collect();
@@ -450,7 +563,7 @@ impl<'a> Typer<'a> {
             cands.extend(ms);
             self.rec(
                 "E-NAM-004",
-                format!("{what} `{member}` of {} is not exported; {} is declared in {}", d.name, d.name, d.module),
+                if through_mixin { format!("{what} `{member}` of {} is not exported; a mixin ({}) sees only the exported members of {} (9.6)", d.name, self.mixin_view.clone().unwrap_or_default(), d.name) } else { format!("{what} `{member}` of {} is not exported; {} is declared in {}", d.name, d.name, d.module) },
                 if what != "field" { "LANG-04-05" } else { "LANG-09-02" },
                 tok,
                 Self::nam(member, cands),
@@ -477,7 +590,7 @@ impl<'a> Typer<'a> {
         let n = e.name();
         let kids = e.kids();
         const PASS: &[&str] = &[
-            "constExpr", "expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "unaryExpr",
+            "constExpr", "expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "asExpr", "unaryExpr",
             "exprStmt",
         ];
         if PASS.contains(&n) && kids.len() == 1 {
@@ -666,6 +779,80 @@ impl<'a> Typer<'a> {
         Some(self.path_of_place(pl))
     }
 
+    /// Every `move` marker the node contains, in source order: the moved place and the marker's token. A lambda body
+    /// is a separate activation and is not entered; an interpolation hole is an expression evaluated where its string
+    /// is (3.6), so its markers count there; `match move p` moves `p` as a marker does (9.8). Bindings an arm's
+    /// pattern makes are fresh on every evaluation, so moves of them do not count (the `skip` names).
+    pub fn move_markers(&self, node: N<'a>) -> Vec<(String, Token)> {
+        let mut out = Vec::new();
+        for c in node.kids() {
+            self.move_markers_of(c, &mut out, &BTreeSet::new());
+        }
+        out
+    }
+
+    fn move_markers_of(&self, c: C<'a>, out: &mut Vec<(String, Token)>, skip: &BTreeSet<String>) {
+        let n = match c {
+            C::T(tk) => {
+                if tk.kind == Kind::Str && tk.text.contains("${") {
+                    for (k, src) in expr::hole_sources(tk).into_iter().enumerate() {
+                        if let Some(p) = expr::hole_tree_at(tk, k, &src) {
+                            self.move_markers_of(C::N(N::new(&p.root, &p.toks)), out, skip);
+                        }
+                    }
+                }
+                return;
+            }
+            C::N(n) => n,
+        };
+        if n.name() == "lambda" {
+            return;
+        }
+        if n.name() == "markerExpr" && n.tokens()[0].text == "move" {
+            if let Some(p) = self.marked_path(n) {
+                if !skip.contains(&root_of(&p)) {
+                    out.push((p, n.tokens()[0].clone()));
+                }
+            }
+            return;
+        }
+        if n.name() == "matchExpr" {
+            let kids = n.kids();
+            if let Some(mt) = kids.iter().find_map(|k| match *k {
+                C::T(t) if t.text == "move" => Some((*t).clone()),
+                _ => None,
+            }) {
+                let scrut = kids.iter().filter_map(|k| k.node()).find(|k| k.name() == "expr" || k.name() == "place");
+                let sp = match scrut {
+                    Some(s) if s.name() == "place" => Some(self.path_of_place(s)),
+                    other => self.path_of_expr(other),
+                };
+                if let Some(p) = sp {
+                    if !skip.contains(&root_of(&p)) {
+                        out.push((p, mt));
+                    }
+                }
+            }
+            let mut inner = skip.clone();
+            for arm in n.child_nodes("matchArm") {
+                for pat in arm.child_nodes("pattern") {
+                    for t in pat.tokens() {
+                        if t.kind == Kind::Lower {
+                            inner.insert(t.text.clone());
+                        }
+                    }
+                }
+            }
+            for k in kids {
+                self.move_markers_of(k, out, &inner);
+            }
+            return;
+        }
+        for k in n.kids() {
+            self.move_markers_of(k, out, skip);
+        }
+    }
+
     /// A deferred body's effect on the facts where it runs (D-75): every place it assigns or loans exclusively loses its
     /// facts, except that a place written once in the body, by a top-level `place = <integer literal>` (or its negation)
     /// with no other write to it, a prefix of it or a field of it, holds the literal afterwards (the body has no exits,
@@ -730,8 +917,8 @@ impl<'a> Typer<'a> {
         let n = cond.name();
         let kids = cond.kids();
         const PASS: &[&str] = &[
-            "constExpr", "expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "unaryExpr",
-            "exprStmt",
+            "constExpr", "expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "asExpr", "unaryExpr",
+            "postfixExpr", "exprStmt",
         ];
         if PASS.contains(&n) && kids.len() == 1 {
             if let C::N(k) = kids[0] {
@@ -760,10 +947,14 @@ impl<'a> Typer<'a> {
             let op = kids[1].tok().unwrap().text.clone();
             let mut lp = self.path_of_expr(kids[0].node());
             let rp = self.path_of_expr(kids[2].node());
+            let before = self.nrecords();
             let lt = self.infer_c(kids[0], env, None);
             let mark = self.inval_log.len();
             let want = self.enum_operand(&lt); // `s == Error` (9.7, X-345)
             let rt = self.infer_c(kids[2], env, want.as_ref());
+            // the operands are typed again for the narrowing; their diagnostics were reported when the condition was
+            // typed, so a second `move d` here is not a second move to report (D-448)
+            self.truncate_records(before);
             // D-74, D-77: the left operand's value was read before the right operand ran; if the right operand discarded
             // the left place's facts (a write, an editable loan), the comparison says nothing about its current value
             if let Some(p) = &lp {
@@ -893,6 +1084,8 @@ impl<'a> Typer<'a> {
     /// the fallback is a loan (a nested lent `??`, at any depth), or either operand is a place read through a loan.
     /// An owned value is then made from it only by `copy`, wherever it meets an owned expectation.
     pub fn coalesce_result(&mut self, inner: &Type, right: &Type, left_node: Option<N<'a>>, right_node: Option<N<'a>>, env: &Env) -> Type {
+        let merged = self.with_closure(inner, right);
+        let inner = &merged;
         if inner.is_loan() || !self.is_bearing(inner) {
             return inner.clone();
         }
@@ -903,6 +1096,263 @@ impl<'a> Typer<'a> {
             Some(origin) => Type::Loan { inner: Box::new(inner.clone()), mode: "alias".into(), origin },
             None => inner.clone(),
         }
+    }
+
+    /// Whether `e`, of type `t`, is a bearing value of its own where it stands: not a loan, nor a place read through
+    /// one (a fresh value, `move p`, `copy p`, a bare owned place). The part of a `??`, a tuple, an `if` or a `match`
+    /// that makes its binding own something beside the loans it holds (7.9; D-366, D-369).
+    pub fn owns_value(&self, e: Option<N<'a>>, t: &Type, env: &Env) -> bool {
+        self.is_bearing(t) && Self::lent(t).is_none() && self.lent_operand(e, env).is_none()
+    }
+
+    /// Whether the value of `e` owns a bearing part beside a loan it holds (`owned_parts`), looking through the
+    /// wrappers of one expression and parentheses.
+    pub fn has_owned_part(&self, e: Option<N<'a>>) -> bool {
+        let mut n = match e {
+            Some(n) => n,
+            None => return false,
+        };
+        loop {
+            if self.owned_parts.contains(&n.id()) {
+                return true;
+            }
+            let kids = n.kids();
+            if n.name() == "primaryExpr" && kids.len() == 3 && kids[0].text_is("(") {
+                match kids[1].node() {
+                    Some(k) => n = k,
+                    None => return false,
+                }
+            } else if kids.len() == 1 {
+                match kids[0].node() {
+                    Some(k) => n = k,
+                    None => return false,
+                }
+            } else {
+                return false;
+            }
+        }
+    }
+
+    /// Record that `node`'s value, of type `t`, owns a bearing part beside the loans it holds (7.9).
+    pub fn note_owned_part(&mut self, node: N<'a>, t: &Type, owned: bool) {
+        if owned && (t.is_loan() || self.holds_loan(t)) {
+            self.owned_parts.insert(node.id());
+        }
+    }
+
+    /// The loans a `give` or `recover` value carries to the expression it ends (7.3; D-355): those its calls carry,
+    /// and those held by the bindings it reads (a pattern binding of the arm, a binding of the branch), as
+    /// `keep_nested` passes them to a binding. They are handed to the expression's consumer when the expression ends.
+    pub fn handed_on(&self, e: Option<N<'a>>, t: &Type) -> Vec<Loan> {
+        let mut out = self.carried.clone();
+        let e = match e {
+            Some(e) => e,
+            None => return out,
+        };
+        if t.is_loan() || self.holds_loan(t) {
+            let names: BTreeSet<String> = e.tokens().iter().filter(|tk| tk.kind == Kind::Lower).map(|tk| tk.text.clone()).collect();
+            for l in &self.own.loans {
+                let ld = l.borrow();
+                if let Some(h) = &ld.holder {
+                    if names.contains(h) && root_of(&ld.owner) != *h {
+                        let via = ld.via.clone().or_else(|| if ld.mode == "alias" { Some(h.clone()) } else { None });
+                        out.push(Rc::new(RefCell::new(LoanData { owner: ld.owner.clone(), mode: ld.mode.clone(), holder: None, depth: self.depth, line: ld.line, nested: true, via, parent: ld.parent.clone() })));
+                    }
+                }
+            }
+            let line = e.tokens().first().map_or(0, |t| t.line);
+            for h in names.intersection(&self.part_owners) {
+                // a loan of what the binding owns (D-369)
+                out.push(Rc::new(RefCell::new(LoanData { owner: h.clone(), mode: "alias".into(), holder: None, depth: self.depth, line, nested: true, via: None, parent: None })));
+            }
+        }
+        out
+    }
+
+    /// The expression has ended: the loans its branches handed on are carried to its consumer (7.3; D-355).
+    pub fn take_handed(&mut self, loans: Vec<Loan>) {
+        for l in loans {
+            if !self.own.has_loan(&l) {
+                self.own.loans.push(l.clone());
+            }
+            if !self.carried.iter().any(|c| loan_eq(c, &l)) {
+                self.carried.push(l);
+            }
+        }
+    }
+
+    /// The bare owned place `p` of a `p ?? v` whose result `e` is, through the wrappers of one expression, parentheses
+    /// and `present(…)`; None otherwise. Where `e` is given to a position that takes ownership, `p` needs the marker
+    /// `let x = p` would (7.5; D-357).
+    pub fn coalesced_place(&self, e: Option<N<'a>>) -> Option<String> {
+        let mut n = e?;
+        loop {
+            if let Some(p) = self.coalesced_places.get(&n.id()) {
+                return Some(p.clone());
+            }
+            let kids = n.kids();
+            if n.name() == "primaryExpr" && kids.len() == 3 && kids[0].text_is("(") {
+                n = kids[1].node()?;
+            } else if n.name() == "primaryExpr" && kids.len() == 4 && kids[0].text_is("present") {
+                n = kids[2].node()?;
+            } else if kids.len() == 1 {
+                n = kids[0].node()?;
+            } else {
+                return None;
+            }
+        }
+    }
+
+    /// E-OWN-001 where a `p ?? v` whose value may be the owned place `p`'s is given to `what`, a position that takes
+    /// ownership (7.5; D-357).
+    pub fn coalesced_marker(&mut self, e: Option<N<'a>>, t: &Type, what: &str) {
+        let Some(lp) = self.coalesced_place(e) else { return };
+        if self.is_bearing(t) {
+            let tok = ftok(e.unwrap()).clone();
+            self.own_err(
+                "E-OWN-001",
+                format!("{what} `{lp} ?? …`: `{lp}` is an existing ownership-bearing place and the result is owned, so the value would have two owners: write `move {lp}` or `copy {lp}`"),
+                &tok,
+                &lp,
+                "marker required",
+                "LANG-07-01",
+                "",
+            );
+        }
+    }
+
+    /// The function may drop an owned value of type `t` here (a binding's end, an `owned` parameter, a temporary, a
+    /// discarded value): a class's `cleanup` contributes its effects to every function that may drop its type (11.3;
+    /// D-393). A loan destroys nothing (7.9), so what is lent is not charged (D-400).
+    pub fn charge_drop(&mut self, t: &Type, tok: &Token) {
+        if t.is_loan() {
+            return;
+        }
+        let mut s = strip(t).clone();
+        while let Type::Optional(i) = s {
+            s = (*i).clone();
+            if s.is_loan() {
+                return;
+            }
+        }
+        match &s {
+            Type::Tuple(items) => {
+                for x in items {
+                    self.charge_drop(x, tok);
+                }
+                return;
+            }
+            Type::Record(fs) => {
+                for (_, x) in fs {
+                    self.charge_drop(x, tok);
+                }
+                return;
+            }
+            _ => {}
+        }
+        let cd = if known(&s) { self.decl_of(&s) } else { None };
+        if let Some(cd) = cd {
+            if cd.has_cleanup {
+                self.requested.borrow_mut().insert(format!("cleanup {}", cd.name));
+                let sm = self.summaries.get(&format!("cleanup {}", cd.name)).cloned().unwrap_or_default();
+                self.eff.imports(&sm, Some(tok), &[]);
+            }
+        }
+    }
+
+    /// The type of a field read through a loan: a loan of the field, in the loan's mode and origin, since a field
+    /// reached through a loan is lent too (7.9), where the receiver is a loan and the field bearing (D-356). A trivial
+    /// field is its value.
+    pub fn lent_member(&self, recv: &Type, r: Type) -> Type {
+        let (mode, origin) = match recv {
+            Type::Loan { mode, origin, .. } => (mode.clone(), origin.clone()),
+            _ => return r,
+        };
+        if !known(&r) {
+            return r;
+        }
+        let (core, opt) = match &r {
+            Type::Optional(i) => ((**i).clone(), true),
+            _ => (r.clone(), false),
+        };
+        if core.is_loan() || !self.is_bearing(&core) {
+            return r;
+        }
+        let lent = Type::Loan { inner: Box::new(core), mode, origin };
+        if opt { optional(lent) } else { lent }
+    }
+
+    /// Whether a method's result lends from its receiver: a loan `from self`, whole or inside an optional, a tuple or
+    /// a record (`(alias T from self)?`, `ListCursor[T] from self`).
+    pub fn lends_from_self(sig: &Sig<'a>) -> bool {
+        if let Type::Loan { origin, .. } = &sig.ret {
+            return origin == "self";
+        }
+        let mut origins = Vec::new();
+        Self::nested_origins(&sig.ret, true, &mut origins);
+        origins.iter().any(|(o, _)| o == "self")
+    }
+
+    /// Whether `t` is a standard cursor type (5.3), seen through any loan or optional around it. A binding that holds
+    /// a cursor owns the value (7.7), so a `let mut` cursor binding may be reassigned; the loan the old cursor stored
+    /// ends with it (7.9; D-401).
+    pub fn cursor_type(t: &Type) -> bool {
+        let mut s = strip(t);
+        while let Type::Optional(i) = s {
+            s = i;
+        }
+        s.is_named("ListCursor")
+    }
+
+    /// A loan-carrying value (7.7), the standard cursors included: it is owned by its binding, and what it lends is
+    /// its origin's, so a loan drawn through it outlives the value itself (7.9).
+    pub fn loan_carrying_or_cursor(&self, t: &Type) -> bool {
+        self.loan_carrying(t) || Self::cursor_type(t)
+    }
+
+    /// Whether assigning the field path `pl` of the `let mut` binding `b` writes through a read loan: a step of the path
+    /// before the field assigned reaches a lent value (`g.n = 9` on `let mut g = first(alias xs)`, or on a narrowed
+    /// `let mut t = xs.get(0)`), which would change what its owner lends (7.3; D-356). Assigning a field that itself
+    /// holds a loan (`rec.item = …` on a record the binding owns) replaces the loan and writes through none (7.9).
+    pub fn writes_through_read_loan(&mut self, pl: N<'a>, b: &Binding) -> bool {
+        let mut t = b.ty.clone();
+        let n_records = self.nrecords();
+        let mut out = false;
+        for k in pl.kids().into_iter().skip(1) {
+            let mut core = t.clone();
+            while let Type::Optional(i) = core {
+                core = (*i).clone();
+            }
+            if let Type::Loan { mode, .. } = &core {
+                out = mode == "alias";
+                break;
+            }
+            if k.is("memberName") {
+                let mt = k.node().unwrap().tokens()[0];
+                t = self.member_type(&core, mt);
+            } else if let C::T(st) = k {
+                if st.kind != Kind::Int {
+                    continue;
+                }
+                match &core {
+                    Type::Tuple(items) => {
+                        let i: usize = st.text.parse().unwrap_or(usize::MAX);
+                        if i >= items.len() {
+                            break;
+                        }
+                        t = items[i].clone();
+                    }
+                    _ => break,
+                }
+            } else {
+                continue;
+            }
+            if !known(&t) {
+                break;
+            }
+        }
+        self.truncate_records(n_records); // the place was typed already; this walk reports nothing
+        out
     }
 
     /// A value of the function's own where the result is declared a loan (7.6; D-373, D-377, D-381). A `from` result
@@ -935,7 +1385,7 @@ impl<'a> Typer<'a> {
     /// was inferred says.
     fn unlent_in(&self, e: N<'a>, want: &Type, env: &Env, t: Option<&Type>) -> Option<String> {
         const WRAP: &[&str] = &[
-            "constExpr", "expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "unaryExpr", "postfixExpr", "primaryExpr", "exprStmt",
+            "constExpr", "expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "asExpr", "unaryExpr", "postfixExpr", "primaryExpr", "exprStmt",
         ];
         const OPS: &[&str] = &["orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr"];
         let mut w = want;
@@ -1014,7 +1464,7 @@ impl<'a> Typer<'a> {
         // a `try` call produces its success value
         let t = t
             .and_then(|t| match strip(t) {
-                Type::Named(nt) if nt.name == "Outcome" && !nt.args.is_empty() => Some(&nt.args[0]),
+                Type::Named(nt) if nt.package.is_empty() && nt.name == "Outcome" && !nt.args.is_empty() => Some(&nt.args[0]),
                 _ => None,
             })
             .or(t);
@@ -1035,7 +1485,7 @@ impl<'a> Typer<'a> {
                     // "without interpolation" is decided by the lexer's recorded holes, as `lower_names` decides it:
                     // an escaped `\${` opens no hole and prints literally on every backend (D-412)
                     let is_static = tok.kind != Kind::Str || expr::hole_sources(tok).is_empty();
-                    if is_static && matches!(strip(core), Type::Named(nt) if ["StringView", "BytesView"].contains(&nt.name.as_str())) {
+                    if is_static && matches!(strip(core), Type::Named(nt) if nt.package.is_empty() && ["StringView", "BytesView"].contains(&nt.name.as_str())) {
                         return None;
                     }
                     return Some(source_text(n));
@@ -1054,6 +1504,13 @@ impl<'a> Typer<'a> {
         }
         if matches!(n.name(), "tupleLit" | "recordLit" | "lambda") {
             return Some(source_text(n)); // constructed here, whatever its parts
+        }
+        if let Some(path) = self.path_of_expr(Some(n)) {
+            if self.part_owners.contains(&root_of(&path)) {
+                // the binding owns a part of what it holds (a `??` fallback, a tuple's own element, a branch's own
+                // value): its value is the function's own on that path, lent or not (7.9; D-369, D-388, D-389)
+                return Some(source_text(n));
+            }
         }
         let t = t?;
         if Self::lent(t).is_some() || self.lent_operand(Some(n), env).is_some() {
@@ -1162,7 +1619,7 @@ impl<'a> Typer<'a> {
             }
             match w {
                 Type::Loan { .. } | Type::Unknown(_) => return,
-                Type::Named(n) if ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str()) => return,
+                Type::Named(n) if (n.package.is_empty() && ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str())) => return,
                 _ => {}
             }
         }
@@ -1173,7 +1630,7 @@ impl<'a> Typer<'a> {
         if matches!(core, Type::Unknown(_)) || self.dc.is_trivial(&lent) || self.copy_refused.contains(&(tok.line, tok.col)) {
             return;
         }
-        if matches!(core, Type::Named(n) if ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str())) {
+        if matches!(core, Type::Named(n) if (n.package.is_empty() && ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str()))) {
             return; // a view held whole is a stored loan (E-OWN-053, E-OWN-090), not a copy
         }
         let place = tok.text.clone();
@@ -1189,7 +1646,7 @@ impl<'a> Typer<'a> {
             );
             return;
         }
-        let dup = if matches!(core, Type::Named(n) if n.name == "Shared" || n.name == "Weak") { " (a `Shared` or `Weak` is duplicated with `retain()`)" } else { "" };
+        let dup = if matches!(core, Type::Named(n) if (n.package.is_empty() && n.name == "Shared") || (n.package.is_empty() && n.name == "Weak")) { " (a `Shared` or `Weak` is duplicated with `retain()`)" } else { "" };
         self.own_err(
             "E-OWN-002",
             format!("{what} must be owned, but it is a loan of {}, which is not Copyable (6.11), so no owned copy can be made{dup}: keep the loan (a read parameter or a `from` result), or take the value out of its owner", lent.show()),
@@ -1205,12 +1662,16 @@ impl<'a> Typer<'a> {
         if t.is_loan() {
             return false;
         }
-        let s = strip(t);
+        let base = base_type(strip(t));
+        let s = &base;
+        if matches!(s, Type::TypeParam(_)) {
+            return true; // a type parameter is never trivial: a loan of a `T` stays a loan (6.12, X-513; D-352)
+        }
         if !known(s) || is_strlit(s) || is_interp(s) {
             return false;
         }
         if let Type::Named(n) = s {
-            if ["StringView", "BytesView", "ListView"].contains(&n.name.as_str()) {
+            if n.package.is_empty() && ["StringView", "BytesView", "ListView"].contains(&n.name.as_str()) {
                 return false;
             }
         }
@@ -1222,7 +1683,7 @@ impl<'a> Typer<'a> {
     pub fn editable_root(&self, path: &str, env: &Env) -> bool {
         let kind = self.binding_kind(path, env).unwrap_or_default();
         let holder = self.own.holders.get(&root_of(path)).cloned();
-        ["mut", "editable", "capture-editable", "capture-move"].contains(&kind.as_str())
+        ["mut", "editable", "capture-editable", "capture-move", "capture-probe"].contains(&kind.as_str())
             || holder.as_ref().map_or(false, |h| h.borrow().mode == "editable")
             || (root_of(path) == "self" && self.self_mode == "editable self")
     }
@@ -1321,7 +1782,48 @@ impl<'a> Typer<'a> {
         }
     }
 
+    fn derived_conversion_summary(&self, d: &DeclRef<'a>, sig: &Sig<'a>, seen: &mut BTreeSet<String>) -> Summary {
+        let mut out = Summary::default();
+        if d.kind == "enum" { out.add("alloc", "proved", None); return out; }
+        let key = format!("{}:{}:{}", d.module, d.name, sig.name);
+        if !seen.insert(key) { return out; }
+        let Some(source) = self.decl_of(&sig.params[0].1) else { return out };
+        for (name, (ft, _, _)) in d.fields.iter() {
+            let Some((st, _, _)) = source.fields.get(name) else { continue };
+            let st = &self.dc.subst(st, &self.dc.type_substitution(&source, &sig.params[0].1));
+            let ft = &self.dc.subst(ft, &self.dc.type_substitution(d, &sig.ret));
+            if !self.dc.is_trivial(st) { out.add("alloc", "proved", None); }
+            if st == ft { continue; }
+            if let Some(owner) = self.decl_of(st).filter(|o| o.has_cleanup) {
+                let label = format!("cleanup {}", owner.name);
+                self.requested.borrow_mut().insert(label.clone());
+                out.imports(&self.summaries.get(&label).cloned().unwrap_or_default(), None, &[]);
+            }
+            if let (Some(sb), Some(tb)) = (crate::conversions::base_of(st), crate::conversions::base_of(ft)) {
+                if self.dc.is_core_type(st) && self.dc.is_core_type(ft) {
+                    if let Some(row) = crate::conversions::resolve(sb, tb) {
+                        if row.allocates() { out.add("alloc", "proved", None); }
+                        continue;
+                    }
+                }
+            }
+            for (t, direction, other) in [(st, "to", ft), (ft, "from", st)] {
+                let Some(owner) = self.decl_of(t) else { continue };
+                for member in self.dc.instantiated_conversions(&owner, t) {
+                    if member.direction == direction && member.other == *other && (member.exported || owner.module == d.module) {
+                        let sub = if member.derived { self.derived_conversion_summary(&owner, &member.sig, seen) } else { self.callee_summary(Some(&owner), &member.sig, &self.method_label(&owner, &member.sig.name)) };
+                        out.imports(&sub, None, &[]);
+                    }
+                }
+            }
+        }
+        out
+    }
+
     pub fn callee_summary(&self, d: Option<&DeclRef<'a>>, sig: &Sig<'a>, label: &str) -> Summary {
+        if let Some(d) = d.filter(|_| sig.name.starts_with("derive:from:")) {
+            return self.derived_conversion_summary(d, sig, &mut BTreeSet::new());
+        }
         if label == "closure" {
             self.requested.borrow_mut().insert("closure".into());
             return self.summaries.get("closure").cloned().unwrap_or_default();
@@ -1339,6 +1841,19 @@ impl<'a> Typer<'a> {
             let home = owner.cloned().or(fd);
             let auth = owner.map_or(false, |d| self.dc.implements_core_authority(d) || (AUTHORITIES.contains(&d.name.as_str()) && d.module.starts_with("fortis")));
             let mut s = library_summary(home.as_ref().map(|h| h.module.as_str()), owner.map(|d| d.name.as_str()), &sig.name, &sig.modifiers, auth, sig.receiver.as_deref(), &self.authority_params(sig));
+            // Callback effects follow the declared type, including pure callbacks' allocation (11.3, X-610).
+            for p in &sig.params {
+                if let Type::Fn { modifiers, .. } = strip(&p.1) {
+                    if !modifiers.iter().any(|m| m == "pure") {
+                        for e in ["io", "mutate", "nondet"] {
+                            s.add_uncertain(e, "proved", "possible", None);
+                        }
+                    }
+                    if !modifiers.iter().any(|m| m == "noalloc") {
+                        s.add_uncertain("alloc", "proved", "possible", None);
+                    }
+                }
+            }
             // a foreign `trusted` function of the program (not the standard library, whose summaries are tabled):
             // what it does is behind a trust boundary except for the claims its signature writes (X-132)
             let user = |d: &DeclRef<'a>| !crate::decls::is_standard(&d.module) && d.kind != "unknown";
@@ -1403,7 +1918,7 @@ impl<'a> Typer<'a> {
     /// A `Shared[A]` handle carries A's authority (11.6, X-137).
     pub fn unshared<'t>(t: &'t Type) -> &'t Type {
         match strip(t) {
-            Type::Named(n) if n.name == "Shared" && n.args.len() == 1 => strip(&n.args[0]),
+            Type::Named(n) if (n.package.is_empty() && n.name == "Shared") && n.args.len() == 1 => strip(&n.args[0]),
             s => s,
         }
     }
@@ -1504,7 +2019,7 @@ impl<'a> Typer<'a> {
             return;
         }
         let caps_params = self.dc.table.get("main").and_then(|d| d.sig.as_ref().map(|sig| {
-            sig.params.iter().any(|(_, t, _)| matches!(t, Type::Named(n) if fortis_names::reading::CAPABILITY_TYPES.contains(&n.name.as_str())))
+            sig.params.iter().any(|(_, t, _)| matches!(t, Type::Named(n) if n.package.is_empty() && fortis_names::reading::CAPABILITY_TYPES.contains(&n.name.as_str())))
         }));
         if caps_params == Some(true) {
             self.eff_err(
@@ -1576,9 +2091,31 @@ impl<'a> Typer<'a> {
         }
     }
 
+    /// A declaration's written modifiers and the contracts it carries must agree, two by two (11.5, E-EFF-050): `pure`
+    /// beside a required capability, a modifier beside `forbids` of the effect it permits, an authority both required
+    /// and excluded. A contract's own contradiction is reported at the contract.
+    pub fn check_contradictions(&mut self, sig: &Sig<'a>, head_tok: &Token, label: &str) {
+        let mut parts: Vec<(String, BTreeMap<String, BTreeSet<String>>)> = vec![(String::new(), [("modifiers".to_string(), sig.modifiers.iter().cloned().collect())].into_iter().collect())];
+        for c in &sig.contracts {
+            if let Some(cd) = self.dc.table.get(c).filter(|cd| cd.kind == "contract") {
+                parts.push((c.clone(), cd.items.clone()));
+            }
+        }
+        let side = |o: &str| if o.is_empty() { "its own modifiers".to_string() } else { format!("contract {o}") };
+        for c in crate::effects::contract_contradictions(&parts, true) {
+            let msg = match c.kind {
+                "pure" => format!("{label} is `pure` (by {}) and requires capability {} (by {}): a pure function receives no authority, so the declaration contradicts itself (11.5)", side(&c.first), c.claim, side(&c.second)),
+                "forbids" => format!("{label} is `{}` (by {}), which permits `{}`, and forbids `{}` (by {}): the declaration contradicts itself (11.5)", c.claim, side(&c.first), c.effect, c.effect, side(&c.second)),
+                _ => format!("{label} requires capability {} (by {}) and excludes it (by {}): the declaration contradicts itself (11.5)", c.claim, side(&c.first), side(&c.second)),
+            };
+            self.eff_err("E-EFF-050", msg, head_tok, &c.second, &c.effect, label, "LANG-11-06");
+        }
+    }
+
     pub fn check_claims(&mut self, sig: &Sig<'a>, head_tok: &Token, label: &str) {
         let mods = self.expanded_mods(sig);
         self.check_contracts(sig, head_tok, label);
+        self.check_contradictions(sig, head_tok, label);
         let site = |s: &Self, e: &str| s.eff.sites.get(e).cloned().unwrap_or_else(|| head_tok.clone());
         // the authority must be in this function's own signature (11.6): one a callee takes, reached through a value that
         // is not an Authority (`caps.clock` of a Capabilities), does not count; a lambda acts under its enclosing
@@ -1587,6 +2124,19 @@ impl<'a> Typer<'a> {
         if label != "lambda" && sig.receiver.is_some() {
             if let Some(st) = self.self_type.clone() {
                 own.extend(self.receiver_authorities(&st));
+            }
+        }
+        if label != "lambda" {
+            // a function that owns a value of a class holding an authority may drop it, and its `cleanup` acts under that
+            // authority (11.6; D-173): an `owned` parameter carries what its class holds, as a receiver does (D-393, X-495)
+            for (_, pt, pm) in &sig.params {
+                if pm.trim_start_matches('.') == "owned" {
+                    let mut core = strip(pt);
+                    while let Type::Optional(i) = core {
+                        core = i;
+                    }
+                    own.extend(self.receiver_authorities(core));
+                }
             }
         }
         if self.eff.needs_auth && own.is_empty() && !self.is_entry_main(label) {
@@ -1629,7 +2179,8 @@ impl<'a> Typer<'a> {
             let t = site(self, "alloc");
             let status = self.eff.status("alloc");
             let verb = if status == "violated" { "allocates" } else { "may allocate" };
-            self.eff_err("E-EFF-001", format!("{label} is declared `noalloc` but its body {verb}{}", why(status)), &t, "noalloc", "alloc", label, "LANG-11-03");
+            let call = if status == "unproved" { format!(" at call `{}`", t.text) } else { String::new() };
+            self.eff_err("E-EFF-001", format!("{label} is declared `noalloc` but its body {verb}{call}{}", why(status)), &t, "noalloc", "alloc", label, "LANG-11-03");
             self.set_last_status(status);
         }
         let ef = |req: &str, eff: &str| Json::obj([("required_contract", Json::str(req)), ("violating_effect", Json::str(eff)), ("witness_path", Json::str(label))]);
@@ -1659,7 +2210,29 @@ impl<'a> Typer<'a> {
             return false;
         }
         let s = strip(t);
-        known(s) && self.dc.is_linear(s)
+        if let Type::TypeParam(n) = s {
+            // the body's own `T: linear` (6.12, 10.7): that parameter is a linear type inside its body
+            return self.linear_in_scope.contains(n);
+        }
+        self.dc.is_linear_with(s, &self.linear_in_scope)
+    }
+
+    /// Whether a type holds `tp` by value in the sense that needs `T: linear` (6.12, X-519): the parameter itself, or
+    /// a structure whose linearity depends on `tp` (`T?`, `List[T]`). A lent `T` or an `(alias T from x)?` leaves the
+    /// value with the caller, and a type that is linear whatever `tp` is (`Future[tp]`, `Task[tp]`, `fn once`) is one
+    /// the obligation machinery holds at every instantiation, so neither needs the bound. The declaration's own
+    /// linearity is judged with every type parameter non-linear (`dc.is_linear` never consults a body's bounds), so a
+    /// caller's own `T: linear` never masks it. Results (including callback results) do not get the always-linear
+    /// wrapper exemption: Outcome<List<T>> must not hide a call that drops T on a failure path (D-596).
+    pub fn holds_by_value(&self, t: &Type, tp: &str, result: bool) -> bool {
+        if t.is_loan() { return false; }
+        match strip(t) {
+            Type::Loan { .. } => false,
+            Type::TypeParam(n) => n == tp,
+            s if !result && known(s) && self.dc.is_linear(s) => false,
+            Type::Optional(i) => self.holds_by_value(i, tp, result),
+            s => Self::tparams_of(s).iter().any(|x| x == tp),
+        }
     }
 
     pub fn obligate(&mut self, path: &str, tok: &Token) {
@@ -1667,8 +2240,19 @@ impl<'a> Typer<'a> {
         self.own.open_obligation(path, tok.clone(), d);
     }
 
+    pub fn optional_consume(&mut self, path: &str) {
+        for (obligations, tok) in self.optional_scopes.clone() {
+            if let Some((origin, depth)) = obligations.get(path) {
+                if self.own.obligations.get(path).is_some_and(|(current, d)| current.line == origin.line && current.col == origin.col && d == depth) {
+                    self.obl_err("E-OBL-001", "an argument of `?.` must not consume an existing obligation: test for null with `match` or `if let` and call in the present branch".into(), &tok, &format!("{}:{}", origin.line, origin.col), path, "LANG-10-01");
+                }
+            }
+        }
+    }
+
     pub fn consume(&mut self, path: Option<String>, line: usize, how: &str) {
         if let Some(p) = path {
+            self.optional_consume(&p);
             self.own.close_obligation(&p, line, how);
         }
     }
@@ -1695,7 +2279,21 @@ impl<'a> Typer<'a> {
         }
     }
 
+    pub fn linear_loop_exit(&mut self, min_depth: i64, tok: &Token, what: &str, unwind: bool) {
+        for (depth, item) in self.linear_loops.clone() {
+            if depth >= min_depth {
+                self.obl_err(
+                    if unwind { "E-OBL-005" } else { "E-OBL-001" },
+                    format!("`{what}` may leave unvisited linear elements in the consuming loop binding `{}`; finish the loop and consume every item (5.3)", item.text),
+                    tok, &format!("{}:{}", item.line, item.col), &format!("remainder of {}", item.text),
+                    if unwind { "LANG-06-09" } else { "LANG-10-01" },
+                );
+            }
+        }
+    }
+
     pub fn unwind_point(&mut self, tok: &Token, what: &str, env: &Env, keep: Option<&str>) {
+        self.linear_loop_exit(0, tok, what, true);
         for (p, (tok0, _)) in self.own.obligations.items.clone() {
             if Some(p.as_str()) == keep || self.catch_bound.contains(&p) {
                 continue;
@@ -1743,7 +2341,8 @@ impl<'a> Typer<'a> {
             chain.insert(c.clone());
             cur = match self.own.holders.get(&c) {
                 Some(h) => {
-                    let r = root_of(&h.borrow().owner);
+                    let h = h.borrow();
+                    let r = h.parent.clone().unwrap_or_else(|| root_of(&h.owner));
                     if r != c {
                         Some(r)
                     } else {
@@ -1782,8 +2381,14 @@ impl<'a> Typer<'a> {
             self.use_ok = false;
             return;
         }
+        if how == "move" {
+            self.optional_consume(&path);
+        }
         let kind = self.binding_kind(&path, env);
         let kind_s = kind.clone().unwrap_or_default();
+        if kind_s == "capture-probe" {
+            self.capture_uses.push((path.clone(), how.into(), tok.clone()));
+        }
         let lhold = |l: &Loan| -> (String, String, String) {
             let d = l.borrow();
             (d.holder.clone().unwrap_or_default(), d.owner.clone(), d.mode.clone())
@@ -1833,8 +2438,13 @@ impl<'a> Typer<'a> {
                 return;
             }
             if self.own.holders.contains(&root_of(&path)) && !path.contains('.') && !["param", "editable", "owned"].contains(&kind_s.as_str()) {
-                self.own_err("E-OWN-011", format!("`{path}` holds a loan and cannot be reassigned"), tok, &path, "loan-holding binding", "LANG-07-05", "");
-                self.use_ok = false;
+                // a binding that holds a standard cursor owns the cursor value (7.7), so it may be reassigned: the
+                // old cursor's stored loan ends on this path (7.9) and the assignment attaches the new value's loan
+                // to the binding (D-401)
+                if !env_get(env, &root_of(&path)).as_ref().map_or(false, Self::cursor_type) {
+                    self.own_err("E-OWN-011", format!("`{path}` holds a loan and cannot be reassigned"), tok, &path, "loan-holding binding", "LANG-07-05", "");
+                    self.use_ok = false;
+                }
             }
             return;
         }
@@ -1973,7 +2583,7 @@ impl<'a> Typer<'a> {
                     Type::Loan { inner, .. } => (**inner).clone(),
                     _ => rt.clone(),
                 };
-                matches!(strip(&rt), Type::Named(n) if ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str()))
+                matches!(strip(&rt), Type::Named(n) if (n.package.is_empty() && ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str())))
             });
             let via = cursor || self.own.holders.get(&root).map_or(false, |h| h.borrow().mode == "alias");
             let d = self.depth;
@@ -1991,11 +2601,15 @@ impl<'a> Typer<'a> {
     /// `(alias T from self)?` gives self, alias (D-348). A result that is itself a loan carries its loan whole
     /// (`result_carries`), so it gives none.
     pub fn nested_origins(t: &Type, top: bool, out: &mut Vec<(String, String)>) {
-        let mut put = |o: &str, m: &str, out: &mut Vec<(String, String)>| match out.iter_mut().find(|(k, _)| k == o) {
+        let put = |o: &str, m: &str, out: &mut Vec<(String, String)>| match out.iter_mut().find(|(k, _)| k == o) {
             Some(e) => e.1 = m.to_string(),
             None => out.push((o.to_string(), m.to_string())),
         };
         match t {
+            Type::Fn { origin, capture_origins, .. } => {
+                if !origin.is_empty() { put(origin, "alias", out); }
+                for (o, m) in capture_origins { put(o, m, out); }
+            }
             Type::Loan { mode, origin, .. } => {
                 if !top {
                     put(origin, mode, out);
@@ -2016,15 +2630,28 @@ impl<'a> Typer<'a> {
         }
     }
 
-    /// Whether a value of type `t` holds a loan of an ownership-bearing value: a loan, or one inside an optional, a
-    /// tuple or a record, at any depth (D-348). A loan of a trivial value is that value, and holds nothing.
+    /// Value provenance only: a signature's formal from regions are resolved by the call's loan state.
+    pub fn captured_loans(t: &Type, out: &mut Vec<(String, String)>) {
+        match t {
+            Type::Fn { capture_origins, .. } => out.extend(capture_origins.iter().cloned()),
+            Type::Loan { inner, .. } | Type::Optional(inner) => Self::captured_loans(inner, out),
+            Type::Named(n) => for x in &n.args { Self::captured_loans(x, out); },
+            Type::Tuple(xs) => for x in xs { Self::captured_loans(x, out); },
+            Type::Record(fs) => for (_, x) in fs { Self::captured_loans(x, out); },
+            _ => {}
+        }
+    }
+
+    /// Whether the value holds an ownership-bearing loan, directly or in an aggregate (D-348).
     pub fn holds_loan(&self, t: &Type) -> bool {
         match t {
             Type::Loan { inner, .. } => self.is_bearing(inner) || self.holds_loan(inner),
             Type::Optional(i) => self.holds_loan(i),
             Type::Tuple(items) => items.iter().any(|x| self.holds_loan(x)),
             Type::Record(fs) => fs.iter().any(|(_, x)| self.holds_loan(x)),
-            _ => false,
+            // a `try` call's result holds what its success value holds (D-394)
+            Type::Named(n) if (n.package.is_empty() && n.name == "Outcome") && !n.args.is_empty() => self.holds_loan(&n.args[0]),
+            _ => self.loan_carrying_or_cursor(t), // a view carries a loan despite its trivial representation (D-606)
         }
     }
 
@@ -2037,6 +2664,9 @@ impl<'a> Typer<'a> {
         let mut rest = Vec::new();
         let mut held = Vec::new();
         for l in std::mem::take(&mut self.carried) {
+            if keep && (matches!(t, Type::Optional(_) | Type::Tuple(_) | Type::Record(_)) || matches!(t, Type::Named(n) if n.package.is_empty() && n.name == "Outcome")) {
+                l.borrow_mut().nested = true; // optional injection keeps the call's loan (D-606)
+            }
             if !l.borrow().nested {
                 rest.push(l);
             } else if keep {
@@ -2061,7 +2691,18 @@ impl<'a> Typer<'a> {
                 if names.contains(&h) && h != holder && root_of(&ld.owner) != h {
                     let via = ld.via.clone().or_else(|| if ld.mode == "alias" { Some(h.clone()) } else { None });
                     crate::journal::loan(&ld.owner, &ld.mode, Some(holder), depth, ld.line);
-                    let c = Rc::new(RefCell::new(LoanData { owner: ld.owner, mode: ld.mode, holder: Some(holder.to_string()), depth, line: ld.line, nested: true, via }));
+                    let c = Rc::new(RefCell::new(LoanData { owner: ld.owner, mode: ld.mode, holder: Some(holder.to_string()), depth, line: ld.line, nested: true, via, parent: ld.parent.clone() }));
+                    self.own.loans.push(c.clone());
+                    held.push(c);
+                }
+            }
+            let line = e.tokens().first().map_or(0, |t| t.line);
+            for h in names.intersection(&self.part_owners.clone()) {
+                if h != holder {
+                    // the binding read owns a part of what it holds (a `??` fallback, a tuple's own element): a loan
+                    // drawn from it is a loan of that binding, and ends with it (7.9; D-369, D-388)
+                    crate::journal::loan(h, "alias", Some(holder), depth, line);
+                    let c = Rc::new(RefCell::new(LoanData { owner: h.clone(), mode: "alias".into(), holder: Some(holder.to_string()), depth, line, nested: true, via: None, parent: None }));
                     self.own.loans.push(c.clone());
                     held.push(c);
                 }
@@ -2075,7 +2716,7 @@ impl<'a> Typer<'a> {
             return true;
         }
         if let Type::Named(n) = strip(&sig.ret) {
-            if ["StringView", "BytesView", "ListView", "Future"].contains(&n.name.as_str()) {
+            if n.package.is_empty() && ["StringView", "BytesView", "ListView", "Future"].contains(&n.name.as_str()) {
                 return true;
             }
         }
@@ -2093,8 +2734,29 @@ impl<'a> Typer<'a> {
         self.is_bearing(t) || is_interp(strip(t))
     }
 
+    /// The core of `e`, seen through the wrappers of one expression and parentheses (D-447): `(move d)` is marked
+    /// exactly as `move d`, since parentheses group an expression and change nothing else (5.6).
+    pub fn core_expr(&self, e: N<'a>) -> N<'a> {
+        let mut e = e;
+        loop {
+            let kids = e.kids();
+            let next = if e.name() == "primaryExpr" && kids.len() == 3 && kids[0].text_is("(") {
+                kids[1].node()
+            } else if kids.len() == 1 {
+                kids[0].node()
+            } else {
+                None
+            };
+            match next {
+                Some(k) => e = k,
+                None => return e,
+            }
+        }
+    }
+
     pub fn check_arg_marker(&mut self, e: N<'a>, p_name: &str, mode: &str, t: &Type, tok: &Token, env: &Env) {
-        let lent_marked = e.find("markerExpr").is_some() && ["alias", "editable"].contains(&e.tokens()[0].text.as_str());
+        let core = self.core_expr(e);
+        let lent_marked = core.name() == "markerExpr" && ["alias", "editable"].contains(&core.tokens()[0].text.as_str());
         if ["owned", "payload"].contains(&mode.trim_start_matches('.')) && !lent_marked {
             // a written `alias` is E-OWN-001 at its marker
             self.loan_into_owned(t, None, tok, &format!("`{p_name}`"));
@@ -2102,10 +2764,17 @@ impl<'a> Typer<'a> {
         let path = match self.path_of_expr(Some(e)) {
             Some(p) => p,
             None => {
-                let lit = e.tokens();
+                let lit = core.tokens();
                 let static_literal = lit.len() == 1 && lit[0].kind == Kind::Str && !lit[0].text.contains("${");
                 if mode == "from" && e.find("markerExpr").is_none() && !static_literal {
                     self.own_err("E-OWN-051", format!("the result borrows from `{p_name}`, so its argument must be a place, not a temporary (7.6)"), tok, p_name, "loan of a temporary", "LANG-07-06", "");
+                }
+                let m = mode.trim_start_matches('.');
+                if (m.is_empty() || m == "loan" || m == "from") && !t.is_loan() {
+                    self.charge_drop(t, tok); // a temporary lent for the call is destroyed with the statement (7.9, 11.3; D-393)
+                }
+                if m == "owned" || m == "payload" {
+                    self.coalesced_marker(Some(e), t, &format!("`{p_name}:`")); // an owned argument or field of `p ?? v` (D-357)
                 }
                 return;
             }
@@ -2117,7 +2786,7 @@ impl<'a> Typer<'a> {
             }
             return;
         }
-        if e.find("markerExpr").is_some() && ["copy", "alias", "move", "editable"].contains(&e.tokens()[0].text.as_str()) {
+        if core.name() == "markerExpr" && ["copy", "alias", "move", "editable"].contains(&core.tokens()[0].text.as_str()) {
             return;
         }
         let fields = |c: &str| Json::obj([("place", Json::str(&path)), ("conflict", Json::str(c)), ("spans", Json::str(&path)), ("loan_region", Json::str(""))]);
@@ -2177,15 +2846,24 @@ impl<'a> Typer<'a> {
     /// `List[T]` against `List[fn]` refuses the same pin.
     pub fn unify_pin(&self, pattern: &Type, actual: &Type, m: &mut BTreeMap<String, Type>, pin_empty: bool) {
         if let Type::TypeParam(n) = pattern {
+            if let Some(want) = m.get(n) { m.insert(n.clone(), self.with_closure(want, actual)); }
             // an argument of the body's own type parameter fixes the callee's: `label(x)` with `x: U` binds T to U, whose
             // bounds are then the body's (D-171)
             let in_scope = matches!(actual, Type::TypeParam(a) if self.tparams_in_scope.contains(a));
             if !m.contains_key(n) && (known(actual) || in_scope) {
-                let mut a = crate::literals::concrete(strip(actual));
+                let mut a = if matches!(actual, Type::Loan { origin, .. } if origin == "static") { actual.clone() } else { crate::literals::concrete(strip(actual)) };
+                if !matches!(&a, Type::Loan { origin, .. } if origin == "static") {
+                    if let Some(lent) = Self::lent(&a) {
+                        if self.dc.is_trivial(&lent) { a = lent; } // a trivial loan is its value (7.6), including optional wrappers
+                    }
+                }
                 if let Type::Refined { base, kind, .. } = &a {
                     if kind == "exact" {
                         a = Type::Named(base.clone());
                     }
+                }
+                if a == never() {
+                    return; // `null` (the absent case of any `T?`) fixes nothing (6.8, 6.10, X-513; D-52.3)
                 }
                 if !pin_empty && Self::empty_declared_fn(&a) {
                     return;
@@ -2200,8 +2878,13 @@ impl<'a> Typer<'a> {
             }
         }
         let actual = strip(actual);
+        if let (Type::Named(_), Type::Refined { base, .. }) = (pattern, actual) {
+            // A value's refinement leaves its base's type arguments intact (LR 6.3).
+            return self.unify_pin(pattern, &base.as_type(), m, pin_empty);
+        }
         match (pattern, actual) {
-            (Type::Named(p), Type::Named(a)) if p.name == a.name => {
+            // an owned value fixes the parameters of the view taken of it: `List[Int]` fixes `ListView[T]` (6.6, 6.7; D-52.8)
+            (Type::Named(p), Type::Named(a)) if (p.name == a.name && p.package == a.package && p.origin == a.origin) || (a.package.is_empty() && p.package.is_empty() && crate::literals::view_of(&a.name, &p.name)) => {
                 for (pa, aa) in p.args.iter().zip(a.args.iter()) {
                     self.unify_pin(pa, aa, m, pin_empty);
                 }
@@ -2217,6 +2900,13 @@ impl<'a> Typer<'a> {
             (Type::Tuple(pi), Type::Tuple(ai)) => {
                 for (x, y) in pi.iter().zip(ai.iter()) {
                     self.unify_pin(x, y, m, pin_empty);
+                }
+            }
+            (Type::Record(ps), Type::Record(xs)) => {
+                for (key, p) in ps {
+                    if let Some((_, x)) = xs.iter().find(|(k, _)| k == key) {
+                        self.unify_pin(p, x, m, pin_empty);
+                    }
                 }
             }
             _ => {}
@@ -2258,15 +2948,15 @@ impl<'a> Typer<'a> {
     /// Does the bound `implements have` grant `implements want`: the same interface with the same arguments, or one it
     /// requires (6.10).
     pub fn grants(&self, have: &NamedT, want: &NamedT, seen: &[String]) -> bool {
-        if have.name == want.name {
+        if have.name == want.name && have.package == want.package && have.origin == want.origin {
             return want.args.is_empty() || have.args == want.args;
         }
-        if seen.contains(&have.name) {
+        if seen.contains(&have.interface_key()) {
             return false;
         }
         let mut seen2 = seen.to_vec();
-        seen2.push(have.name.clone());
-        match self.dc.table.get(&have.name).cloned() {
+        seen2.push(have.interface_key());
+        match self.dc.resolve_named(have, None) {
             Some(hd) if hd.kind == "interface" => {
                 // `J[Int] requires I[T]` grants I[Int]
                 let sub: BTreeMap<String, Type> = hd.type_params.iter().cloned().zip(have.args.iter().cloned()).collect();
@@ -2289,17 +2979,17 @@ impl<'a> Typer<'a> {
         if matches!(a, Type::Unknown(_)) || free.iter().any(|p| !self.tparams_in_scope.contains(p)) {
             return None;
         }
-        if want.name == "Copyable" || want.name == "Shareable" {
-            return Some(self.dc.implements(a, &want.name));
+        if want.package.is_empty() && (want.name == "Copyable" || want.name == "Shareable") {
+            return Some(self.dc.implements(a, &want.interface_key()));
         }
         if let Type::TypeParam(n) = a {
             return Some(self.where_in_scope.iter().any(|(tp, b)| tp == n && self.grants(b, want, &[])));
         }
-        if !self.dc.implements(a, &want.name) {
+        if !self.dc.implements(a, &want.interface_key()) {
             return Some(false);
         }
         if !want.args.is_empty() {
-            if let Some(idecl) = self.dc.table.get(&want.name).cloned() {
+            if let Some(idecl) = self.dc.resolve_named(want, None) {
                 let sub: BTreeMap<String, Type> = idecl.type_params.iter().cloned().zip(want.args.iter().cloned()).collect();
                 for (tp2, b2) in idecl.where_.iter() {
                     if let Some(x) = sub.get(tp2) {
@@ -2314,8 +3004,8 @@ impl<'a> Typer<'a> {
             if let Type::Named(an) = a {
                 let d = self.decl_of(a);
                 let mut declared: Vec<NamedT> = d.as_ref().map(|d| d.implements.clone()).unwrap_or_default();
-                declared.extend(self.dc.table.implement_blocks.iter().filter(|(_, tt, _, _)| tt.name == an.name).map(|(i, _, _, _)| i.clone()));
-                let same: Vec<&NamedT> = declared.iter().filter(|i| i.name == want.name).collect();
+                declared.extend(self.dc.table.implement_blocks.iter().filter(|(_, tt, _, _)| tt.name == an.name && tt.package == an.package && tt.origin == an.origin).map(|(i, _, _, _)| i.clone()));
+                let same: Vec<&NamedT> = declared.iter().filter(|i| i.name == want.name && i.package == want.package && i.origin == want.origin).collect();
                 if !same.is_empty() {
                     let sub: BTreeMap<String, Type> = d.as_ref().map(|d| d.type_params.iter().cloned().zip(an.args.iter().cloned()).collect()).unwrap_or_default();
                     return Some(same.iter().any(|i| match self.subst(&Type::Named((*i).clone()), &sub) {
@@ -2341,7 +3031,10 @@ impl<'a> Typer<'a> {
     /// left unbound.
     pub fn result_of_call(&self, sig: &Sig<'a>, m: &BTreeMap<String, Type>, unknown_args: bool) -> Type {
         let mut r = self.subst(&sig.ret, m);
-        if has_free(&r) {
+        let mut in_result = BTreeSet::new();
+        free_names(&r, &mut in_result);
+        // a result that names only the body's own parameters is typed by them, so a loan of `T` stays a loan (6.12; D-352)
+        if has_free(&r) && !in_result.iter().all(|n| self.tparams_in_scope.contains(n)) {
             let mut names = BTreeSet::new();
             free_names(&sig.ret, &mut names);
             let unbound = names.iter().any(|n| !m.contains_key(n));
@@ -2363,22 +3056,26 @@ impl<'a> Typer<'a> {
             return true;
         }
         match strip(t) {
+            Type::Unknown(_) | Type::TypeParam(_) => true, // unresolved results cannot end a loan
             Type::Optional(i) => self.carries_onward(i),
-            Type::Named(n) if n.name == "Future" || n.name == "Task" => true,
-            Type::Named(n) if n.name == "Outcome" && !n.args.is_empty() => self.carries_onward(&n.args[0]),
+            Type::Named(n) if (n.package.is_empty() && n.name == "Future") || (n.package.is_empty() && n.name == "Task") => true,
+            Type::Named(n) => n.args.iter().any(|x| self.carries_onward(x)),
             Type::Tuple(ts) => ts.iter().any(|x| self.carries_onward(x)),
+            Type::Record(fs) => fs.iter().any(|(_, x)| self.carries_onward(x)),
             _ => false,
         }
     }
 
     pub fn loan_carrying(&self, t: &Type) -> bool {
-        if t.is_loan() {
+        if t.is_loan() || self.dc.view_newtype(t) {
             return true;
         }
         match strip(t) {
+            Type::Fn { origin, capture_origins, .. } => !origin.is_empty() || !capture_origins.is_empty(),
+            Type::Refined { base, .. } => self.loan_carrying(&base.as_type()),
             Type::Optional(i) => self.loan_carrying(i),
             Type::Named(n) => {
-                if ["StringView", "BytesView", "ListView"].contains(&n.name.as_str()) {
+                if n.package.is_empty() && ["StringView", "BytesView", "ListView"].contains(&n.name.as_str()) {
                     return true;
                 }
                 self.decl_of(&Type::Named(n.clone())).map_or(false, |d| d.kind == "class" && d.lifetime.is_some())
@@ -2399,7 +3096,7 @@ impl<'a> Typer<'a> {
                 break;
             }
         }
-        if r.is_loan() {
+        if r.is_loan() || matches!(r, Type::Fn { origin, .. } if !origin.is_empty()) {
             return;
         }
         if self.loan_carrying(r) {
@@ -2422,11 +3119,11 @@ impl<'a> Typer<'a> {
                 self.rec("E-TYP-030", format!("exported signature {label} uses a structural type {}", t.show()), "LANG-04-05", tok, DeclChecker::typ_fields("a nominal exported type", &t.show(), label));
             }
             Type::Named(n) => {
-                if n.name == "VariantMap" && !allow_structural {
+                if (n.package.is_empty() && n.name == "VariantMap") && !allow_structural {
                     self.rec("E-TYP-030", format!("exported signature {label} uses a structural type {}", t.show()), "LANG-04-05", tok, DeclChecker::typ_fields("a nominal exported type", &t.show(), label));
                     return;
                 }
-                if let Some(d) = self.dc.table.get(&n.name).cloned() {
+                if let Some(d) = self.dc.resolve_named(n, None) {
                     if d.module == self.module && !d.exported && ["class", "enum", "type", "interface", "error"].contains(&d.kind.as_str()) {
                         self.rec("E-TYP-030", format!("exported signature {label} names non-exported type {}", n.name), "LANG-04-05", tok, DeclChecker::typ_fields("an exported type", &n.name, label));
                     }

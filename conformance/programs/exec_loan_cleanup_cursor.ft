@@ -19,7 +19,7 @@ class Token {
 func walk(console: Shared[Console], xs: List[Token]) {
   let mut cursor = alias xs.iterate()
   loop {
-    let t = editable cursor.next()
+    let t = cursor.next()
     if t == null {
       break
     }
@@ -31,8 +31,8 @@ func walk(console: Shared[Console], xs: List[Token]) {
 func main(out: Console) {
   let console = Shared.create(move out)
   let mut toks: List[Token] = List.default()
-  toks.push(Token(label: String.from("a"), console: console.retain()))
-  toks.push(Token(label: String.from("b"), console: console.retain()))
+  toks.push(Token(label: "a" as String, console: console.retain()))
+  toks.push(Token(label: "b" as String, console: console.retain()))
   walk(console, toks)
   console.print("end")
 }

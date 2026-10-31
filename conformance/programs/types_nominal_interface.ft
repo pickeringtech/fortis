@@ -1,15 +1,16 @@
-// reject: E-TYP-080 (at the marked line)
-// Having a method with the right name is not an implementation (9.5).
+// reject: E-TYP-090 (at the marked line)
+// covers: LANG-09-03
+// Having a method with the right name is not an implementation (9.5): `Square` has `area` but does not list `Shape`,
+// so a bound on `Shape` is not met.
 export interface Shape {
   pure func area(self) Int
 }
 
-export mixin Measured {
-  requires Shape
-  export pure func double(self) Int => self.area() * 2
-}
-
-export class Square with Measured {        // reject: E-TYP-080 — Square does not implement Shape
+export class Square {
   export side: Int
   export pure func area(self) Int => Int.saturatingMul(self.side, self.side)
 }
+
+func double[T](s: T) Int where T implements Shape => Int.saturatingMul(s.area(), 2)
+
+func use(s: Square) Int => double(s)          // reject: E-TYP-090 — Square does not implement Shape

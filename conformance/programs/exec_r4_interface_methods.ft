@@ -1,0 +1,18 @@
+// execute: 7 7
+// requires: runtime
+// covers: LANG-08-04
+import fortis.host { Console }
+interface I { func size(self) Int }
+class Box implements I { export func size(self) Int => 7 }
+func dynamicSize(x: dynamic I) Int {
+  let f = fn[alias x]() Int => x.size()
+  return f()
+}
+func parameterSize[T](x: T) Int where T implements I {
+  let f = fn[alias x]() Int => x.size()
+  return f()
+}
+func main(console: Console) {
+  let b = Box()
+  console.print("${dynamicSize(b)} ${parameterSize(b)}")
+}

@@ -1,0 +1,20 @@
+// execute: 1|2|3
+// covers: LANG-06-15
+// The member names alone do not identify a conversion.
+import fortis.host { Console }
+
+class Own {
+  n: Int
+  func from(n: Int) Own => Own(n: n)
+  func validate(n: Int) Own => Own(n: n)
+  func to(self) Int => self.n
+}
+
+func main(console: Console) {
+  let a = Own.from(1)
+  let b = Own.validate(2)
+  let c = Own(n: 3)
+  console.print("${a.n}")
+  console.print("${b.n}")
+  console.print("${c.to()}")
+}

@@ -1,0 +1,17 @@
+{
+  "verdict": "reject",
+  "covers": [
+    "LANG-06-01",
+    "LANG-04-04"
+  ],
+  "code": "E-TYP-040",
+  "records": [
+    {
+      "file": "main.ft",
+      "line": 6,
+      "column": 10,
+      "code": "E-TYP-040",
+      "message": "returned value has type Map[bad.mopup.diagnostic.main.Bool, Int], expected Map[prelude.Bool, Int]: bad.mopup.diagnostic.main.Bool is not prelude.Bool"
+    }
+  ]
+}

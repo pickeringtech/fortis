@@ -1,0 +1,43 @@
+// execute: 75|7|8|9|10
+// covers: LANG-06-03, LANG-06-14
+// D-505: total conversions lose dead or fail only when the module keeps its verdict.
+import fortis.host { Console }
+
+type Percent = Int<0..100>
+
+try func kept() Percent {
+  return Percent.validate(7) or fail
+}
+
+try func checked(raw: Int) Percent {
+  return Percent.validate(raw) or fail
+}
+
+recovers func caught(console: Console) {
+  let value = Percent.validate(9) catch problem {
+    report problem
+    recover Percent(0)
+  }
+  console.print("${value}")
+}
+
+try func main(console: Console) {
+  let first = Percent.validate(75) or fail
+  console.print("${first}")
+  let retained = kept() or fail
+  console.print("${retained}")
+  let fallible = checked(8) or fail
+  console.print("${fallible}")
+  caught(console)
+  let grouped = (Percent.validate(10)) or fail
+  console.print("${grouped}")
+}
+
+// The checker records a table field as unknown until its use constrains it; that is not a totality proof.
+test "an unknown validation operand is kept" cases {
+  "one": { raw: 1 }
+  "two": { raw: 2 }
+} as row {
+  let converted = Percent.validate(row.raw) or fail
+  expect converted == Percent(row.raw)
+}

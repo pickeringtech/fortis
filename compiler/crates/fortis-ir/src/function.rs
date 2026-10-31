@@ -52,9 +52,9 @@ fn bodies<'a>(root: N<'a>) -> BTreeMap<String, N<'a>> {
                     out.insert(format!("test {}", t.text), *b);
                 }
             }
-            "class" | "enum" => {
+            "class" | "enum" | "mixin" => {
                 for m in d.node.kids().into_iter().filter_map(|c| c.node()) {
-                    if m.name() != "classMember" && m.name() != "enumMember" {
+                    if m.name() != "classMember" && m.name() != "enumMember" && m.name() != "mixinMember" {
                         continue;
                     }
                     if let Some(b) = m.find("cleanupDecl").and_then(|c| c.find("block")) {
@@ -112,11 +112,12 @@ pub fn to_json(ir: &FnIr, cfgs: &BTreeMap<String, N>) -> Json {
     ir.observation = dedup(&ir.observation, |o| (o.origin.clone(), o.op.clone(), o.name.clone(), o.line, o.required.clone()));
     ir.cleanup = dedup(&ir.cleanup, |c| (c.origin.clone(), c.op.clone(), c.name.clone(), c.line, c.runs.clone()));
     let ir = &ir;
-    let c = cfgs.get(&ir.function).and_then(|b| if b.name() == "block" { Some(cfg::build_block(*b, &ir.function)) } else { cfg::build_body(*b, &ir.function) });
+    let body_label = ir.source_function.as_deref().unwrap_or(&ir.function);
+    let c = cfgs.get(body_label).and_then(|b| if b.name() == "block" { Some(cfg::build_block(*b, &ir.function)) } else { cfg::build_body(*b, &ir.function) });
     let eff = ir.effects.clone().unwrap_or_default();
     let mut effects: Vec<(String, String)> = eff.effects.clone();
     effects.sort();
-    Json::obj([
+    let mut json = Json::obj([
         ("function", Json::str(&ir.function)),
         ("line", Json::Int(ir.line as i64)),
         ("cfg", c.as_ref().map_or(Json::Null, cfg_json)),
@@ -176,7 +177,12 @@ pub fn to_json(ir: &FnIr, cfgs: &BTreeMap<String, N>) -> Json {
                     .collect(),
             ),
         ),
-    ])
+    ]);
+    if let Json::Obj(fields) = &mut json {
+        if let Some(file) = &ir.source_file { fields.insert("source_file".into(), Json::str(file)); }
+        if let Some(function) = &ir.source_function { fields.insert("source_function".into(), Json::str(function)); }
+    }
+    json
 }
 
 /// The function IR of every module of a package directory, by module file (None when the set does not resolve).
@@ -186,12 +192,19 @@ pub fn package_ir(dir: &std::path::Path, search: &std::path::Path) -> Option<Vec
         return None;
     }
     let (_, mods) = fortis_types::check::check_package_set_ir(&ps);
+    // The application remains in its class's module, but its CFG comes from the declaring mixin's text.
+    let module_bodies: BTreeMap<&str, BTreeMap<String, N>> = mods.iter().map(|(file, parsed, _)| {
+        (file.as_str(), bodies(N::new(&parsed.root, &parsed.toks)))
+    }).collect();
     Some(
-        mods.into_iter()
-            .map(|(file, parsed, irs)| {
-                let root = N::new(&parsed.root, &parsed.toks);
-                let b = bodies(root);
-                (file, irs.iter().map(|ir| to_json(ir, &b)).collect())
+        mods.iter()
+            .map(|(file, _, irs)| {
+                let functions = irs.iter().map(|ir| {
+                    let source = ir.source_file.as_deref().unwrap_or(file);
+                    let b = module_bodies.get(source).expect("a checked body's source belongs to the package set");
+                    to_json(ir, b)
+                }).collect();
+                (file.clone(), functions)
             })
             .collect(),
     )
@@ -203,4 +216,36 @@ pub fn function_ir(parsed: &Parsed, file: &str) -> Vec<Json> {
     let root = N::new(&parsed.root, &parsed.toks);
     let b = bodies(root);
     irs.iter().map(|ir| to_json(ir, &b)).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn applied_mixin_cfg_uses_its_declaring_body() {
+        let parsed = fortis_syntax::parse_module(r#"
+mixin Reads {
+    export func read(self) Int {
+        return self.value
+    }
+}
+class Box with Reads {
+    export value: Int
+}
+func ordinary() Int => 0
+"#).expect("parse");
+        let functions = function_ir(&parsed, "mixin.ft");
+        let fields = |label: &str| functions.iter().find_map(|f| match f {
+            Json::Obj(fields) if fields.get("function") == Some(&Json::str(label)) => Some(fields),
+            _ => None,
+        }).expect("typed function");
+        let applied = fields("method Box.read");
+        assert_eq!(applied.get("source_file"), Some(&Json::str("mixin.ft")));
+        assert_eq!(applied.get("source_function"), Some(&Json::str("method Reads.read")));
+        assert!(matches!(applied.get("cfg"), Some(Json::Obj(_))), "the applied block body has a CFG");
+        let ordinary = fields("function ordinary");
+        assert!(!ordinary.contains_key("source_file"));
+        assert!(!ordinary.contains_key("source_function"));
+    }
 }

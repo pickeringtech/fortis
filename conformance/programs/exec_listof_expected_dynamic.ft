@@ -1,0 +1,29 @@
+// execute: 7
+// requires: runtime
+// covers: LANG-06-11
+// `let xs: List[dynamic I] = List.of(C(), D())` for two classes implementing I: the expected type fixes the element
+// type, so the call is accepted and the list holds both (6.10; D-89 (b), which no longer reproduces on master).
+import fortis.host { Console }
+
+export interface Measured {
+  pure func size(self) Int
+}
+
+export class Pair implements Measured {
+  export a: Int
+  pure func size(self) Int => self.a
+}
+
+export class Single implements Measured {
+  export b: Int
+  pure func size(self) Int => self.b
+}
+
+func main(console: Console) {
+  let xs: List[dynamic Measured] = List.of(Pair(a: 3), Single(b: 4))
+  let mut sum = 0
+  for x in xs {
+    sum = Int.wrappingAdd(sum, x.size())
+  }
+  console.print("${sum}")
+}

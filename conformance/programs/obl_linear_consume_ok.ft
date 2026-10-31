@@ -1,0 +1,28 @@
+// accept
+// covers: LANG-10-01, LANG-10-02
+// X-519, X-520, X-521: the legal shapes — a generic declaring `T: linear` holds its parameter as a linear type
+// inside its body and consumes it: returning it forwards the obligation to the caller, whose own machinery then
+// holds it. A concrete linear parameter is consumed by the operations of 10.2. Nothing drops at the end of
+// either body, so no obligation is reported (X-521).
+import fortis.host { Console }
+
+func id[T](x: owned T) T where T: linear {
+  return move x
+}
+
+func useit(x: owned Outcome[Int<0..10>], console: Console) {
+  match move x {
+    success(n) => console.print("${n}")
+    failure(f) => { report f }
+  }
+}
+
+recovers func main(console: Console) {
+  let r = 3 as Int<0..10>
+  match id(move r) {
+    success(n) => console.print("${n}")
+    failure(f) => { report f }
+  }
+  let s = 4 as Int<0..10>
+  useit(move s, console)
+}

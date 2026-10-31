@@ -1,0 +1,1272 @@
+[
+  {
+    "name": "lr6_4_add_zero",
+    "input": {
+      "type": "Int",
+      "op": "+",
+      "a": 0,
+      "b": 0
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_add_positive",
+    "input": {
+      "type": "Int",
+      "op": "+",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 10
+  },
+  {
+    "name": "lr6_4_add_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "+",
+      "a": -7,
+      "b": 3
+    },
+    "expect": -4
+  },
+  {
+    "name": "lr6_4_add_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "+",
+      "a": 7,
+      "b": -3
+    },
+    "expect": 4
+  },
+  {
+    "name": "lr6_4_add_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "+",
+      "a": -7,
+      "b": -3
+    },
+    "expect": -10
+  },
+  {
+    "name": "lr6_4_sub_zero",
+    "input": {
+      "type": "Int",
+      "op": "-",
+      "a": 0,
+      "b": 0
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_sub_positive",
+    "input": {
+      "type": "Int",
+      "op": "-",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 4
+  },
+  {
+    "name": "lr6_4_sub_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "-",
+      "a": -7,
+      "b": 3
+    },
+    "expect": -10
+  },
+  {
+    "name": "lr6_4_sub_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "-",
+      "a": 7,
+      "b": -3
+    },
+    "expect": 10
+  },
+  {
+    "name": "lr6_4_sub_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "-",
+      "a": -7,
+      "b": -3
+    },
+    "expect": -4
+  },
+  {
+    "name": "lr6_4_mul_zero",
+    "input": {
+      "type": "Int",
+      "op": "*",
+      "a": 0,
+      "b": 0
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_mul_positive",
+    "input": {
+      "type": "Int",
+      "op": "*",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 21
+  },
+  {
+    "name": "lr6_4_mul_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "*",
+      "a": -7,
+      "b": 3
+    },
+    "expect": -21
+  },
+  {
+    "name": "lr6_4_mul_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "*",
+      "a": 7,
+      "b": -3
+    },
+    "expect": -21
+  },
+  {
+    "name": "lr6_4_mul_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "*",
+      "a": -7,
+      "b": -3
+    },
+    "expect": 21
+  },
+  {
+    "name": "lr6_4_and_zero",
+    "input": {
+      "type": "Int",
+      "op": "&",
+      "a": 0,
+      "b": 0
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_and_positive",
+    "input": {
+      "type": "Int",
+      "op": "&",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 3
+  },
+  {
+    "name": "lr6_4_and_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "&",
+      "a": -7,
+      "b": 3
+    },
+    "expect": 1
+  },
+  {
+    "name": "lr6_4_and_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "&",
+      "a": 7,
+      "b": -3
+    },
+    "expect": 5
+  },
+  {
+    "name": "lr6_4_and_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "&",
+      "a": -7,
+      "b": -3
+    },
+    "expect": -7
+  },
+  {
+    "name": "lr6_4_or_zero",
+    "input": {
+      "type": "Int",
+      "op": "|",
+      "a": 0,
+      "b": 0
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_or_positive",
+    "input": {
+      "type": "Int",
+      "op": "|",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 7
+  },
+  {
+    "name": "lr6_4_or_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "|",
+      "a": -7,
+      "b": 3
+    },
+    "expect": -5
+  },
+  {
+    "name": "lr6_4_or_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "|",
+      "a": 7,
+      "b": -3
+    },
+    "expect": -1
+  },
+  {
+    "name": "lr6_4_or_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "|",
+      "a": -7,
+      "b": -3
+    },
+    "expect": -3
+  },
+  {
+    "name": "lr6_4_xor_zero",
+    "input": {
+      "type": "Int",
+      "op": "^",
+      "a": 0,
+      "b": 0
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_xor_positive",
+    "input": {
+      "type": "Int",
+      "op": "^",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 4
+  },
+  {
+    "name": "lr6_4_xor_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "^",
+      "a": -7,
+      "b": 3
+    },
+    "expect": -6
+  },
+  {
+    "name": "lr6_4_xor_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "^",
+      "a": 7,
+      "b": -3
+    },
+    "expect": -6
+  },
+  {
+    "name": "lr6_4_xor_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "^",
+      "a": -7,
+      "b": -3
+    },
+    "expect": 4
+  },
+  {
+    "name": "lr6_4_eq_zero",
+    "input": {
+      "type": "Int",
+      "op": "==",
+      "a": 0,
+      "b": 0
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_eq_positive",
+    "input": {
+      "type": "Int",
+      "op": "==",
+      "a": 7,
+      "b": 3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_eq_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "==",
+      "a": -7,
+      "b": 3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_eq_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "==",
+      "a": 7,
+      "b": -3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_eq_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "==",
+      "a": -7,
+      "b": -3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_ne_zero",
+    "input": {
+      "type": "Int",
+      "op": "!=",
+      "a": 0,
+      "b": 0
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_ne_positive",
+    "input": {
+      "type": "Int",
+      "op": "!=",
+      "a": 7,
+      "b": 3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_ne_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "!=",
+      "a": -7,
+      "b": 3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_ne_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "!=",
+      "a": 7,
+      "b": -3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_ne_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "!=",
+      "a": -7,
+      "b": -3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_lt_zero",
+    "input": {
+      "type": "Int",
+      "op": "<",
+      "a": 0,
+      "b": 0
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_lt_positive",
+    "input": {
+      "type": "Int",
+      "op": "<",
+      "a": 7,
+      "b": 3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_lt_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "<",
+      "a": -7,
+      "b": 3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_lt_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "<",
+      "a": 7,
+      "b": -3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_lt_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "<",
+      "a": -7,
+      "b": -3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_le_zero",
+    "input": {
+      "type": "Int",
+      "op": "<=",
+      "a": 0,
+      "b": 0
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_le_positive",
+    "input": {
+      "type": "Int",
+      "op": "<=",
+      "a": 7,
+      "b": 3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_le_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "<=",
+      "a": -7,
+      "b": 3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_le_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "<=",
+      "a": 7,
+      "b": -3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_le_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "<=",
+      "a": -7,
+      "b": -3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_gt_zero",
+    "input": {
+      "type": "Int",
+      "op": ">",
+      "a": 0,
+      "b": 0
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_gt_positive",
+    "input": {
+      "type": "Int",
+      "op": ">",
+      "a": 7,
+      "b": 3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_gt_negative_left",
+    "input": {
+      "type": "Int",
+      "op": ">",
+      "a": -7,
+      "b": 3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_gt_negative_right",
+    "input": {
+      "type": "Int",
+      "op": ">",
+      "a": 7,
+      "b": -3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_gt_both_negative",
+    "input": {
+      "type": "Int",
+      "op": ">",
+      "a": -7,
+      "b": -3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_ge_zero",
+    "input": {
+      "type": "Int",
+      "op": ">=",
+      "a": 0,
+      "b": 0
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_ge_positive",
+    "input": {
+      "type": "Int",
+      "op": ">=",
+      "a": 7,
+      "b": 3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_ge_negative_left",
+    "input": {
+      "type": "Int",
+      "op": ">=",
+      "a": -7,
+      "b": 3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_ge_negative_right",
+    "input": {
+      "type": "Int",
+      "op": ">=",
+      "a": 7,
+      "b": -3
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_4_ge_both_negative",
+    "input": {
+      "type": "Int",
+      "op": ">=",
+      "a": -7,
+      "b": -3
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_4_div_positive",
+    "input": {
+      "type": "Int",
+      "op": "/",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 2
+  },
+  {
+    "name": "lr6_4_rem_positive",
+    "input": {
+      "type": "Int",
+      "op": "%",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 1
+  },
+  {
+    "name": "lr6_4_div_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "/",
+      "a": -7,
+      "b": 3
+    },
+    "expect": -2
+  },
+  {
+    "name": "lr6_4_rem_negative_left",
+    "input": {
+      "type": "Int",
+      "op": "%",
+      "a": -7,
+      "b": 3
+    },
+    "expect": -1
+  },
+  {
+    "name": "lr6_4_div_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "/",
+      "a": 7,
+      "b": -3
+    },
+    "expect": -2
+  },
+  {
+    "name": "lr6_4_rem_negative_right",
+    "input": {
+      "type": "Int",
+      "op": "%",
+      "a": 7,
+      "b": -3
+    },
+    "expect": 1
+  },
+  {
+    "name": "lr6_4_div_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "/",
+      "a": -7,
+      "b": -3
+    },
+    "expect": 2
+  },
+  {
+    "name": "lr6_4_rem_both_negative",
+    "input": {
+      "type": "Int",
+      "op": "%",
+      "a": -7,
+      "b": -3
+    },
+    "expect": -1
+  },
+  {
+    "name": "lr6_4_shr_0",
+    "input": {
+      "type": "Int",
+      "op": ">>",
+      "a": 0,
+      "b": 0
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_shl_0",
+    "input": {
+      "type": "Int",
+      "op": "<<",
+      "a": 0,
+      "b": 0
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_shr_1",
+    "input": {
+      "type": "Int",
+      "op": ">>",
+      "a": 1,
+      "b": 0
+    },
+    "expect": 1
+  },
+  {
+    "name": "lr6_4_shl_1",
+    "input": {
+      "type": "Int",
+      "op": "<<",
+      "a": 1,
+      "b": 0
+    },
+    "expect": 1
+  },
+  {
+    "name": "lr6_4_shr_2",
+    "input": {
+      "type": "Int",
+      "op": ">>",
+      "a": -1,
+      "b": 1
+    },
+    "expect": -1
+  },
+  {
+    "name": "lr6_4_shl_2",
+    "input": {
+      "type": "Int",
+      "op": "<<",
+      "a": -1,
+      "b": 1
+    },
+    "expect": -2
+  },
+  {
+    "name": "lr6_4_shr_3",
+    "input": {
+      "type": "Int",
+      "op": ">>",
+      "a": -8,
+      "b": 2
+    },
+    "expect": -2
+  },
+  {
+    "name": "lr6_4_shl_3",
+    "input": {
+      "type": "Int",
+      "op": "<<",
+      "a": -8,
+      "b": 2
+    },
+    "expect": -32
+  },
+  {
+    "name": "lr6_4_shr_4",
+    "input": {
+      "type": "Int",
+      "op": ">>",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_shl_4",
+    "input": {
+      "type": "Int",
+      "op": "<<",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 56
+  },
+  {
+    "name": "lr6_4_shr_5",
+    "input": {
+      "type": "Int",
+      "op": ">>",
+      "a": -9223372036854775808,
+      "b": 63
+    },
+    "expect": -1
+  },
+  {
+    "name": "lr6_5_string_eq_0",
+    "input": {
+      "type": "String",
+      "op": "==",
+      "a": "",
+      "b": ""
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_string_ne_0",
+    "input": {
+      "type": "String",
+      "op": "!=",
+      "a": "",
+      "b": ""
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_lt_0",
+    "input": {
+      "type": "String",
+      "op": "<",
+      "a": "",
+      "b": ""
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_le_0",
+    "input": {
+      "type": "String",
+      "op": "<=",
+      "a": "",
+      "b": ""
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_string_gt_0",
+    "input": {
+      "type": "String",
+      "op": ">",
+      "a": "",
+      "b": ""
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_ge_0",
+    "input": {
+      "type": "String",
+      "op": ">=",
+      "a": "",
+      "b": ""
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_string_eq_1",
+    "input": {
+      "type": "String",
+      "op": "==",
+      "a": "a",
+      "b": "b"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_ne_1",
+    "input": {
+      "type": "String",
+      "op": "!=",
+      "a": "a",
+      "b": "b"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_string_lt_1",
+    "input": {
+      "type": "String",
+      "op": "<",
+      "a": "a",
+      "b": "b"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_string_le_1",
+    "input": {
+      "type": "String",
+      "op": "<=",
+      "a": "a",
+      "b": "b"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_string_gt_1",
+    "input": {
+      "type": "String",
+      "op": ">",
+      "a": "a",
+      "b": "b"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_ge_1",
+    "input": {
+      "type": "String",
+      "op": ">=",
+      "a": "a",
+      "b": "b"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_eq_2",
+    "input": {
+      "type": "String",
+      "op": "==",
+      "a": "é",
+      "b": "z"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_ne_2",
+    "input": {
+      "type": "String",
+      "op": "!=",
+      "a": "é",
+      "b": "z"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_string_lt_2",
+    "input": {
+      "type": "String",
+      "op": "<",
+      "a": "é",
+      "b": "z"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_le_2",
+    "input": {
+      "type": "String",
+      "op": "<=",
+      "a": "é",
+      "b": "z"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_gt_2",
+    "input": {
+      "type": "String",
+      "op": ">",
+      "a": "é",
+      "b": "z"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_string_ge_2",
+    "input": {
+      "type": "String",
+      "op": ">=",
+      "a": "é",
+      "b": "z"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_string_eq_3",
+    "input": {
+      "type": "String",
+      "op": "==",
+      "a": "🙂",
+      "b": "é"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_ne_3",
+    "input": {
+      "type": "String",
+      "op": "!=",
+      "a": "🙂",
+      "b": "é"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_string_lt_3",
+    "input": {
+      "type": "String",
+      "op": "<",
+      "a": "🙂",
+      "b": "é"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_le_3",
+    "input": {
+      "type": "String",
+      "op": "<=",
+      "a": "🙂",
+      "b": "é"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_string_gt_3",
+    "input": {
+      "type": "String",
+      "op": ">",
+      "a": "🙂",
+      "b": "é"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_string_ge_3",
+    "input": {
+      "type": "String",
+      "op": ">=",
+      "a": "🙂",
+      "b": "é"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_float_eq_0",
+    "input": {
+      "type": "Float",
+      "op": "==",
+      "a": "NaN",
+      "b": "1.0"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_ne_0",
+    "input": {
+      "type": "Float",
+      "op": "!=",
+      "a": "NaN",
+      "b": "1.0"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_float_lt_0",
+    "input": {
+      "type": "Float",
+      "op": "<",
+      "a": "NaN",
+      "b": "1.0"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_le_0",
+    "input": {
+      "type": "Float",
+      "op": "<=",
+      "a": "NaN",
+      "b": "1.0"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_gt_0",
+    "input": {
+      "type": "Float",
+      "op": ">",
+      "a": "NaN",
+      "b": "1.0"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_ge_0",
+    "input": {
+      "type": "Float",
+      "op": ">=",
+      "a": "NaN",
+      "b": "1.0"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_eq_1",
+    "input": {
+      "type": "Float",
+      "op": "==",
+      "a": "-0.0",
+      "b": "0.0"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_float_ne_1",
+    "input": {
+      "type": "Float",
+      "op": "!=",
+      "a": "-0.0",
+      "b": "0.0"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_lt_1",
+    "input": {
+      "type": "Float",
+      "op": "<",
+      "a": "-0.0",
+      "b": "0.0"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_le_1",
+    "input": {
+      "type": "Float",
+      "op": "<=",
+      "a": "-0.0",
+      "b": "0.0"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_float_gt_1",
+    "input": {
+      "type": "Float",
+      "op": ">",
+      "a": "-0.0",
+      "b": "0.0"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_ge_1",
+    "input": {
+      "type": "Float",
+      "op": ">=",
+      "a": "-0.0",
+      "b": "0.0"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_float_eq_2",
+    "input": {
+      "type": "Float",
+      "op": "==",
+      "a": "-Infinity",
+      "b": "Infinity"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_ne_2",
+    "input": {
+      "type": "Float",
+      "op": "!=",
+      "a": "-Infinity",
+      "b": "Infinity"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_float_lt_2",
+    "input": {
+      "type": "Float",
+      "op": "<",
+      "a": "-Infinity",
+      "b": "Infinity"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_float_le_2",
+    "input": {
+      "type": "Float",
+      "op": "<=",
+      "a": "-Infinity",
+      "b": "Infinity"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_float_gt_2",
+    "input": {
+      "type": "Float",
+      "op": ">",
+      "a": "-Infinity",
+      "b": "Infinity"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_ge_2",
+    "input": {
+      "type": "Float",
+      "op": ">=",
+      "a": "-Infinity",
+      "b": "Infinity"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_eq_3",
+    "input": {
+      "type": "Float",
+      "op": "==",
+      "a": "3.5",
+      "b": "3.5"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_float_ne_3",
+    "input": {
+      "type": "Float",
+      "op": "!=",
+      "a": "3.5",
+      "b": "3.5"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_lt_3",
+    "input": {
+      "type": "Float",
+      "op": "<",
+      "a": "3.5",
+      "b": "3.5"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_le_3",
+    "input": {
+      "type": "Float",
+      "op": "<=",
+      "a": "3.5",
+      "b": "3.5"
+    },
+    "expect": true
+  },
+  {
+    "name": "lr6_5_float_gt_3",
+    "input": {
+      "type": "Float",
+      "op": ">",
+      "a": "3.5",
+      "b": "3.5"
+    },
+    "expect": false
+  },
+  {
+    "name": "lr6_5_float_ge_3",
+    "input": {
+      "type": "Float",
+      "op": ">=",
+      "a": "3.5",
+      "b": "3.5"
+    },
+    "expect": true
+  }
+]

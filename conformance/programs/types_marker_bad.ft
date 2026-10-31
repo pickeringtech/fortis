@@ -1,12 +1,13 @@
-// reject: E-TYP-080 (at the marked line)
-// A marker interface is implemented only by declaration.
+// reject: E-TYP-090 (at the marked line)
+// covers: LANG-09-03
+// A marker interface is implemented only by declaration (9.5): a bound on it is met by no type that does not list it,
+// whatever members the type has. (A mixin requires methods only, never an interface, 9.6, so the bound is a call's.)
 export interface Audited {}
 
-export mixin Logged {
-  requires Audited
-  export pure func tag(self) String => "audited"
-}
-
-export class Ledger with Logged {          // reject: E-TYP-080 — Ledger does not declare Audited
+export class Ledger {
   export name: String
 }
+
+func audit[T](x: T) Int where T implements Audited => 1
+
+func check(l: Ledger) Int => audit(l)         // reject: E-TYP-090 — Ledger does not declare Audited

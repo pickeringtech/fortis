@@ -1,8 +1,9 @@
-// reject: E-TYP-090, E-TYP-040 (at the marked lines)
+// reject: E-TYP-090, E-TYP-040, E-TYP-080 (at the marked lines)
 // covers: LANG-06-10
 // D-171: a callee's `where` bounds hold at every call, for the type arguments the call fixes (6.10). Neither checker
 // checked them at a call: a generic function bounded by an interface, and a standard method bounded by `Copyable`
-// (`List.reversed`), accepted arguments that do not implement it.
+// (`List.reversed`), accepted arguments that do not implement it. An interface's own bound is also checked at the
+// implementation that breaks it (9.5; D-69), so `FutSink` is refused there too.
 export interface Shown {
   func show(self) String
 }
@@ -52,7 +53,7 @@ export interface Sink[S] where S implements Copyable {
   func put(self, s: S)
 }
 
-class FutSink implements Sink[Future[Int]] {
+class FutSink implements Sink[Future[Int]] {      // reject: E-TYP-080 — Sink's own bound fails for Future (D-69)
   export n: Int
   func put(self, s: Future[Int]) {
   }

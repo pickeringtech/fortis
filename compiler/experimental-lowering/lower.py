@@ -31,7 +31,7 @@ from checker.types import (DynamicT, FnT, LoanT, Named, OptionalT, Refined, Tupl
 
 TRIVIAL = {"Int", "Bool", "Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64", "Float", "Float32", "Scalar", "Duration", "Must"}
 EXPR_CHAIN = ("expr", "constExpr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr",
-              "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "unaryExpr", "exprStmt", "literal")
+              "equalityExpr", "relationalExpr", "shiftExpr", "additiveExpr", "multiplicativeExpr", "asExpr", "unaryExpr", "exprStmt", "literal")
 
 
 class LowerError(Exception):

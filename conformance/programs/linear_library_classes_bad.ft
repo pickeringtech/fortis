@@ -1,0 +1,6 @@
+// reject: E-OBL-003
+// covers: LANG-10-02
+// D-547: standard classes follow the same linear-argument rule as other user generics.
+import fortis.collections { Deque, SortedSet }
+func deque(xs: Deque[Outcome[Int]]) Int => xs.count()
+func sorted(xs: SortedSet[Outcome[Int]]) Int => xs.count()

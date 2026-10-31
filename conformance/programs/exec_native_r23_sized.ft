@@ -1,0 +1,39 @@
+// execute: -2147483648 5|0 7 -8 12|42 255 65535 4294967295|5 6 7 8|-128 127 43 3
+// requires: runtime
+// covers: LANG-06-01, LANG-10-01
+// D-245, D-515: context reaches arithmetic, recovery and value-block literals.
+import fortis.host { Console }
+
+error Missing {
+  code: "demo.missing"
+}
+try func small(ok: Bool) Int8 {
+  if ok { return 7 }
+  fail Missing()
+}
+func smallest() Int8 { return -127 - 1 }
+func read(value: UInt16) UInt16 { return value }
+recovers func main(console: Console) {
+  let x: Int32 = -2147483647 - 1
+  let y: Int32 = 2 + 3
+  console.print("${x} ${y}")
+  let a: Int8 = small(false) catch e { recover 0 }
+  let b: Int8 = small(true) catch e { recover 0 }
+  let c: Int8 = small(false) catch e { recover -2 * 4 }
+  let d: Int8 = small(false) or recover 3 * 4
+  console.print("${a} ${b} ${c} ${d}")
+  let wide: Int16 = 6 * 7
+  let f: UInt8 = 250 + 5
+  let g: UInt16 = 65530 + 5
+  let h: UInt32 = 4294967290 + 5
+  console.print("${wide} ${f} ${g} ${h}")
+  let i: Int8 = if true { give 2 + 3 } else { give 5 }
+  let j: Int16 = match true { true => 2 * 3
+    false => 6 }
+  let k: Int32 = if false { give 6 } else { give 7 }
+  let l: Int8 = small(false) catch e { recover 8 }
+  console.print("${i} ${j} ${k} ${l}")
+  let signed: Int8 = 120 + 7
+  let unsigned: UInt64 = 42 + 1
+  console.print("${smallest()} ${signed} ${unsigned} ${read(1 + 2)}")
+}

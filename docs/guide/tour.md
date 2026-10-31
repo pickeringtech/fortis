@@ -3,7 +3,6 @@
 <!-- covers: LR 1, LR 2 -->
 *Human mode. Agent mode: [Overview, by rule](../agent/01-overview.md). Source of truth: LR 1 and LR 2.*
 
-> Preview: the whole program at the end declares a newtype (LR 6.9), an interface and a mixin (LR 9.5, 9.6), which arrive in v0.1; it is checked and runs today. Everything else this tour shows is in v0.0.2.
 
 This chapter says what Fortis is for, gets the tools running, and then walks through one whole program, a small
 to-do list, pointing to the chapter that explains each piece. You do not need to understand every line on first
@@ -115,7 +114,14 @@ Then use the `fortis` command from the repository root (`bin/fortis`, or `fortis
 A directory with a `project.yaml` is a package, and every command accepts it in place of a file. The production
 compiler `fortisc`, which `fortis build`, `view` and `fmt` run for you, also runs programs on the development VM:
 `fortisc vm FILE.ft` runs `main` there (it prints the program's output lines joined by `|`, in the form the
-conformance tools compare), and `fortisc test FILE.ft` runs the tests there.
+conformance tools compare). Add `--stdout` for the exact console output, with harness metadata on
+standard error; `fortisc test FILE.ft` runs the tests there.
+
+`fortis build --emit-only FILE.ft` (or a package) stops once the compiler has generated the crate: it writes the
+generated Rust crate where a build would compile it (under `build/native-build/`), prints where it wrote it, and
+builds nothing, so no rustc runs and no executable appears. Use it to read exactly what the lowering produced.
+The program is checked as for a full build first, and a program the checker refuses emits no crate; each emitted
+program exits 0 and prints one `emit` record (`program`, `crate`) when the output is a pipe.
 
 Every finding and every runtime report is a record: text when the output is a terminal, one JSON object per
 line when it is a pipe, and `--format json` or `--format text` chooses explicitly.
@@ -160,7 +166,6 @@ Here is a complete module: a tiny to-do list with an identifier type, a state en
 interface, a mixin, a class, a closure, a deferred block, a fallible constructor and a test. It is the guide's
 counterpart of the invoicing module in LR 2, written to run on its own.
 
-> Preview: `TodoId` is a newtype (LR 6.9), and `Describable` and `Labelled` are an interface and a mixin (LR 9.5, 9.6); they arrive in v0.1.
 
 ```fortis
 // accept
@@ -209,7 +214,7 @@ export class Todo implements Describable with Labelled {
   export pure func title(self) String => copy self.name
 
   export pure func finish(editable self, by: StringView) {
-    self.status = Done(by: String.from(by))
+    self.status = Done(by: by as String)
   }
 
   export pure func isOpen(self) Bool => self.status == Open
@@ -271,8 +276,9 @@ standard error; it is not part of the program's output (LR 10.6). Now the pieces
 prelude (`Int`, `String`, `List`, `Bool`, …) needs no import (LR 4.3). See [Modules and packages](04-modules.md).
 
 **A newtype.** `type TodoId = Int<1..>` declares a new nominal type whose values are integers of at least 1. A
-`TodoId` never mixes with any other `Int`-based type, and the only ways to make one are a literal the checker can
-prove in range, written `TodoId(1)`, or the fallible `TodoId.validate(n)` (LR 6.9). See [Types](06-types.md).
+`TodoId` never mixes with any other `Int`-based type. `TodoId(value)` takes a value proved in range,
+such as `TodoId(1)`; `n as TodoId or fail` checks an unproved value at run time. The retired
+`TodoId.validate(n)` remains accepted and the formatter rewrites it (LR 6.9, LR 6.13). See [Types](06-types.md).
 
 **An enum with payloads.** `Status` has three variants, two of which carry data. `derive Equatable` generates `==`
 for it (LR 6.10). A `match` over a `Status` must handle every variant, so adding a fourth variant later makes the
@@ -332,7 +338,7 @@ which means read-only loans that end when `show` returns (LR 7.5).
 Read the chapters in order, starting with [Lexical structure](03-lexical.md); each follows one section of the LR.
 Some everyday words are keywords and cannot name a variable, a parameter or a field: `before`, `after`, `from`,
 `once`, `owned`, `error`, `record`, `test`, `cases`, `view`, `state`, `model` and `action` among them, all
-listed in [Keywords](appendix-a-keywords.md) (LR 3.4). The [core library](../agent/library.md) lists every
+listed in [Keywords](appendix-a-keywords.md) (LR 3.4). The [core library](library.md) lists every
 operation of the standard modules, generated from their declarations.
 If you already know Rust, TypeScript or Python, the notes for readers coming from [Rust](from-rust.md),
 [TypeScript](from-typescript.md) and [Python](from-python.md) map what you know onto Fortis. The

@@ -1,0 +1,15 @@
+// reject: E-TYP-180 (at the marked lines)
+// covers: LANG-06-14
+// 6.13 (D-516): the built-in table is keyed by the built-in types, not their spellings: a user's `class Int`
+// is itself, and no row of the table reaches it — the pair has no conversion.
+class Int {
+  v: String
+}
+
+func f(x: Int) String {
+  return x as String                         // reject: E-TYP-180 — the user's Int is not the built-in Int
+}
+
+func g(y: Int) Int {
+  return y as Int64                          // reject: E-TYP-180 — nor is it a name of one range with Int64
+}

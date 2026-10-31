@@ -18,12 +18,12 @@ export class Item {
 
 func noisy(console: Console, label: StringView) String {
   console.print("fallback ${label}")
-  return String.from("fb")
+  return "fb" as String
 }
 
 func noisyItem(console: Console) Item {
   console.print("fallback item")
-  return Item(name: String.from("fb"))
+  return Item(name: "fb" as String)
 }
 
 try func boom(console: Console) String {
@@ -49,7 +49,7 @@ func interpNest(console: Console, xs: List[String], ys: List[String]) {
 
 try func nestFail(console: Console, xs: List[String], ys: List[String]) String {
   show(console, "nf", xs.get(0) ?? ys.get(0) ?? (boom(console) or fail))
-  return String.from("kept")
+  return "kept" as String
 }
 
 func items(console: Console, xs: List[Item], ys: List[Item]) {
@@ -86,17 +86,17 @@ recovers func settle(console: Console, o: owned Outcome[String]) {
 
 recovers func main(console: Console) {
   let mut xs: List[String] = List.default()
-  xs.push(String.from("hi"))
+  xs.push("hi" as String)
   let mut ys: List[String] = List.default()
-  ys.push(String.from("yo"))
+  ys.push("yo" as String)
   let none: List[String] = List.default()
   let mut its: List[Item] = List.default()
-  its.push(Item(name: String.from("a")))
+  its.push(Item(name: "a" as String))
   let mut js: List[Item] = List.default()
-  js.push(Item(name: String.from("b")))
+  js.push(Item(name: "b" as String))
   let noItems: List[Item] = List.default()
   let mut m: Map[String, String] = Map.default()
-  m.set(String.from("k"), String.from("mv"))
+  m.set("k" as String, "mv" as String)
   let noMap: Map[String, String] = Map.default()
   nest(console, xs, ys)
   nest(console, none, ys)
@@ -115,14 +115,14 @@ recovers func main(console: Console) {
   items(console, noItems, noItems)
   three(console, none, none, ys)
   three(console, none, none, none)
-  param(console, String.from("p"), ys)
+  param(console, "p" as String, ys)
   param(console, null, ys)
   param(console, null, none)
   maps(console, m, ys)
   maps(console, noMap, ys)
   maps(console, noMap, none)
-  place(console, none, ys, String.from("dd"))
-  place(console, none, none, String.from("dd"))
+  place(console, none, ys, "dd" as String)
+  place(console, none, none, "dd" as String)
   console.print("first ${first(xs) ?? "none"}")
   console.print("first ${first(none) ?? "none"}")
 }

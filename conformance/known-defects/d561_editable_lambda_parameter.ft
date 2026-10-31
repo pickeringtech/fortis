@@ -1,0 +1,8 @@
+class Counter {
+  value: Int
+}
+func edit(a: editable Counter, f: fn(editable Counter) Void) { f(editable a) }
+func run() {
+  let mut n = Counter(value: 1)
+  edit(editable n, fn(x: editable Counter) Void { x.value = 9 })
+}

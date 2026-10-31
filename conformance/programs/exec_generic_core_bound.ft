@@ -1,0 +1,48 @@
+// execute: true|false|true|2|b|true
+// requires: runtime
+// covers: LANG-06-12
+// A generic body bounded by a core interface, natively too (D-82): `equals` through an `Equatable` bound on a class,
+// an enum and a trivial class with their own `equals` (which decides), `==` on the type parameter, and `<` through a
+// `Comparable` bound. (`compare` through a bound, and `<` on a class with its own `compare`, run natively and on the VM; the
+// interpreter's `Ordering` values and its `<` on such a class are D-87 and D-84, conformance/known-defects/.)
+import fortis.host { Console }
+
+export class Tag implements Equatable {
+  export name: String
+  pure func equals(self, other: Tag) Bool => true
+}
+
+export trivial class Spot implements Equatable {
+  export x: Int
+  export y: Int
+  pure func equals(self, other: Spot) Bool => self.x == other.x
+}
+
+export enum Mood implements Equatable {
+  Happy
+  Sad
+  pure func equals(self, other: Mood) Bool => false
+}
+
+func sameBy[T](a: T, b: T) Bool where T implements Equatable {
+  return a.equals(b)
+}
+
+func sameOp[T](a: T, b: T) Bool where T implements Equatable {
+  return a == b
+}
+
+func larger[T](a: T, b: T) T where T implements Comparable, T implements Copyable {
+  if a < b {
+    return copy b
+  }
+  return copy a
+}
+
+func main(console: Console) {
+  let ta = Tag(name: "a")
+  let tb = Tag(name: "b")
+  let first: String = "a"
+  let second: String = "b"
+  console.print("${sameBy(ta, tb)}|${sameBy(Mood.Happy, Happy)}|${sameOp(3, 3)}|${larger(1, 2)}|${larger(first, second)}|${sameBy(Spot(x: 1, y: 2), Spot(x: 1, y: 5))}")
+}

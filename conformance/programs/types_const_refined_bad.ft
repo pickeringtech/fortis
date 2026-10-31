@@ -1,0 +1,10 @@
+// reject: E-REF-001 (at the marked lines)
+// covers: LANG-06-02
+// A constant's initialiser is checked against its declared refinement like any other literal (6.3, 4.2; D-201).
+const big: Int<1..100> = 200           // reject: E-REF-001
+const neg: Int<0..> = -1               // reject: E-REF-001
+const ok: Int<1..100> = 50
+
+test "a constant within its refinement" {
+  expect ok == 50
+}

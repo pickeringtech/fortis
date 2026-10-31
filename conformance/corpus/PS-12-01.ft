@@ -1,4 +1,4 @@
-// illustrative
+// accept
 contract FastCalculation {
   pure
   noalloc
@@ -11,5 +11,5 @@ contract PublicApi {
 
 contract DatabaseOnly {
   excludes capability Network
-  excludes capability Mail
+  excludes capability Process
 }

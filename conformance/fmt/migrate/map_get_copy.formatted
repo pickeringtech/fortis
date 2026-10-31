@@ -4,7 +4,7 @@ pure func tally(words: ListView[StringView]) Map[String, Int] {
   let mut counts: Map[String, Int] = Map.default()
   for word in words {
     let seen = counts.get(word) ?? 0
-    counts.set(String.from(word), Int.wrappingAdd(seen, 1))
+    counts.set(word as String, Int.wrappingAdd(seen, 1))
   }
   return counts
 }

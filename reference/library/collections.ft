@@ -1,3 +1,56 @@
 // Signature module for `fortis.collections` (Language Reference 6.7): growth APIs beyond the prelude's
 // core operations live here (the `alloc` feature set enables them).
 export trusted pure func sorted(items: ListView[Int]) List[Int]
+export class Deque[T] implements Iterable[T, ListCursor[T]] {
+  front: List[T] = List.default()
+  back: List[T] = List.default()
+  export trusted pure func default() Deque[T]
+  export trusted pure func fromList(items: owned List[T]) Deque[T]
+  export trusted pure func count(self) Int
+  export trusted pure func isEmpty(self) Bool
+  export trusted func pushBack(editable self, item: owned T)
+  export trusted func pushFront(editable self, item: owned T)
+  export trusted func popFront(editable self) T?
+  export trusted func popBack(editable self) T?
+  export trusted pure func get(self, index: Int) (alias T from self)?
+  export trusted pure func peekFront(self) (alias T from self)?
+  export trusted pure func peekBack(self) (alias T from self)?
+  export trusted pure func iterate(self) ListCursor[T] from self
+  export trusted func each(self, visit: editable fn mut(T) Void)
+  export trusted try func tryEach(self, visit: editable fn mut(T) Outcome[Void])
+  export trusted pure func map[U](self, f: pure fn(T) U) Deque[U]
+  export trusted pure try func tryMap[U](self, f: pure fn(T) Outcome[U]) Deque[U]
+  export trusted pure func filter(self, keep: pure fn(T) Bool) Deque[T] where T implements Copyable
+  export trusted pure func fold[A](self, initial: owned A, step: pure fn(A, T) A) A
+  export trusted pure try func tryFold[A](self, initial: owned A, step: pure fn(A, T) Outcome[A]) A
+  export trusted pure func any(self, holds: pure fn(T) Bool) Bool
+  export trusted pure func all(self, holds: pure fn(T) Bool) Bool
+  export trusted pure func find(self, holds: pure fn(T) Bool) (alias T from self)?
+  export trusted pure func indexWhere(self, holds: pure fn(T) Bool) Int?
+  export trusted pure func contains(self, target: T) Bool where T implements Equatable
+  export trusted pure func toList(self) List[T] where T implements Copyable
+}
+export class SortedSet[T] implements Iterable[T, ListCursor[T]] {
+  items: List[T] = List.default()
+  export trusted pure func default() SortedSet[T] where T implements Comparable
+  export trusted pure func fromList(items: owned List[T]) SortedSet[T] where T implements Comparable
+  export trusted pure func count(self) Int
+  export trusted pure func isEmpty(self) Bool
+  export trusted func add(editable self, item: owned T) Bool where T implements Comparable
+  export trusted pure func contains(self, item: T) Bool where T implements Comparable
+  export trusted func remove(editable self, item: T) Bool where T implements Comparable
+  export trusted pure func first(self) (alias T from self)?
+  export trusted pure func last(self) (alias T from self)?
+  export trusted pure func get(self, index: Int) (alias T from self)?
+  export trusted pure func iterate(self) ListCursor[T] from self
+  export trusted func each(self, visit: editable fn mut(T) Void)
+  export trusted pure func fold[A](self, initial: owned A, step: pure fn(A, T) A) A
+  export trusted pure func any(self, holds: pure fn(T) Bool) Bool
+  export trusted pure func all(self, holds: pure fn(T) Bool) Bool
+  export trusted pure func find(self, holds: pure fn(T) Bool) (alias T from self)?
+  export trusted pure func toList(self) List[T] where T implements Copyable
+  export trusted pure func between(self, low: T, high: T) List[T] where T implements Comparable, T implements Copyable
+  export trusted pure func union(self, other: SortedSet[T]) SortedSet[T] where T implements Comparable, T implements Copyable
+  export trusted pure func intersection(self, other: SortedSet[T]) SortedSet[T] where T implements Comparable, T implements Copyable
+  export trusted pure func difference(self, other: SortedSet[T]) SortedSet[T] where T implements Comparable, T implements Copyable
+}

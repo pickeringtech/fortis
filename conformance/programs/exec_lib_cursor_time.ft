@@ -4,7 +4,7 @@
 // List.iterate gives a cursor over read loans; Timestamp ordering (15).
 import fortis.host { Console }
 recovers func main(console: Console) {
-  let letters = List.of("a", "b", "c")
+  let letters: List[String] = List.of("a", "b", "c")
   let mut cursor = letters.iterate()
   loop {
     match cursor.next() {

@@ -1,0 +1,27 @@
+// reject: E-OBL-001, E-OBL-003
+// covers: LANG-10-02, LANG-06-16
+import fortis.host { Console }
+class Cursor[T] implements Consumer[T] where T: linear {
+  items: List[T]
+  // Returning null says nothing about the obligations still in items.
+  export func next(editable self) T? => null
+}
+class Bag[T] implements Consumable[T, Cursor[T]] where T: linear {
+  items: List[T]
+  export func consume(owned self) Cursor[T] {
+    let Bag(items: contents) = move self
+    return Cursor(items: move contents)
+  }
+}
+recovers func main(console: Console) {
+  let bag = Bag(items: List[Outcome[Int]].of(Outcome.success(1), Outcome.success(2)))
+  for item in move bag {
+
+  }
+}
+
+// Even an item-consuming body cannot consume a linear cursor's final state.
+recovers func handled() {
+  let bag = Bag(items: List[Outcome[Int]].of(Outcome.success(1)))
+  for item in move bag { discard item or recover 0 }
+}

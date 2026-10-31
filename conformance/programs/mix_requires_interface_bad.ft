@@ -1,0 +1,8 @@
+// reject: E-SYN-000 (at the marked line)
+// covers: LANG-09-04
+// A mixin requires method signatures only, never an interface (9.6; the owner's decision of 29 October): `requires
+// Displayable` is not a sentence of the grammar.
+export mixin Shown {
+  requires Displayable                        // reject: E-SYN-000
+  export pure func shown(self) String => "shown"
+}

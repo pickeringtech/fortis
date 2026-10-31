@@ -1,0 +1,38 @@
+// execute: operand|7|true|abc|3|3|7|true
+// covers: LANG-06-14, LANG-06-15
+// D-505: the grammar decides grouping; operands run once and postfixes stay on the converted result.
+import fortis.host { Console }
+
+type Small = Int<0..100>
+
+class Source { n: Int }
+class Target derive convert from Source, Equatable, Comparable { n: Int }
+
+func operand(console: Console) Source {
+  console.print("operand")
+  return Source(n: 7)
+}
+
+try func checked(left: Int<0..5>, right: Int<0..5>) Int<0..100> {
+  return (left - right) as Int<0..100> or fail
+}
+
+try func nested(raw: Int) Small {
+  return (raw as Int<0..10> or fail) as Small
+}
+
+try func main(console: Console) {
+  let source = operand(console)
+  let target = source as Target
+  console.print("${target.n}")
+  console.print("${(source as Target) < Target(n: 9)}")
+  let bytes = ("abc" as String).toBytes()
+  let text = String.fromBytes(bytes) or fail
+  console.print(text)
+  let difference = checked(5, 2) or fail
+  console.print("${difference}")
+  let narrowed = nested(3) or fail
+  console.print("${narrowed}")
+  console.print("${(source as Target).n}")
+  console.print("${source as Target >= Target(n: 7)}")
+}

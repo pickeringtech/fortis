@@ -1,0 +1,81 @@
+// reject: E-OWN-050 (at the marked lines)
+// covers: LANG-07-06
+// D-395, 7.6: a result declared `from xs` may lend `xs` alone, whichever way it is produced: returned directly, given
+// out of an `if` or a `match` arm, recovered by a handler, or produced by an expression body. Both checkers judged a
+// direct return and a `match` expression only, so a loan of `ys` given out of an `if` or returned by an expression
+// body was recorded against `xs`, and `ys` could change while the result lived: the interpreter and the VM popped
+// and destroyed the element and then read it; native code refused the program.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func pick(xs: List[Token], c: Bool) (alias Token from xs)? {
+  if c {
+    fail Missing()
+  }
+  return xs.get(0)
+}
+
+func given(xs: List[Token], ys: List[Token], c: Bool) (alias Token from xs)? {
+  return if c {                                                           // reject: E-OWN-050 — the `else` branch lends ys
+    give xs.get(0)
+  } else {
+    give ys.get(0)
+  }
+}
+
+func body(xs: List[Token], ys: List[Token]) (alias Token from xs)? => ys.get(0)   // reject: E-OWN-050 — the body lends ys
+
+func armBlock(xs: List[Token], ys: List[Token], c: Bool) (alias Token from xs)? {
+  return match c {                                                        // reject: E-OWN-050 — an arm block gives a loan of ys
+    true => {
+      give xs.get(0)
+    }
+    false => {
+      give ys.get(0)
+    }
+  }
+}
+
+recovers func recovered(xs: List[Token], ys: List[Token]) (alias Token from xs)? {
+  return pick(alias xs, true) catch e {                                   // reject: E-OWN-050 — the handler recovers a loan of ys
+    report e
+    recover ys.get(0)
+  }
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "x"))
+  let mut ys: List[Token] = List.default()
+  ys.push(make(console, "y"))
+  {
+    let t = given(alias xs, alias ys, false)
+    discard ys.pop()
+    console.print("got ${t?.label ?? "none"}")
+  }
+  ys.push(make(console, "y"))
+  {
+    let t = body(alias xs, alias ys)
+    discard ys.pop()
+    console.print("got ${t?.label ?? "none"}")
+  }
+  console.print(armBlock(alias xs, alias ys, false)?.label ?? "none")
+  console.print(recovered(alias xs, alias ys)?.label ?? "none")
+}

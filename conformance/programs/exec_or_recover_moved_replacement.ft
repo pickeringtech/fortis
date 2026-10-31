@@ -1,0 +1,45 @@
+// execute: show recovered|drop recovered|after recovered
+// execute-trace: drop Token
+// requires: runtime
+// covers: LANG-07-07, LANG-05-07
+// D-446, 7.9: an `or recover` whose replacement is a moved local, lent for a call
+// (`show(console, find(alias empty) or recover move d)`): the failing try side moves `d` into the statement's
+// slot, which holds either side (`rt::MaybeOwned` natively, a `std::borrow::Cow` for text), and the made
+// replacement is destroyed and announced when the statement ends (D-375); a borrowed success announces
+// nothing there. Natively the lowering once passed the moved value where a loan was expected (rustc E0308)
+// where both checkers accept the program and the interpreter and the VM run it; the slot now holds both
+// sides. Found by the v0.1 stream A fix of D-375.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: label as String, console: console.retain())
+}
+
+func show(console: Shared[Console], t: Token) {
+  console.print("show ${t.label}")
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func find(xs: List[Token]) alias Token from xs {
+  fail Missing()
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  let d = make(console, "recovered")
+  show(console, find(alias empty) or recover move d)
+  console.print("after recovered")
+}

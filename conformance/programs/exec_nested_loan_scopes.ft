@@ -14,8 +14,8 @@ class Item {
 
 func items() List[Item] {
   let mut xs: List[Item] = List.default()
-  xs.push(Item(label: String.from("a")))
-  xs.push(Item(label: String.from("b")))
+  xs.push(Item(label: "a" as String))
+  xs.push(Item(label: "b" as String))
   return xs
 }
 
@@ -39,7 +39,7 @@ func copied(console: Console) {
   }
   let first = match xs.get(1) {
     present(w) => copy w
-    null => Item(label: String.from("none"))
+    null => Item(label: "none" as String)
   }
   let v = xs.pop()
   console.print("${c?.label ?? "none"} ${first.label} ${v?.label ?? "none"}")
@@ -61,7 +61,7 @@ func ownedResults(console: Console) {
     null => 0
   }
   let text = "${xs.get(1)?.label ?? "none"}"
-  xs.push(Item(label: String.from("c")))
+  xs.push(Item(label: "c" as String))
   console.print("${size} ${text}")
 }
 
@@ -87,17 +87,17 @@ func reassignedInLoop(console: Console) {
 
 func mapKey(console: Console) {
   let mut m: Map[String, String] = Map.default()
-  m.set(String.from("k"), String.from("v"))
-  let mut key = String.from("k")
+  m.set("k" as String, "v" as String)
+  let mut key = "k" as String
   let v = m.get(key)
-  key = String.from("j")
+  key = "j" as String
   console.print("${v ?? "none"} ${key}")
 }
 
 func cursorTwice(console: Console) {
   let mut xs: List[String] = List.default()
-  xs.push(String.from("a"))
-  xs.push(String.from("b"))
+  xs.push("a" as String)
+  xs.push("b" as String)
   let mut c = alias xs.iterate()
   let a = c.next()
   let b = c.next()
@@ -143,7 +143,7 @@ func main(console: Console) {
   mapKey(console)
   cursorTwice(console)
   let mut ws: List[String] = List.default()
-  ws.push(String.from("x"))
+  ws.push("x" as String)
   let mut c = alias ws.iterate()
   cursorParam(editable c, console)
   let xs = items()

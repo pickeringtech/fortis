@@ -1,0 +1,39 @@
+// execute: [kept]|after loan|[made]|drop made|after fallback|recovered|drop recovered|after recovery|drop end|drop kept
+// execute-trace: loans-end|drop Token
+// requires: runtime
+// covers: LANG-07-06, LANG-07-07
+// A Slot has no cleanup of its own, as in exec_coalesce_fallback_temporary (D-344).
+// A method lends its selected receiver through an interpolation or call until the full statement ends.
+import fortis.host { Console }
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+class Slot {
+  token: Token
+  func text(self) StringView from self => alias self.token.label
+}
+export error Missing {
+  code: "demo.missing"
+}
+try func first(xs: List[Slot]) alias Slot from xs {
+  return xs.get(0) ?? fail Missing()
+}
+func make(console: Shared[Console], label: StringView) Slot {
+  return Slot(token: Token(label: label as String, console: console.retain()))
+}
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let xs = List.of(make(console, "kept"))
+  let empty: List[Slot] = List.default()
+  console.print("[${(xs.get(0) ?? make(console, "unused")).text().trim()}]")
+  console.print("after loan")
+  console.print("[${(empty.get(0) ?? make(console, "made")).text().trim()}]")
+  console.print("after fallback")
+  console.print((first(alias empty) or recover make(console, "recovered")).text().trim())
+  console.print("after recovery")
+  let end = Token(label: "end", console: console.retain())
+}

@@ -3,5 +3,5 @@
 try func capped(xs: List[Int]) List[Int]<length: 0..3> {
   let mut local = List.of(1)
   local.push(2)
-  return List[Int]<length: 0..3>.validate(move local) or fail
+  return move local as List[Int]<length: 0..3> or fail
 }

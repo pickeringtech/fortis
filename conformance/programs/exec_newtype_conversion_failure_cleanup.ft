@@ -1,0 +1,22 @@
+// execute: drop|refinement.out_of_range|after
+// requires: runtime
+// covers: LANG-06-14, LANG-07-07
+// Failure consumes and destroys the moved representation before the handler runs.
+import fortis.host { Console }
+class Token {
+  console: Shared[Console]
+  cleanup(editable self) { self.console.print("drop") }
+}
+type Empty = List[Token]<length: 0..0>
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let values = List[Token].of(Token(console: console.retain()))
+  match (move values as Empty) {
+    success(result) => { discard result }
+    failure(e) => {
+      console.print(e.code)
+      report e
+    }
+  }
+  console.print("after")
+}

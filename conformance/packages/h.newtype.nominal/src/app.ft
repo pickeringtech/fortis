@@ -1,0 +1,7 @@
+// reject: E-TYP-040
+import fortis.host { Console }
+import h.newtype.nominal.defs as defs
+func main(console: Console) {
+  let b = defs.make()
+  let xs: List[Int] = move b
+}

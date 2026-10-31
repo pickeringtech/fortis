@@ -1,0 +1,10 @@
+// execute: 3 4
+// requires: runtime
+// covers: LANG-06-11
+import fortis.host { Console }
+func make() Array[Int, 3] { return Array.filled(7) }
+func size(a: Array[Int, 4]) Int { return a.count() }
+func main(console: Console) {
+  let a = make()
+  console.print("${a.count()} ${size(Array.filled(5))}")
+}

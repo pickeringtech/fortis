@@ -1,0 +1,16 @@
+// reject: E-TYP-090 (at the marked lines)
+// covers: LANG-04-04, LANG-06-06, LANG-06-10
+// D-591, X-640: a bound on a local interface never grants a prelude bound.
+import fortis.prelude
+interface Equatable {}
+interface Hashable requires Equatable {}
+class NotCore derive Hashable { export n: Int } // reject: E-TYP-090
+class Pretend implements Hashable, Equatable { export n: Int }
+func needHash[T](x: T) Int where T implements prelude.Hashable => 1
+func needEqual[T](x: T) Int where T implements prelude.Equatable => 1
+func forwarded[T](x: T) Int where T implements Hashable => needHash(x) // reject: E-TYP-090
+func equality[T](x: T) Int where T implements Equatable => needEqual(x) // reject: E-TYP-090
+func concrete(x: Pretend) Int => needHash(x) // reject: E-TYP-090
+func keys[K](x: owned Map[K, Int]) Map[K, Int] where K implements Hashable, K implements Equatable => move x // reject: E-TYP-090
+func values[K](x: owned Set[K]) Set[K] where K implements Hashable, K implements Equatable => move x // reject: E-TYP-090
+func concreteKeys(x: owned Map[Pretend, Int]) Map[Pretend, Int] => move x // reject: E-TYP-090

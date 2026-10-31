@@ -1,0 +1,24 @@
+// reject: E-TYP-040 (at the marked lines)
+// covers: LANG-04-04, LANG-06-01
+// D-592, X-640: nominal identity survives every enclosing type.
+import fortis.prelude
+import fortis.collections { Deque, SortedSet }
+class Bool derive Equatable, Hashable { export n: Int }
+class Box[T] { export item: T }
+func nested(x: owned List[Map[String, Set[Bool]]]) List[Map[String, Set[prelude.Bool]]] => move x // reject: E-TYP-040
+func queue(x: owned Deque[Bool]) Deque[prelude.Bool] => move x // reject: E-TYP-040
+func sorted(x: owned SortedSet[Bool]) SortedSet[prelude.Bool] => move x // reject: E-TYP-040
+func maybe(x: owned Bool?) prelude.Bool? => move x // reject: E-TYP-040
+func pair(x: owned (Int, Bool)) (Int, prelude.Bool) => move x // reject: E-TYP-040
+func callback(x: owned fn(Bool) prelude.Bool) fn(prelude.Bool) prelude.Bool => move x // reject: E-TYP-040
+func callbackResult(x: owned fn(Int) Bool) fn(Int) prelude.Bool => move x // reject: E-TYP-040
+func outcome(x: owned Outcome[Bool]) Outcome[prelude.Bool] => move x // reject: E-TYP-040
+func box(x: owned Box[List[Bool]]) Box[List[prelude.Bool]] => move x // reject: E-TYP-040
+func take(x: prelude.Bool) {}
+func argument(x: Bool) { take(x) } // reject: E-TYP-040
+func assignment(x: owned Bool) {
+  let mut target: prelude.Bool = true
+  target = move x // reject: E-TYP-040
+}
+type Wrapped = List[Bool]
+func construct(x: owned List[prelude.Bool]) Wrapped => Wrapped(move x) // reject: E-TYP-040

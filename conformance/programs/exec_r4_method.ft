@@ -1,0 +1,10 @@
+// execute: 1
+// requires: runtime
+// covers: LANG-08-04
+import fortis.host { Console }
+class Box { export func size(self) Int => 1 }
+func main(console: Console) {
+  let b = Box()
+  let f = fn[alias b]() Int => b.size()
+  console.print("${f()}")
+}

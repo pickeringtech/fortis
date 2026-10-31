@@ -1,0 +1,522 @@
+[
+  {
+    "name": "void_constructor",
+    "input": {
+      "source": "func f() { Void() }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "Void has no constructor"
+    }
+  },
+  {
+    "name": "void_callback",
+    "input": {
+      "source": "func f() { let o = (\"21\" as Int).map(fn(n) => Void())\n match move o { success(v) => {}\n failure(e) => { report e } } }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "fn(n) { }"
+    }
+  },
+  {
+    "name": "void_block_callback",
+    "input": {
+      "source": "func f() { let o = (\"21\" as Int).map(fn(n) { })\n match move o { success(v) => {}\n failure(e) => { report e } } }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "program_void_constructor",
+    "input": {
+      "source": "class Void {}\nfunc f() Void { return Void() }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "borrowed_string_literal",
+    "input": {
+      "source": "class Drink { text: String\n convert from String(s) { return Drink(text: copy s) } }\nfunc f() Drink { return \"tea\" as Drink }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "borrowed_string_view",
+    "input": {
+      "source": "class Drink { text: String\n convert from String(s) { return Drink(text: copy s) } }\nfunc f(x: StringView) Drink { return x as Drink }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "borrowed_string_string",
+    "input": {
+      "source": "class Drink { text: String\n convert from String(s) { return Drink(text: copy s) } }\nfunc f(x: String) Drink { return x as Drink }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "borrowed_stringview_literal",
+    "input": {
+      "source": "class Drink { text: String\n convert from StringView(s) { return Drink(text: s as String) } }\nfunc f() Drink { return \"tea\" as Drink }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "borrowed_stringview_view",
+    "input": {
+      "source": "class Drink { text: String\n convert from StringView(s) { return Drink(text: s as String) } }\nfunc f(x: StringView) Drink { return x as Drink }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "borrowed_stringview_string",
+    "input": {
+      "source": "class Drink { text: String\n convert from StringView(s) { return Drink(text: s as String) } }\nfunc f(x: String) Drink { return x as Drink }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "owned_string_literal",
+    "input": {
+      "source": "class Drink { text: String\n convert from String(owned s) { return Drink(text: move s) } }\nfunc f() Drink { return \"tea\" as Drink }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "owned_string_view",
+    "input": {
+      "source": "class Drink { text: String\n convert from String(owned s) { return Drink(text: move s) } }\nfunc f(s: StringView) Drink { return s as Drink }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "owned_string_alias_view",
+    "input": {
+      "source": "class Drink { text: String\n convert from String(owned s) { return Drink(text: move s) } }\nfunc f(s: StringView) Drink { return alias s as Drink }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "owned_string_requires_move",
+    "input": {
+      "source": "class Drink { text: String\n convert from String(owned s) { return Drink(text: move s) } }\nfunc f(s: String) Drink { return s as Drink }"
+    },
+    "expect": {
+      "codes": [
+        "E-OWN-001"
+      ]
+    }
+  },
+  {
+    "name": "owned_string_move",
+    "input": {
+      "source": "class Drink { text: String\n convert from String(owned s) { return Drink(text: move s) } }\nfunc f(s: owned String) Drink { return move s as Drink }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "owned_string_copy_allocates",
+    "input": {
+      "source": "class Drink { text: String\n convert from String(owned s) { return Drink(text: move s) } }\nnoalloc func f(s: StringView) Drink { return s as Drink }"
+    },
+    "expect": {
+      "codes": [
+        "E-EFF-001"
+      ]
+    }
+  },
+  {
+    "name": "text_pair_overlap",
+    "input": {
+      "source": "class Drink { convert from String(s) { return Drink() }\n convert from StringView(s) { return Drink() } }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-182"
+      ]
+    }
+  },
+  {
+    "name": "derived_text_pair_overlap",
+    "input": {
+      "source": "enum Drink derive convert from String { Tea\n convert from String(s) { return Tea } }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-182"
+      ]
+    }
+  },
+  {
+    "name": "program_string_distinct",
+    "input": {
+      "source": "class String {}\nclass Drink { convert from String(s) { return Drink() } }\nfunc f(s: StringView) Drink { return s as Drink }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-180"
+      ]
+    }
+  },
+  {
+    "name": "owned_view_from_string",
+    "input": {
+      "source": "class Length { n: Int\n convert from StringView(owned s) { return Length(n: s.scalarCount()) } }\nfunc f(s: owned String) Int { let n = move s as Length\n return n.n }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "owned_view_alias_string",
+    "input": {
+      "source": "class Length { n: Int\n convert from StringView(owned s) { return Length(n: s.scalarCount()) } }\nfunc f(s: String) Int { let n = alias s as Length\n return n.n }"
+    },
+    "expect": {
+      "codes": [
+        "E-OWN-001"
+      ]
+    }
+  },
+  {
+    "name": "owned_view_literal",
+    "input": {
+      "source": "class Length { n: Int\n convert from StringView(owned s) { return Length(n: s.scalarCount()) } }\nfunc f() Int { let n = \"tea\" as Length\n return n.n }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "qualified_diagnostic_record",
+    "input": {
+      "source": "import fortis.prelude\nclass Bool derive Equatable, Hashable { n: Int }\nfunc f(xs: owned Map[Bool, Int]) Map[prelude.Bool, Int] { return move xs }\n"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "returned value has type Map[main.Bool, Int], expected Map[prelude.Bool, Int]: main.Bool is not prelude.Bool",
+      "fields": {
+        "expected_type": "Map[prelude.Bool, Int]",
+        "actual_type": "Map[main.Bool, Int]",
+        "primary_span": "returned value"
+      }
+    }
+  },
+  {
+    "name": "qualified_condition",
+    "input": {
+      "source": "class Bool {}\nfunc f(b: Bool) { if b {} }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-010"
+      ],
+      "message": "condition has type main.Bool, not prelude.Bool"
+    }
+  },
+  {
+    "name": "qualified_boolean_operand",
+    "input": {
+      "source": "class Bool {}\nfunc f(b: Bool) { discard !b }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "operand has type main.Bool, expected prelude.Bool"
+    }
+  },
+  {
+    "name": "borrowed_text_noalloc",
+    "input": {
+      "source": "class Length { n: Int\n convert from String(s) { return Length(n: s.scalarCount()) } }\nnoalloc func f() Int { let n = \"tea\" as Length\n return n.n }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "qualified_void_constructor",
+    "input": {
+      "source": "import fortis.prelude\nfunc f() { prelude.Void() }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "Void has no constructor"
+    }
+  },
+  {
+    "name": "qualified_conversion",
+    "input": {
+      "source": "import fortis.prelude\nclass String {}\nfunc f(s: String) prelude.String { return s as prelude.String }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-180"
+      ],
+      "message": "no conversion from main.String to prelude.String"
+    }
+  },
+  {
+    "name": "void_value_callback",
+    "input": {
+      "source": "func f() { let o: Outcome[Void] = (\"21\" as Int).map(fn(n) => Void)\n match move o { success(v) => {}\n failure(e) => { report e } } }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "qualified_key",
+    "input": {
+      "source": "class Hashable {}\nfunc f(xs: Map[Hashable, Int]) {}"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-090"
+      ],
+      "message": "Map[main.Hashable, Int] needs a key that implements prelude.Hashable and Equatable; main.Hashable does not (6.7)",
+      "fields": {
+        "expected_type": "prelude.Hashable and Equatable",
+        "actual_type": "main.Hashable",
+        "primary_span": "Map[main.Hashable, Int]"
+      }
+    }
+  },
+  {
+    "name": "unambiguous_derive",
+    "input": {
+      "source": "class Thing {}\nclass Box derive Equatable { item: Thing }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-090"
+      ],
+      "message": "derive Equatable: field `item: Thing` does not implement Equatable",
+      "fields": {
+        "expected_type": "Equatable",
+        "actual_type": "Thing",
+        "primary_span": "item"
+      }
+    }
+  },
+  {
+    "name": "qualified_bound",
+    "input": {
+      "source": "import fortis.prelude\nclass Hashable {}\nfunc use[T](value: T) where T implements prelude.Hashable {}\nfunc main() { use(Hashable()) }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-090"
+      ],
+      "message": "use needs `T` to implement prelude.Hashable; main.Hashable does not (6.10)",
+      "fields": {
+        "expected_type": "prelude.Hashable",
+        "actual_type": "main.Hashable",
+        "primary_span": "use"
+      }
+    }
+  },
+  {
+    "name": "qualified_index",
+    "input": {
+      "source": "class Int {}\nfunc f(xs: List[String], index: Int) { discard xs[index] }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "index has type main.Int, expected an integer",
+      "fields": {
+        "expected_type": "prelude.Int",
+        "actual_type": "main.Int",
+        "primary_span": "index"
+      }
+    }
+  },
+  {
+    "name": "qualified_range",
+    "input": {
+      "source": "class Int {}\nfunc f(i: Int) { for n in i..i {} }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "range bound has type main.Int, expected an integer",
+      "fields": {
+        "expected_type": "prelude.Int",
+        "actual_type": "main.Int",
+        "primary_span": "range"
+      }
+    }
+  },
+  {
+    "name": "qualified_bare_return",
+    "input": {
+      "source": "class Void {}\nfunc f() Void { return }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "bare `return` in a function returning main.Void",
+      "fields": {
+        "expected_type": "main.Void",
+        "actual_type": "prelude.Void",
+        "primary_span": "return"
+      }
+    }
+  },
+  {
+    "name": "qualified_report",
+    "input": {
+      "source": "class Failure {}\nfunc f(value: owned Failure) { report move value }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "`report` takes a prelude.Failure, got main.Failure",
+      "fields": {
+        "expected_type": "prelude.Failure",
+        "actual_type": "main.Failure",
+        "primary_span": "report"
+      }
+    }
+  },
+  {
+    "name": "qualified_equatable",
+    "input": {
+      "source": "class Equatable {}\nfunc f(a: Equatable, b: Equatable) Bool { return a == b }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "`==` needs prelude.Equatable; main.Equatable does not implement it",
+      "fields": {
+        "expected_type": "prelude.Equatable",
+        "actual_type": "main.Equatable",
+        "primary_span": "=="
+      }
+    }
+  },
+  {
+    "name": "qualified_comparable",
+    "input": {
+      "source": "class Comparable {}\nfunc f(a: Comparable, b: Comparable) Bool { return a < b }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ],
+      "message": "`<` needs prelude.Comparable; main.Comparable does not implement it",
+      "fields": {
+        "expected_type": "prelude.Comparable",
+        "actual_type": "main.Comparable",
+        "primary_span": "<"
+      }
+    }
+  },
+  {
+    "name": "qualified_method_parameter",
+    "input": {
+      "source": "import fortis.prelude\nclass Bool {}\ninterface Reader { func read(self, flag: prelude.Bool) }\nclass Sample implements Reader { func read(self, flag: Bool) {} }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-080"
+      ],
+      "message": "Sample.read does not satisfy Reader.read: parameter `flag` narrows prelude.Bool to main.Bool",
+      "fields": {
+        "expected_type": "func read(self, flag: prelude.Bool) Void",
+        "actual_type": "func read(self, flag: main.Bool) Void",
+        "primary_span": "read"
+      }
+    }
+  },
+  {
+    "name": "qualified_method_result",
+    "input": {
+      "source": "import fortis.prelude\nclass Bool {}\ninterface Reader { func read(self) prelude.Bool }\nclass Sample implements Reader { func read(self) Bool { return Bool() } }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-080"
+      ],
+      "message": "Sample.read does not satisfy Reader.read: return main.Bool widens prelude.Bool",
+      "fields": {
+        "expected_type": "func read(self, ) prelude.Bool",
+        "actual_type": "func read(self, ) main.Bool",
+        "primary_span": "read"
+      }
+    }
+  },
+  {
+    "name": "qualified_dynamic_bound",
+    "input": {
+      "source": "import fortis.prelude\nclass Hashable {}\ninterface Reader[T] where T implements prelude.Hashable { func read(self) }\nfunc f(value: dynamic Reader[Hashable]) {}"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-090"
+      ],
+      "message": "parameter `value` of f: `dynamic Reader[main.Hashable]` needs `T` to implement prelude.Hashable; main.Hashable does not (9.5)",
+      "fields": {
+        "expected_type": "a dynamic-eligible interface whose bounds hold",
+        "actual_type": "dynamic Reader[main.Hashable]",
+        "primary_span": "parameter `value` of f"
+      }
+    }
+  },
+  {
+    "name": "qualified_interface_bound",
+    "input": {
+      "source": "import fortis.prelude\nclass Hashable {}\ninterface Reader[T] where T implements prelude.Hashable { func read(self) }\nclass Sample implements Reader[Hashable] { func read(self) {} }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-080"
+      ],
+      "message": "Sample implements Reader[main.Hashable], whose `where` needs `T` to implement prelude.Hashable; main.Hashable does not (9.5)",
+      "fields": {
+        "expected_type": "prelude.Hashable",
+        "actual_type": "main.Hashable",
+        "primary_span": "Sample"
+      }
+    }
+  }
+]

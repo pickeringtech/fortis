@@ -1,0 +1,9 @@
+// execute: 1
+// requires: runtime
+// covers: LANG-06-02, LANG-07-06
+import fortis.host { Console }
+func main(console: Console) {
+  let a: { inner: { n: Int<0..3>? } } = { inner: { n: 1 } }
+  let b: { inner: { n: Int? } } = a
+  console.print("${b.inner.n ?? 0}")
+}

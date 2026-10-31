@@ -1,0 +1,19 @@
+// execute: held|held|none|none
+// requires: runtime
+// covers: LANG-06-08, LANG-07-06
+import fortis.host { Console }
+class Cell {
+  text: String
+  func textView(self) StringView from self => alias self.text
+  func child(self) (alias Cell from self)? => alias self
+}
+func textOf(value: Cell?) (StringView from value)? => value?.textView()
+func childOf(value: Cell?) (alias Cell from value)? => value?.child()
+func main(console: Console) {
+  let value: Cell? = Cell(text: "held")
+  let none: Cell? = null
+  console.print(textOf(value) ?? "none")
+  console.print(childOf(value)?.textView() ?? "none")
+  console.print(textOf(none) ?? "none")
+  console.print(childOf(none)?.textView() ?? "none")
+}

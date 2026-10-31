@@ -1,0 +1,11 @@
+import fortis.host { Console }
+import conversion.derive.visible.source { Source, make }
+
+class Target derive convert from Source {
+  value: Int
+}
+
+func main(console: Console) {
+  let value = make() as Target
+  console.print(value.value as String)
+}

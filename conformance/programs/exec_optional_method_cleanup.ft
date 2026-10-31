@@ -1,0 +1,18 @@
+// execute: one|none|alive|drop one
+// requires: runtime
+// covers: LANG-06-08, LANG-07-07
+import fortis.host { Console }
+class Token {
+  text: String
+  console: Shared[Console]
+  func label(self) String => "${self.text}"
+  cleanup(editable self) { self.console.print("drop ${self.text}") }
+}
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let value: Token? = Token(text: "one", console: console.retain())
+  let none: Token? = null
+  console.print(value?.label() ?? "none")
+  console.print(none?.label() ?? "none")
+  console.print("alive")
+}

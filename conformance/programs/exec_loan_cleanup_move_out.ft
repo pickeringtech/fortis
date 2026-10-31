@@ -22,7 +22,7 @@ func consume(console: Shared[Console], t: owned Token) {
 }
 
 func moved(console: Shared[Console]) {
-  let own = Token(label: String.from("moved"), console: console.retain())
+  let own = Token(label: "moved" as String, console: console.retain())
   {
     let a = alias own
     console.print("lent ${a.label}")
@@ -33,7 +33,7 @@ func moved(console: Shared[Console]) {
 
 func popped(console: Shared[Console]) {
   let mut xs: List[Token] = List.default()
-  xs.push(Token(label: String.from("popped"), console: console.retain()))
+  xs.push(Token(label: "popped" as String, console: console.retain()))
   {
     let t = xs.get(0)
     console.print("peek ${t?.label ?? "none"}")
@@ -46,7 +46,7 @@ func popped(console: Shared[Console]) {
 }
 
 func matched(console: Shared[Console]) {
-  let own = Token(label: String.from("matched"), console: console.retain())
+  let own = Token(label: "matched" as String, console: console.retain())
   {
     let a = alias own
     console.print("lent ${a.label}")

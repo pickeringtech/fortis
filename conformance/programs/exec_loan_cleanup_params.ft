@@ -42,7 +42,7 @@ func lent(console: Shared[Console], b: Bag) {
 
 func main(out: Console) {
   let console = Shared.create(move out)
-  let mut own = Token(label: String.from("own"), console: console.retain())
+  let mut own = Token(label: "own" as String, console: console.retain())
   read(console, own)
   edit(console, editable own)
   console.print(own.describe())
@@ -51,7 +51,7 @@ func main(out: Console) {
   }
   f(own)
   console.print("after calls")
-  let b = Bag(tok: Token(label: String.from("bagged"), console: console.retain()))
+  let b = Bag(tok: Token(label: "bagged" as String, console: console.retain()))
   lent(console, b)
   console.print("end")
 }

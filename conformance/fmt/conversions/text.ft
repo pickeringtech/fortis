@@ -1,0 +1,22 @@
+// execute: first|second|firstsecond|first|second
+// covers: LANG-06-14
+// Each source expression runs once and in order; nested conversions reach a fixed point.
+import fortis.host { Console }
+
+func borrowText(console: Console, value: StringView) StringView from value {
+  console.print(value)
+  return value
+}
+
+func main(console: Console) {
+  let a = String.from(borrowText(console, "first"))
+  let b = String.from(borrowText(console, "second"))
+  console.print("${a}${b}")
+  let c = String.from(
+    // The borrowed text is copied here.
+    a
+  )
+  let d = String.from(b)
+  console.print(c)
+  console.print(d)
+}

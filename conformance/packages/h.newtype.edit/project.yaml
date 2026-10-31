@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: h.newtype.edit
+version: 1.0.0
+entry: app
+exports: []
+dependencies:
+  fortis: "1.0"

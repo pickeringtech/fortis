@@ -1,0 +1,6 @@
+// reject: E-TYP-090
+// covers: LANG-06-15
+class Source {}
+enum Target derive convert from Source {
+  Empty
+}

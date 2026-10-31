@@ -1,0 +1,5 @@
+// accept
+export type Pence = Int<0..100>
+export func value(p: Pence) Int<0..100> {
+  return p as Int
+}

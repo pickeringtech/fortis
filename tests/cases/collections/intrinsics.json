@@ -1,0 +1,3542 @@
+[
+  {
+    "name": "lr6_7_list_empty_index_neg1",
+    "input": {
+      "type": "List",
+      "initial": [],
+      "ops": [
+        [
+          "get",
+          -1
+        ],
+        [
+          "at",
+          -1
+        ],
+        [
+          "set",
+          -1,
+          9
+        ],
+        [
+          "get",
+          -1
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": -1
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": -1
+          }
+        },
+        null
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_index_0",
+    "input": {
+      "type": "List",
+      "initial": [],
+      "ops": [
+        [
+          "get",
+          0
+        ],
+        [
+          "at",
+          0
+        ],
+        [
+          "set",
+          0,
+          9
+        ],
+        [
+          "get",
+          0
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 0
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 0
+          }
+        },
+        null
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_index_1",
+    "input": {
+      "type": "List",
+      "initial": [],
+      "ops": [
+        [
+          "get",
+          1
+        ],
+        [
+          "at",
+          1
+        ],
+        [
+          "set",
+          1,
+          9
+        ],
+        [
+          "get",
+          1
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 1
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 1
+          }
+        },
+        null
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_push_pop",
+    "input": {
+      "type": "List",
+      "initial": [],
+      "ops": [
+        [
+          "push",
+          9
+        ],
+        [
+          "count"
+        ],
+        [
+          "pop"
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        1,
+        9,
+        0
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_drain",
+    "input": {
+      "type": "List",
+      "initial": [],
+      "ops": [
+        [
+          "pop"
+        ],
+        [
+          "pop"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        null
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_clear",
+    "input": {
+      "type": "List",
+      "initial": [],
+      "ops": [
+        [
+          "clear"
+        ],
+        [
+          "count"
+        ],
+        [
+          "pop"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        0,
+        null
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_cursor",
+    "input": {
+      "type": "List",
+      "initial": [],
+      "ops": [
+        [
+          "iterate"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        [
+          null,
+          null
+        ]
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_array_empty_get_neg1",
+    "input": {
+      "type": "Array",
+      "initial": [],
+      "ops": [
+        [
+          "get",
+          -1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        0
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_array_empty_get_0",
+    "input": {
+      "type": "Array",
+      "initial": [],
+      "ops": [
+        [
+          "get",
+          0
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        0
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_index_neg1",
+    "input": {
+      "type": "List",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "get",
+          -1
+        ],
+        [
+          "at",
+          -1
+        ],
+        [
+          "set",
+          -1,
+          9
+        ],
+        [
+          "get",
+          -1
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": -1
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": -1
+          }
+        },
+        null
+      ],
+      "items": [
+        7
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_index_0",
+    "input": {
+      "type": "List",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "get",
+          0
+        ],
+        [
+          "at",
+          0
+        ],
+        [
+          "set",
+          0,
+          9
+        ],
+        [
+          "get",
+          0
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        7,
+        7,
+        null,
+        9
+      ],
+      "items": [
+        9
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_index_1",
+    "input": {
+      "type": "List",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "get",
+          1
+        ],
+        [
+          "at",
+          1
+        ],
+        [
+          "set",
+          1,
+          9
+        ],
+        [
+          "get",
+          1
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 1
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 1
+          }
+        },
+        null
+      ],
+      "items": [
+        7
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_index_2",
+    "input": {
+      "type": "List",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "get",
+          2
+        ],
+        [
+          "at",
+          2
+        ],
+        [
+          "set",
+          2,
+          9
+        ],
+        [
+          "get",
+          2
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 2
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 2
+          }
+        },
+        null
+      ],
+      "items": [
+        7
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_push_pop",
+    "input": {
+      "type": "List",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "push",
+          9
+        ],
+        [
+          "count"
+        ],
+        [
+          "pop"
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        2,
+        9,
+        1
+      ],
+      "items": [
+        7
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_drain",
+    "input": {
+      "type": "List",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "pop"
+        ],
+        [
+          "pop"
+        ],
+        [
+          "pop"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        7,
+        null,
+        null
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_clear",
+    "input": {
+      "type": "List",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "clear"
+        ],
+        [
+          "count"
+        ],
+        [
+          "pop"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        0,
+        null
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_cursor",
+    "input": {
+      "type": "List",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "iterate"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        [
+          7,
+          null,
+          null
+        ]
+      ],
+      "items": [
+        7
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_one_get_neg1",
+    "input": {
+      "type": "Array",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "get",
+          -1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        1
+      ],
+      "items": [
+        7
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_one_get_0",
+    "input": {
+      "type": "Array",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "get",
+          0
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        7,
+        1
+      ],
+      "items": [
+        7
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_one_get_1",
+    "input": {
+      "type": "Array",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "get",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        1
+      ],
+      "items": [
+        7
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_one_replace",
+    "input": {
+      "type": "Array",
+      "initial": [
+        7
+      ],
+      "ops": [
+        [
+          "set",
+          0,
+          9
+        ],
+        [
+          "get",
+          0
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        9
+      ],
+      "items": [
+        9
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_index_neg1",
+    "input": {
+      "type": "List",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "get",
+          -1
+        ],
+        [
+          "at",
+          -1
+        ],
+        [
+          "set",
+          -1,
+          9
+        ],
+        [
+          "get",
+          -1
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": -1
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": -1
+          }
+        },
+        null
+      ],
+      "items": [
+        2,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_index_0",
+    "input": {
+      "type": "List",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "get",
+          0
+        ],
+        [
+          "at",
+          0
+        ],
+        [
+          "set",
+          0,
+          9
+        ],
+        [
+          "get",
+          0
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        2,
+        2,
+        null,
+        9
+      ],
+      "items": [
+        9,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_index_2",
+    "input": {
+      "type": "List",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "get",
+          2
+        ],
+        [
+          "at",
+          2
+        ],
+        [
+          "set",
+          2,
+          9
+        ],
+        [
+          "get",
+          2
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        1,
+        1,
+        null,
+        9
+      ],
+      "items": [
+        2,
+        2,
+        9
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_index_3",
+    "input": {
+      "type": "List",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "get",
+          3
+        ],
+        [
+          "at",
+          3
+        ],
+        [
+          "set",
+          3,
+          9
+        ],
+        [
+          "get",
+          3
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 3
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 3
+          }
+        },
+        null
+      ],
+      "items": [
+        2,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_index_4",
+    "input": {
+      "type": "List",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "get",
+          4
+        ],
+        [
+          "at",
+          4
+        ],
+        [
+          "set",
+          4,
+          9
+        ],
+        [
+          "get",
+          4
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 4
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 4
+          }
+        },
+        null
+      ],
+      "items": [
+        2,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_push_pop",
+    "input": {
+      "type": "List",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "push",
+          9
+        ],
+        [
+          "count"
+        ],
+        [
+          "pop"
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        4,
+        9,
+        3
+      ],
+      "items": [
+        2,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_drain",
+    "input": {
+      "type": "List",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "pop"
+        ],
+        [
+          "pop"
+        ],
+        [
+          "pop"
+        ],
+        [
+          "pop"
+        ],
+        [
+          "pop"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        1,
+        2,
+        2,
+        null,
+        null
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_clear",
+    "input": {
+      "type": "List",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "clear"
+        ],
+        [
+          "count"
+        ],
+        [
+          "pop"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        0,
+        null
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_cursor",
+    "input": {
+      "type": "List",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "iterate"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        [
+          2,
+          2,
+          1,
+          null,
+          null
+        ]
+      ],
+      "items": [
+        2,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_duplicates_get_neg1",
+    "input": {
+      "type": "Array",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "get",
+          -1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        3
+      ],
+      "items": [
+        2,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_duplicates_get_0",
+    "input": {
+      "type": "Array",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "get",
+          0
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        2,
+        3
+      ],
+      "items": [
+        2,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_duplicates_get_2",
+    "input": {
+      "type": "Array",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "get",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        1,
+        3
+      ],
+      "items": [
+        2,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_duplicates_get_3",
+    "input": {
+      "type": "Array",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "get",
+          3
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        3
+      ],
+      "items": [
+        2,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_duplicates_replace",
+    "input": {
+      "type": "Array",
+      "initial": [
+        2,
+        2,
+        1
+      ],
+      "ops": [
+        [
+          "set",
+          0,
+          9
+        ],
+        [
+          "get",
+          0
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        9
+      ],
+      "items": [
+        9,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_ordered_index_neg1",
+    "input": {
+      "type": "List",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "get",
+          -1
+        ],
+        [
+          "at",
+          -1
+        ],
+        [
+          "set",
+          -1,
+          9
+        ],
+        [
+          "get",
+          -1
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": -1
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": -1
+          }
+        },
+        null
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_ordered_index_0",
+    "input": {
+      "type": "List",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "get",
+          0
+        ],
+        [
+          "at",
+          0
+        ],
+        [
+          "set",
+          0,
+          9
+        ],
+        [
+          "get",
+          0
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        3,
+        3,
+        null,
+        9
+      ],
+      "items": [
+        9,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_ordered_index_2",
+    "input": {
+      "type": "List",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "get",
+          2
+        ],
+        [
+          "at",
+          2
+        ],
+        [
+          "set",
+          2,
+          9
+        ],
+        [
+          "get",
+          2
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        2,
+        2,
+        null,
+        9
+      ],
+      "items": [
+        3,
+        1,
+        9
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_ordered_index_3",
+    "input": {
+      "type": "List",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "get",
+          3
+        ],
+        [
+          "at",
+          3
+        ],
+        [
+          "set",
+          3,
+          9
+        ],
+        [
+          "get",
+          3
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 3
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 3
+          }
+        },
+        null
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_ordered_index_4",
+    "input": {
+      "type": "List",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "get",
+          4
+        ],
+        [
+          "at",
+          4
+        ],
+        [
+          "set",
+          4,
+          9
+        ],
+        [
+          "get",
+          4
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 4
+          }
+        },
+        {
+          "code": "collection.index",
+          "payload": {
+            "index": 4
+          }
+        },
+        null
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_ordered_push_pop",
+    "input": {
+      "type": "List",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "push",
+          9
+        ],
+        [
+          "count"
+        ],
+        [
+          "pop"
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        4,
+        9,
+        3
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_ordered_drain",
+    "input": {
+      "type": "List",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "pop"
+        ],
+        [
+          "pop"
+        ],
+        [
+          "pop"
+        ],
+        [
+          "pop"
+        ],
+        [
+          "pop"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        2,
+        1,
+        3,
+        null,
+        null
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_ordered_clear",
+    "input": {
+      "type": "List",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "clear"
+        ],
+        [
+          "count"
+        ],
+        [
+          "pop"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        0,
+        null
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_list_ordered_cursor",
+    "input": {
+      "type": "List",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "iterate"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        [
+          3,
+          1,
+          2,
+          null,
+          null
+        ]
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_ordered_get_neg1",
+    "input": {
+      "type": "Array",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "get",
+          -1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        3
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_ordered_get_0",
+    "input": {
+      "type": "Array",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "get",
+          0
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        3,
+        3
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_ordered_get_2",
+    "input": {
+      "type": "Array",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "get",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        2,
+        3
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_ordered_get_3",
+    "input": {
+      "type": "Array",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "get",
+          3
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        3
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_array_ordered_replace",
+    "input": {
+      "type": "Array",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "set",
+          0,
+          9
+        ],
+        [
+          "get",
+          0
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        9
+      ],
+      "items": [
+        9,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_empty_remove_1",
+    "input": {
+      "type": "Map",
+      "initial": [],
+      "ops": [
+        [
+          "get",
+          1
+        ],
+        [
+          "containsKey",
+          1
+        ],
+        [
+          "remove",
+          1
+        ],
+        [
+          "containsKey",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        false,
+        null,
+        false,
+        0
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_map_empty_replace_1",
+    "input": {
+      "type": "Map",
+      "initial": [],
+      "ops": [
+        [
+          "set",
+          1,
+          90
+        ],
+        [
+          "get",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        90,
+        1
+      ],
+      "items": [
+        [
+          1,
+          90
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_empty_remove_2",
+    "input": {
+      "type": "Map",
+      "initial": [],
+      "ops": [
+        [
+          "get",
+          2
+        ],
+        [
+          "containsKey",
+          2
+        ],
+        [
+          "remove",
+          2
+        ],
+        [
+          "containsKey",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        false,
+        null,
+        false,
+        0
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_map_empty_replace_2",
+    "input": {
+      "type": "Map",
+      "initial": [],
+      "ops": [
+        [
+          "set",
+          2,
+          90
+        ],
+        [
+          "get",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        90,
+        1
+      ],
+      "items": [
+        [
+          2,
+          90
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_empty_remove_9",
+    "input": {
+      "type": "Map",
+      "initial": [],
+      "ops": [
+        [
+          "get",
+          9
+        ],
+        [
+          "containsKey",
+          9
+        ],
+        [
+          "remove",
+          9
+        ],
+        [
+          "containsKey",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        false,
+        null,
+        false,
+        0
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_map_empty_replace_9",
+    "input": {
+      "type": "Map",
+      "initial": [],
+      "ops": [
+        [
+          "set",
+          9,
+          90
+        ],
+        [
+          "get",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        90,
+        1
+      ],
+      "items": [
+        [
+          9,
+          90
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_one_remove_1",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          1,
+          10
+        ]
+      ],
+      "ops": [
+        [
+          "get",
+          1
+        ],
+        [
+          "containsKey",
+          1
+        ],
+        [
+          "remove",
+          1
+        ],
+        [
+          "containsKey",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        10,
+        true,
+        10,
+        false,
+        0
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_map_one_replace_1",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          1,
+          10
+        ]
+      ],
+      "ops": [
+        [
+          "set",
+          1,
+          90
+        ],
+        [
+          "get",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        90,
+        1
+      ],
+      "items": [
+        [
+          1,
+          90
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_one_remove_2",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          1,
+          10
+        ]
+      ],
+      "ops": [
+        [
+          "get",
+          2
+        ],
+        [
+          "containsKey",
+          2
+        ],
+        [
+          "remove",
+          2
+        ],
+        [
+          "containsKey",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        false,
+        null,
+        false,
+        1
+      ],
+      "items": [
+        [
+          1,
+          10
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_one_replace_2",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          1,
+          10
+        ]
+      ],
+      "ops": [
+        [
+          "set",
+          2,
+          90
+        ],
+        [
+          "get",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        90,
+        2
+      ],
+      "items": [
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          90
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_one_remove_9",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          1,
+          10
+        ]
+      ],
+      "ops": [
+        [
+          "get",
+          9
+        ],
+        [
+          "containsKey",
+          9
+        ],
+        [
+          "remove",
+          9
+        ],
+        [
+          "containsKey",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        false,
+        null,
+        false,
+        1
+      ],
+      "items": [
+        [
+          1,
+          10
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_one_replace_9",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          1,
+          10
+        ]
+      ],
+      "ops": [
+        [
+          "set",
+          9,
+          90
+        ],
+        [
+          "get",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        90,
+        2
+      ],
+      "items": [
+        [
+          1,
+          10
+        ],
+        [
+          9,
+          90
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_ordered_remove_1",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          20
+        ]
+      ],
+      "ops": [
+        [
+          "get",
+          1
+        ],
+        [
+          "containsKey",
+          1
+        ],
+        [
+          "remove",
+          1
+        ],
+        [
+          "containsKey",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        10,
+        true,
+        10,
+        false,
+        2
+      ],
+      "items": [
+        [
+          3,
+          30
+        ],
+        [
+          2,
+          20
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_ordered_replace_1",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          20
+        ]
+      ],
+      "ops": [
+        [
+          "set",
+          1,
+          90
+        ],
+        [
+          "get",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        90,
+        3
+      ],
+      "items": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          90
+        ],
+        [
+          2,
+          20
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_ordered_remove_2",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          20
+        ]
+      ],
+      "ops": [
+        [
+          "get",
+          2
+        ],
+        [
+          "containsKey",
+          2
+        ],
+        [
+          "remove",
+          2
+        ],
+        [
+          "containsKey",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        20,
+        true,
+        20,
+        false,
+        2
+      ],
+      "items": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          10
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_ordered_replace_2",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          20
+        ]
+      ],
+      "ops": [
+        [
+          "set",
+          2,
+          90
+        ],
+        [
+          "get",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        90,
+        3
+      ],
+      "items": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          90
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_ordered_remove_9",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          20
+        ]
+      ],
+      "ops": [
+        [
+          "get",
+          9
+        ],
+        [
+          "containsKey",
+          9
+        ],
+        [
+          "remove",
+          9
+        ],
+        [
+          "containsKey",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        false,
+        null,
+        false,
+        3
+      ],
+      "items": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          20
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_ordered_replace_9",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          20
+        ]
+      ],
+      "ops": [
+        [
+          "set",
+          9,
+          90
+        ],
+        [
+          "get",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        null,
+        90,
+        4
+      ],
+      "items": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          20
+        ],
+        [
+          9,
+          90
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_map_remove_reinsert_moves_to_end",
+    "input": {
+      "type": "Map",
+      "initial": [
+        [
+          3,
+          30
+        ],
+        [
+          1,
+          10
+        ],
+        [
+          2,
+          20
+        ]
+      ],
+      "ops": [
+        [
+          "remove",
+          1
+        ],
+        [
+          "set",
+          1,
+          11
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        10,
+        null
+      ],
+      "items": [
+        [
+          3,
+          30
+        ],
+        [
+          2,
+          20
+        ],
+        [
+          1,
+          11
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_empty_add_1",
+    "input": {
+      "type": "Set",
+      "initial": [],
+      "ops": [
+        [
+          "add",
+          1
+        ],
+        [
+          "contains",
+          1
+        ],
+        [
+          "add",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        true,
+        true,
+        false,
+        1
+      ],
+      "items": [
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_empty_remove_1",
+    "input": {
+      "type": "Set",
+      "initial": [],
+      "ops": [
+        [
+          "remove",
+          1
+        ],
+        [
+          "contains",
+          1
+        ],
+        [
+          "remove",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        false,
+        false,
+        false,
+        0
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_set_empty_add_2",
+    "input": {
+      "type": "Set",
+      "initial": [],
+      "ops": [
+        [
+          "add",
+          2
+        ],
+        [
+          "contains",
+          2
+        ],
+        [
+          "add",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        true,
+        true,
+        false,
+        1
+      ],
+      "items": [
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_empty_remove_2",
+    "input": {
+      "type": "Set",
+      "initial": [],
+      "ops": [
+        [
+          "remove",
+          2
+        ],
+        [
+          "contains",
+          2
+        ],
+        [
+          "remove",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        false,
+        false,
+        false,
+        0
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_set_empty_add_9",
+    "input": {
+      "type": "Set",
+      "initial": [],
+      "ops": [
+        [
+          "add",
+          9
+        ],
+        [
+          "contains",
+          9
+        ],
+        [
+          "add",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        true,
+        true,
+        false,
+        1
+      ],
+      "items": [
+        9
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_empty_remove_9",
+    "input": {
+      "type": "Set",
+      "initial": [],
+      "ops": [
+        [
+          "remove",
+          9
+        ],
+        [
+          "contains",
+          9
+        ],
+        [
+          "remove",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        false,
+        false,
+        false,
+        0
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_set_one_add_1",
+    "input": {
+      "type": "Set",
+      "initial": [
+        1
+      ],
+      "ops": [
+        [
+          "add",
+          1
+        ],
+        [
+          "contains",
+          1
+        ],
+        [
+          "add",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        false,
+        true,
+        false,
+        1
+      ],
+      "items": [
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_one_remove_1",
+    "input": {
+      "type": "Set",
+      "initial": [
+        1
+      ],
+      "ops": [
+        [
+          "remove",
+          1
+        ],
+        [
+          "contains",
+          1
+        ],
+        [
+          "remove",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        true,
+        false,
+        false,
+        0
+      ],
+      "items": []
+    }
+  },
+  {
+    "name": "lr6_7_set_one_add_2",
+    "input": {
+      "type": "Set",
+      "initial": [
+        1
+      ],
+      "ops": [
+        [
+          "add",
+          2
+        ],
+        [
+          "contains",
+          2
+        ],
+        [
+          "add",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        true,
+        true,
+        false,
+        2
+      ],
+      "items": [
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_one_remove_2",
+    "input": {
+      "type": "Set",
+      "initial": [
+        1
+      ],
+      "ops": [
+        [
+          "remove",
+          2
+        ],
+        [
+          "contains",
+          2
+        ],
+        [
+          "remove",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        false,
+        false,
+        false,
+        1
+      ],
+      "items": [
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_one_add_9",
+    "input": {
+      "type": "Set",
+      "initial": [
+        1
+      ],
+      "ops": [
+        [
+          "add",
+          9
+        ],
+        [
+          "contains",
+          9
+        ],
+        [
+          "add",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        true,
+        true,
+        false,
+        2
+      ],
+      "items": [
+        1,
+        9
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_one_remove_9",
+    "input": {
+      "type": "Set",
+      "initial": [
+        1
+      ],
+      "ops": [
+        [
+          "remove",
+          9
+        ],
+        [
+          "contains",
+          9
+        ],
+        [
+          "remove",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        false,
+        false,
+        false,
+        1
+      ],
+      "items": [
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_ordered_add_1",
+    "input": {
+      "type": "Set",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "add",
+          1
+        ],
+        [
+          "contains",
+          1
+        ],
+        [
+          "add",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        false,
+        true,
+        false,
+        3
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_ordered_remove_1",
+    "input": {
+      "type": "Set",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "remove",
+          1
+        ],
+        [
+          "contains",
+          1
+        ],
+        [
+          "remove",
+          1
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        true,
+        false,
+        false,
+        2
+      ],
+      "items": [
+        3,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_ordered_add_2",
+    "input": {
+      "type": "Set",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "add",
+          2
+        ],
+        [
+          "contains",
+          2
+        ],
+        [
+          "add",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        false,
+        true,
+        false,
+        3
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_ordered_remove_2",
+    "input": {
+      "type": "Set",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "remove",
+          2
+        ],
+        [
+          "contains",
+          2
+        ],
+        [
+          "remove",
+          2
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        true,
+        false,
+        false,
+        2
+      ],
+      "items": [
+        3,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_ordered_add_9",
+    "input": {
+      "type": "Set",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "add",
+          9
+        ],
+        [
+          "contains",
+          9
+        ],
+        [
+          "add",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        true,
+        true,
+        false,
+        4
+      ],
+      "items": [
+        3,
+        1,
+        2,
+        9
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_ordered_remove_9",
+    "input": {
+      "type": "Set",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "remove",
+          9
+        ],
+        [
+          "contains",
+          9
+        ],
+        [
+          "remove",
+          9
+        ],
+        [
+          "count"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        false,
+        false,
+        false,
+        3
+      ],
+      "items": [
+        3,
+        1,
+        2
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_set_remove_reinsert_moves_to_end",
+    "input": {
+      "type": "Set",
+      "initial": [
+        3,
+        1,
+        2
+      ],
+      "ops": [
+        [
+          "remove",
+          1
+        ],
+        [
+          "add",
+          1
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        true,
+        true
+      ],
+      "items": [
+        3,
+        2,
+        1
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_cursor_empty",
+    "input": {
+      "type": "Deque",
+      "initial": [
+        [],
+        []
+      ],
+      "ops": [
+        [
+          "iterate"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        [
+          null,
+          null
+        ]
+      ],
+      "items": [
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_cursor_front",
+    "input": {
+      "type": "Deque",
+      "initial": [
+        [
+          1
+        ],
+        []
+      ],
+      "ops": [
+        [
+          "iterate"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        [
+          1,
+          null,
+          null
+        ]
+      ],
+      "items": [
+        [
+          1
+        ],
+        []
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_cursor_back",
+    "input": {
+      "type": "Deque",
+      "initial": [
+        [],
+        [
+          2
+        ]
+      ],
+      "ops": [
+        [
+          "iterate"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        [
+          2,
+          null,
+          null
+        ]
+      ],
+      "items": [
+        [],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_cursor_both",
+    "input": {
+      "type": "Deque",
+      "initial": [
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "ops": [
+        [
+          "iterate"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        [
+          1,
+          2,
+          3,
+          4,
+          null,
+          null
+        ]
+      ],
+      "items": [
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_cursor_duplicates",
+    "input": {
+      "type": "Deque",
+      "initial": [
+        [
+          2,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "ops": [
+        [
+          "iterate"
+        ]
+      ]
+    },
+    "expect": {
+      "results": [
+        [
+          2,
+          2,
+          1,
+          2,
+          null,
+          null
+        ]
+      ],
+      "items": [
+        [
+          2,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ]
+    }
+  }
+]

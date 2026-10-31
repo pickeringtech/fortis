@@ -1,0 +1,11 @@
+// reject: E-TYP-080
+// Different modules' types are distinct (4.4), and a type implementing an interface must implement what it requires
+// (9.5; D-67): `Job` implements module a's `Required`, not the module b one `Svc` requires, so the package is rejected,
+// as it is when `Job` implements neither.
+import bad.requirement.identity.a { Required }
+import bad.requirement.identity.lib { Svc }
+
+export class Job implements Svc, Required {             // reject: E-TYP-080
+  export n: Int
+  export func run(self) Int => self.n
+}

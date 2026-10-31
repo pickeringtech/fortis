@@ -1,0 +1,44 @@
+// execute: kept moved|drop moved|drop fresh|after fresh|drop named|after named|drop read|after read|9
+// execute-trace: loans-end|drop Token|drop Token|drop Token|drop Token
+// requires: runtime
+// covers: LANG-08-04, LANG-07-07
+// Owned callback arguments transfer once, including a fresh value with cleanup.
+import fortis.host { Console }
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+func apply[A](a: owned A, f: fn(owned A) A) A => f(move a)
+func fresh(console: Shared[Console], f: fn(owned Token) Void) {
+  f(Token(label: "fresh", console: console.retain()))
+}
+class Counter {
+  value: Int
+}
+func reader(t: Token) {}
+func readMoved(t: owned Token, f: fn(Token) Void) { f(move t) }
+func setCount(x: editable Counter) { x.value = 9 }
+func edit[A](a: editable A, f: fn(editable A) Void) {
+  f(editable a)
+}
+func main(out: Console) {
+  let console = Shared.create(move out)
+  {
+    let t = Token(label: "moved", console: console.retain())
+    let kept = apply(move t, fn(x: owned Token) => move x)
+    console.print("kept ${kept.label}")
+  }
+  fresh(console, fn(t: owned Token) Void {})
+  console.print("after fresh")
+  let f: fn(owned Token) Void = fn(t: owned Token) Void {}
+  f(Token(label: "named", console: console.retain()))
+  console.print("after named")
+  readMoved(Token(label: "read", console: console.retain()), reader)
+  console.print("after read")
+  let mut n = Counter(value: 1)
+  edit(editable n, setCount)
+  console.print("${n.value}")
+}

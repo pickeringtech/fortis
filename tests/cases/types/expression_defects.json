@@ -1,0 +1,6 @@
+[
+  {"name": "lr63_condition_parentheses", "input": {"op": "narrow", "source": "(x < 3)", "env": {"x": ["ref", "Int", 0, 9]}}, "expect": [[0, 2], [3, 9]]},
+  {"name": "lr63_if", "input": {"op": "infer", "source": "if x < 4 { give x } else { give 4 }", "env": {"x": ["ref", "Int", 0, 9]}}, "expect": ["ref", "Int", 0, 4]},
+  {"name": "lr63_match", "input": {"op": "infer", "source": "match x { 0..3 => x\n_ => 4 }", "env": {"x": ["ref", "Int", 0, 9]}}, "expect": ["ref", "Int", 0, 4]},
+  {"name": "lr63_range_exclusive", "input": {"op": "infer", "source": "match x { 0..<4 => x\n_ => 4 }", "env": {"x": ["ref", "Int", 0, 9]}}, "expect": ["ref", "Int", 0, 4]}
+]

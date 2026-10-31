@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+import fortis.text
+func main() { let f = text.graphemes
+  let n = f(42) }

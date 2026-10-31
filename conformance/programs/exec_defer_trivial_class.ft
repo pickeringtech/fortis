@@ -6,8 +6,9 @@
 // the local after the return, in a hole or bare, still sees it: alone, inside a tuple and inside an enum payload.
 // The interpreter's value-level test of 6.11 had no case for a trivial class, so it marked the local moved and
 // stopped with a dynamic failure where both checkers accept the program and the VM and native code run it. The
-// same output and trace on every backend. A record holding one runs on the interpreter and the VM as well, but
-// native code does not build a record returned past a deferred block that reads it (a known limitation).
+// same output and trace on every backend. A record holding one runs on the interpreter and the VM as well, and
+// a record whose fields are all trivial is trivial itself and runs everywhere (D-415;
+// exec_record_returned_past_defer.ft).
 import fortis.host { Console }
 
 trivial class Point {

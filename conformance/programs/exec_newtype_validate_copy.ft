@@ -1,0 +1,30 @@
+// execute: 1|2|inside|drop|after
+// execute-trace: loans-end|drop Token
+// requires: runtime
+// covers: LANG-06-14, LANG-07-07
+// D-518: a retired read validator copies a Copyable representation and transfers an explicitly moved one.
+import fortis.host { Console }
+class Raw {
+  n: Int
+}
+type Wrapped = Raw
+class Token {
+  console: Shared[Console]
+  cleanup(editable self) { self.console.print("drop") }
+}
+type OwnedToken = Token
+try func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut raw = Raw(n: 1)
+  let wrapped = Wrapped.validate(raw) or fail
+  raw.n = 2
+  let old = move wrapped as Raw
+  console.print(old.n as String)
+  console.print(raw.n as String)
+  {
+    let token = Token(console: console.retain())
+    let kept = OwnedToken.validate(move token) or fail
+    console.print("inside")
+  }
+  console.print("after")
+}

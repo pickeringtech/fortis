@@ -1,0 +1,5 @@
+// reject: E-TYP-182
+// covers: LANG-06-15
+enum Size derive convert from String { Small
+  try convert from StringView(text) { return Size.Small }
+}

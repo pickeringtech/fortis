@@ -1,0 +1,20 @@
+// reject: E-OWN-001
+// covers: LANG-07-01
+// A conversion that transfers an owned representation cannot create a second owner from a read loan.
+type Label = String
+func bad() {
+  let raw: String = "hello"
+  let label = raw as Label // reject: E-OWN-001
+  discard label
+}
+func unwrap() {
+  let label = "hello" as Label
+  let raw = label as String // reject: E-OWN-001
+  discard raw
+}
+
+func borrow(raw: String) String from raw => alias raw
+func temporaryLoan(raw: String) {
+  let invalid = borrow(alias raw) as Label // reject: E-OWN-001
+  discard invalid
+}

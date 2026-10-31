@@ -1,0 +1,7 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+// D-707: writable members cannot change their types.
+interface I {}
+class C implements I {}
+func poke(s: editable { item: dynamic I }) {}
+func f(s: editable { item: C }) { poke(editable s) }

@@ -1,0 +1,4 @@
+// reject: E-TYP-180
+// covers: LANG-06-14
+enum Size derive convert from String { Small }
+func bad(size: Size) { discard size as String }

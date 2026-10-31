@@ -1,0 +1,35 @@
+// execute: 7/7/7/7/7/7/7|8/8/8
+// requires: runtime
+// covers: LANG-06-15
+// X-555: written target arguments select the exact source, including instantiated fields.
+import fortis.host { Console }
+class Source[U] { value: U }
+class Old[T] derive From[Source[Int]] { value: Int }
+class Modern[T] derive convert from Source[Int] { value: Int }
+class Explicit[T] implements From[Source[Int]] {
+  value: Int
+  export pure func from(source: Source[Int]) Explicit[T] {
+    return Explicit[T](value: source.value)
+  }
+}
+class Constant[T] implements From[T] {
+  value: Int
+  export pure func from(source: T) Constant[T] { return Constant[T](value: 8) }
+}
+class Phantom[U] { tag: Int }
+class Exact[T] derive convert from Phantom[T] { tag: Int }
+func main(console: Console) {
+  let source = Source[Int](value: 7)
+  let a = Old[String].from(source)
+  let b: Modern[String] = source.to()
+  let c = source as Modern[Int]
+  let d = Explicit[Int].from(source)
+  let e = source as Explicit[String]
+  let f: Explicit[Int] = source.to()
+  let g = source as Old[Int]
+  console.print("${a.value}/${b.value}/${c.value}/${d.value}/${e.value}/${f.value}/${g.value}")
+  let n = 7 as Constant[Int]
+  let m: Constant[String] = ("ignored" as String).to()
+  let exact = Phantom[Int](tag: 8) as Exact[Int]
+  console.print("${n.value}/${m.value}/${exact.tag}")
+}

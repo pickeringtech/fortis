@@ -15,7 +15,7 @@ try func half(n: Int) Int {
 }
 try func main(console: Console) {
   let out = alias console
-  let data = String.from("ab").toBytes()
+  let data = ("ab" as String).toBytes()
   out.print("${Int.saturatingSub(data.byteCount(), 4)}")
   out.print("${data.get(5) ?? 0}")
   out.print("${(data.get(99) ?? 1)}")

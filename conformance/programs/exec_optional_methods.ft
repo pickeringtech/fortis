@@ -1,0 +1,48 @@
+// execute: tea|none|tea|none|tea|none|tea|none|argument|tea!|none|tea|none|tea|none|tea|tea|none
+// requires: runtime
+// covers: LANG-06-08, LANG-07-06
+import fortis.host { Console }
+mixin Labelled {
+  requires func title(self) String
+  export func label(self) String => self.title()
+}
+interface Named {
+  func title(self) String
+}
+class Drink implements Named with Labelled {
+  export text: String
+  export func title(self) String => "${self.text}"
+  export func maybe(self) String? => "${self.text}"
+  export func suffix(self, text: StringView) String => "${self.text}${text}"
+  export func child(self) (alias Drink from self)? => alias self
+  export func textView(self) StringView from self => alias self.text
+}
+class Shelf { export drink: Drink? }
+func argument(console: Console) String { console.print("argument")
+  return "!" }
+func fromInterface(value: dynamic Named?) String => value?.title() ?? "none"
+func main(console: Console) {
+  let drinks = List.of(Drink(text: "tea"))
+  let none: List[Drink] = List.default()
+  console.print(drinks.first()?.label() ?? "none")
+  console.print(none.first()?.label() ?? "none")
+  console.print(drinks.first()?.child()?.title() ?? "none")
+  console.print(none.first()?.child()?.title() ?? "none")
+  console.print(drinks.first()?.maybe() ?? "none")
+  console.print(none.first()?.maybe() ?? "none")
+  let shelf: Shelf? = Shelf(drink: Drink(text: "tea"))
+  let empty: Shelf? = null
+  console.print(shelf?.drink?.title() ?? "none")
+  console.print(empty?.drink?.title() ?? "none")
+  console.print(drinks.first()?.suffix(argument(console)) ?? "none")
+  console.print(none.first()?.suffix(argument(console)) ?? "none")
+  console.print(drinks.first()?.textView() ?? "none")
+  console.print(none.first()?.textView() ?? "none")
+  console.print(shelf?.drink?.textView() ?? "none")
+  console.print(empty?.drink?.textView() ?? "none")
+  console.print(drinks.first().map(fn(d) => d.label()) ?? "none")
+  let drink: dynamic Named = Drink(text: "tea")
+  let named: dynamic Named? = move drink
+  console.print(fromInterface(named))
+  console.print(fromInterface(null))
+}

@@ -1,0 +1,15 @@
+// reject: E-OBL-001
+// covers: LANG-10-02
+// D-597: abrupt exits must check linear locals in every block they leave.
+func breaking() { loop { let item = Outcome.success(1)
+  break } }
+func continuing() { for n in 0..<2 { let item = Outcome.success(n)
+  continue } }
+func giving(b: Bool) Int {
+  return if b { let item = Outcome.success(1)
+    give 1 } else { give 0 }
+}
+recovers func recovering(r: owned Outcome[Int]) Int {
+  return r catch why { let item = Outcome.success(1)
+    recover 0 }
+}

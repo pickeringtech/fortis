@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+type Bag = List[Int]
+func main() { let b = Bag(List.of(1))
+  let f = alias b.count }

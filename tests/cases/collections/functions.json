@@ -1,0 +1,4155 @@
+[
+  {
+    "name": "lr6_7_list_empty_map",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "map",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_filter",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "filter",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_fold",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "fold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 0,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_each",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "each",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_trymap",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "tryMap",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_tryfold",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 0,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_tryeach",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "tryEach",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_take_neg1",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "take",
+      "args": [
+        -1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_take_0",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "take",
+      "args": [
+        0
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_take_2",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "take",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_take_9",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "take",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_skip_neg1",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "skip",
+      "args": [
+        -1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_skip_0",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "skip",
+      "args": [
+        0
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_skip_2",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "skip",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_skip_9",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "skip",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_enumerate",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "enumerate",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_chunked",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "chunked",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_reversed",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "reversed",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_map",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "map",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [
+        6
+      ],
+      "visited": [
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_filter",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "filter",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": [
+        3
+      ],
+      "visited": [
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_fold",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "fold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 3,
+      "visited": [
+        [
+          0,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_each",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "each",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_trymap",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "tryMap",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [
+        6
+      ],
+      "visited": [
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_tryfold",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 3,
+      "visited": [
+        [
+          0,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_tryeach",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "tryEach",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_take_neg1",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "take",
+      "args": [
+        -1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_take_0",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "take",
+      "args": [
+        0
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_take_2",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "take",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        3
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_take_9",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "take",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        3
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_skip_neg1",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "skip",
+      "args": [
+        -1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        3
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_skip_0",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "skip",
+      "args": [
+        0
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        3
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_skip_2",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "skip",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_skip_9",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "skip",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_enumerate",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "enumerate",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        [
+          0,
+          3
+        ]
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_chunked",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "chunked",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        [
+          3
+        ]
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_reversed",
+    "input": {
+      "type": "List",
+      "items": [
+        3
+      ],
+      "method": "reversed",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        3
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_map",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "map",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [
+        6,
+        2,
+        6,
+        4
+      ],
+      "visited": [
+        [
+          3
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_filter",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "filter",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": [
+        3,
+        1,
+        3
+      ],
+      "visited": [
+        [
+          3
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_fold",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "fold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 9,
+      "visited": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          7,
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_each",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "each",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          3
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_trymap",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "tryMap",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [
+        6,
+        2,
+        6,
+        4
+      ],
+      "visited": [
+        [
+          3
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_tryfold",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 9,
+      "visited": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          7,
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_tryeach",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "tryEach",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          3
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_take_neg1",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "take",
+      "args": [
+        -1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_take_0",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "take",
+      "args": [
+        0
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_take_2",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "take",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        3,
+        1
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_take_9",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "take",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_skip_neg1",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "skip",
+      "args": [
+        -1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_skip_0",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "skip",
+      "args": [
+        0
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_skip_2",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "skip",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        3,
+        2
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_skip_9",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "skip",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_enumerate",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "enumerate",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_chunked",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "chunked",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        [
+          3,
+          1
+        ],
+        [
+          3,
+          2
+        ]
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_duplicates_reversed",
+    "input": {
+      "type": "List",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "reversed",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_map",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "map",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_filter",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "filter",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_fold",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "fold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 0,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_each",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "each",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_trymap",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "tryMap",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_tryfold",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 0,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_tryeach",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "tryEach",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_map",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3
+      ],
+      "method": "map",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [
+        6
+      ],
+      "visited": [
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_filter",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3
+      ],
+      "method": "filter",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": [
+        3
+      ],
+      "visited": [
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_fold",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3
+      ],
+      "method": "fold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 3,
+      "visited": [
+        [
+          0,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_each",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3
+      ],
+      "method": "each",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_trymap",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3
+      ],
+      "method": "tryMap",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [
+        6
+      ],
+      "visited": [
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_tryfold",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3
+      ],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 3,
+      "visited": [
+        [
+          0,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_tryeach",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3
+      ],
+      "method": "tryEach",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_duplicates_map",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "map",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [
+        6,
+        2,
+        6,
+        4
+      ],
+      "visited": [
+        [
+          3
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_duplicates_filter",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "filter",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": [
+        3,
+        1,
+        3
+      ],
+      "visited": [
+        [
+          3
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_duplicates_fold",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "fold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 9,
+      "visited": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          7,
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_duplicates_each",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "each",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          3
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_duplicates_trymap",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "tryMap",
+      "args": [],
+      "callback": "double"
+    },
+    "expect": {
+      "value": [
+        6,
+        2,
+        6,
+        4
+      ],
+      "visited": [
+        [
+          3
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_duplicates_tryfold",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 9,
+      "visited": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          7,
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_duplicates_tryeach",
+    "input": {
+      "type": "Deque",
+      "items": [
+        3,
+        1,
+        3,
+        2
+      ],
+      "method": "tryEach",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          3
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_trymap_failure_0",
+    "input": {
+      "type": "List",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryMap",
+      "args": [],
+      "callback": "fail_0"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 4
+        }
+      },
+      "visited": [
+        [
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_trymap_failure_1",
+    "input": {
+      "type": "List",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryMap",
+      "args": [],
+      "callback": "fail_1"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 5
+        }
+      },
+      "visited": [
+        [
+          4
+        ],
+        [
+          5
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_trymap_failure_2",
+    "input": {
+      "type": "List",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryMap",
+      "args": [],
+      "callback": "fail_2"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 6
+        }
+      },
+      "visited": [
+        [
+          4
+        ],
+        [
+          5
+        ],
+        [
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_tryeach_failure_0",
+    "input": {
+      "type": "List",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryEach",
+      "args": [],
+      "callback": "fail_0"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 4
+        }
+      },
+      "visited": [
+        [
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_tryeach_failure_1",
+    "input": {
+      "type": "List",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryEach",
+      "args": [],
+      "callback": "fail_1"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 5
+        }
+      },
+      "visited": [
+        [
+          4
+        ],
+        [
+          5
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_tryeach_failure_2",
+    "input": {
+      "type": "List",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryEach",
+      "args": [],
+      "callback": "fail_2"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 6
+        }
+      },
+      "visited": [
+        [
+          4
+        ],
+        [
+          5
+        ],
+        [
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_tryfold_failure_0",
+    "input": {
+      "type": "List",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "fail_0"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 4
+        }
+      },
+      "visited": [
+        [
+          0,
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_tryfold_failure_1",
+    "input": {
+      "type": "List",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "fail_1"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 5
+        }
+      },
+      "visited": [
+        [
+          0,
+          4
+        ],
+        [
+          4,
+          5
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_tryfold_failure_2",
+    "input": {
+      "type": "List",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "fail_2"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 6
+        }
+      },
+      "visited": [
+        [
+          0,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          9,
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_trymap_failure_0",
+    "input": {
+      "type": "Deque",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryMap",
+      "args": [],
+      "callback": "fail_0"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 4
+        }
+      },
+      "visited": [
+        [
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_trymap_failure_1",
+    "input": {
+      "type": "Deque",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryMap",
+      "args": [],
+      "callback": "fail_1"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 5
+        }
+      },
+      "visited": [
+        [
+          4
+        ],
+        [
+          5
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_trymap_failure_2",
+    "input": {
+      "type": "Deque",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryMap",
+      "args": [],
+      "callback": "fail_2"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 6
+        }
+      },
+      "visited": [
+        [
+          4
+        ],
+        [
+          5
+        ],
+        [
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_tryeach_failure_0",
+    "input": {
+      "type": "Deque",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryEach",
+      "args": [],
+      "callback": "fail_0"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 4
+        }
+      },
+      "visited": [
+        [
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_tryeach_failure_1",
+    "input": {
+      "type": "Deque",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryEach",
+      "args": [],
+      "callback": "fail_1"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 5
+        }
+      },
+      "visited": [
+        [
+          4
+        ],
+        [
+          5
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_tryeach_failure_2",
+    "input": {
+      "type": "Deque",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryEach",
+      "args": [],
+      "callback": "fail_2"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 6
+        }
+      },
+      "visited": [
+        [
+          4
+        ],
+        [
+          5
+        ],
+        [
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_tryfold_failure_0",
+    "input": {
+      "type": "Deque",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "fail_0"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 4
+        }
+      },
+      "visited": [
+        [
+          0,
+          4
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_tryfold_failure_1",
+    "input": {
+      "type": "Deque",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "fail_1"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 5
+        }
+      },
+      "visited": [
+        [
+          0,
+          4
+        ],
+        [
+          4,
+          5
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_tryfold_failure_2",
+    "input": {
+      "type": "Deque",
+      "items": [
+        4,
+        5,
+        6
+      ],
+      "method": "tryFold",
+      "args": [
+        0
+      ],
+      "callback": "fail_2"
+    },
+    "expect": {
+      "value": {
+        "code": "unit.stop",
+        "payload": {
+          "item": 6
+        }
+      },
+      "visited": [
+        [
+          0,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          9,
+          6
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_count",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "count",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 0,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_tolist",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "toList",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_contains_1",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "contains",
+      "args": [
+        1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_contains_9",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "contains",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_count",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3
+      ],
+      "method": "count",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 1,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_tolist",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3
+      ],
+      "method": "toList",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        3
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_contains_1",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3
+      ],
+      "method": "contains",
+      "args": [
+        1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_contains_9",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3
+      ],
+      "method": "contains",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_unsorted_count",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3,
+        1,
+        2
+      ],
+      "method": "count",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 3,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_unsorted_tolist",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3,
+        1,
+        2
+      ],
+      "method": "toList",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        1,
+        2,
+        3
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_unsorted_contains_1",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3,
+        1,
+        2
+      ],
+      "method": "contains",
+      "args": [
+        1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": true,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_unsorted_contains_9",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3,
+        1,
+        2
+      ],
+      "method": "contains",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_duplicates_count",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3,
+        1,
+        3,
+        2,
+        1
+      ],
+      "method": "count",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 3,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_duplicates_tolist",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3,
+        1,
+        3,
+        2,
+        1
+      ],
+      "method": "toList",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        1,
+        2,
+        3
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_duplicates_contains_1",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3,
+        1,
+        3,
+        2,
+        1
+      ],
+      "method": "contains",
+      "args": [
+        1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": true,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_duplicates_contains_9",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        3,
+        1,
+        3,
+        2,
+        1
+      ],
+      "method": "contains",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_any",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "any",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_all",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "all",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": true,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_find",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "find",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_contains3",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "contains",
+      "args": [
+        3
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_contains9",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "contains",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_indexwhere",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "indexWhere",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_any",
+    "input": {
+      "type": "List",
+      "items": [
+        2
+      ],
+      "method": "any",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_all",
+    "input": {
+      "type": "List",
+      "items": [
+        2
+      ],
+      "method": "all",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_find",
+    "input": {
+      "type": "List",
+      "items": [
+        2
+      ],
+      "method": "find",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_one_contains3",
+    "input": {
+      "type": "List",
+      "items": [
+        2
+      ],
+      "method": "contains",
+      "args": [
+        3
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_contains9",
+    "input": {
+      "type": "List",
+      "items": [
+        2
+      ],
+      "method": "contains",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_indexwhere",
+    "input": {
+      "type": "List",
+      "items": [
+        2
+      ],
+      "method": "indexWhere",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_mixed_any",
+    "input": {
+      "type": "List",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "any",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": true,
+      "visited": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_mixed_all",
+    "input": {
+      "type": "List",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "all",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_mixed_find",
+    "input": {
+      "type": "List",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "find",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": 3,
+      "visited": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_mixed_contains3",
+    "input": {
+      "type": "List",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "contains",
+      "args": [
+        3
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": true,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_mixed_contains9",
+    "input": {
+      "type": "List",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "contains",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_mixed_indexwhere",
+    "input": {
+      "type": "List",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "indexWhere",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": 1,
+      "visited": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_any",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "any",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_all",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "all",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": true,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_find",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "find",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_contains3",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "contains",
+      "args": [
+        3
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_contains9",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "contains",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_indexwhere",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "indexWhere",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_peekfront",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "peekFront",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_peekback",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "peekBack",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_popfront",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "popFront",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_empty_popback",
+    "input": {
+      "type": "Deque",
+      "items": [],
+      "method": "popBack",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_any",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2
+      ],
+      "method": "any",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_all",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2
+      ],
+      "method": "all",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_find",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2
+      ],
+      "method": "find",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_contains3",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2
+      ],
+      "method": "contains",
+      "args": [
+        3
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_contains9",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2
+      ],
+      "method": "contains",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_indexwhere",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2
+      ],
+      "method": "indexWhere",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_peekfront",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2
+      ],
+      "method": "peekFront",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 2,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_peekback",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2
+      ],
+      "method": "peekBack",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 2,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_popfront",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2
+      ],
+      "method": "popFront",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 2,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_one_popback",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2
+      ],
+      "method": "popBack",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 2,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_mixed_any",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "any",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": true,
+      "visited": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_mixed_all",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "all",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_mixed_find",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "find",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": 3,
+      "visited": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_mixed_contains3",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "contains",
+      "args": [
+        3
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": true,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_mixed_contains9",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "contains",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_mixed_indexwhere",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "indexWhere",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": 1,
+      "visited": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_deque_mixed_peekfront",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "peekFront",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 2,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_mixed_peekback",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "peekBack",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 3,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_mixed_popfront",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "popFront",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 2,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_deque_mixed_popback",
+    "input": {
+      "type": "Deque",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "popBack",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 3,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_any",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "any",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_all",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "all",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": true,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_find",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "find",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_first",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "first",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_last",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "last",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_isempty",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "isEmpty",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": true,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_each",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "each",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_empty_fold",
+    "input": {
+      "type": "SortedSet",
+      "items": [],
+      "method": "fold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 0,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_any",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2
+      ],
+      "method": "any",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_all",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2
+      ],
+      "method": "all",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_find",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2
+      ],
+      "method": "find",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_first",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2
+      ],
+      "method": "first",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 2,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_last",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2
+      ],
+      "method": "last",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 2,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_isempty",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2
+      ],
+      "method": "isEmpty",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_each",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2
+      ],
+      "method": "each",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_one_fold",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2
+      ],
+      "method": "fold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 2,
+      "visited": [
+        [
+          0,
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_mixed_any",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "any",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": true,
+      "visited": [
+        [
+          1
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_mixed_all",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "all",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": false,
+      "visited": [
+        [
+          1
+        ],
+        [
+          2
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_mixed_find",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "find",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": 1,
+      "visited": [
+        [
+          1
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_mixed_first",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "first",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 1,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_mixed_last",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "last",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": 3,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_mixed_isempty",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "isEmpty",
+      "args": [],
+      "callback": null
+    },
+    "expect": {
+      "value": false,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_mixed_each",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "each",
+      "args": [],
+      "callback": "visit"
+    },
+    "expect": {
+      "value": null,
+      "visited": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_sortedset_mixed_fold",
+    "input": {
+      "type": "SortedSet",
+      "items": [
+        2,
+        3,
+        1,
+        3
+      ],
+      "method": "fold",
+      "args": [
+        0
+      ],
+      "callback": "sum"
+    },
+    "expect": {
+      "value": 6,
+      "visited": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          3,
+          3
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_chunks_1",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "chunked",
+      "args": [
+        1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_chunks_2",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "chunked",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_chunks_9",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "chunked",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_empty_countwhere",
+    "input": {
+      "type": "List",
+      "items": [],
+      "method": "countWhere",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": 0,
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_chunks_1",
+    "input": {
+      "type": "List",
+      "items": [
+        1
+      ],
+      "method": "chunked",
+      "args": [
+        1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        [
+          1
+        ]
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_chunks_2",
+    "input": {
+      "type": "List",
+      "items": [
+        1
+      ],
+      "method": "chunked",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        [
+          1
+        ]
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_chunks_9",
+    "input": {
+      "type": "List",
+      "items": [
+        1
+      ],
+      "method": "chunked",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        [
+          1
+        ]
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_one_countwhere",
+    "input": {
+      "type": "List",
+      "items": [
+        1
+      ],
+      "method": "countWhere",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": 1,
+      "visited": [
+        [
+          1
+        ]
+      ]
+    }
+  },
+  {
+    "name": "lr6_7_list_many_chunks_1",
+    "input": {
+      "type": "List",
+      "items": [
+        1,
+        2,
+        1,
+        3
+      ],
+      "method": "chunked",
+      "args": [
+        1
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ]
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_many_chunks_2",
+    "input": {
+      "type": "List",
+      "items": [
+        1,
+        2,
+        1,
+        3
+      ],
+      "method": "chunked",
+      "args": [
+        2
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ]
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_many_chunks_9",
+    "input": {
+      "type": "List",
+      "items": [
+        1,
+        2,
+        1,
+        3
+      ],
+      "method": "chunked",
+      "args": [
+        9
+      ],
+      "callback": null
+    },
+    "expect": {
+      "value": [
+        [
+          1,
+          2,
+          1,
+          3
+        ]
+      ],
+      "visited": []
+    }
+  },
+  {
+    "name": "lr6_7_list_many_countwhere",
+    "input": {
+      "type": "List",
+      "items": [
+        1,
+        2,
+        1,
+        3
+      ],
+      "method": "countWhere",
+      "args": [],
+      "callback": "odd"
+    },
+    "expect": {
+      "value": 3,
+      "visited": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          1
+        ],
+        [
+          3
+        ]
+      ]
+    }
+  }
+]

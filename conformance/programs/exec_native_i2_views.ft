@@ -1,0 +1,47 @@
+// execute: [tea]|[fallback]|[tea]|[ tea]|[tea ]|[ea]|[tea]|[tea]|tea|fresh|[fresh]|[stored]|[ea]|[projected]
+// requires: runtime
+// covers: LANG-07-06, LANG-07-07, LANG-06-06
+// D-573: views of selected text preserve the source loan and full-statement temporaries.
+import fortis.host { Console }
+
+class Row {
+  text: String
+}
+export error Missing {
+  code: "demo.missing"
+}
+try func first(xs: List[String]) alias String from xs {
+  return xs.get(0) ?? fail Missing()
+}
+recovers func main(console: Console) {
+  let fields = " tea , other".split(",")
+  let empty: List[String] = List.default()
+  let name = (fields.get(0) ?? "").trim()
+  console.print("[${name}]")
+  let fallback = (empty.get(0) ?? " fallback ").trim()
+  console.print("[${fallback}]")
+  let recovered = (first(alias fields) or recover "").trim()
+  console.print("[${recovered}]")
+  let end = (fields.get(0) ?? "").trimEnd()
+  console.print("[${end}]")
+  let start = (fields.get(0) ?? "").trimStart()
+  console.print("[${start}]")
+  let sliced = (fields.get(0) ?? "").trim().slice(1, 3) or recover ""
+  console.print("[${sliced}]")
+  let chained = (fields.get(0) ?? "").trimStart().trimEnd()
+  console.print("[${chained}]")
+  console.print("[${(fields.get(0) ?? "").trim()}]")
+  console.print((first(alias fields) or recover " fallback ").trim())
+  console.print((first(alias empty) or recover (" fresh " as String)).trim())
+  console.print("[${(empty.get(0) ?? (" fresh " as String)).trim()}]")
+  let stored = " stored " as String
+  let borrowed = (empty.get(0) ?? alias stored).trim()
+  console.print("[${borrowed}]")
+  // D-580: an optional view may be local, but may not be a stored element.
+  let maybe: StringView? = " tea "
+  let slice = (maybe ?? "").slice(2, 4) or recover ""
+  console.print("[${slice}]")
+  let rows = List.of(Row(text: " projected "))
+  let projected = (rows.get(0)?.text ?? "").trim()
+  console.print("[${projected}]")
+}

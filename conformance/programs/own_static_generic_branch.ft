@@ -1,0 +1,8 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-584: an unfixed generic context cannot hide a non-static branch.
+pure func literal() StringView from static => "static"
+pure func escape(flag: Bool, text: StringView) List[alias StringView from static] {
+  let xs = List.of(if flag { give literal() } else { give text })
+  return xs
+}

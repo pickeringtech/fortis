@@ -234,10 +234,12 @@ jobs:
 
   # At a release's tag in the maintainers' repository, once everything above passed: publish.yml pushes the public
   # tree, checked on its own, to pickeringtech/fortis as one commit with the same tag. A release candidate is never
-  # published.
+  # published. The condition names full's result rather than relying on the implicit success(), which considers every
+  # job a job needs, directly or through others: the end-to-end placeholder is skipped, and that skipped publish and
+  # github-release at v0.0.2 (D-416). full itself fails unless every job it names passed.
   publish:
     needs: [full]
-    if: github.repository == 'pickeringtech/fortis-internal' && github.ref_type == 'tag' && !contains(github.ref_name, '-')
+    if: ${{ !cancelled() && needs.full.result == 'success' && github.repository == 'pickeringtech/fortis-internal' && github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
     uses: ./.github/workflows/publish.yml
     with:
       tag: ${{ github.ref_name }}
@@ -248,7 +250,7 @@ jobs:
   # release notes from the tree.
   github-release:
     needs: [full]
-    if: github.repository == 'pickeringtech/fortis' && github.ref_type == 'tag' && !contains(github.ref_name, '-')
+    if: ${{ !cancelled() && needs.full.result == 'success' && github.repository == 'pickeringtech/fortis' && github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -279,4 +281,7 @@ jobs:
               return f"{m.group(1)}(https://github.com/{repo}/blob/{tag}/{full}" + (f"#{frag})" if frag else ")")
           print(re.sub(r"(\[[^\]]*\])\(([^)\s]+)\)", absolute, open(notes).read()), end="")
           PY
-          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "Fortis $TAG" --notes-file "$RUNNER_TEMP/notes.md"
+          # The release's title is its theme (releases.md, "Each release is a theme"): the notes' first heading,
+          # "# Fortis vX.Y.Z: Theme"; a notes file without that heading falls back to "Fortis vX.Y.Z"
+          TITLE=$(python3 -I -c 'import sys; h = open(sys.argv[1]).readline().strip(); print(h[2:] if h.startswith("# Fortis ") and ": " in h else "Fortis " + sys.argv[2])' "docs/releases/$TAG.md" "$TAG")
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md"

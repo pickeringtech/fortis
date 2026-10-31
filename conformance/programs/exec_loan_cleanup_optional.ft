@@ -47,7 +47,7 @@ func picked(console: Shared[Console], xs: List[Token]) {
 func main(out: Console) {
   let console = Shared.create(move out)
   let mut toks: List[Token] = List.default()
-  toks.push(Token(label: String.from("item"), console: console.retain()))
+  toks.push(Token(label: "item" as String, console: console.retain()))
   narrowed(console, toks)
   picked(console, toks)
   console.print("end")

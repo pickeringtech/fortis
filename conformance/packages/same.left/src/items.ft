@@ -14,5 +14,5 @@ export try func find(label: StringView) Item {
   if label == "" {
     fail Missing()
   }
-  return Item(label: String.from(label))
+  return Item(label: label as String)
 }

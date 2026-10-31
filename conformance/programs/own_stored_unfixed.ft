@@ -1,0 +1,7 @@
+// reject: E-TYP-160
+// covers: LANG-06-11, LANG-07-06
+// D-580: later pushes do not fix the element type of an empty unannotated list.
+func use(v: StringView) {
+  let mut parts = List.default()
+  parts.push(v)
+}

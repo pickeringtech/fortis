@@ -1,0 +1,5 @@
+// accept
+// covers: LANG-04-01
+// D-51.5: no warning for this unused import.
+import fortis.host { Console }
+func main() {}

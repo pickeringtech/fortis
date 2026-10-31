@@ -1,0 +1,346 @@
+[
+  {
+    "name": "d505_total_0",
+    "input": "type Percent = Int<0..100>\ntry func f() Percent => Percent.validate(0) or fail\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\ntry func f() Percent => 0 as Percent\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_total_0_grouped",
+    "input": "type Percent = Int<0..100>\ntry func f() Percent => (Percent.validate(0)) or fail\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\ntry func f() Percent => 0 as Percent\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_total_1",
+    "input": "type Percent = Int<0..100>\ntry func f() Percent => Percent.validate(1) or fail\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\ntry func f() Percent => 1 as Percent\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_total_1_grouped",
+    "input": "type Percent = Int<0..100>\ntry func f() Percent => (Percent.validate(1)) or fail\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\ntry func f() Percent => 1 as Percent\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_total_75",
+    "input": "type Percent = Int<0..100>\ntry func f() Percent => Percent.validate(75) or fail\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\ntry func f() Percent => 75 as Percent\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_total_75_grouped",
+    "input": "type Percent = Int<0..100>\ntry func f() Percent => (Percent.validate(75)) or fail\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\ntry func f() Percent => 75 as Percent\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_total_100",
+    "input": "type Percent = Int<0..100>\ntry func f() Percent => Percent.validate(100) or fail\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\ntry func f() Percent => 100 as Percent\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_total_100_grouped",
+    "input": "type Percent = Int<0..100>\ntry func f() Percent => (Percent.validate(100)) or fail\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\ntry func f() Percent => 100 as Percent\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_unknown_parameter",
+    "input": "type Percent = Int<0..100>\ntry func f(raw: Int) Percent => Percent.validate(raw) or fail\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\ntry func f(raw: Int) Percent => raw as Percent or fail\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_proved_parameter",
+    "input": "type Percent = Int<0..100>\ntry func f(raw: Int<0..100>) Percent => Percent.validate(raw) or fail\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\ntry func f(raw: Int<0..100>) Percent => raw as Percent\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_catch_1",
+    "input": "type Percent = Int<0..100>\nrecovers func f() Percent => Percent.validate(1) catch e { report e\n  recover Percent(0) }\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\nrecovers func f() Percent => 1 as Percent\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_catch_9",
+    "input": "type Percent = Int<0..100>\nrecovers func f() Percent => Percent.validate(9) catch e { report e\n  recover Percent(0) }\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\nrecovers func f() Percent => 9 as Percent\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_structural_1",
+    "input": "try func f() Int<0..100> => Int<0..100>.validate(1) or fail\n",
+    "expect": {
+      "text": "try func f() Int<0..100> => 1\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_structural_99",
+    "input": "try func f() Int<0..100> => Int<0..100>.validate(99) or fail\n",
+    "expect": {
+      "text": "try func f() Int<0..100> => 99\n",
+      "note": false
+    }
+  },
+  {
+    "name": "d505_unknown_table_field",
+    "input": "type Percent = Int<0..100>\ntest \"unknown\" cases { \"one\": { raw: 1 } } as row {\n  let n = Percent.validate(row.raw) or fail\n  expect n == Percent(row.raw)\n}\n",
+    "expect": {
+      "text": "type Percent = Int<0..100>\ntest \"unknown\" cases { \"one\": { raw: 1 } } as row {\n  let n = Percent.validate(row.raw)\n  expect n == Percent(row.raw)\n}\n",
+      "note": true
+    }
+  },
+  {
+    "name": "lr6_13_string_text",
+    "input": "func f(s: StringView) String => String.from(s)\n",
+    "expect": {
+      "text": "func f(s: StringView) String => s as String\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr6_13_string_nested",
+    "input": "func f(s: StringView) String => String.from(String.from(s))\n",
+    "expect": {
+      "text": "func f(s: StringView) String => (s as String)\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr6_13_string_literal",
+    "input": "func f(s: StringView) String => String.from(\"hi\")\n",
+    "expect": {
+      "text": "func f(s: StringView) String => \"hi\" as String\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr_migration_void",
+    "input": "func f() Void {}\n",
+    "expect": {
+      "text": "func f() {}\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr_migration_return_move",
+    "input": "func f() String { let x = \"a\" as String\n  return move x }\n",
+    "expect": {
+      "text": "func f() String { let x = \"a\" as String\n  return x }\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr_migration_editable_receiver",
+    "input": "func f() { let mut xs = List.of(1)\n  editable xs.push(2) }\n",
+    "expect": {
+      "text": "func f() { let mut xs = List.of(1)\n  xs.push(2) }\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr_migration_export_main",
+    "input": "export func main() {}\n",
+    "expect": {
+      "text": "func main() {}\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr_migration_unused_args",
+    "input": "func main(args: List[String]) {}\n",
+    "expect": {
+      "text": "func main() {}\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr_migration_map_copy",
+    "input": "func f(m: Map[String, Int], key: String) Int? => m.get(copy key)\n",
+    "expect": {
+      "text": "func f(m: Map[String, Int], key: String) Int? => m.get(key)\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr_migration_test_handler",
+    "input": "test \"checked\" { let n = Int.add(1, 2) or fail\n  expect n == 3 }\n",
+    "expect": {
+      "text": "test \"checked\" { let n = Int.add(1, 2)\n  expect n == 3 }\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr_migration_grouped_handler",
+    "input": "test \"checked\" {\n  let n = (Int.add(1, 2) or fail) * 3\n  expect n == 9\n}\n",
+    "expect": {
+      "text": "test \"checked\" {\n  let n = Int.add(1, 2) * 3\n  expect n == 9\n}\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr_migration_lambda_kept",
+    "input": "func f() fn() Int => fn() => 1\n",
+    "expect": {
+      "text": "func f() fn() Int => fn() => 1\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr_migration_comment",
+    "input": "func f() Void {\n // retain this\n}\n",
+    "expect": {
+      "text": "func f() {\n // retain this\n}\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr6_13_from",
+    "input": "class Source { n: Int }\nclass Target derive From[Source] { n: Int }\nfunc f(s: Source) Target => Target.from(s)\n",
+    "expect": {
+      "text": "class Source { n: Int }\nclass Target derive convert from Source { n: Int }\nfunc f(s: Source) Target => s as Target\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr6_13_to",
+    "input": "class Source { n: Int }\nclass Target derive From[Source] { n: Int }\nfunc f(s: Source) Target => s.to()\n",
+    "expect": {
+      "text": "class Source { n: Int }\nclass Target derive convert from Source { n: Int }\nfunc f(s: Source) Target => s as Target\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr6_13_field",
+    "input": "class Source { n: Int }\nclass Target derive From[Source] { n: Int }\nfunc f(s: Source) Int => Target.from(s).n\n",
+    "expect": {
+      "text": "class Source { n: Int }\nclass Target derive convert from Source { n: Int }\nfunc f(s: Source) Int => (s as Target).n\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr6_4_reading_add",
+    "input": "try func f(a: Int, b: Int) Int => Int.add(a, b) or fail\n",
+    "expect": {
+      "text": "try func f(a: Int, b: Int) Int => a + b or fail\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr6_4_reading_sub",
+    "input": "try func f(a: Int, b: Int) Int => Int.sub(a, b) or fail\n",
+    "expect": {
+      "text": "try func f(a: Int, b: Int) Int => a - b or fail\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr6_4_reading_mul",
+    "input": "try func f(a: Int, b: Int) Int => Int.mul(a, b) or fail\n",
+    "expect": {
+      "text": "try func f(a: Int, b: Int) Int => a * b or fail\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr6_4_reading_div",
+    "input": "try func f(a: Int, b: Int) Int => Int.div(a, b) or fail\n",
+    "expect": {
+      "text": "try func f(a: Int, b: Int) Int => a / b or fail\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr6_4_reading_rem",
+    "input": "try func f(a: Int, b: Int) Int => Int.rem(a, b) or fail\n",
+    "expect": {
+      "text": "try func f(a: Int, b: Int) Int => a % b or fail\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr5_8_constructor_pun",
+    "input": "class Point { x: Int }\nfunc f(x: Int) Point => Point(x: x)\n",
+    "expect": {
+      "text": "class Point { x: Int }\nfunc f(x: Int) Point => Point(x)\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr5_8_function_pun",
+    "input": "func target(x: Int, y: Int) Int => x\nfunc f(x: Int, y: Int) Int => target(x: x, y: y)\n",
+    "expect": {
+      "text": "func target(x: Int, y: Int) Int => x\nfunc f(x: Int, y: Int) Int => target(x, y)\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr5_8_different_name_kept",
+    "input": "class Point { x: Int }\nfunc f(y: Int) Point => Point(x: y)\n",
+    "expect": {
+      "text": "class Point { x: Int }\nfunc f(y: Int) Point => Point(x: y)\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr9_8_adjacent_same",
+    "input": "func f(x: Int) Int => match x {\n  1 => 7\n  2 => 7\n  otherwise => 9\n}\n",
+    "expect": {
+      "text": "func f(x: Int) Int => match x {\n  1 | 2 => 7\n  otherwise => 9\n}\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr9_8_adjacent_different",
+    "input": "func f(x: Int) Int => match x {\n  1 => 7\n  2 => 8\n  otherwise => 9\n}\n",
+    "expect": {
+      "text": "func f(x: Int) Int => match x {\n  1 => 7\n  2 => 8\n  otherwise => 9\n}\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr9_7_bare_result",
+    "input": "enum Shade {\n  Dark\n  Light\n}\nfunc f() Shade => Shade.Dark\n",
+    "expect": {
+      "text": "enum Shade {\n  Dark\n  Light\n}\nfunc f() Shade => Dark\n",
+      "note": false
+    }
+  },
+  {
+    "name": "lr9_7_bare_binding",
+    "input": "enum Shade {\n  Dark\n  Light\n}\nfunc f() Shade {\n  let x: Shade = Shade.Light\n  return x\n}\n",
+    "expect": {
+      "text": "enum Shade {\n  Dark\n  Light\n}\nfunc f() Shade {\n  let x: Shade = Light\n  return x\n}\n",
+      "note": false
+    }
+  }
+]

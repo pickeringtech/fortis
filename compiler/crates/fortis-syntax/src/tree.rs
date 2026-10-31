@@ -12,6 +12,8 @@ pub enum Child {
 
 #[derive(Clone, Debug)]
 pub struct Node {
+    /// Checked lambda head, elaborated before lowering; original tokens remain the source of formatting.
+    pub inferred_head: std::sync::OnceLock<Box<Parsed>>,
     pub rule: u16,
     pub children: Vec<Child>,
 }
@@ -23,6 +25,7 @@ impl Node {
 }
 
 /// A parsed module: the tokens and the tree over them.
+#[derive(Clone, Debug)]
 pub struct Parsed {
     pub toks: Vec<Token>,
     pub root: Node,

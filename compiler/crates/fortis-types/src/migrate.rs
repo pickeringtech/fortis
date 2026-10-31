@@ -17,6 +17,15 @@ use fortis_diag::Record;
 use fortis_syntax::view::N;
 use fortis_syntax::Parsed;
 
+/// A retired conversion identified by the checker, never by the member's spelling.
+#[derive(Clone, Debug)]
+pub struct LegacyConversion {
+    /// The resolved target, absent for a `to()` with no written expected target.
+    pub target: Option<crate::types::Type>,
+    /// `from`, `to`, `validate`, or `string`.
+    pub kind: &'static str,
+}
+
 /// The source from `from` up to (not including) `to`, both (line, column) with columns counting characters as the
 /// lexer's do, replaced by `text`.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]

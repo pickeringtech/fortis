@@ -1,0 +1,30 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-584: static origins are proved at each value transfer, including function conversions.
+class StaticSlot { text: alias StringView from static }
+pure func needsStatic(text: alias StringView from static) Int => 1
+pure func lent(text: StringView) StringView from text => text
+func forged(text: StringView) {
+  let converted: alias StringView from static = "owned" as String // reject: E-OWN-053
+  let optional: (alias StringView from static)? = text // reject: E-OWN-053
+  let pair: (alias StringView from static, Int) = (text, 1) // reject: E-OWN-053
+  let rec: { text: alias StringView from static } = { text: text } // reject: E-OWN-053
+  let slot = StaticSlot(text) // reject: E-OWN-053
+  discard needsStatic(text) // reject: E-OWN-053
+  let f: pure fn(StringView) (alias StringView from static) = move lent // reject: E-OWN-053
+  let g: pure fn(StringView) Int = move needsStatic // reject: E-OWN-053
+}
+
+func edit(slot: editable StaticSlot, text: StringView) {
+  slot.text = text // reject: E-OWN-053
+}
+pure func literal() StringView from static => "static"
+func branches(flag: Bool, text: StringView) {
+  let explicit: alias StringView from static = if flag { give literal() } else { give text } // reject: E-OWN-053
+  let inferred = if flag { give literal() } else { give text } // reject: E-OWN-053
+  let wrapped: (alias StringView from static)? = present(text) // reject: E-OWN-053
+  let maybe: (alias StringView from static)? = literal()
+  let fallback: alias StringView from static = maybe ?? text // reject: E-OWN-053
+}
+
+pure func forgedFunction() pure fn(StringView) (alias StringView from static) => move lent // reject: E-OWN-053

@@ -1,0 +1,28 @@
+// accept
+// Private functions and constants, and this module's imports, belong to the body text.
+import exec.mixin.lexical.arithmetic as arithmetic
+
+const factor = 2
+func helper(n: Int) Int => n
+
+// Same spelling as the applying app.Box, a distinct private lexical type.
+class Box {
+  n: Int
+  pure func value(self) Int => self.n
+}
+
+export mixin Doubled {
+  requires pure func base(self) Int
+  export pure func twice(self) Int => Int.saturatingMul(helper(self.base()), factor)
+  export pure func once(self) Int => Int.saturatingMul(self.base(), 2)
+  export pure func next(self) Int => arithmetic.bump(helper(self.base()))
+  export pure func fresh(self) Int => Box(n: self.base()).value()
+}
+
+export mixin Shown {
+  export pure func show(self) String {
+    let item = alias self.value
+    let render = pure fn[alias item]() String => item.render()
+    return render()
+  }
+}

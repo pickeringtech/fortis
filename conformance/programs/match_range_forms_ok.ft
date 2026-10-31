@@ -1,0 +1,35 @@
+// accept
+// covers: LANG-09-05
+// X-517: the four range pattern forms over a refined integer scrutinee — `a..b`, `a..<b`, and the one-sided
+// `a..` and `..<b` — with bounds that fold as refinement bounds fold (integer literals and `const`), nested in
+// a payload match and joined in alternatives. The arms' intervals cover the scrutinee's range, so the matches
+// are exhaustive without a catch-all (X-518).
+import fortis.host { Console }
+
+const cap: Int = 100
+
+func forms(n: Int<0..cap>, console: Console) {
+  match n {
+    ..<25 => console.print("quarter")
+    25..49 => console.print("half")
+    50..<100 => console.print("high")
+    100..=> console.print("top")
+  }
+}
+
+func ends(n: Int<0..cap>, console: Console) {
+  match n {
+    0..9 | 90..100 => console.print("ends")
+    10..89 => console.print("middle")
+  }
+}
+
+recovers func main(console: Console) {
+  match 7 as Int<0..cap> {
+    success(n) => {
+      forms(n, console)
+      ends(n, console)
+    }
+    failure(f) => { report f }
+  }
+}

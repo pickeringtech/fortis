@@ -1,0 +1,200 @@
+// execute: 1|1|7|4|4|2|3|5|6|6|2|ada|ada|ada|3|7|7|12
+// requires: runtime
+// covers: LANG-06-12
+// More forms of calls through bounds and `dynamic` values, natively too (D-82, D-148): named arguments in any order,
+// a bundle (an interface of requirements only), an impl whose required interface's impl needs a bound, bounds whose
+// names share a prefix, a lambda in a generic body, a method taking a function, a `dynamic` value read as the
+// interface it requires, a generic field read from a loan, a read `String` passed as a `T`, a generic class with a
+// `Shared` field, a type parameter only a bound names, and an interface method with its own bounded type parameter.
+import fortis.host { Console }
+
+export interface Picker {
+  pure func first(self, a: Int, b: Int) Int
+}
+
+export class Pick implements Picker {
+  export z: Int
+  pure func first(self, a: Int, b: Int) Int => a
+}
+
+func pickBound[T](x: T) Int where T implements Picker {
+  return x.first(b: 2, a: 1)
+}
+
+func pickDynamic(x: dynamic Picker) Int => x.first(b: 2, a: 1)
+
+export interface Measure {
+  pure func size(self) Int
+}
+
+export interface Bundle requires Measure {
+}
+
+export class Thing implements Measure, Bundle {
+  export n: Int
+  pure func size(self) Int => self.n
+}
+
+func sizeOfBundle[T](x: T) Int where T implements Bundle {
+  return x.size()
+}
+
+export interface Weighed {
+  pure func weight(self) Int
+}
+
+export class Brick implements Weighed {
+  export w: Int
+  pure func weight(self) Int => self.w
+}
+
+export interface Lower {
+  pure func low(self) Int
+}
+
+export interface Upper requires Lower {
+  pure func up(self) Int
+}
+
+export class Crate[T] implements Lower, Upper {
+  export item: T
+  pure func low(self) Int where T implements Weighed => self.item.weight()
+  pure func up(self) Int => 4
+}
+
+func viaLower[X](x: X) Int where X implements Lower {
+  return x.low()
+}
+
+func viaUpper[X](x: X) Int where X implements Upper {
+  return x.up()
+}
+
+export interface A {
+  pure func one(self) Int
+}
+
+export interface Ab {
+  pure func two(self) Int
+}
+
+export class Pair implements A, Ab {
+  export n: Int
+  pure func one(self) Int => 1
+  pure func two(self) Int => 2
+}
+
+func prefixed[T](x: T) Int where T implements Ab, T implements A {
+  return Int.wrappingAdd(x.one(), x.two())
+}
+
+export interface First {
+  pure func value(self) Int
+}
+
+export interface Second {
+  pure func value(self) Int
+}
+
+export class Both implements First, Second {
+  export v: Int
+  pure func value(self) Int => self.v
+}
+
+func inLambda[T](x: T) Int where T implements First, T implements Second {
+  let g = fn[alias x]() Int => x.value()
+  return g()
+}
+
+export interface Mapper {
+  pure func apply(self, f: pure fn(Int) Int) Int
+  pure func base(self) Int
+}
+
+export class Map3 implements Mapper {
+  export v: Int
+  pure func apply(self, f: pure fn(Int) Int) Int => f(self.v)
+  pure func base(self) Int => self.v
+}
+
+func mapBound[T](x: T) Int where T implements Mapper {
+  return x.apply(fn(n: Int) Int => Int.wrappingMul(n, 2))
+}
+
+func mapDynamic(x: dynamic Mapper) Int => Int.wrappingMul(x.base(), 2)
+
+func useLower(x: dynamic Lower) Int => x.low()
+
+export class Plank implements Lower, Upper {
+  export n: Int
+  pure func low(self) Int => 2
+  pure func up(self) Int => 3
+}
+
+func useUpper(x: dynamic Upper) Int => useLower(x)
+
+export class Cell[T] {
+  export value: T
+  pure func get(self) T where T implements Copyable => copy self.value
+}
+
+export interface Echo[E] {
+  pure func echo(self, e: E) E
+}
+
+export class Echoer implements Echo[String] {
+  export n: Int
+  pure func echo(self, e: String) String => copy e
+}
+
+func echoBound[T](x: T, s: String) String where T implements Echo[String] {
+  return x.echo(s)
+}
+
+func same[T](x: T) T where T implements Copyable => copy x
+
+func passOn(s: String) String => same(s)
+
+export class Holder[T] {
+  export h: Shared[Int]
+  export value: T
+}
+
+export interface Part[P] {
+  pure func item(self) P
+}
+
+export class IntBox implements Part[Int] {
+  export v: Int
+  pure func item(self) Int => self.v
+}
+
+func itemOr[T, P](x: T, fallback: P) P where T implements Part[P] {
+  return x.item()
+}
+
+export interface Scale {
+  pure func weigh[W](self, x: W) Int where W implements Weighed
+}
+
+export class Doubler implements Scale {
+  export k: Int
+  pure func weigh[W](self, x: W) Int where W implements Weighed => Int.wrappingMul(x.weight(), self.k)
+}
+
+func scaled[S](s: S) Int where S implements Scale {
+  return s.weigh(Brick(w: 6))
+}
+
+func main(console: Console) {
+  let crate: Crate[Brick] = Crate(item: Brick(w: 4))
+  let cell: Cell[String] = Cell(value: "ada")
+  let held: Holder[Int] = Holder(h: Shared.create(1), value: 2)
+  console.print("${pickBound(Pick(z: 0))}|${pickDynamic(Pick(z: 0))}|${sizeOfBundle(Thing(n: 7))}|${viaLower(crate)}|${viaUpper(crate)}")
+  console.print("${useUpper(Plank(n: 0))}|${prefixed(Pair(n: 0))}|${inLambda(Both(v: 5))}|${mapBound(Map3(v: 3))}|${mapDynamic(Map3(v: 3))}")
+  console.print("${useLower(Plank(n: 0))}")
+  console.print(cell.get())
+  console.print(echoBound(Echoer(n: 0), "ada"))
+  console.print(passOn("ada"))
+  console.print("${Int.wrappingAdd(held.value, 1)}|${itemOr(IntBox(v: 7), 0)}|${IntBox(v: 7).item()}|${scaled(Doubler(k: 2))}")
+}

@@ -3,6 +3,7 @@
 //! definitional interpreter's.
 
 pub mod codec;
+pub mod convert;
 pub mod executor;
 pub mod generation;
 pub mod intrinsics;
@@ -103,6 +104,13 @@ fn run_main_here(prog: &Program, file: &str, args: &[String], decl_files: &HashM
         }
         Observed { text, out: vm.out, trace: vm.trace, reports: vm.reports, failure_lines: vm.failure_lines, exit_code: code, threads }
     };
+    // a run that stops at a dynamic check is observed as the console lines it printed, then `dynamic:<message>`, as
+    // the interpreter observes it and as the defect path below does (D-53, D-398)
+    let halt = |vm: Vm, m: String| -> Observed {
+        let mut parts = vm.out.clone();
+        parts.push(format!("dynamic:{m}"));
+        finish(vm, parts.join("|"), 2)
+    };
     // the result of main: a failure value, a defect (no cleanup, no drain), or success
     let failure = match r {
         Ok(v) if v.is_failure() => Some(v),
@@ -114,21 +122,21 @@ fn run_main_here(prog: &Program, file: &str, args: &[String], decl_files: &HashM
             parts.push(format!("defect:{k}"));
             return finish(vm, parts.join("|"), 101);
         }
-        Err(Exit::Halt(Halt::Dynamic(m))) => return finish(vm, format!("dynamic:{m}"), 2),
-        Err(Exit::Halt(Halt::Cancel)) => return finish(vm, "dynamic:the main task was cancelled".into(), 2),
-        Err(Exit::Halt(Halt::Shutdown)) => return finish(vm, "dynamic:shutdown".into(), 2),
-        Err(Exit::Flow(f)) => return finish(vm, format!("dynamic:{f:?} escaped main"), 2),
+        Err(Exit::Halt(Halt::Dynamic(m))) => return halt(vm, m),
+        Err(Exit::Halt(Halt::Cancel)) => return halt(vm, "the main task was cancelled".into()),
+        Err(Exit::Halt(Halt::Shutdown)) => return halt(vm, "shutdown".into()),
+        Err(Exit::Flow(f)) => return halt(vm, format!("{f:?} escaped main")),
     };
     // detached tasks run to completion before main's own result is reported (their supervisor observes them)
     match vm.drain_detached() {
         Ok(()) => {}
-        Err(Exit::Halt(Halt::Dynamic(m))) => return finish(vm, format!("dynamic:{m}"), 2),
+        Err(Exit::Halt(Halt::Dynamic(m))) => return halt(vm, m),
         Err(Exit::Halt(Halt::Defect(k))) => {
             let mut parts = vm.out.clone();
             parts.push(format!("defect:{k}"));
             return finish(vm, parts.join("|"), 101);
         }
-        Err(_) => return finish(vm, "dynamic:a detached task could not complete".into(), 2),
+        Err(_) => return halt(vm, "a detached task could not complete".into()),
     }
     let (suffix, code) = match failure {
         Some(v) => {

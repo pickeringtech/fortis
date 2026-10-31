@@ -1,0 +1,15 @@
+// reject: E-OBL-001
+// covers: LANG-10-01, LANG-06-14
+// D-522, X-554: validation failure must not silently discard linear elements of a moved representation.
+type Empty = List[Outcome[Int]]<length: 0..0>
+try func cast(values: owned List[Outcome[Int]]) Empty {
+  return move values as Empty or fail // reject: E-OBL-001
+}
+try func legacy(values: owned List[Outcome[Int]]) Empty {
+  return Empty.validate(move values) or fail // reject: E-OBL-001
+}
+
+func refinedDrop(values: owned List[Outcome[Int]]<length: 0..0>) { // reject: E-OBL-001
+}
+func newtypeDrop(values: owned Empty) { // reject: E-OBL-001
+}

@@ -27,6 +27,9 @@ Every build runs with the network blocked (`unshare -rn`).
 7. **Trust and the three notions** (PROG-ARC-05, PROG-ARC-06): the manifest lists, per function, the trusted
    operations it reaches, and keeps the target's feature set, each function's effects and its authorities in
    separate fields.
+8. **Emit only** (R17, X-541): `build --emit-only` writes a file's or a package's generated crate where the build
+   would compile it, prints where it wrote it (an `emit` record when the output is JSON), and builds nothing: no
+   executable, no manifest. A full build afterwards compiles that very crate and rewrites none of it.
 """
 import hashlib
 import json
@@ -167,6 +170,32 @@ def main(argv):
         expect("a program importing modules it never uses builds to the same executable as one importing nothing (PLAT-01-05)", bins[0] == bins[1], bins)
         vm = [run([FORTISC, "vm", os.path.join(BUILD, n)])[1].replace(n, "") for n in ("plain.ft", "imports.ft")]
         expect("importing standard modules performs no runtime work: the VM observes the same run (PLAT-01-04)", vm[0] == vm[1] and "observed: " in vm[0], vm)
+        # 8. `--emit-only` (R17, X-541): the generated crate is written where the build would compile it, and nothing
+        # is built: no runtime prebuild, no rustc, no executable, no manifest
+        emit_exe = os.path.join(out, "emit-orders")
+        code, so, se = run([FORTISC, "build", "--format", "json", "--out", emit_exe, "examples/apps/orders", "--emit-only"])
+        recs = [json.loads(l) for l in so.splitlines() if l.startswith("{")]
+        emitted = [r for r in recs if r.get("kind") == "emit"]
+        ok_crate = (code == 0 and len(emitted) == 1 and emitted[0]["crate"] == gen
+                    and os.path.exists(os.path.join(gen, "Cargo.toml"))
+                    and os.path.getsize(os.path.join(gen, "src", "main.rs")) > 0
+                    and not os.path.exists(emit_exe) and not os.path.exists(emit_exe + ".build.json"))
+        expect("`--emit-only` writes a package's generated crate, reports it with an `emit` record, and builds nothing",
+               ok_crate, recs or (so + se)[-300:])
+        code, so, se = run([FORTISC, "build", "--format", "text", "--out", emit_exe, "examples/apps/orders"])
+        m3 = manifest(emit_exe) if code == 0 else {}
+        expect("the emitted crate is the crate the build compiles: the full build rewrites none of it and links it",
+               code == 0 and m3.get("rewritten") == [] and os.path.exists(emit_exe), m3.get("rewritten", (so + se)[-300:]))
+        hello = os.path.join(work, "emit-hello.ft")
+        shutil.copy(os.path.join(ROOT, "examples", "01_hello.ft"), hello)
+        hello_crate = os.path.join(ROOT, "build", "native-build", "fb_emit_hello")
+        shutil.rmtree(hello_crate, ignore_errors=True)
+        hello_exe = os.path.join(out, "emit-hello")
+        code, so, se = run([FORTISC, "build", "--format", "text", "--out", hello_exe, hello, "--emit-only"])
+        expect("`--emit-only` writes a file's generated crate and says so in text too, and builds nothing",
+               code == 0 and "emitted the crate for" in so and hello_crate in so
+               and os.path.getsize(os.path.join(hello_crate, "src", "main.rs")) > 0
+               and not os.path.exists(hello_exe) and not os.path.exists(hello_exe + ".build.json"), (so + se)[-300:])
         # 1. reproducible from clean clones
         if "--no-clones" not in argv:
             # a git checkout is cloned at its commit; a plain download (no git) is copied, less its build output

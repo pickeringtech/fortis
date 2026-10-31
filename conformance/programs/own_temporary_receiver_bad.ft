@@ -1,0 +1,56 @@
+// reject: E-OWN-051 (at the marked lines)
+// covers: LANG-07-06, LANG-07-07
+// D-392, 7.6, 7.9: a result that borrows from its receiver needs a receiver that is a place, as a `from` argument must
+// be: a temporary (a call's result) is destroyed at the end of its statement, so a loan drawn from it (`fresh().get(0)`,
+// `.first()`, the left side of a `??`, a cursor of a temporary list) would read what its cleanup has run on. Both
+// checkers covered a temporary argument only; the interpreter and the VM read the destroyed element, and native
+// code refused the program. Bind the temporary first (exec_temporary_receiver_bound.ft); a receiver that is itself a
+// loan, a view or a cursor lends what it lends, which outlives the statement.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func fresh(console: Shared[Console], a: StringView, b: StringView) List[Token] {
+  return List.of(make(console, a), make(console, b))
+}
+
+func lentGet(console: Shared[Console]) {
+  let t = fresh(console, "t1", "t2").get(0)                               // reject: E-OWN-051 — the list ends with the statement
+  console.print("got ${t?.label ?? "?"}")
+}
+
+func lentFirst(console: Shared[Console]) {
+  let t = fresh(console, "f1", "f2").first()                              // reject: E-OWN-051 — so does `first`'s receiver
+  console.print("first ${t?.label ?? "?"}")
+}
+
+func lentCoalesce(console: Shared[Console]) {
+  let t = fresh(console, "c1", "c2").get(0) ?? make(console, "fb")        // reject: E-OWN-051 — the left side of a `??`
+  console.print("co ${t.label}")
+}
+
+func lentCursor(console: Shared[Console]) {
+  let mut c = fresh(console, "u1", "u2").iterate()                        // reject: E-OWN-051 — a cursor of a temporary list
+  let item = c.next()
+  console.print("cur ${item?.label ?? "?"}")
+}
+
+func main(console: Console) {
+  let shared = Shared.create(move console)
+  lentGet(shared)
+  lentFirst(shared)
+  lentCoalesce(shared)
+  lentCursor(shared)
+  shared.print("end")
+}

@@ -49,6 +49,10 @@ pub struct CleanupFact {
 pub struct FnIr {
     pub function: String,
     pub line: usize,
+    /// A contributed body's text belongs to this file and declaration, while `function` names the application.
+    /// Ordinary bodies omit both fields from the JSON representation.
+    pub source_file: Option<String>,
+    pub source_function: Option<String>,
     pub loans: Vec<LoanFact>,
     pub obligations: Vec<OblFact>,
     pub observation: Vec<ObsFact>,
@@ -84,6 +88,13 @@ pub fn at(line: usize) {
 
 pub fn begin(function: &str, line: usize) {
     J.with(|j| *j.borrow_mut() = Some(FnIr { function: function.to_string(), line, ..Default::default() }));
+}
+
+pub fn source(file: &str, function: &str) {
+    with(|ir| {
+        ir.source_file = Some(file.to_string());
+        ir.source_function = Some(function.to_string());
+    });
 }
 
 pub fn end() -> Option<FnIr> {

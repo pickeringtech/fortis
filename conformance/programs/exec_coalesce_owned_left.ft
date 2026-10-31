@@ -1,0 +1,46 @@
+// execute: bound s|drop s|copied s|last s|end|drop d
+// requires: runtime
+// covers: LANG-07-01, LANG-06-08
+// D-357, D-354, 7.5: a `??` whose left operand is a binding that owns its value. Where the result goes to a position
+// that takes ownership, the left side carries the marker `let x = p` would: `move some ?? move d` moves `some` on
+// every path (the token is then owned by the binding alone and destroyed once, at that binding's end), `copy s ?? …`
+// copies it. Each cleanup runs once, when the owner ends, on every backend; native code builds the moved form
+// (D-354). The same bare place lent for a call or an interpolation (`show(console, some ?? make(…))`, `"${s ?? "none"}"`
+// followed by another use of `s`) is a read loan of it, which the checkers accept and the interpreter and the VM run,
+// and native code still refuses (D-354). The tokens sit in slots without a cleanup of their own, so that no backend
+// announces the bindings' drops in its trace (native code announces none for a `??` fallback, D-344); the output
+// shows every cleanup.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+class Slot {
+  token: Token
+}
+
+func make(console: Shared[Console], label: StringView) Slot {
+  return Slot(token: Token(label: label as String, console: console.retain()))
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let some: Slot? = make(console, "s")
+  let d = make(console, "d")
+  {
+    let p = move some ?? move d
+    console.print("bound ${p.token.label}")
+  }
+  let s: String? = "s" as String
+  let copied = copy s ?? "none" as String
+  console.print("copied ${copied}")
+  let last = move s ?? "gone" as String
+  console.print("last ${last}")
+  console.print("end")
+}

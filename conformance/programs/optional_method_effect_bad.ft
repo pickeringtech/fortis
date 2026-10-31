@@ -1,0 +1,8 @@
+// reject: E-EFF-001, E-EFF-010
+// covers: LANG-06-08, LANG-11-01
+import fortis.host { Console }
+class Cell {
+  console: Shared[Console]
+  func show(self) { self.console.print("visible") }
+}
+pure func bad(c: Cell?) { discard c?.show() }

@@ -1,0 +1,5 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-580: a generic adapter cannot erase a callback result's origin before storage.
+pure func invoke[U](item: String, f: pure fn(String) U) U => f(item)
+pure func size(text: String) Int => List.of(invoke(text, fn(item: String) alias String from item => alias item)).count()

@@ -1,0 +1,35 @@
+// execute: 2|1|1|2|3|1|true|2|4|4|1|7|2|1|2|Latte|Tea|Latte|Tea|1
+import fortis.host { Console }
+import h.newtype.read.defs as defs
+func main(console: Console) {
+  let mut basket = defs.make()
+  console.print("${basket.count()}")
+  let limit = 2
+  let filtered: List[Int] = basket.filter(fn(n) => n < limit)
+  console.print("${filtered.count()}")
+  for item in basket { console.print("${item}") }
+  defs.add(editable basket)
+  console.print("${basket.count()}")
+  let counts = defs.counts()
+  console.print("${counts.count()}")
+  let tags = defs.tags()
+  console.print("${tags.contains(7)}")
+  let pair = defs.pair()
+  console.print("${pair.count()}")
+  for n in pair { console.print("${n}") }
+  for entry in counts { console.print("${entry.1}") }
+  for tag in tags { console.print("${tag}") }
+  let raw = List.of(1, 2)
+  let borrowed = defs.Borrowed(alias raw)
+  console.print("${borrowed.count()}")
+  for item in borrowed { console.print("${item}") }
+  let drinks = defs.drinks()
+  let budget = 3
+  let cheap: List[defs.Drink] = drinks.filter(fn(drink) => drink.price() < budget)
+  drinks.each(fn(drink) => console.print(drink.label()))
+  for drink in drinks { console.print(drink.label()) }
+  console.print("${cheap.count()}")
+  defs.clear(move basket)
+}
+
+func shortCount(xs: defs.Short) Int { return xs.count() }

@@ -4,6 +4,150 @@
  "about": "The effects of the fortis package's bodiless (trusted) operations that their signatures cannot show (Language Reference 11.1, 11.3; D-112). Both checkers read this file and nothing else for them: a row names one operation by module, owner (null for a free function) and name, and lists the effects it adds, from alloc, block, io, mutate and nondet. Modifiers give fail, suspend and recovers; a capability's method, or an operation that takes an Authority, has io (11.6). A malformed row stops the checker; library_check.py and fortis-types' unit test refuse a row that names no bodiless operation of its module. Reviewed with the package's trusted operations.",
  "operations": [
   {
+   "module": "fortis.collections",
+   "owner": "Deque",
+   "name": "filter",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "Deque",
+   "name": "map",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "Deque",
+   "name": "popBack",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "Deque",
+   "name": "popFront",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "Deque",
+   "name": "pushBack",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "Deque",
+   "name": "pushFront",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "Deque",
+   "name": "toList",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "Deque",
+   "name": "tryMap",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "SortedSet",
+   "name": "add",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "SortedSet",
+   "name": "between",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "SortedSet",
+   "name": "difference",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "SortedSet",
+   "name": "fromList",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "SortedSet",
+   "name": "intersection",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "SortedSet",
+   "name": "remove",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "SortedSet",
+   "name": "toList",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.collections",
+   "owner": "SortedSet",
+   "name": "union",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
    "module": "fortis.host",
    "owner": null,
    "name": "reveal",
@@ -267,6 +411,15 @@
   {
    "module": "fortis.prelude",
    "owner": "List",
+   "name": "chunked",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
    "name": "concat",
    "effects": [
     "alloc"
@@ -276,7 +429,34 @@
   {
    "module": "fortis.prelude",
    "owner": "List",
+   "name": "enumerate",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
    "name": "filter",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "flatMap",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "groupBy",
    "effects": [
     "alloc"
    ],
@@ -320,8 +500,188 @@
   },
   {
    "module": "fortis.prelude",
+   "owner": "List",
+   "name": "skip",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "sortedBy",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "take",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "tryMap",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "List",
+   "name": "zip",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "chunked",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "concat",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "enumerate",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "filter",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "flatMap",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "groupBy",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "map",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "reversed",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "skip",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "sortedBy",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "take",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "tryMap",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "ListView",
+   "name": "zip",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Map",
+   "name": "keys",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
    "owner": "Map",
    "name": "set",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Map",
+   "name": "values",
    "effects": [
     "alloc"
    ],
@@ -410,6 +770,33 @@
   },
   {
    "module": "fortis.prelude",
+   "owner": "Set",
+   "name": "difference",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Set",
+   "name": "intersection",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "Set",
+   "name": "union",
+   "effects": [
+    "alloc"
+   ],
+   "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
    "owner": "Shared",
    "name": "create",
    "effects": [
@@ -420,11 +807,128 @@
   {
    "module": "fortis.prelude",
    "owner": "String",
+   "name": "asciiLower",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "String",
+   "name": "asciiUpper",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "String",
    "name": "from",
    "effects": [
     "alloc"
    ],
    "why": "grows or creates heap storage (C.3)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "String",
+   "name": "join",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "String",
+   "name": "lines",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "String",
+   "name": "repeat",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "String",
+   "name": "replace",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "String",
+   "name": "split",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "StringView",
+   "name": "asciiLower",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "StringView",
+   "name": "asciiUpper",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "StringView",
+   "name": "lines",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "StringView",
+   "name": "repeat",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "StringView",
+   "name": "replace",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
+  },
+  {
+   "module": "fortis.prelude",
+   "owner": "StringView",
+   "name": "split",
+   "effects": [
+    "alloc"
+   ],
+   "why": "returns a new owned string or list of strings (C.3; X-479)"
   },
   {
    "module": "fortis.prelude",

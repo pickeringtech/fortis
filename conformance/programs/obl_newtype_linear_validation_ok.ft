@@ -1,0 +1,13 @@
+// accept
+// covers: LANG-10-01, LANG-06-14
+// X-554: proved linear wrapping is safe; the retained validator still returns an Outcome.
+type Nonempty = List[Outcome[Int]]<length: 1..>
+func cast(values: owned List[Outcome[Int]]<length: 1..>) Nonempty {
+  return move values as Nonempty
+}
+try func legacy(values: owned List[Outcome[Int]]<length: 1..>) Nonempty {
+  return Nonempty.validate(move values) or fail
+}
+func unwrap(values: owned Nonempty) List[Outcome[Int]]<length: 1..> {
+  return move values as List[Outcome[Int]]
+}

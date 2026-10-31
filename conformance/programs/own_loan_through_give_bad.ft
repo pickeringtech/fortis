@@ -1,0 +1,82 @@
+// reject: E-OWN-010 (at the marked lines)
+// covers: LANG-07-05, LANG-07-04
+// D-355, 7.3: a loan carried out of a branch by `give` (an `if` or `match` expression, a `recover`) is held by the
+// binding that receives the expression's value, as the loan of a call bound directly is; and a `match` whose scrutinee
+// is a temporary that lends (`match xs.get(0)`) lends to the arm's payload bindings for the arm. The owner cannot be
+// changed while either lives. Both checkers ended the loan with the `give` statement or the scrutinee's statement,
+// so the interpreter and the VM read an element after it left the list.
+import fortis.host { Console }
+
+class Item {
+  label: String
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func find(xs: List[Item], c: Bool) (alias Item from xs)? {
+  if c {
+    fail Missing()
+  }
+  return xs.get(0)
+}
+
+func givenByIf(console: Console) {
+  let mut xs: List[Item] = List.default()
+  xs.push(Item(label: String.from("a")))
+  let some = xs.count() > 0
+  let t = if some {
+    give xs.get(0)
+  } else {
+    give xs.get(1)
+  }
+  let v = xs.pop()                                                        // reject: E-OWN-010 — t holds the loan the `give` carried
+  console.print("${t?.label ?? "none"} ${v?.label ?? "none"}")
+}
+
+func givenByMatch(console: Console) {
+  let mut xs: List[Item] = List.default()
+  xs.push(Item(label: String.from("a")))
+  let t = match xs.count() {
+    0 => {
+      give null
+    }
+    otherwise => {
+      give xs.get(0)
+    }
+  }
+  let v = xs.pop()                                                        // reject: E-OWN-010 — the arm's `give` carried the loan
+  console.print("${t?.label ?? "none"} ${v?.label ?? "none"}")
+}
+
+recovers func givenByRecover(console: Console) {
+  let mut xs: List[Item] = List.default()
+  xs.push(Item(label: String.from("a")))
+  let ys: List[Item] = List.default()
+  let u = find(alias ys, true) catch e {
+    report e
+    recover xs.get(0)
+  }
+  let v = xs.pop()                                                        // reject: E-OWN-010 — the `recover` carried the loan of xs
+  console.print("${u?.label ?? "none"} ${v?.label ?? "none"}")
+}
+
+func scrutinee(console: Console) {
+  let mut xs: List[Item] = List.default()
+  xs.push(Item(label: String.from("a")))
+  match xs.get(0) {
+    present(w) => {
+      let v = xs.pop()                                                    // reject: E-OWN-010 — w lends the temporary's element
+      console.print("${w.label} ${v?.label ?? "none"}")
+    }
+    null => console.print("none")
+  }
+}
+
+func main(console: Console) {
+  givenByIf(console)
+  givenByMatch(console)
+  givenByRecover(console)
+  scrutinee(console)
+}

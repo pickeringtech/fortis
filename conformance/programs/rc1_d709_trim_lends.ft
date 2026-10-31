@@ -1,0 +1,4 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-709: rc.1 regression.
+pure func n(a: String) StringView { return a.trim() }

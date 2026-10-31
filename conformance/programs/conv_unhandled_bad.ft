@@ -1,0 +1,19 @@
+// reject: E-OBL-001, E-TYP-040, E-ERR-001 (at the marked lines)
+// covers: LANG-06-14, LANG-10-01
+// 6.13 (X-475): a fallible conversion is an Outcome[T] handled on the line; left unhandled it is caught by the
+// outcome rules: dropped, E-OBL-001; used as a T, E-TYP-040; `or fail` outside a try function, E-ERR-001.
+func dropped(n: Int) {
+  let x = n as Int8                          // reject: E-OBL-001 — the Outcome[Int8] in x is dropped at the end of the block
+}
+
+func asValue(n: Int) Int8 {
+  return n as Int8                           // reject: E-TYP-040 — Outcome[Int8] is not Int8
+}
+
+func parsed(s: StringView) Int {
+  return s as Int                            // reject: E-TYP-040 — Outcome[Int] is not Int
+}
+
+func noTry(n: Int) Int8 {
+  return n as Int8 or fail                   // reject: E-ERR-001 — `or fail` needs a try function
+}

@@ -1,0 +1,44 @@
+// execute: got t1|drop t1|drop t2|cursor u1|drop u1|drop u2|end
+// requires: runtime
+// covers: LANG-07-06, LANG-07-07
+// D-392, 7.6, 7.9: a result that borrows from its receiver is drawn from a place: the temporary list is bound first
+// and lent through the binding, which outlives the loan. A cursor is a loan-carrying value owned by its binding, so
+// an item drawn through a temporary cursor of a bound list (`xs.iterate().next()`) lends the list, which outlives the
+// statement. Each element is destroyed once, with its list, on every backend.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: label as String, console: console.retain())
+}
+
+func fresh(console: Shared[Console], a: StringView, b: StringView) List[Token] {
+  return List.of(make(console, a), make(console, b))
+}
+
+func bound(console: Shared[Console]) {
+  let xs = fresh(console, "t1", "t2")
+  let t = xs.get(0)
+  console.print("got ${t?.label ?? "?"}")
+}
+
+func throughCursor(console: Shared[Console]) {
+  let xs = fresh(console, "u1", "u2")
+  let item = xs.iterate().next()
+  console.print("cursor ${item?.label ?? "?"}")
+}
+
+func main(console: Console) {
+  let shared = Shared.create(move console)
+  bound(shared)
+  throughCursor(shared)
+  shared.print("end")
+}

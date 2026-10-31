@@ -1,0 +1,477 @@
+[
+  {
+    "name": "lr6_4_add_0",
+    "input": {
+      "op": "add",
+      "a": 0,
+      "b": 0
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_add_1",
+    "input": {
+      "op": "add",
+      "a": 9223372036854775807,
+      "b": 0
+    },
+    "expect": 9223372036854775807
+  },
+  {
+    "name": "lr6_4_add_2",
+    "input": {
+      "op": "add",
+      "a": -9223372036854775808,
+      "b": 0
+    },
+    "expect": -9223372036854775808
+  },
+  {
+    "name": "lr6_4_add_3",
+    "input": {
+      "op": "add",
+      "a": 9223372036854775807,
+      "b": 1
+    },
+    "expect": {
+      "code": "numeric.overflow",
+      "payload": {
+        "operation": "add"
+      }
+    }
+  },
+  {
+    "name": "lr6_4_add_4",
+    "input": {
+      "op": "add",
+      "a": -9223372036854775808,
+      "b": -1
+    },
+    "expect": {
+      "code": "numeric.overflow",
+      "payload": {
+        "operation": "add"
+      }
+    }
+  },
+  {
+    "name": "lr6_4_add_5",
+    "input": {
+      "op": "add",
+      "a": 9223372036854775807,
+      "b": -9223372036854775808
+    },
+    "expect": -1
+  },
+  {
+    "name": "lr6_4_add_6",
+    "input": {
+      "op": "add",
+      "a": -7,
+      "b": 5
+    },
+    "expect": -2
+  },
+  {
+    "name": "lr6_4_add_7",
+    "input": {
+      "op": "add",
+      "a": 7,
+      "b": -5
+    },
+    "expect": 2
+  },
+  {
+    "name": "lr6_4_sub_0",
+    "input": {
+      "op": "sub",
+      "a": 0,
+      "b": 0
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_sub_1",
+    "input": {
+      "op": "sub",
+      "a": 9223372036854775807,
+      "b": 0
+    },
+    "expect": 9223372036854775807
+  },
+  {
+    "name": "lr6_4_sub_2",
+    "input": {
+      "op": "sub",
+      "a": -9223372036854775808,
+      "b": 0
+    },
+    "expect": -9223372036854775808
+  },
+  {
+    "name": "lr6_4_sub_3",
+    "input": {
+      "op": "sub",
+      "a": -9223372036854775808,
+      "b": 1
+    },
+    "expect": {
+      "code": "numeric.overflow",
+      "payload": {
+        "operation": "sub"
+      }
+    }
+  },
+  {
+    "name": "lr6_4_sub_4",
+    "input": {
+      "op": "sub",
+      "a": 9223372036854775807,
+      "b": -1
+    },
+    "expect": {
+      "code": "numeric.overflow",
+      "payload": {
+        "operation": "sub"
+      }
+    }
+  },
+  {
+    "name": "lr6_4_sub_5",
+    "input": {
+      "op": "sub",
+      "a": -9223372036854775808,
+      "b": -9223372036854775808
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_sub_6",
+    "input": {
+      "op": "sub",
+      "a": -7,
+      "b": 5
+    },
+    "expect": -12
+  },
+  {
+    "name": "lr6_4_sub_7",
+    "input": {
+      "op": "sub",
+      "a": 7,
+      "b": -5
+    },
+    "expect": 12
+  },
+  {
+    "name": "lr6_4_mul_0",
+    "input": {
+      "op": "mul",
+      "a": 0,
+      "b": 9223372036854775807
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_mul_1",
+    "input": {
+      "op": "mul",
+      "a": 1,
+      "b": -9223372036854775808
+    },
+    "expect": -9223372036854775808
+  },
+  {
+    "name": "lr6_4_mul_2",
+    "input": {
+      "op": "mul",
+      "a": -1,
+      "b": -9223372036854775808
+    },
+    "expect": {
+      "code": "numeric.overflow",
+      "payload": {
+        "operation": "mul"
+      }
+    }
+  },
+  {
+    "name": "lr6_4_mul_3",
+    "input": {
+      "op": "mul",
+      "a": 9223372036854775807,
+      "b": 2
+    },
+    "expect": {
+      "code": "numeric.overflow",
+      "payload": {
+        "operation": "mul"
+      }
+    }
+  },
+  {
+    "name": "lr6_4_mul_4",
+    "input": {
+      "op": "mul",
+      "a": -9223372036854775808,
+      "b": 2
+    },
+    "expect": {
+      "code": "numeric.overflow",
+      "payload": {
+        "operation": "mul"
+      }
+    }
+  },
+  {
+    "name": "lr6_4_mul_5",
+    "input": {
+      "op": "mul",
+      "a": -7,
+      "b": -5
+    },
+    "expect": 35
+  },
+  {
+    "name": "lr6_4_mul_6",
+    "input": {
+      "op": "mul",
+      "a": 7,
+      "b": -5
+    },
+    "expect": -35
+  },
+  {
+    "name": "lr6_4_mul_7",
+    "input": {
+      "op": "mul",
+      "a": 3037000499,
+      "b": 3037000499
+    },
+    "expect": 9223372030926249001
+  },
+  {
+    "name": "lr6_4_div_pp",
+    "input": {
+      "op": "div",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 2
+  },
+  {
+    "name": "lr6_4_div_np",
+    "input": {
+      "op": "div",
+      "a": -7,
+      "b": 3
+    },
+    "expect": -2
+  },
+  {
+    "name": "lr6_4_div_pn",
+    "input": {
+      "op": "div",
+      "a": 7,
+      "b": -3
+    },
+    "expect": -2
+  },
+  {
+    "name": "lr6_4_div_nn",
+    "input": {
+      "op": "div",
+      "a": -7,
+      "b": -3
+    },
+    "expect": 2
+  },
+  {
+    "name": "lr6_4_div_zero",
+    "input": {
+      "op": "div",
+      "a": 0,
+      "b": 3
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_div_zero_divisor",
+    "input": {
+      "op": "div",
+      "a": 5,
+      "b": 0
+    },
+    "expect": {
+      "code": "numeric.divide_by_zero",
+      "payload": {}
+    }
+  },
+  {
+    "name": "lr6_4_div_min_neg_one",
+    "input": {
+      "op": "div",
+      "a": -9223372036854775808,
+      "b": -1
+    },
+    "expect": {
+      "code": "numeric.overflow",
+      "payload": {
+        "operation": "div"
+      }
+    }
+  },
+  {
+    "name": "lr6_4_div_large",
+    "input": {
+      "op": "div",
+      "a": 9223372036854775807,
+      "b": 3
+    },
+    "expect": 3074457345618258602
+  },
+  {
+    "name": "lr6_4_rem_pp",
+    "input": {
+      "op": "rem",
+      "a": 7,
+      "b": 3
+    },
+    "expect": 1
+  },
+  {
+    "name": "lr6_4_rem_np",
+    "input": {
+      "op": "rem",
+      "a": -7,
+      "b": 3
+    },
+    "expect": -1
+  },
+  {
+    "name": "lr6_4_rem_pn",
+    "input": {
+      "op": "rem",
+      "a": 7,
+      "b": -3
+    },
+    "expect": 1
+  },
+  {
+    "name": "lr6_4_rem_nn",
+    "input": {
+      "op": "rem",
+      "a": -7,
+      "b": -3
+    },
+    "expect": -1
+  },
+  {
+    "name": "lr6_4_rem_zero",
+    "input": {
+      "op": "rem",
+      "a": 0,
+      "b": 3
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_rem_zero_divisor",
+    "input": {
+      "op": "rem",
+      "a": 5,
+      "b": 0
+    },
+    "expect": {
+      "code": "numeric.divide_by_zero",
+      "payload": {}
+    }
+  },
+  {
+    "name": "lr6_4_rem_min_neg_one",
+    "input": {
+      "op": "rem",
+      "a": -9223372036854775808,
+      "b": -1
+    },
+    "expect": 0
+  },
+  {
+    "name": "lr6_4_rem_large",
+    "input": {
+      "op": "rem",
+      "a": 9223372036854775807,
+      "b": 3
+    },
+    "expect": 1
+  },
+  {
+    "name": "lr6_4_shift_zero",
+    "input": {
+      "op": "shiftLeft",
+      "a": 9,
+      "b": 0
+    },
+    "expect": 9
+  },
+  {
+    "name": "lr6_4_shift_sign",
+    "input": {
+      "op": "shiftLeft",
+      "a": -1,
+      "b": 63
+    },
+    "expect": -9223372036854775808
+  },
+  {
+    "name": "lr6_4_shift_overflow",
+    "input": {
+      "op": "shiftLeft",
+      "a": 1,
+      "b": 63
+    },
+    "expect": {
+      "code": "numeric.overflow",
+      "payload": {
+        "operation": "shiftLeft"
+      }
+    }
+  },
+  {
+    "name": "lr6_4_shift_negative",
+    "input": {
+      "op": "shiftLeft",
+      "a": 1,
+      "b": -1
+    },
+    "expect": {
+      "code": "numeric.shift_range",
+      "payload": {
+        "bits": -1
+      }
+    }
+  },
+  {
+    "name": "lr6_4_shift_width",
+    "input": {
+      "op": "shiftLeft",
+      "a": 1,
+      "b": 64
+    },
+    "expect": {
+      "code": "numeric.shift_range",
+      "payload": {
+        "bits": 64
+      }
+    }
+  },
+  {
+    "name": "lr6_4_shift_zero_large",
+    "input": {
+      "op": "shiftLeft",
+      "a": 0,
+      "b": 63
+    },
+    "expect": 0
+  }
+]

@@ -1,0 +1,23 @@
+// execute: 7|8
+// requires: runtime
+// covers: LANG-10-01, LANG-06-14
+// X-554: an unrefined representation always succeeds; wrapping and unwrapping transfer its obligations.
+import fortis.host { Console }
+type Pending = List[Outcome[Int]]
+recovers func consume(console: Console, values: owned Pending) {
+  let items = move values as List[Outcome[Int]]
+  move items.consumeEach(fn[alias console](item: owned Outcome[Int]) Void {
+    match move item {
+      success(n) => console.print(n as String)
+      failure(e) => { report e }
+    }
+  })
+}
+try recovers func main(console: Console) {
+  let first = List[Outcome[Int]].of(Outcome[Int].success(7))
+  let wrapped = move first as Pending
+  consume(console, move wrapped)
+  let second = List[Outcome[Int]].of(Outcome[Int].success(8))
+  let old = Pending.validate(move second) or fail
+  consume(console, move old)
+}

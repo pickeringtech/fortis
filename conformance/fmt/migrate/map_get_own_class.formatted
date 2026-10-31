@@ -10,7 +10,7 @@ class Index {
 
 func main(console: Console) {
   let mut counts: Map[String, Int] = Map.default()
-  let key = String.from("apples")
+  let key = "apples" as String
   counts.set(copy key, 3)
   let index = Index(seen: 1)
   let n = counts.get(key) ?? 0

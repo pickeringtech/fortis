@@ -1,0 +1,1918 @@
+[
+  {
+    "name": "lr6_4_checked_add_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.add",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_add(1i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_sub_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.sub",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_sub(1i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_mul_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.mul",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_mul(1i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_div_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.div",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_div(1i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_rem_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.rem",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_rem(1i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_shiftleft_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.shiftLeft",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_shift_left(1i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_wrapping_add_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.wrappingAdd",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "1i64.wrapping_add(2i64)"
+  },
+  {
+    "name": "lr6_4_wrapping_sub_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.wrappingSub",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "1i64.wrapping_sub(2i64)"
+  },
+  {
+    "name": "lr6_4_wrapping_mul_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.wrappingMul",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "1i64.wrapping_mul(2i64)"
+  },
+  {
+    "name": "lr6_4_saturating_add_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.saturatingAdd",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "1i64.saturating_add(2i64)"
+  },
+  {
+    "name": "lr6_4_saturating_sub_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.saturatingSub",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "1i64.saturating_sub(2i64)"
+  },
+  {
+    "name": "lr6_4_saturating_mul_positive",
+    "input": {
+      "kind": "call",
+      "op": "Int.saturatingMul",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "1i64.saturating_mul(2i64)"
+  },
+  {
+    "name": "lr5_6_binary_add_positive",
+    "input": {
+      "kind": "binary",
+      "op": "+",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 + 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_sub_positive",
+    "input": {
+      "kind": "binary",
+      "op": "-",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 - 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_mul_positive",
+    "input": {
+      "kind": "binary",
+      "op": "*",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 * 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_div_positive",
+    "input": {
+      "kind": "binary",
+      "op": "/",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 / 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_rem_positive",
+    "input": {
+      "kind": "binary",
+      "op": "%",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64).wrapping_rem(2i64)"
+  },
+  {
+    "name": "lr5_6_binary_shl_positive",
+    "input": {
+      "kind": "binary",
+      "op": "<<",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 << 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_shr_positive",
+    "input": {
+      "kind": "binary",
+      "op": ">>",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 >> 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_and_positive",
+    "input": {
+      "kind": "binary",
+      "op": "&",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 & 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_or_positive",
+    "input": {
+      "kind": "binary",
+      "op": "|",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 | 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_xor_positive",
+    "input": {
+      "kind": "binary",
+      "op": "^",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 ^ 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_eq_positive",
+    "input": {
+      "kind": "binary",
+      "op": "==",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 == 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_ne_positive",
+    "input": {
+      "kind": "binary",
+      "op": "!=",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 != 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_lt_positive",
+    "input": {
+      "kind": "binary",
+      "op": "<",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 < 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_le_positive",
+    "input": {
+      "kind": "binary",
+      "op": "<=",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 <= 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_gt_positive",
+    "input": {
+      "kind": "binary",
+      "op": ">",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 > 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_ge_positive",
+    "input": {
+      "kind": "binary",
+      "op": ">=",
+      "args": [
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(1i64 >= 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_add_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.add",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_add(-3i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_sub_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.sub",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_sub(-3i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_mul_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.mul",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_mul(-3i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_div_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.div",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_div(-3i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_rem_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.rem",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_rem(-3i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_shiftleft_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.shiftLeft",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_shift_left(-3i64, 2i64)"
+  },
+  {
+    "name": "lr6_4_wrapping_add_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.wrappingAdd",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "-3i64.wrapping_add(2i64)"
+  },
+  {
+    "name": "lr6_4_wrapping_sub_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.wrappingSub",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "-3i64.wrapping_sub(2i64)"
+  },
+  {
+    "name": "lr6_4_wrapping_mul_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.wrappingMul",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "-3i64.wrapping_mul(2i64)"
+  },
+  {
+    "name": "lr6_4_saturating_add_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.saturatingAdd",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "-3i64.saturating_add(2i64)"
+  },
+  {
+    "name": "lr6_4_saturating_sub_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.saturatingSub",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "-3i64.saturating_sub(2i64)"
+  },
+  {
+    "name": "lr6_4_saturating_mul_negative",
+    "input": {
+      "kind": "call",
+      "op": "Int.saturatingMul",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "-3i64.saturating_mul(2i64)"
+  },
+  {
+    "name": "lr5_6_binary_add_negative",
+    "input": {
+      "kind": "binary",
+      "op": "+",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 + 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_sub_negative",
+    "input": {
+      "kind": "binary",
+      "op": "-",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 - 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_mul_negative",
+    "input": {
+      "kind": "binary",
+      "op": "*",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 * 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_div_negative",
+    "input": {
+      "kind": "binary",
+      "op": "/",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 / 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_rem_negative",
+    "input": {
+      "kind": "binary",
+      "op": "%",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64).wrapping_rem(2i64)"
+  },
+  {
+    "name": "lr5_6_binary_shl_negative",
+    "input": {
+      "kind": "binary",
+      "op": "<<",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 << 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_shr_negative",
+    "input": {
+      "kind": "binary",
+      "op": ">>",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 >> 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_and_negative",
+    "input": {
+      "kind": "binary",
+      "op": "&",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 & 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_or_negative",
+    "input": {
+      "kind": "binary",
+      "op": "|",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 | 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_xor_negative",
+    "input": {
+      "kind": "binary",
+      "op": "^",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 ^ 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_eq_negative",
+    "input": {
+      "kind": "binary",
+      "op": "==",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 == 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_ne_negative",
+    "input": {
+      "kind": "binary",
+      "op": "!=",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 != 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_lt_negative",
+    "input": {
+      "kind": "binary",
+      "op": "<",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 < 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_le_negative",
+    "input": {
+      "kind": "binary",
+      "op": "<=",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 <= 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_gt_negative",
+    "input": {
+      "kind": "binary",
+      "op": ">",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 > 2i64)"
+  },
+  {
+    "name": "lr5_6_binary_ge_negative",
+    "input": {
+      "kind": "binary",
+      "op": ">=",
+      "args": [
+        -3,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64 >= 2i64)"
+  },
+  {
+    "name": "lr6_4_checked_add_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.add",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_add(0i64, 0i64)"
+  },
+  {
+    "name": "lr6_4_checked_sub_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.sub",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_sub(0i64, 0i64)"
+  },
+  {
+    "name": "lr6_4_checked_mul_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.mul",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_mul(0i64, 0i64)"
+  },
+  {
+    "name": "lr6_4_checked_div_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.div",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_div(0i64, 0i64)"
+  },
+  {
+    "name": "lr6_4_checked_rem_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.rem",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_rem(0i64, 0i64)"
+  },
+  {
+    "name": "lr6_4_checked_shiftleft_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.shiftLeft",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::numeric::int_shift_left(0i64, 0i64)"
+  },
+  {
+    "name": "lr6_4_wrapping_add_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.wrappingAdd",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "0i64.wrapping_add(0i64)"
+  },
+  {
+    "name": "lr6_4_wrapping_sub_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.wrappingSub",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "0i64.wrapping_sub(0i64)"
+  },
+  {
+    "name": "lr6_4_wrapping_mul_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.wrappingMul",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "0i64.wrapping_mul(0i64)"
+  },
+  {
+    "name": "lr6_4_saturating_add_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.saturatingAdd",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "0i64.saturating_add(0i64)"
+  },
+  {
+    "name": "lr6_4_saturating_sub_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.saturatingSub",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "0i64.saturating_sub(0i64)"
+  },
+  {
+    "name": "lr6_4_saturating_mul_zero",
+    "input": {
+      "kind": "call",
+      "op": "Int.saturatingMul",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "0i64.saturating_mul(0i64)"
+  },
+  {
+    "name": "lr5_6_binary_add_zero",
+    "input": {
+      "kind": "binary",
+      "op": "+",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 + 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_sub_zero",
+    "input": {
+      "kind": "binary",
+      "op": "-",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 - 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_mul_zero",
+    "input": {
+      "kind": "binary",
+      "op": "*",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 * 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_div_zero",
+    "input": {
+      "kind": "binary",
+      "op": "/",
+      "args": [
+        0,
+        1
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 / 1i64)"
+  },
+  {
+    "name": "lr5_6_binary_rem_zero",
+    "input": {
+      "kind": "binary",
+      "op": "%",
+      "args": [
+        0,
+        1
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64).wrapping_rem(1i64)"
+  },
+  {
+    "name": "lr5_6_binary_shl_zero",
+    "input": {
+      "kind": "binary",
+      "op": "<<",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 << 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_shr_zero",
+    "input": {
+      "kind": "binary",
+      "op": ">>",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 >> 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_and_zero",
+    "input": {
+      "kind": "binary",
+      "op": "&",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 & 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_or_zero",
+    "input": {
+      "kind": "binary",
+      "op": "|",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 | 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_xor_zero",
+    "input": {
+      "kind": "binary",
+      "op": "^",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 ^ 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_eq_zero",
+    "input": {
+      "kind": "binary",
+      "op": "==",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 == 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_ne_zero",
+    "input": {
+      "kind": "binary",
+      "op": "!=",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 != 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_lt_zero",
+    "input": {
+      "kind": "binary",
+      "op": "<",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 < 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_le_zero",
+    "input": {
+      "kind": "binary",
+      "op": "<=",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 <= 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_gt_zero",
+    "input": {
+      "kind": "binary",
+      "op": ">",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 > 0i64)"
+  },
+  {
+    "name": "lr5_6_binary_ge_zero",
+    "input": {
+      "kind": "binary",
+      "op": ">=",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64 >= 0i64)"
+  },
+  {
+    "name": "lr6_4_literal_int8_0",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int8"
+    },
+    "expect": "0i8"
+  },
+  {
+    "name": "lr6_4_literal_int8_1",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        1
+      ],
+      "type": "Int8"
+    },
+    "expect": "1i8"
+  },
+  {
+    "name": "lr6_4_literal_int8_127",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        127
+      ],
+      "type": "Int8"
+    },
+    "expect": "127i8"
+  },
+  {
+    "name": "lr6_4_literal_int16_0",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int16"
+    },
+    "expect": "0i16"
+  },
+  {
+    "name": "lr6_4_literal_int16_1",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        1
+      ],
+      "type": "Int16"
+    },
+    "expect": "1i16"
+  },
+  {
+    "name": "lr6_4_literal_int16_127",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        127
+      ],
+      "type": "Int16"
+    },
+    "expect": "127i16"
+  },
+  {
+    "name": "lr6_4_literal_int32_0",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int32"
+    },
+    "expect": "0i32"
+  },
+  {
+    "name": "lr6_4_literal_int32_1",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        1
+      ],
+      "type": "Int32"
+    },
+    "expect": "1i32"
+  },
+  {
+    "name": "lr6_4_literal_int32_127",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        127
+      ],
+      "type": "Int32"
+    },
+    "expect": "127i32"
+  },
+  {
+    "name": "lr6_4_literal_int_0",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "0i64"
+  },
+  {
+    "name": "lr6_4_literal_int_1",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        1
+      ],
+      "type": "Int"
+    },
+    "expect": "1i64"
+  },
+  {
+    "name": "lr6_4_literal_int_127",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        127
+      ],
+      "type": "Int"
+    },
+    "expect": "127i64"
+  },
+  {
+    "name": "lr6_4_literal_uint8_0",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "UInt8"
+    },
+    "expect": "0u8"
+  },
+  {
+    "name": "lr6_4_literal_uint8_1",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        1
+      ],
+      "type": "UInt8"
+    },
+    "expect": "1u8"
+  },
+  {
+    "name": "lr6_4_literal_uint8_127",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        127
+      ],
+      "type": "UInt8"
+    },
+    "expect": "127u8"
+  },
+  {
+    "name": "lr6_4_literal_uint16_0",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "UInt16"
+    },
+    "expect": "0u16"
+  },
+  {
+    "name": "lr6_4_literal_uint16_1",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        1
+      ],
+      "type": "UInt16"
+    },
+    "expect": "1u16"
+  },
+  {
+    "name": "lr6_4_literal_uint16_127",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        127
+      ],
+      "type": "UInt16"
+    },
+    "expect": "127u16"
+  },
+  {
+    "name": "lr6_4_literal_uint32_0",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "UInt32"
+    },
+    "expect": "0u32"
+  },
+  {
+    "name": "lr6_4_literal_uint32_1",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        1
+      ],
+      "type": "UInt32"
+    },
+    "expect": "1u32"
+  },
+  {
+    "name": "lr6_4_literal_uint32_127",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        127
+      ],
+      "type": "UInt32"
+    },
+    "expect": "127u32"
+  },
+  {
+    "name": "lr6_4_literal_uint64_0",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "UInt64"
+    },
+    "expect": "0u64"
+  },
+  {
+    "name": "lr6_4_literal_uint64_1",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        1
+      ],
+      "type": "UInt64"
+    },
+    "expect": "1u64"
+  },
+  {
+    "name": "lr6_4_literal_uint64_127",
+    "input": {
+      "kind": "literal",
+      "op": "",
+      "args": [
+        127
+      ],
+      "type": "UInt64"
+    },
+    "expect": "127u64"
+  },
+  {
+    "name": "lr6_7_list_of_0",
+    "input": {
+      "kind": "call",
+      "op": "List.of",
+      "args": [],
+      "type": "List"
+    },
+    "expect": "vec![]"
+  },
+  {
+    "name": "lr6_7_list_of_1",
+    "input": {
+      "kind": "call",
+      "op": "List.of",
+      "args": [
+        0
+      ],
+      "type": "List"
+    },
+    "expect": "vec![0i64]"
+  },
+  {
+    "name": "lr6_7_list_of_3",
+    "input": {
+      "kind": "call",
+      "op": "List.of",
+      "args": [
+        0,
+        1,
+        2
+      ],
+      "type": "List"
+    },
+    "expect": "vec![0i64, 1i64, 2i64]"
+  },
+  {
+    "name": "lr6_tuple_0",
+    "input": {
+      "kind": "tuple",
+      "op": "",
+      "args": [],
+      "type": "Int"
+    },
+    "expect": "()"
+  },
+  {
+    "name": "lr6_tuple_1",
+    "input": {
+      "kind": "tuple",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64,)"
+  },
+  {
+    "name": "lr6_tuple_3",
+    "input": {
+      "kind": "tuple",
+      "op": "",
+      "args": [
+        0,
+        1,
+        2
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64, 1i64, 2i64)"
+  },
+  {
+    "name": "lr10_present_neg1",
+    "input": {
+      "kind": "present",
+      "op": "",
+      "args": [
+        -1
+      ],
+      "type": "Optional"
+    },
+    "expect": "Some(-1i64)"
+  },
+  {
+    "name": "lr10_present_0",
+    "input": {
+      "kind": "present",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Optional"
+    },
+    "expect": "Some(0i64)"
+  },
+  {
+    "name": "lr10_present_3",
+    "input": {
+      "kind": "present",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Optional"
+    },
+    "expect": "Some(3i64)"
+  },
+  {
+    "name": "lr10_success_neg1",
+    "input": {
+      "kind": "success",
+      "op": "",
+      "args": [
+        -1
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::Outcome::Ok(-1i64)"
+  },
+  {
+    "name": "lr10_success_0",
+    "input": {
+      "kind": "success",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::Outcome::Ok(0i64)"
+  },
+  {
+    "name": "lr10_success_3",
+    "input": {
+      "kind": "success",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Outcome"
+    },
+    "expect": "rt::Outcome::Ok(3i64)"
+  },
+  {
+    "name": "lr_native_neg_0",
+    "input": {
+      "kind": "neg",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64)"
+  },
+  {
+    "name": "lr_native_construct_0",
+    "input": {
+      "kind": "construct",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Item"
+    },
+    "expect": "(__ft_4974656d { value: 0i64 })"
+  },
+  {
+    "name": "lr_native_variant_0",
+    "input": {
+      "kind": "variant",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Item"
+    },
+    "expect": "(__ft_4974656d::__ft_56616c7565 { value: 0i64 })"
+  },
+  {
+    "name": "lr_native_record_0",
+    "input": {
+      "kind": "record",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Record"
+    },
+    "expect": "(Rec_5265636f7264285b282276616c7565222c204e616d6564284e616d656454207b206e616d653a2022496e74222c20617267733a205b5d2c207061636b6167653a2022222c206f726967696e3a202222207d29295d29 { value: 0i64 })"
+  },
+  {
+    "name": "lr_native_field_0",
+    "input": {
+      "kind": "field",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(__ft_4974656d { value: 0i64 }).value"
+  },
+  {
+    "name": "lr_native_tuple_field_0",
+    "input": {
+      "kind": "tuple_field",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(0i64,).0"
+  },
+  {
+    "name": "lr_native_index_0",
+    "input": {
+      "kind": "index",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "rt::collections::index(&vec![0i64], 0i64)"
+  },
+  {
+    "name": "lr_native_wrap_0",
+    "input": {
+      "kind": "wrap",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "0i64"
+  },
+  {
+    "name": "lr_native_interpolate_0",
+    "input": {
+      "kind": "interpolate",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "String"
+    },
+    "expect": "rt::interp!(\"value=\", 0i64)"
+  },
+  {
+    "name": "lr_native_or_fail_0",
+    "input": {
+      "kind": "or_fail",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "rt::Outcome::Ok(0i64)?"
+  },
+  {
+    "name": "lr_native_or_recover_0",
+    "input": {
+      "kind": "or_recover",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Int"
+    },
+    "expect": "(match rt::Outcome::Ok(0i64) { Ok(v) => v, Err(_) => 9i64 })"
+  },
+  {
+    "name": "lr_native_neg_3",
+    "input": {
+      "kind": "neg",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Int"
+    },
+    "expect": "(-3i64)"
+  },
+  {
+    "name": "lr_native_construct_3",
+    "input": {
+      "kind": "construct",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Item"
+    },
+    "expect": "(__ft_4974656d { value: 3i64 })"
+  },
+  {
+    "name": "lr_native_variant_3",
+    "input": {
+      "kind": "variant",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Item"
+    },
+    "expect": "(__ft_4974656d::__ft_56616c7565 { value: 3i64 })"
+  },
+  {
+    "name": "lr_native_record_3",
+    "input": {
+      "kind": "record",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Record"
+    },
+    "expect": "(Rec_5265636f7264285b282276616c7565222c204e616d6564284e616d656454207b206e616d653a2022496e74222c20617267733a205b5d2c207061636b6167653a2022222c206f726967696e3a202222207d29295d29 { value: 3i64 })"
+  },
+  {
+    "name": "lr_native_field_3",
+    "input": {
+      "kind": "field",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Int"
+    },
+    "expect": "(__ft_4974656d { value: 3i64 }).value"
+  },
+  {
+    "name": "lr_native_tuple_field_3",
+    "input": {
+      "kind": "tuple_field",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Int"
+    },
+    "expect": "(3i64,).0"
+  },
+  {
+    "name": "lr_native_index_3",
+    "input": {
+      "kind": "index",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Int"
+    },
+    "expect": "rt::collections::index(&vec![3i64], 0i64)"
+  },
+  {
+    "name": "lr_native_wrap_3",
+    "input": {
+      "kind": "wrap",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Int"
+    },
+    "expect": "3i64"
+  },
+  {
+    "name": "lr_native_interpolate_3",
+    "input": {
+      "kind": "interpolate",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "String"
+    },
+    "expect": "rt::interp!(\"value=\", 3i64)"
+  },
+  {
+    "name": "lr_native_or_fail_3",
+    "input": {
+      "kind": "or_fail",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Int"
+    },
+    "expect": "rt::Outcome::Ok(3i64)?"
+  },
+  {
+    "name": "lr_native_or_recover_3",
+    "input": {
+      "kind": "or_recover",
+      "op": "",
+      "args": [
+        3
+      ],
+      "type": "Int"
+    },
+    "expect": "(match rt::Outcome::Ok(3i64) { Ok(v) => v, Err(_) => 9i64 })"
+  },
+  {
+    "name": "lr_native_not_false",
+    "input": {
+      "kind": "not",
+      "op": "",
+      "args": [
+        0
+      ],
+      "type": "Bool"
+    },
+    "expect": "(!false)"
+  },
+  {
+    "name": "lr_native_and_false_false",
+    "input": {
+      "kind": "and",
+      "op": "",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Bool"
+    },
+    "expect": "(false && false)"
+  },
+  {
+    "name": "lr_native_or_false_false",
+    "input": {
+      "kind": "or",
+      "op": "",
+      "args": [
+        0,
+        0
+      ],
+      "type": "Bool"
+    },
+    "expect": "(false || false)"
+  },
+  {
+    "name": "lr_native_and_false_true",
+    "input": {
+      "kind": "and",
+      "op": "",
+      "args": [
+        0,
+        1
+      ],
+      "type": "Bool"
+    },
+    "expect": "(false && true)"
+  },
+  {
+    "name": "lr_native_or_false_true",
+    "input": {
+      "kind": "or",
+      "op": "",
+      "args": [
+        0,
+        1
+      ],
+      "type": "Bool"
+    },
+    "expect": "(false || true)"
+  },
+  {
+    "name": "lr_native_not_true",
+    "input": {
+      "kind": "not",
+      "op": "",
+      "args": [
+        1
+      ],
+      "type": "Bool"
+    },
+    "expect": "(!true)"
+  },
+  {
+    "name": "lr_native_and_true_false",
+    "input": {
+      "kind": "and",
+      "op": "",
+      "args": [
+        1,
+        0
+      ],
+      "type": "Bool"
+    },
+    "expect": "(true && false)"
+  },
+  {
+    "name": "lr_native_or_true_false",
+    "input": {
+      "kind": "or",
+      "op": "",
+      "args": [
+        1,
+        0
+      ],
+      "type": "Bool"
+    },
+    "expect": "(true || false)"
+  },
+  {
+    "name": "lr_native_and_true_true",
+    "input": {
+      "kind": "and",
+      "op": "",
+      "args": [
+        1,
+        1
+      ],
+      "type": "Bool"
+    },
+    "expect": "(true && true)"
+  },
+  {
+    "name": "lr_native_or_true_true",
+    "input": {
+      "kind": "or",
+      "op": "",
+      "args": [
+        1,
+        1
+      ],
+      "type": "Bool"
+    },
+    "expect": "(true || true)"
+  }
+]

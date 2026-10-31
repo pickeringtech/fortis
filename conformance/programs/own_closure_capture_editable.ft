@@ -1,0 +1,7 @@
+// reject: E-OWN-053
+// covers: LANG-07-06, LANG-08-02
+func bad() {
+  let mut s = "hello" as String
+  let f = fn mut[editable s]() Int => s.byteCount()
+  let fs = List.of(move f)
+}

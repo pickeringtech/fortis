@@ -1,0 +1,32 @@
+// execute: 2|rejected refinement.out_of_range
+// reports: runtime-failure:refinement.out_of_range
+// requires: runtime
+// covers: LANG-06-03
+// The repair for a container whose element refinement is unproved (6.3, X-514; D-465): validate element by element
+// into a container of the refined type, failing at the first element outside it.
+import fortis.host { Console }
+
+try func narrow(xs: List[Int]) List[Int<0..5>] {
+  let mut out: List[Int<0..5>] = List.default()
+  for x in xs {
+    out.push(x as Int<0..5> or fail)
+  }
+  return out
+}
+
+recovers func main(console: Console) {
+  match narrow(List.of(1, 2)) {
+    success(v) => console.print("${v.count()}")
+    failure(f) => {
+      console.print("rejected ${f.code}")
+      report f
+    }
+  }
+  match narrow(List.of(1, 9)) {
+    success(v) => console.print("${v.count()}")
+    failure(f) => {
+      console.print("rejected ${f.code}")
+      report f
+    }
+  }
+}

@@ -1,0 +1,9 @@
+// reject: E-OBL-003, E-OBL-001
+// covers: LANG-10-02
+class Bin[T] {
+  item: T
+}
+type Hidden = Bin[Outcome[Int]]
+func exercise() {
+  let absent: Bin[Outcome[Int]]? = null
+}

@@ -1,0 +1,13 @@
+// execute: 9 10
+// requires: runtime
+// covers: LANG-08-01
+import fortis.host { Console }
+async func value[T](n: T) Int => 9
+class Box[T] { export async try func value(n: T) Int => 10 }
+async try func main(console: Console) {
+  let f: async fn(Int) Int = value
+  let g = Box[Int].value
+  let a: Int = await f(1)
+  let b: Int = await g(1) or fail
+  console.print("${a} ${b}")
+}

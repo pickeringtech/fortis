@@ -21,7 +21,7 @@ export pure func words(text: StringView, minLength: Int) List[String] {
 
 // The longest word, the first of equal length; empty for no words.
 export pure func longest(ws: ListView[String]) String {
-  let mut best = String.from("")
+  let mut best = "" as String
   for w in ws {
     if w.scalarCount() > best.scalarCount() {
       best = copy w

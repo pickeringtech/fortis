@@ -1,0 +1,10 @@
+// accept
+try func parsePercent(text: StringView) Int<0..100> {
+  let n = text as Int or fail                // fallible: the canonical text of an Int, or conversion.parse
+  return n as Int<0..100> or fail            // fallible: the refinement, or refinement.out_of_range
+}
+
+func label(count: Int8, price: Decimal) String {
+  let total = count as Decimal               // total: an integer widens into a Decimal
+  return "${count as String} of ${price} is ${total}"
+}

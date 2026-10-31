@@ -1,0 +1,4 @@
+// D-548: generic-class copyability is judged on the declaration.
+class Bin[T] { values: List[T] }
+func main() { let b = Bin(values: List.of("x" as String))
+  let c = copy b }

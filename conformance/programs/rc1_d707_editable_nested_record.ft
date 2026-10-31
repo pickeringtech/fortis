@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+// D-707: rc.1 regression.
+func poke(s: editable { inner: { n: Int } }) {}
+func f(s: editable { inner: { n: Int<0..3> } }) { poke(editable s) }

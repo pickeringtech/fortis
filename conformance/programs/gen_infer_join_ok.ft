@@ -1,0 +1,20 @@
+// accept
+// covers: LANG-06-11
+// Arguments that disagree are joined to their common type (6.10, X-513): two integer refinements of one base fix `T`
+// to the hull of their intervals, and a narrower type widens to the wider one that contains it, in either order.
+pure func pick[T](a: T, b: T) T where T implements Copyable => copy a
+
+test "join" {
+  let small: Int<0..3> = 1
+  let big: Int<0..9> = 7
+  let xs = List.of(small, big)
+  expect xs.count() == 2
+  let ys = List.of(big, small)
+  expect ys.count() == 2
+  expect pick(small, big) == 1
+  let n: Int = 5
+  let zs = List.of(small, n)
+  expect zs.count() == 2
+  let ws = List.of(n, small)
+  expect ws.count() == 2
+}

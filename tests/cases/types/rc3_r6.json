@@ -1,0 +1,128 @@
+[
+  {
+    "name": "try_value",
+    "input": {
+      "source": "import fortis.host { Console }\ntry func parse(s: String) Int => s as Int or fail\ntry func main(console: Console) {\n  let f = parse\n  let v = f(\"3\") or fail\n  let n: Outcome[Int] = f(\"4\")\n  let w = n or fail\n  console.print(\"${v} ${w}\")\n}\n"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "try_controls",
+    "input": {
+      "source": "import fortis.host { Console }\ntry func parse(s: String) Int => s as Int or fail\ntry func main(console: Console) {\n  let f: try fn(String) Int = parse\n  let g = try fn(s: String) Int => s as Int or fail\n  let a = f(\"3\") or fail\n  let b = g(\"4\") or fail\n  let c = parse(\"5\") or fail\n  console.print(\"${a} ${b} ${c}\")\n}\n"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "nested_outcome_rejected",
+    "input": {
+      "source": "import fortis.host { Console }\ntry func parse(s: String) Int => s as Int or fail\nfunc main(console: Console) {\n  let f = parse\n  match move f(\"3\") {\n    success(inner) => match move inner {\n      success(n) => console.print(\"deep ${n}\")\n      failure(_) => console.print(\"inner-fail\")\n    }\n    failure(_) => console.print(\"outer-fail\")\n  }\n}\n"
+    },
+    "expect": {
+      "codes": [
+        "E-MAT-001",
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "try_failure",
+    "input": {
+      "source": "try func parse(s: String) Int => s as Int or fail\ntry func main() {\n  let f = parse\n  let n = f(\"no\") or fail\n  discard n\n}\n"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "try_effect_retained",
+    "input": {
+      "source": "try func parse(s: String) Int => s as Int or fail\nfunc main() { let f = parse\n let n = f(\"no\") or fail\n discard n }"
+    },
+    "expect": {
+      "codes": [
+        "E-ERR-001"
+      ]
+    }
+  },
+  {
+    "name": "try_generic_result",
+    "input": {
+      "source": "try func value[T]() T { fail \"absent\" }\ntry func main() { let f: try fn() Int = value\n let n = f() or fail\n discard n }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "async_value",
+    "input": {
+      "source": "import fortis.host { Console }\nasync func value() Int => 3\nasync try func parse(s: String) Int => s as Int or fail\nasync try func main(console: Console) {\n  let f = value\n  let pending: Future[Int] = f()\n  let a = await pending\n  let g = parse\n  let pendingTry: Future[Outcome[Int]] = g(\"4\")\n  let b = await pendingTry or fail\n  console.print(\"${a} ${b}\")\n}\n"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "async_annotation",
+    "input": {
+      "source": "async func value() Int => 3\nasync func main() { let f: async fn() Int = value\n let n: Int = await f()\n discard n }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "async_try_annotation",
+    "input": {
+      "source": "async try func value() Int => 3\nasync try func main() { let f: async try fn() Int = value\n let n: Int = await f() or fail\n discard n }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "async_effect_retained",
+    "input": {
+      "source": "async func value() Int => 3\nfunc main() { let f = value\n let n: Int = await f()\n discard n }"
+    },
+    "expect": {
+      "codes": [
+        "E-EFF-001"
+      ]
+    }
+  },
+  {
+    "name": "async_nested_rejected",
+    "input": {
+      "source": "async func value() Int => 3\nasync func main() { let f = value\n let n: Future[Int] = await f()\n let v = await n\n discard v }"
+    },
+    "expect": {
+      "codes": [
+        "E-TYP-040"
+      ]
+    }
+  },
+  {
+    "name": "explicit_outcome",
+    "input": {
+      "source": "func value() Outcome[Int] => Outcome.success(3)\ntry func main() { let f = value\n let n: Int = f() or fail\n discard n }"
+    },
+    "expect": {
+      "codes": []
+    }
+  },
+  {
+    "name": "associated_try",
+    "input": {
+      "source": "class Box { export try func value() Int => 3 }\ntry func main() { let f = Box.value\n let n: Int = f() or fail\n discard n }"
+    },
+    "expect": {
+      "codes": []
+    }
+  }
+]

@@ -1,11 +1,19 @@
 // accept
+// covers: LANG-09-03
+// A marker interface is implemented by declaration (9.5), and a mixin requires methods only (9.6): `Logged` needs the
+// `tag` the class provides, and the bound on `Audited` is met by the declaration.
 export interface Audited {}
 
 export mixin Logged {
-  requires Audited
-  export pure func tag(self) String => "audited"
+  requires pure func tag(self) String
+  export pure func label(self) String => "audited ${self.tag()}"
 }
 
 export class Ledger implements Audited with Logged {
   export name: String
+  export pure func tag(self) String => copy self.name
 }
+
+func audit[T](x: T) Int where T implements Audited => 1
+
+func check(l: Ledger) Int => audit(l)

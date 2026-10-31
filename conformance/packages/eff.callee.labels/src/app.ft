@@ -1,7 +1,7 @@
 // accept
 // LANG-11-03 (D-133): every call's effect summary is its own callee's. A call through a function value carries what
-// its type permits (it may allocate); a variant constructor, a newtype's `validate` and a refinement's `validate`
-// called after it allocate nothing, so each `noalloc` function below proves itself.
+// its type permits (it may allocate); a variant constructor, a newtype's `as` conversion and a refinement's `as`
+// conversion called after it allocate nothing, so each `noalloc` function below proves itself.
 export enum Shape {
   Dot(n: Int)
   Empty
@@ -15,8 +15,8 @@ noalloc func dot() Shape => Dot(n: 1)
 
 func callback2(g: fn() Int) Int => g()
 
-noalloc try func small(n: Int) Small => Small.validate(n) or fail
+noalloc try func small(n: Int) Small => n as Small or fail
 
 func callback3(g: fn() Int) Int => g()
 
-noalloc try func bounded(n: Int) Int<0..10> => Int<0..10>.validate(n) or fail
+noalloc try func bounded(n: Int) Int<0..10> => n as Int<0..10> or fail

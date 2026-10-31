@@ -1,0 +1,29 @@
+// reject: E-TYP-080 (at the marked lines)
+// covers: LANG-09-03
+// An implementation's associated constant is checked against the interface's declared type (9.3, 9.5; D-65): `Box`
+// provides `limit` as a `String` where `Sized` declares an `Int`, and `Crate` as a `Bool` through a written type;
+// `Tub` provides it as an `Int` and is accepted.
+export interface Sized {
+  func size(self) Int
+  const limit: Int
+}
+
+export class Box implements Sized {
+  export n: Int
+  const limit = "many"                              // reject: E-TYP-080
+  export func size(self) Int => self.n
+}
+
+export class Crate implements Sized {
+  export n: Int
+  const limit: Bool = true                          // reject: E-TYP-080
+  export func size(self) Int => self.n
+}
+
+export class Tub implements Sized {
+  export n: Int
+  const limit = 5
+  export func size(self) Int => self.n
+}
+
+export func cap() Int => Tub.limit

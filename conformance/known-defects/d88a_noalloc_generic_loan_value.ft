@@ -1,0 +1,12 @@
+// D-88 (a) (docs/delivery/defects.json): in a `noalloc` function, a `T` read from a loan where a value is wanted
+// (`noalloc func same[T](x: T) T => x`, called with a `String`) does not build natively (outside `noalloc` the value is
+// copied, D-82); the checkers accept it. D-352 (stream B) makes the checkers reject `return x` of a loaned `T`.
+import fortis.host { Host }
+
+noalloc func same[T](x: T) T => x
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let s = "ada"
+  caps.console.print("${same(s)}")
+}

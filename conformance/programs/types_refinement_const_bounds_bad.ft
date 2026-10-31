@@ -1,0 +1,18 @@
+// reject: E-REF-001 (at the marked lines)
+// covers: LANG-06-02
+// A `const` bound is folded, so the interval rules hold a literal to it (6.3, X-512; D-135: `Int<0..top>` was read as
+// `Int<0..>` and `f(50)` was accepted).
+const top: Int = 10
+const low = 2
+const twice: Int = top * 2
+
+pure func between(n: Int<low..top>) Int => n
+pure func upTo(n: Int<0..twice>) Int => n
+pure func below(n: Int<0..<top>) Int => n
+
+test "folded bounds reject what they exclude" {
+  expect between(50) == 50                   // reject: E-REF-001
+  expect between(1) == 1                     // reject: E-REF-001
+  expect upTo(21) == 21                      // reject: E-REF-001
+  expect below(10) == 10                     // reject: E-REF-001
+}

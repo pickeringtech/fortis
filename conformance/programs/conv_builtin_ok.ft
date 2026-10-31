@@ -1,0 +1,90 @@
+// accept
+// covers: LANG-06-14
+// 6.13 (X-475): every row of the built-in conversion table resolves; a total row has type T, a fallible row
+// Outcome[T] and is handled on the line; the chain reads left to right; a refinement target is the spelled validate.
+import fortis.text { Scalar }
+
+try func widen(n: Int8, u: UInt8) Int {
+  let a = n as Int
+  let b = u as Int16 as Int                  // UInt8 into Int16 is total: its range contains [0, 255]
+  return a + b or fail
+}
+
+try func narrow(n: Int, u: UInt64) Int8 {
+  let i = u as Int or fail                   // UInt64 into Int is fallible: its range is not contained
+  discard i
+  return n as Int8 or fail
+}
+
+func decimal(n: Int, d: Decimal) Decimal {
+  let x = n as Decimal
+  discard x
+  return d
+}
+
+try func integral(d: Decimal) Int {
+  return d as Int or fail
+}
+
+func float(n: Int32) Float {
+  return n as Float                          // Int32 and smaller: every value is exact, total
+}
+
+try func floatOf(n: Int) Float {
+  return n as Float or fail                  // Int: fallible, not every value is exact
+}
+
+func text(n: Int, d: Decimal, b: Bool, s: Scalar, f: Float) String {
+  let t1 = n as String
+  let t2 = d as String
+  let t3 = b as String
+  let t4 = s as String
+  discard t1
+  discard t2
+  discard t3
+  discard t4
+  return f as String
+}
+
+try func parse(text: StringView, own: String) Int {
+  let d = text as Decimal or fail
+  let b = text as Bool or fail
+  let small = own as Int8 or fail
+  discard d
+  discard b
+  discard small
+  return "42" as Int or fail
+}
+
+func copies(v: StringView, s: String) Bytes {
+  let copyOf = v as String                   // an owned copy of the view
+  let bytes = v as Bytes
+  discard copyOf
+  discard bytes
+  return s as Bytes
+}
+
+try func decode(b: Bytes, bv: BytesView) String {
+  let t = bv as String or fail
+  discard t
+  return b as String or fail
+}
+
+try func scalars(s: Scalar, n: Int) Scalar {
+  let code = s as Int
+  discard code
+  return n as Scalar or fail
+}
+
+try func refine(n: Int, p: Int<0..100>) Int<0..10> {
+  let q = n as Int<0..100> or fail           // a base type into a refinement of it: the spelled validate
+  discard q
+  return p as Int<0..10> or fail             // a refinement into a narrower one is the same conversion
+}
+
+try func moved(s: owned String, t: String) Bytes {
+  let b = move s as Bytes                    // moved into the conversion
+  let c = copy t as Int or fail              // a copy converted
+  discard c
+  return b
+}

@@ -21,6 +21,13 @@ pub fn slice(s: &str, a: i64, b: i64) -> Outcome<String> {
         Err(Failure::new("text.slice_bounds", "").with("start", Dyn::Int(a as i128)).with("end", Dyn::Int(b as i128)))
     }
 }
+/// An optional loan of text as a result: the signature is `Option<&str>`, while an intrinsic (`xs.get(0)`,
+/// `xs.first()`, `m.get(k)`), a binding or an `if` or `match` of them gives `Option<&String>` (D-353). The
+/// referent is anything read as a `str`, so an already viewed option passes through as it is (D-390).
+#[inline]
+pub fn opt_view<'a, T: AsRef<str> + ?Sized>(o: Option<&'a T>) -> Option<&'a str> {
+    o.map(|s| s.as_ref())
+}
 /// `s.slice(a, b)` as a view of `s` (no copy): scalar indices mapped to byte offsets.
 #[inline]
 pub fn slice_view(s: &str, a: i64, b: i64) -> Outcome<&str> {
@@ -69,6 +76,20 @@ pub fn words(s: &str) -> Vec<String> {
     s.split_whitespace().map(|w| w.to_string()).collect()
 }
 
+// The everyday text operations (6.6, X-479) are the runtime's own: the VM calls the same functions.
+pub use fortis_runtime::text::{ascii_lower, ascii_upper, find, lines, replace, split, trim, trim_end, trim_start};
+
+/// `s.startsWith(prefix)`.
+#[inline]
+pub fn starts_with(s: &str, prefix: &str) -> bool {
+    s.starts_with(prefix)
+}
+/// `s.endsWith(suffix)`.
+#[inline]
+pub fn ends_with(s: &str, suffix: &str) -> bool {
+    s.ends_with(suffix)
+}
+
 /// `text.Builder`
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Builder(pub String);
@@ -99,35 +120,9 @@ impl Show for Builder {
     }
 }
 
-/// Extended grapheme clusters for the rules the contract names (GB3, GB9, GB11, GB12/13), as the interpreter
-/// approximates them.
+/// The shared Unicode grapheme implementation (D-713).
 pub fn graphemes(s: &str) -> i64 {
-    fn is_extend(c: char) -> bool {
-        let o = c as u32;
-        (0x0300..=0x036F).contains(&o) || (0x1AB0..=0x1AFF).contains(&o) || (0x1DC0..=0x1DFF).contains(&o) || (0x20D0..=0x20FF).contains(&o) || (0xFE20..=0xFE2F).contains(&o) || (0xFE00..=0xFE0F).contains(&o) || (0x1F3FB..=0x1F3FF).contains(&o)
-    }
-    fn is_pict(c: char) -> bool {
-        let o = c as u32;
-        (0x1F000..=0x1FAFF).contains(&o) || (0x2600..=0x27BF).contains(&o)
-    }
-    fn is_ri(c: char) -> bool {
-        (0x1F1E6..=0x1F1FF).contains(&(c as u32))
-    }
-    let (mut count, mut prev, mut ri_run) = (0i64, None::<char>, 0u32);
-    for c in s.chars() {
-        match prev {
-            None => count += 1,
-            Some(p) => {
-                let joined = (p == '\r' && c == '\n') || is_extend(c) || c == '\u{200D}' || (p == '\u{200D}' && is_pict(c)) || (is_ri(c) && is_ri(p) && ri_run % 2 == 1);
-                if !joined {
-                    count += 1;
-                }
-            }
-        }
-        ri_run = if is_ri(c) { ri_run + 1 } else { 0 };
-        prev = Some(c);
-    }
-    count
+    fortis_runtime::graphemes::count(s) as i64
 }
 
 /// `Scalar.of(s)`: the one scalar of a one-scalar text.

@@ -1,0 +1,28 @@
+// execute: 2|30|true|false|30|1|41|1|7
+// requires: runtime
+// covers: LANG-06-06
+// D-549: equal derived class keys address one entry on every backend.
+import fortis.host { Console }
+class Key derive Equatable, Hashable { export n: Int }
+class GenericKey[T] derive Equatable, Hashable { export value: T }
+enum GenericKind[T] derive Equatable, Hashable { Wrapped(value: T) }
+func main(console: Console) {
+  let mut values: Map[Key, Int] = Map.default()
+  values.set(Key(n: 1), 10)
+  values.set(Key(n: 2), 20)
+  values.set(Key(n: 1), 30)
+  console.print("${values.count()}")
+  console.print("${values.get(Key(n: 1)) ?? 0}")
+  console.print("${values.containsKey(Key(n: 2))}")
+  console.print("${values.containsKey(Key(n: 3))}")
+  console.print("${editable values.remove(Key(n: 1)) ?? 0}")
+  console.print("${values.count()}")
+  let mut generic: Map[GenericKey[Int], Int] = Map.default()
+  generic.set(GenericKey[Int](value: 1), 40)
+  generic.set(GenericKey[Int](value: 1), 41)
+  console.print("${generic.get(GenericKey[Int](value: 1)) ?? 0}")
+  console.print("${generic.count()}")
+  let mut kinds: Map[GenericKind[Int], Int] = Map.default()
+  kinds.set(GenericKind[Int].Wrapped(value: 2), 7)
+  console.print("${kinds.get(GenericKind[Int].Wrapped(value: 2)) ?? 0}")
+}

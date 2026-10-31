@@ -1,0 +1,69 @@
+// accept
+// covers: LANG-06-06
+// D-549, X-615: hash-container key requirements.
+import fortis.money { Money, Currency }
+class Key derive Equatable, Hashable { export n: Int }
+enum Kind derive Equatable, Hashable { One
+  Two(n: Int) }
+type Id = Int
+class Plain { export n: Int }
+func probe() {
+  let s0: Set[Int]? = null
+  let m0: Map[Int, Plain]? = null
+  let s1: Set[Int8]? = null
+  let m1: Map[Int8, Plain]? = null
+  let s2: Set[Int16]? = null
+  let m2: Map[Int16, Plain]? = null
+  let s3: Set[Int32]? = null
+  let m3: Map[Int32, Plain]? = null
+  let s4: Set[Int64]? = null
+  let m4: Map[Int64, Plain]? = null
+  let s5: Set[UInt]? = null
+  let m5: Map[UInt, Plain]? = null
+  let s6: Set[UInt8]? = null
+  let m6: Map[UInt8, Plain]? = null
+  let s7: Set[UInt16]? = null
+  let m7: Map[UInt16, Plain]? = null
+  let s8: Set[UInt32]? = null
+  let m8: Map[UInt32, Plain]? = null
+  let s9: Set[UInt64]? = null
+  let m9: Map[UInt64, Plain]? = null
+  let s10: Set[Byte]? = null
+  let m10: Map[Byte, Plain]? = null
+  let s11: Set[Bool]? = null
+  let m11: Map[Bool, Plain]? = null
+  let s12: Set[String]? = null
+  let m12: Map[String, Plain]? = null
+  let s13: Set[Bytes]? = null
+  let m13: Map[Bytes, Plain]? = null
+  let s14: Set[Decimal]? = null
+  let m14: Map[Decimal, Plain]? = null
+  let s15: Set[Duration]? = null
+  let m15: Map[Duration, Plain]? = null
+  let s16: Set[Timestamp]? = null
+  let m16: Map[Timestamp, Plain]? = null
+  let s17: Set[Instant]? = null
+  let m17: Map[Instant, Plain]? = null
+  let s18: Set[Scalar]? = null
+  let m18: Map[Scalar, Plain]? = null
+  let s19: Set[Money]? = null
+  let m19: Map[Money, Plain]? = null
+  let s20: Set[Currency]? = null
+  let m20: Map[Currency, Plain]? = null
+  let s21: Set[Key]? = null
+  let m21: Map[Key, Plain]? = null
+  let s22: Set[Kind]? = null
+  let m22: Map[Kind, Plain]? = null
+  let s23: Set[Id]? = null
+  let m23: Map[Id, Plain]? = null
+}
+func empty[K]() Map[K, Int] where K implements Hashable => Map.default()
+func both[K]() Set[K] where K implements Hashable, K implements Equatable => Set.default()
+interface KeyLike requires Hashable {}
+func bundle[K]() Map[K, Int] where K implements KeyLike => Map.default()
+
+class GenericKey[T] derive Equatable, Hashable { export n: T }
+func instantiated() { let keys: Map[GenericKey[Int], Int]? = null }
+
+class RecursiveKey derive Equatable, Hashable { export next: RecursiveKey? }
+func recursive() { let keys: Map[RecursiveKey, Int]? = null }

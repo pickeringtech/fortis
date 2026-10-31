@@ -388,30 +388,15 @@ def run_backend(backend, target, is_dir, stem):
         code, out, err = run([sys.executable, "-I", FORTIS, "run", target, "--format", "json"])
         return code, out, err
     if backend == "vm":
-        code, out, err = run([FORTISC, "vm", target])
-        # the observed text runs to the trace line: a printed line feed inside one print stays part of it
-        m = re.search(r"^observed: (.*?)\ntrace: ", out, re.M | re.S)
-        obs = m.group(1) if m else None
-        if obs is None:
-            # a refusal prints `observed:` and no trace line. It used to exit 0, and the recorded
-            # observation is that text (D-52). A crash that prints no observation is not a run.
-            line = next((l[len("observed: "):] for l in out.splitlines() if l.startswith("observed: ")), None)
-            if line is not None and line.startswith(("refused", "unbuilt", "dynamic:")):
-                return 4, "", "fortisc vm exit 0: " + out + err
-            return 4, "", f"fortisc vm exit {code}: " + out + err
-        if obs.startswith(("refused", "unbuilt", "dynamic:")):
-            # a loud refusal stays a refusal when the process now exits non-zero (D-325)
-            return 4, "", obs
-        parts = obs.split("|") if obs else []
-        status, end, want = 0, "", 0
-        if parts and parts[-1].startswith("fail:"):
-            status, end, parts, want = 1, parts[-1], parts[:-1], 1
-        elif parts and parts[-1].startswith("defect:"):
-            # the VM process exits 101 for a defect; the example's status stays 3, as the interpreter's
-            status, end, parts, want = 3, parts[-1], parts[:-1], 101
-        if code != want:
-            return 4, "", f"fortisc vm exit {code}: " + out + err
-        return status, "".join(p + "\n" for p in parts), end
+        # The envelope joins print calls with `|`, which is also ordinary program text (the coffee receipt).
+        # Compare the actual console stream; metadata and failure records stay on stderr.
+        code, out, err = run([FORTISC, "vm", "--stdout", target])
+        # A refusal also exits 1, but never reaches execution and its trace. It must not pass an
+        # example expecting a failing main, even when that example prints nothing.
+        if code == 1 and not re.search(r"^trace: ", err, re.M):
+            return 4, out, err
+        status = 3 if code == 101 else code if code in (0, 1) else 4
+        return status, out, err
     exe = os.path.join(WORK, "bin", stem)
     os.makedirs(os.path.dirname(exe), exist_ok=True)
     # an executable left by an earlier run must not stand in for this build's (a build can exit 0 without one, D-55)

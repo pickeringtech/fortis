@@ -4,8 +4,6 @@
 *Human mode. Agent mode: [Classes, interfaces, mixins and enums, by rule](../agent/09-classes.md). Source of
 truth: LR 9.*
 
-> Preview: interfaces and mixins (LR 9.5, 9.6) arrive in v0.1. Classes, cleanup, enums and match (LR 9.1, 9.2, 9.3, 9.4, 9.7 and 9.8) are in v0.0.1.
-
 Fortis has no inheritance. A **class** is a named record with methods; an **interface** is a set of method
 signatures a type can promise to implement; a **mixin** contributes ready-made methods to classes that ask for
 it; an **enum** is a closed set of variants, each with its own payload. `match` takes any of them apart. Each of
@@ -63,7 +61,7 @@ class Point derive Equatable {
 }
 
 func main(console: Console) {
-  let name = String.from("home")
+  let name = "home" as String
   let a = Point(x: 1, y: 2)
   let b = Point(x: 1, y: 2, label: copy name)
   console.print("${a.label} ${b.label} ${name}")
@@ -169,9 +167,9 @@ class Person {
 }
 
 try func main(console: Console) {
-  let ada = Person.create(String.from("Ada"), 36) or fail
+  let ada = Person.create("Ada" as String, 36) or fail
   console.print("${ada.name} is ${ada.age()}")
-  let nobody = Person.create(String.from(""), 0) or fail
+  let nobody = Person.create("" as String, 0) or fail
   console.print("not reached")
 }
 ```
@@ -264,7 +262,7 @@ class Counter {
 }
 
 func main(console: Console) {
-  let mut hits = Counter.start(String.from("hits"))
+  let mut hits = Counter.start("hits" as String)
   hits.bump()
   hits.bump()
   console.print("value ${hits.value()}")
@@ -390,11 +388,13 @@ rectangle
 ```
 
 A generic function like `larger` is checked once against its bound and compiled once per type it is used with,
-so the call costs nothing at run time (LR 6.10).
+so dispatch is static rather than through a dynamic interface (LR 6.10).
 
-An implementation must provide every member with a compatible signature, and it may not weaken what the interface
-promises: it cannot drop `pure`, add `try` or `async`, or narrow a parameter's refinement (LR 9.5). Every such
-mismatch, and a missing member, is `E-TYP-080` (LR 9.5):
+An implementation must provide every member with a compatible signature, and it may not strengthen a precondition
+or weaken a guarantee: it cannot drop `pure` or `noalloc`, add `try`, `async` or `recovers`, narrow a parameter's
+refinement, widen a return refinement, or drop a contract's clause (LR 9.5, LR 11.2). Every such mismatch, a
+missing member, an associated constant of a type other than the interface declares, and an unmet mixin requirement
+is `E-TYP-080` (LR 9.5). Callers through the interface see the interface's contract only:
 
 ```fortis
 // reject: E-TYP-080
@@ -410,8 +410,10 @@ func main() {
 }
 ```
 
-The `implement` block is the form used for implementations declared apart from the type, such as generic ones
-(LR 9.5):
+The `implement` block is the form used for an implementation declared apart from the type's own head (LR 9.5).
+In Language 1.0 its target must be a non-generic class or enum the program declares, however the block names it
+(an import alias names the declaration it resolves to), and the block is then exactly the target listing the
+interface in `implements`, with the block's methods, which are reached through the interface (LR 9.5, X-180):
 
 ```fortis
 // accept
@@ -440,10 +442,41 @@ func main(console: Console) {
 21 C
 ```
 
+A block for a core type (`implement Labelled for Int`), a newtype, an optional, a generic class or enum
+(`implement Labelled for Pair[Int]`) or any other type is `E-TYP-171`: core types and newtypes have no run-time
+identity of their own in Language 1.0's backends, and a block for one instantiation of a generic type would need
+the backends to tell its instantiations apart; a generic implementation
+(`implement Displayable for Pair[T] where T implements Displayable`) is therefore not in Language 1.0 (LR 9.5,
+X-180). A block method the target already has, its own or a mixin's, or that another block for the target adds
+in any module of the package, is a member declared twice (`E-TYP-070`); a block for an interface the target
+already implements or derives is the overlap `E-TYP-100` alone. Two blocks for one interface and one target are
+an overlap whatever their modules; the target is the declaration with its type arguments, so `Box[Int]` and
+`Box[String]` are two targets, and a block in one module of a package is seen by every module of it (LR 9.5,
+D-132).
+
+```fortis
+// reject: E-TYP-171
+interface Describe {
+  pure func describe(self) String
+}
+
+implement Describe for Int {                 // reject: E-TYP-171 — a core type is no target
+  pure func describe(self) String => "an int"
+}
+
+func main() {
+}
+```
+
 ### Requirements, bundles and markers
 
-An interface may **require** others: a type implementing `Hashable` must also implement `Equatable` (LR 9.5). An
-interface with requirements and no members of its own is a **bundle**, satisfied by every type that implements
+An interface may **require** others: a type implementing `Hashable` must also implement `Equatable` (LR 9.5). A
+requirement is matched by identity and type arguments: the interface the requiring declaration's own module
+names, with the arguments the requirement states, so `Svc requires Tagged[String]` is not met by an
+implementation of `Tagged[Int]`, nor by another module's `Tagged` (LR 4.4, LR 9.5). A `dynamic J` can be used as `dynamic I` when `J` requires `I` and both are dynamic-eligible
+(LR 9.5). `Equatable` itself is not eligible because `equals` takes a second `Self`; see
+[Dynamic dispatch](#dynamic-dispatch). An interface with requirements and no members of its
+own is a **bundle**, satisfied by every type that implements
 everything it requires, without being named: `Codec` is `Encodable` plus `Decodable` (LR 9.5). An interface with
 neither members nor requirements is a **marker**, such as `Authority`, and is only ever implemented by explicit
 declaration (LR 9.5). A cycle of requirements is `E-TYP-060` (LR 9.5):
@@ -453,16 +486,22 @@ declaration (LR 9.5). A cycle of requirements is `E-TYP-060` (LR 9.5):
 interface Left requires Right {             // reject: E-TYP-060
 }
 
-interface Right requires Left {             // reject: E-TYP-060
+interface Right requires Left {              // reject: E-TYP-060
 }
 
 func main() {
 }
 ```
 
+An interface may carry a `where` clause constraining its type parameters before its body, and it is checked at
+every implementation and use: `class C implements Source[Int]` with `interface Source[T] where T implements
+Tag` is rejected when `Int` does not implement `Tag` (`E-TYP-080`), and so is the type `dynamic Source[Int]`
+wherever it is written (`E-TYP-090`, the code an unmet bound has at a call; LR 6.10, LR 9.5).
+
 Deriving an interface and also writing the method the derivation would generate is `E-MIX-001` (LR 9.5). There
-are no default method bodies in interfaces: shared behaviour on top of an interface is a mixin that requires it
-(LR 9.5).
+are no default method bodies in interfaces: shared behaviour on top of an interface is a mixin that requires
+the interface's methods it uses (LR 9.5, LR 9.6). A mixin requires methods only, never an interface:
+`requires Displayable` is not a sentence of the grammar (`E-SYN-000`, LR 9.6, X-526).
 
 ### Coherence
 
@@ -535,13 +574,33 @@ rectangle: 10
 total 14
 ```
 
-Only some interfaces can be used this way: an interface is dynamic-eligible when it has no generic methods and no
-method that takes or returns `Self` by value (LR 9.5).
+An interface is not itself a type a value has: a field, variant payload, parameter or result declared with a
+bare interface name is rejected at its declaration (`E-TYP-040`), naming `dynamic I`, `Shared[dynamic I]` and a
+type parameter bounded by `I` (LR 9.5). And only some interfaces are dynamic-eligible: one is eligible when it
+has no associated types, no generic methods and no method taking or returning `Self` beyond its receiver — a
+`Self` parameter, lent or owned, names a second value whose type a `dynamic` cannot know. `dynamic I` of any
+other interface is rejected wherever the type is written, a declared type, a lambda's or a `let` annotation
+(`E-TYP-172`); an associated function or constant does not count, since a `dynamic` value does not reach it
+(LR 9.5, LANG-09-07).
+
+```fortis
+// reject: E-TYP-172
+func main() {
+  let nothing: dynamic Equatable? = null    // reject: E-TYP-172 — `equals` takes a Self, so Equatable is not dynamic-eligible
+}
+```
+
+A value converts to `dynamic I` only from a type that implements `I` with the written type arguments, from a
+type parameter whose bound grants `I` (directly or through an interface that requires it), or from a
+`dynamic J` where `J` is `I` or requires it; any other conversion is `E-TYP-040`. An `async` method called
+through `dynamic` allocates its future, and such a call is rejected in `noalloc` code (LR 9.5).
 
 ## Mixins
 
 A mixin contributes method bodies to the classes that apply it with `with`. It declares what it needs as
-`requires` method signatures, never fields, and it cannot add fields, constructors or a cleanup (LR 9.6). A method
+`requires` method signatures, never fields, and never an interface — a mixin requires methods only
+(`requires Displayable` is not a sentence of the grammar, `E-SYN-000`, LR 9.6, X-526) — and it cannot add
+fields, constructors or a cleanup (LR 9.6). A method
 the class declares itself wins over a mixin method of the same name (LR 9.6).
 
 ```fortis
@@ -569,8 +628,21 @@ func main(console: Console) {
 woof! ...
 ```
 
-A mixin body is checked at each class that applies it and sees only the class's exported members, so a mixin never
-reads a private field (LR 9.6). Two applied mixins that provide the same method, with no method of that name in the
+A requirement is a signature: the class's method of that name is compared with it as an implementation is with
+an interface member — receiver, modifiers and claims, parameters, result — or the application is `E-TYP-080`,
+and a method the class has by derivation or through an interface it lists meets a requirement of that name. The
+method that meets a requirement is visible to the mixin's bodies whether or not the class exports it, since the
+requirement names it; that exception grants access only to the mixin declaring the requirement, not to another
+applied mixin or to an ordinary caller outside the class's module (LR 9.6, X-478). A mixin's method may in turn
+satisfy a member of an interface the class lists (LR 9.6).
+
+A mixin body is checked at each application site, as a method of the applying class, and sees only the class's
+exported members and the methods meeting its requirements, so a mixin never reads a private field (`E-NAM-004`);
+a type error in a mixin body is reported at the body for each class that applies it. This includes an
+application from another module of the package: the names written in the body resolve in the mixin's declaring
+module, including that module's private functions, constants and types, `self` denotes the applying class, and
+the diagnostic names the mixin's source file and line and identifies the applying class and its module
+(LR 9.6, X-476). Two applied mixins that provide the same method, with no method of that name in the
 class to settle it, are `E-MIX-001` (LR 9.6):
 
 ```fortis
@@ -659,6 +731,7 @@ arm (LR 9.8).
 | `name` | anything, and binds it |
 | `_` | anything |
 | a literal | an equal integer, string or Boolean |
+| `a..b`, `a..<b`, `a..`, `..<b` | an integer scrutinee whose value lies in the interval |
 | `Variant`, `Variant(field: name)`, `Variant(name)` | an enum variant, binding its payload |
 | `present(name)`, `null` | an optional |
 | `success(name)`, `failure(name)` | an outcome ([Outcomes and failures](10-outcomes.md)) |
@@ -762,7 +835,63 @@ func main() {
 }
 ```
 
-An arm may list alternatives, `Red | Amber => true`, when they share a result: the arm matches when any alternative does. The alternatives bind no names, are never `otherwise`, and the arm takes no `when` guard (`E-MAT-003`); every variant still has to be named somewhere, so a new variant is still reported (LR 9.8). Range patterns and `x @ pattern` bindings are not in Fortis 1.0.
+An arm may list alternatives, `Red | Amber => true`, when they share a result: the arm matches when any alternative does. The alternatives bind no names, are never `otherwise`, and the arm takes no `when` guard (`E-MAT-003`); every variant still has to be named somewhere, so a new variant is still reported (LR 9.8). Binding-with-subpattern (`x @ pattern`) is not in Fortis 1.0.
+
+### Range patterns
+
+A **range pattern** matches an integer scrutinee — `Int` or a sized integer type, refined or not — whose value
+lies in its interval: `a..b` includes `b`, `a..<b` excludes it, and the one-sided forms `a..` and `..<b` run to
+the limits of the scrutinee's own type (LR 9.8, X-517). Each bound is a constant expression that folds as a
+refinement's bound folds, an integer literal or a `const` (LR 6.3). An empty or inverted interval (`5..1`,
+`5..<5`), a bound that does not fold, or one outside the scrutinee type's own range is `E-MAT-005`. A range
+pattern over a scrutinee of any other type is `E-TYP-040`: a refinement alias or a newtype (`type Score =
+Int<0..100>`) is not an integer scrutinee — match on the refined integer type itself, or on a binding the
+conversion produced (LR 9.8). A range pattern binds no names, nests in payloads and alternatives like any
+pattern, and in a destructuring `let` it is refutable as any pattern is (`E-MAT-004`, LR 5.1).
+
+```fortis
+// accept
+import fortis.host { Console }
+
+const passMark: Int = 40
+
+pure func grade(mark: Int<0..100>) StringView from static {
+  return match mark {
+    70..100 => "distinction"
+    passMark..<70 => "pass"
+    0..<passMark => "fail"           // the three intervals cover 0..100, so no `otherwise` is needed
+  }
+}
+
+func main(console: Console) {
+  console.print("${grade(85)} ${grade(50)} ${grade(10)}")
+}
+```
+
+```output
+distinction pass fail
+```
+
+Over a refined integer scrutinee, exhaustiveness counts intervals (LR 9.8, X-518): the unguarded arms whose
+intervals together cover the scrutinee's whole interval make the match exhaustive without `otherwise` (which
+remains permitted as the catch-all), and the intervals left uncovered are named in the record (`E-MAT-001`);
+guarded arms and literal arms do not count toward the coverage. An unrefined integer scrutinee keeps its
+catch-all requirement. Inside an arm the scrutinee is narrowed to the arm's interval, as a `when` guard
+narrows, and a later unguarded arm sees the intervals the earlier unguarded arms covered removed from its
+scrutinee's known interval (LR 6.3, LR 9.8).
+
+```fortis
+// reject: E-MAT-005
+pure func band(n: Int) Int {
+  return match n {
+    5..1 => 1                              // reject: E-MAT-005 — the interval is inverted
+    otherwise => 0
+  }
+}
+
+func main() {
+}
+```
 
 ### Ownership in patterns
 
@@ -802,3 +931,7 @@ func main(console: Console) {
 books: 2500 g
 false
 ```
+
+A range pattern establishes its facts before the guard runs (LR 9.8; X-713). If the guard writes the scrutinee's
+place, or loans it or its owner editable, the arm body loses those facts. A guard that only reads keeps them.
+A separately bound integer copy keeps its own narrowing when the original owner changes.

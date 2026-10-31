@@ -1,0 +1,30 @@
+// execute: 5 [a, b, , c, ]|1 [abc]|1 []|2 [, ]|3 [, x, ]|2 [, a]|4 [naïve, , , café]|1 [héllo]|1 []|4 [a, b, c, d]|true
+// requires: runtime
+// covers: LANG-06-06
+// X-479, R19, 6.6: `split` cuts at every non-overlapping occurrence of the separator, left to right, and answers owned
+// strings. A separator at either end, or two in a row, gives an empty piece there; a text without the separator is
+// one piece (itself); the empty text is one empty piece. The empty separator occurs nowhere, so the text is its own
+// single piece. A separator of several scalars, or of multi-byte scalars, cuts the same way, and `join` is the
+// inverse of `split` for a non-empty separator.
+import fortis.host { Console }
+
+func show(pieces: List[String]) String {
+  return "${pieces.count()} ${pieces}"
+}
+
+recovers func main(console: Console) {
+  console.print(show("a,b,,c,".split(",")))
+  console.print(show("abc".split(",")))
+  console.print(show("".split(",")))
+  console.print(show(",".split(",")))
+  console.print(show(",x,".split(",")))
+  console.print(show("aaa".split("aa")))
+  console.print(show("naïve::: café".replace(" ", "").split(":")))
+  console.print(show("héllo".split("")))
+  console.print(show("".split("")))
+  let heap = "a b c d" as String
+  console.print(show(heap.split(" ")))
+  let line = "x=1;y=2;z=3"
+  let pieces = line.split(";")
+  console.print("${String.join(pieces, ";") == line}")
+}

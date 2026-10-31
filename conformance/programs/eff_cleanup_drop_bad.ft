@@ -1,0 +1,44 @@
+// reject: E-EFF-001 (at the marked lines)
+// covers: LANG-11-03, LANG-11-06
+// D-393, 11.3: a class's `cleanup` contributes its effects to every function that may drop its type: one that owns a
+// value of it as an `owned` parameter or `owned self`, binds one, destroys a temporary of it or discards one. A
+// function declared `pure` whose dropped value prints in its `cleanup` has the `io` effect. Both checkers charged a
+// binding's cleanup only, so a pure function printed from inside its own body on every backend. The authority the
+// cleanup acts under is one its class holds (11.6), which an `owned` parameter of the class carries as a receiver
+// does (X-495); a loan destroys nothing and is charged nothing (D-400, eff_loan_binding_cleanup_ok.ft).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+
+  pure func finish(owned self) Int => self.label.byteCount()             // reject: E-EFF-001 — dropping self prints
+}
+
+pure func ownedParameter(d: owned Token) Int {                            // reject: E-EFF-001 — d is dropped at the end
+  discard d.label
+  return 1
+}
+
+pure func discarded(d: owned Token) Int {                                 // reject: E-EFF-001 — the discard destroys d
+  discard d
+  return 2
+}
+
+pure func temporary(d: owned Token, e: owned Token) Int {                 // reject: E-EFF-001 — the moved temporary is destroyed with the statement
+  discard (move d, 1).1
+  return e.label.byteCount()
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  console.print("${ownedParameter(Token(label: String.from("a"), console: console.retain()))}")
+  console.print("${discarded(Token(label: String.from("b"), console: console.retain()))}")
+  console.print("${temporary(Token(label: String.from("c"), console: console.retain()), Token(label: String.from("d"), console: console.retain()))}")
+  console.print("${Token(label: String.from("e"), console: console.retain()).finish()}")
+  console.print("end")
+}

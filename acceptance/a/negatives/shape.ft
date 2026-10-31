@@ -1,6 +1,6 @@
 // base: src/main.ft
 // class: E-OWN-090
-// change: a fn mut closure moved into Shared, a shape with no safe lowering
+// change: an owned-capture fn mut closure moved into Shared, a shape with no safe lowering
 // Application A: reads the stock and order feeds through the FileSystem capability, builds the ledger, applies
 // the orders and prints a summary. It imports no kit package: the language core and fortis.host only.
 import fortis.host { Console, FileSystem, Path }
@@ -33,7 +33,7 @@ try func stockItems(text: StringView, out: Console) List[Item] {
         recover null
       }
       if e != null {
-        items.push(Item(sku: e.sku, name: String.from(nameField(line) or fail), quantity: e.quantity))
+        items.push(Item(sku: e.sku, name: (nameField(line) or fail) as String, quantity: e.quantity))
       }
     }
   }
@@ -80,13 +80,14 @@ try func run(fs: FileSystem, out: Console) {
     ledger.add(move item)
   }
   out.print("ledger: ${ledger.count()} items, ${ledger.countBelow(10)} below 10")
-  let first = SkuId.validate(1001) or fail
+  let first = 1001 as SkuId
   out.print("sku 1001 is ${ledger.nameOf(first) ?? "unknown"}")
   // fn mut: the visitor accumulates into a captured counter
   let mut units = 0
   {
-    let mut tally = fn mut[editable units](item: Item) Void {
-      units = Int.saturatingAdd(units, item.quantity)
+    let mut tallyUnits = copy units
+    let mut tally = fn mut[move tallyUnits](item: Item) Void {
+      tallyUnits = Int.saturatingAdd(tallyUnits, item.quantity)
     }
     let shared = Shared.create(move tally)
   }

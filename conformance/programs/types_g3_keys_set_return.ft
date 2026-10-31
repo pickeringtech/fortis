@@ -1,0 +1,5 @@
+// reject: E-TYP-090
+// covers: LANG-06-06
+// D-549, X-615: hash-container key requirements.
+class Plain { export n: Int }
+func empty() Set[Plain] => Set.default()

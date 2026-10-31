@@ -1,0 +1,10 @@
+// reject: E-OWN-051
+// covers: LANG-07-06, LANG-06-08
+class Cell { text: String
+  func textView(self) StringView from self => alias self.text
+}
+class Box { export cell: Cell? }
+func bad() (StringView from static)? {
+  let box: Box? = Box(cell: Cell(text: "gone"))
+  return box?.cell?.textView()
+}

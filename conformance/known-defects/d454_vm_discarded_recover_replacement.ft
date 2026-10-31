@@ -1,0 +1,42 @@
+// D-454: an `or recover` in a discarded statement whose try side fails and whose recover side makes the
+// replacement (`discard find(alias xs) or recover make(console, "made")` on an empty list, `find` a `try`
+// function whose result is `alias Token from xs`) passes both checkers, which type the discarded outcome as
+// the try side's loan, so the typed IR holds no statement temporary for it (a loan has nothing to destroy)
+// and the VM never destroys the made replacement: the interpreter prints `drop made|end` and the VM prints
+// `end`, exit 0 on both. Native code does not build the program (rustc E0308, D-453's shape). Pre-existing
+// since v0.0.1, whose interpreter destroyed the replacement and whose VM held no temporary of the discarded
+// outcome either; v0.1's D-413 fix moved the destruction of a discarded outcome's value into the statement's
+// temporary, which the loan typing leaves unheld where the try side lends. Found by the v0.1 stream A fix of
+// D-451, in a discard probe.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func find(xs: List[Token]) alias Token from xs {
+  match xs.get(0) {
+    present(t) => { return t }
+    null => { fail Missing() }
+  }
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let xs: List[Token] = List.default()
+  discard find(alias xs) or recover make(console, "made")
+  console.print("end")
+}

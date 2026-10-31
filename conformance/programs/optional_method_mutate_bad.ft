@@ -1,0 +1,12 @@
+// reject: E-OWN-011
+// covers: LANG-07-05, LANG-06-08
+class Cell {
+  text: String
+  func textView(self) StringView from self => alias self.text
+}
+func bad() {
+  let mut cell: Cell? = Cell(text: "alive")
+  let held = cell?.textView()
+  cell = null
+  discard held
+}

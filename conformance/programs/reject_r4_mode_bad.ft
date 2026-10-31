@@ -1,0 +1,4 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+func size(value: owned String) Int => value.scalarCount()
+func main() { let f: fn(String) Int = size }

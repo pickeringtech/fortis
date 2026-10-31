@@ -1,0 +1,22 @@
+// accept: S10: `report e as r`, `is V as name` and `import m as a` bind a lowercase name; only a type name after `as` converts
+import fortis.text as text
+
+error Missing {
+  code: "s10.missing"
+}
+
+recovers func fallback(n: Int) Int {
+  let v = n as Int8 catch e {
+    report e as r
+    discard r
+    recover 0
+  }
+  return v as Int
+}
+
+func kind(f: Failure) String {
+  return match f {
+    is Missing as m => "missing"
+    otherwise => "other"
+  }
+}

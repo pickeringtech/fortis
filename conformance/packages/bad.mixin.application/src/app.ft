@@ -1,0 +1,21 @@
+import bad.mixin.application.shapes { Peeks }
+
+// This helper must never change the meaning of the mixin's helper call.
+pure func helper(s: StringView) Int => 1
+
+export class Vault with Peeks {
+  secret: Int
+}
+
+// An exported field is visible, so only sum is wrong for this application.
+export class Open with Peeks {
+  export secret: Int
+}
+
+// A declared class method takes precedence over the mixin body.
+export class Override with Peeks {
+  export pure func peek(self) Int => 1
+  export pure func sum(self) Int => 2
+}
+
+func main() {}

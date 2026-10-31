@@ -1,0 +1,6 @@
+// reject: E-FUN-011
+// covers: LANG-08-02, LANG-08-03
+func demo() fn() Int {
+  let n = 1
+  return fn() => n
+}

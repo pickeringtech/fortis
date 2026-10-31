@@ -1,0 +1,6 @@
+// accept
+// covers: LANG-08-02, LANG-08-04
+// D-550: a plain fn mut parameter is treated as an immutable read loan; use editable fn mut for a user helper.
+func visit(items: ListView[Int], f: fn mut(Int) Void) {
+  for item in items { f(item) }
+}

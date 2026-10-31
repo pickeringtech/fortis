@@ -1,0 +1,13 @@
+// reject: E-TYP-040 (at the marked line)
+// covers: LANG-09-04
+// A mixin body is checked at each application site (9.6): `summary` adds the class's `title`, a `String`, to an `Int`,
+// which is found when `Report` applies the mixin, not left for a backend to meet.
+export mixin Summarised {
+  requires pure func title(self) String
+  export pure func summary(self) Int => Int.wrappingAdd(self.title(), 1)   // reject: E-TYP-040
+}
+
+export class Report with Summarised {
+  export name: String
+  export pure func title(self) String => copy self.name
+}

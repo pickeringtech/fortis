@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+enum Choice[T] { Some(value: T) }
+func main() { let f: fn(Int) Choice = Choice.Some
+  let n = f(1) }

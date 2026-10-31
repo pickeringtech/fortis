@@ -15,7 +15,16 @@ def name(node) -> Optional[str]:
 
 
 def children(node) -> list:
-    return node[1] if is_node(node) else []
+    if not is_node(node):
+        return []
+    raw = node[1]
+    head = next((c[1] for c in raw if name(c) == "inferredLambdaHead"), None)
+    if head is None:
+        return raw
+    out = [c for c in raw if name(c) != "inferredLambdaHead"]
+    at = next(i for i, c in enumerate(out) if isinstance(c, Token) and c.text == "fn") + 1
+    out[at:at] = [c for c in children(head) if name(c) == "captureList" or isinstance(c, Token) and c.text in ("mut", "once")]
+    return out
 
 
 def walk(node) -> Iterator:
@@ -46,9 +55,12 @@ def find(node, rule: str):
 def lambda_body(node):
     """A lambda's body: its `funcBody`, or, for an expression body written without a return type (LR 8.2, X-345), the
     same shape built from its `=>` and expression, so every reader of a body reads both forms alike."""
-    fb = child(node, "funcBody")
+    fb = child(node, "funcBody") or child(node, "lambdaBlock")
     if fb is not None:
         return fb
+    block = child(node, "block")
+    if block is not None:
+        return ("funcBody", [block])
     kids = children(node)
     arrow = next((i for i, k in enumerate(kids) if isinstance(k, Token) and k.text == "=>"), None)
     return ("funcBody", kids[arrow:]) if arrow is not None else None
@@ -66,7 +78,7 @@ def pun_name(arg) -> Optional[Token]:
 
 ARITH_RULES = ("additiveExpr", "multiplicativeExpr", "shiftExpr")
 WRAPPERS = ("expr", "outcomeExpr", "coalesceExpr", "orExpr", "andExpr", "bitOrExpr", "bitXorExpr", "bitAndExpr", "equalityExpr", "relationalExpr",
-            "shiftExpr", "additiveExpr", "multiplicativeExpr", "unaryExpr", "postfixExpr")
+            "shiftExpr", "additiveExpr", "multiplicativeExpr", "asExpr", "unaryExpr", "postfixExpr")
 
 
 def region_operators(node) -> set:
@@ -107,8 +119,9 @@ def tokens(node) -> List[Token]:
     if isinstance(node, Token):
         return [node]
     out: List[Token] = []
-    for c in children(node):
-        out.extend(tokens(c))
+    for c in (node[1] if is_node(node) else []):
+        if name(c) != "inferredLambdaHead":
+            out.extend(tokens(c))
     return out
 
 

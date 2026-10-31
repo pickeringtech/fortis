@@ -6,3 +6,6 @@ description = "Fortis lexer and the generated LL(3) parser (DEL-02 generator, Ru
 
 [dependencies]
 fortis-diag = { path = "../fortis-diag" }
+
+[dev-dependencies]
+fortis-testkit = { path = "../fortis-testkit" }

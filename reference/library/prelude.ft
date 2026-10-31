@@ -66,12 +66,39 @@ export class String {
   export trusted pure func empty() String
   export trusted pure func scalarCount(self) Int
   export trusted pure func byteCount(self) Int
+  export trusted pure func trim(self) StringView from self
+  export trusted pure func trimStart(self) StringView from self
+  export trusted pure func trimEnd(self) StringView from self
+  export trusted pure func find(self, needle: StringView) Int<0..>?
+  export trusted pure func contains(self, needle: StringView) Bool
+  export trusted pure func startsWith(self, prefix: StringView) Bool
+  export trusted pure func endsWith(self, suffix: StringView) Bool
+  export trusted pure func split(self, separator: StringView) List[String]
+  export trusted pure func lines(self) List[String]
+  export trusted pure func replace(self, old: StringView, new: StringView) String
+  export trusted pure func asciiUpper(self) String
+  export trusted pure func asciiLower(self) String
+  export trusted pure func repeat(self, times: Int<0..>) String
+  export trusted pure func join(parts: ListView[String], separator: StringView) String
 }
 export class StringView {
   export trusted pure func scalarCount(self) Int
   export trusted pure func byteCount(self) Int
   export trusted pure try func slice(self, start: Int, end: Int) StringView
   export trusted pure try func scalarAt(self, index: Int) Scalar
+  export trusted pure func trim(self) StringView from self
+  export trusted pure func trimStart(self) StringView from self
+  export trusted pure func trimEnd(self) StringView from self
+  export trusted pure func find(self, needle: StringView) Int<0..>?
+  export trusted pure func contains(self, needle: StringView) Bool
+  export trusted pure func startsWith(self, prefix: StringView) Bool
+  export trusted pure func endsWith(self, suffix: StringView) Bool
+  export trusted pure func split(self, separator: StringView) List[String]
+  export trusted pure func lines(self) List[String]
+  export trusted pure func replace(self, old: StringView, new: StringView) String
+  export trusted pure func asciiUpper(self) String
+  export trusted pure func asciiLower(self) String
+  export trusted pure func repeat(self, times: Int<0..>) String
 }
 export class Bytes {
   export trusted pure func byteCount(self) Int
@@ -118,13 +145,33 @@ export class List[T] {
   export trusted pure func get(self, index: Int) (alias T from self)?
   export trusted pure try func at(self, index: Int) T
   export trusted try func set(editable self, index: Int, value: owned T)
+  export trusted func clear(editable self)
   export trusted pure func isEmpty(self) Bool
   export trusted pure func first(self) (alias T from self)?
   export trusted pure func reversed(self) List[T] where T implements Copyable
   export trusted pure func concat(self, other: ListView[T]) List[T] where T implements Copyable
   export trusted pure func countWhere(self, keep: pure fn(T) Bool) Int
-  export trusted pure func map[U](self, f: pure fn(T) U) List[U]
+  export trusted pure func map[U](self, f: pure fn(T) U) List[U] where U: linear
   export trusted pure func filter(self, keep: pure fn(T) Bool) List[T] where T implements Copyable
+  export trusted func each(self, visit: editable fn mut(T) Void)
+  export trusted try func tryEach(self, visit: editable fn mut(T) Outcome[Void])
+  // U must be non-linear: failure drops earlier results (10.7, E-OBL-003).
+  export trusted pure try func tryMap[U](self, f: pure fn(T) Outcome[U]) List[U]
+  export trusted pure func fold[A](self, initial: owned A, step: pure fn(A, T) A) A
+  export trusted pure try func tryFold[A](self, initial: owned A, step: pure fn(A, T) Outcome[A]) A
+  export trusted pure func any(self, holds: pure fn(T) Bool) Bool
+  export trusted pure func all(self, holds: pure fn(T) Bool) Bool
+  export trusted pure func find(self, holds: pure fn(T) Bool) (alias T from self)?
+  export trusted pure func indexWhere(self, holds: pure fn(T) Bool) Int?
+  export trusted pure func contains(self, target: T) Bool where T implements Equatable
+  export trusted pure func enumerate(self) List[(Int, T)] where T implements Copyable
+  export trusted pure func zip[U](self, other: ListView[U]) List[(T, U)] where T implements Copyable, U implements Copyable
+  export trusted pure func take(self, n: Int) List[T] where T implements Copyable
+  export trusted pure func skip(self, n: Int) List[T] where T implements Copyable
+  export trusted pure func flatMap[U](self, f: pure fn(T) List[U]) List[U] where U: linear
+  export trusted pure func chunked(self, size: Int<1..>) List[List[T]] where T implements Copyable
+  export trusted pure func sortedBy[K](self, key: pure fn(T) K) List[T] where T implements Copyable, K implements Comparable
+  export trusted pure func groupBy[K](self, key: pure fn(T) K) Map[K, List[T]] where T implements Copyable, K implements Copyable, K implements Hashable, K implements Equatable
   export trusted pure func iterate(self) ListCursor[T] from self
   export trusted func consumeEach(owned self, visit: fn mut(owned T) Void)
 }
@@ -136,28 +183,70 @@ export class ListView[T] {
   export trusted pure func get(self, index: Int) (alias T from self)?
   export trusted pure func isEmpty(self) Bool
   export trusted pure func reversed(self) List[T] where T implements Copyable
+  export trusted pure func concat(self, other: ListView[T]) List[T] where T implements Copyable
+  export trusted pure func countWhere(self, keep: pure fn(T) Bool) Int
+  export trusted pure func map[U](self, f: pure fn(T) U) List[U] where U: linear
+  export trusted pure func filter(self, keep: pure fn(T) Bool) List[T] where T implements Copyable
+  export trusted func each(self, visit: editable fn mut(T) Void)
+  export trusted try func tryEach(self, visit: editable fn mut(T) Outcome[Void])
+  // U must be non-linear: failure drops earlier results (10.7, E-OBL-003).
+  export trusted pure try func tryMap[U](self, f: pure fn(T) Outcome[U]) List[U]
+  export trusted pure func fold[A](self, initial: owned A, step: pure fn(A, T) A) A
+  export trusted pure try func tryFold[A](self, initial: owned A, step: pure fn(A, T) Outcome[A]) A
+  export trusted pure func any(self, holds: pure fn(T) Bool) Bool
+  export trusted pure func all(self, holds: pure fn(T) Bool) Bool
+  export trusted pure func find(self, holds: pure fn(T) Bool) (alias T from self)?
+  export trusted pure func indexWhere(self, holds: pure fn(T) Bool) Int?
+  export trusted pure func contains(self, target: T) Bool where T implements Equatable
+  export trusted pure func enumerate(self) List[(Int, T)] where T implements Copyable
+  export trusted pure func zip[U](self, other: ListView[U]) List[(T, U)] where T implements Copyable, U implements Copyable
+  export trusted pure func take(self, n: Int) List[T] where T implements Copyable
+  export trusted pure func skip(self, n: Int) List[T] where T implements Copyable
+  export trusted pure func flatMap[U](self, f: pure fn(T) List[U]) List[U] where U: linear
+  export trusted pure func chunked(self, size: Int<1..>) List[List[T]] where T implements Copyable
+  export trusted pure func sortedBy[K](self, key: pure fn(T) K) List[T] where T implements Copyable, K implements Comparable
+  export trusted pure func groupBy[K](self, key: pure fn(T) K) Map[K, List[T]] where T implements Copyable, K implements Copyable, K implements Hashable, K implements Equatable
 }
 export class Array[T, N] {
   export trusted pure func filled(value: T) Array[T, N]
   export trusted pure func count(self) Int
   export trusted func set(editable self, index: Int, value: owned T)
+  export trusted pure func asView(self) ListView[T] from self
+  export trusted pure func get(self, index: Int) (alias T from self)?
 }
 export class Map[K, V] {
-  export trusted pure func default() Map[K, V]
+  export trusted pure func default() Map[K, V] where K implements Hashable
   export trusted pure func get(self, key: K) (alias V from self)?
   export trusted func set(editable self, key: owned K, value: owned V)
   export trusted pure func count(self) Int
+  export trusted pure func containsKey(self, key: K) Bool
+  export trusted func remove(editable self, key: K) V?
+  export trusted pure func isEmpty(self) Bool where K implements Hashable
+  export trusted func each(self, visit: editable fn mut(K, V) Void) where K implements Hashable
+  export trusted pure func keys(self) List[K] where K implements Hashable, K implements Copyable
+  export trusted pure func values(self) List[V] where K implements Hashable, V implements Copyable
 }
 export class OrderedMap[K, V] {}
 export class Set[T] {
-  export trusted pure func default() Set[T]
+  export trusted pure func default() Set[T] where T implements Hashable
   export trusted func add(editable self, item: owned T) Bool
   export trusted pure func contains(self, item: T) Bool
   export trusted pure func count(self) Int
+  export trusted func remove(editable self, item: T) Bool
+  export trusted pure func isEmpty(self) Bool where T implements Hashable
+  export trusted func each(self, visit: editable fn mut(T) Void) where T implements Hashable
+  export trusted pure func union(self, other: Set[T]) Set[T] where T implements Hashable, T implements Copyable
+  export trusted pure func intersection(self, other: Set[T]) Set[T] where T implements Hashable, T implements Copyable
+  export trusted pure func difference(self, other: Set[T]) Set[T] where T implements Hashable, T implements Copyable
 }
 export class FixedList[T, N] {}
 export class FixedMap[K, V, N] {}
 export class VariantMap[E, V] {}
+
+// ---- optional values (6.8) ----
+export class Optional {
+  export trusted pure func map[T, U](value: T?, f: pure fn(T) U) U? where U: linear
+}
 
 // ---- outcomes and failures (10) ----
 export class Must {
@@ -167,7 +256,10 @@ export class Must {
 export class Outcome[T] {
   export trusted pure func success(value: owned T) Outcome[T]
   export trusted pure func failure(f: owned Failure) Outcome[T]
+  // T must be non-linear: failure can drop successful payloads (10.7, E-OBL-003).
   export trusted pure try func collect(list: owned List[Outcome[T]]) List[T]
+  // T must be non-linear: the callback borrows a payload that is then dropped (10.7, E-OBL-003).
+  export trusted pure func map[U](owned self, f: pure fn(T) U) Outcome[U] where U: linear
 }
 export class Failure {
   export code: StringView from static
@@ -221,12 +313,12 @@ export class AtomicBool {
   export trusted func store(self, value: Bool)
 }
 export class Scope {
-  export trusted func launch[T](self, work: owned Future[T]) Task[T]
-  export trusted func launchParallel[T](self, work: owned Future[T]) Task[T]
-  export trusted func launchBlocking[T](self, work: owned fn once() T) Task[T]
+  export trusted func launch[T](self, work: owned Future[T]) Task[T] where T: linear
+  export trusted func launchParallel[T](self, work: owned Future[T]) Task[T] where T: linear
+  export trusted func launchBlocking[T](self, work: owned fn once() T) Task[T] where T: linear
   export trusted func detach[T](self, task: owned Task[T], supervisor: Supervisor)
 }
-export trusted async func join[A, B](a: owned Future[A], b: owned Future[B]) (A, B)
+export trusted async func join[A, B](a: owned Future[A], b: owned Future[B]) (A, B) where A: linear, B: linear
 export trusted func checkpoint()
 // Fault injection for the conformance corpus (10.8): a defect of the named class terminates the task at once.
 // Not a language feature: the reference toolchain's one hook for the defect taxonomy tests.

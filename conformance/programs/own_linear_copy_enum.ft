@@ -1,0 +1,7 @@
+// reject: E-OWN-002, E-OBL-001
+// covers: LANG-07-01, LANG-10-02
+enum Ticket { Held(value: Must) }
+func demo() {
+  let first = Ticket.Held(Must.create())
+  let second = copy first
+}

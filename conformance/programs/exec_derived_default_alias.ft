@@ -22,7 +22,7 @@ class Inner derive Default {
 
 type Wrapped = Inner
 
-class Array derive Default {
+class Array derive Default, Equatable {
   value: Int
 }
 

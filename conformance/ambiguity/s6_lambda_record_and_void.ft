@@ -1,0 +1,9 @@
+// accept
+// covers: LANG-08-01, LANG-08-02
+// S6 (X-580): try the written record result first; otherwise a bare block has a Void result.
+func demo() {
+  let buildRecord = fn(x: Int) { value: Int } { return { value: x } }
+  let noop = fn(x: Int) { discard x }
+  let r = buildRecord(3)
+  noop(r.value)
+}

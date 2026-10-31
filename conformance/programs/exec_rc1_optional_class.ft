@@ -1,0 +1,9 @@
+// execute: 1
+// requires: runtime
+// covers: LANG-06-08
+import fortis.host { Console }
+class Box { export n: Int? }
+func main(console: Console) {
+  let b = Box(n: 1)
+  console.print("${b.n ?? 0}")
+}

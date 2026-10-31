@@ -1,0 +1,8 @@
+// reject: E-OBL-001
+// covers: LANG-10-01
+// D-705: rc.1 regression.
+class Cell { export func take(self, o: owned Outcome[Int]) Int { return match move o { success(n) => n
+  failure(e) => { report e
+    give 0 } } } }
+func f(c: Cell?) { let o = "1" as Int
+  let n = c?.take(move o) }

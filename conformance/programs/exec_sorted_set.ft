@@ -1,0 +1,98 @@
+// execute: 0 true [] -1 -1 false|add true true true false true false|4 [1,3,5,9] 1 9 5 -1|has true false false false|remove true false true true false [5]|[1,3,5,7] [5,6,7,8] [1,3,5,6,7,8] [5,7] [1,3] [6,8] [] [1,3,5,7]|<3 5 > <1 3 5 7 > <> <> <1 3 >|16 true false 5 1357|apple fig pear|true apple 3|1.2 1.10 2.0 false|drained 0 [] 8
+// requires: runtime
+// covers: LANG-06-16
+// A set kept in ascending order (6.7, X-577): `add` finds the place of an item by binary search and says whether it was
+// new, so a duplicate changes nothing; `contains`, `remove`, `first`, `last` and `get` work on the sorted order; `for`
+// and `each` visit from the smallest to the largest; `union`, `intersection` and `difference` merge two sets, and
+// `between(low, high)` copies the members from low up to but not including high. Cases: empty, duplicates, removing the
+// smallest, the largest and an absent item, text, and a class that derives `Comparable`.
+import fortis.collections { SortedSet }
+import fortis.host { Console }
+
+class Version derive Equatable, Comparable {
+  export major: Int
+  export minor: Int
+}
+
+func show(s: SortedSet[Int]) String {
+  let mut out = "["
+  let mut first = true
+  for x in s {
+    if !first {
+      out = "${out},"
+    }
+    first = false
+    out = "${out}${x}"
+  }
+  return "${out}]"
+}
+
+func showList(xs: ListView[Int]) String {
+  let mut out = "<"
+  for x in xs {
+    out = "${out}${x} "
+  }
+  return "${out}>"
+}
+
+func main(console: Console) {
+  let mut s: SortedSet[Int] = SortedSet.default()
+  console.print("${s.count()} ${s.isEmpty()} ${show(s)} ${s.first() ?? -1} ${s.last() ?? -1} ${s.contains(0)}")
+  console.print("add ${s.add(5)} ${s.add(1)} ${s.add(9)} ${s.add(5)} ${s.add(3)} ${s.add(1)}")
+  console.print("${s.count()} ${show(s)} ${s.first() ?? -1} ${s.last() ?? -1} ${s.get(2) ?? -1} ${s.get(4) ?? -1}")
+  console.print("has ${s.contains(3)} ${s.contains(4)} ${s.contains(0)} ${s.contains(10)}")
+  console.print("remove ${s.remove(3)} ${s.remove(3)} ${s.remove(1)} ${s.remove(9)} ${s.remove(7)} ${show(s)}")
+  let a = SortedSet.fromList(List.of(7, 3, 7, 1, 5, 3))
+  let b = SortedSet.fromList(List.of(5, 6, 7, 8))
+  let none: SortedSet[Int] = SortedSet.default()
+  console.print("${show(a)} ${show(b)} ${show(a.union(b))} ${show(a.intersection(b))} ${show(a.difference(b))} ${show(b.difference(a))} ${show(a.intersection(none))} ${show(a.difference(none))}")
+  console.print("${showList(a.between(2, 7))} ${showList(a.between(0, 100))} ${showList(a.between(5, 5))} ${showList(a.between(8, 2))} ${showList(a.between(-5, 4))}")
+  let mut order = 0
+  a.each(fn mut[editable order](x: Int) Void {
+    order = Int.wrappingAdd(Int.wrappingMul(order, 10), x)
+  })
+  console.print("${a.fold(0, fn(sum, x) => Int.wrappingAdd(sum, x))} ${a.any(fn(x: Int) Bool => x > 6)} ${a.all(fn(x: Int) Bool => x > 1)} ${a.find(fn(x: Int) Bool => x > 3) ?? -1} ${order}")
+  let mut words: SortedSet[String] = SortedSet.default()
+  discard words.add("pear")
+  discard words.add("apple")
+  discard words.add("fig")
+  discard words.add("apple")
+  let mut line = ""
+  for w in words {
+    if line == "" {
+      line = "${w}"
+    } else {
+      line = "${line} ${w}"
+    }
+  }
+  console.print(line)
+  console.print("${words.contains("fig")} ${words.first() ?? "none"} ${words.count()}")
+  let mut versions: SortedSet[Version] = SortedSet.default()
+  discard versions.add(Version(major: 2, minor: 0))
+  discard versions.add(Version(major: 1, minor: 10))
+  discard versions.add(Version(major: 1, minor: 2))
+  discard versions.add(Version(major: 1, minor: 10))
+  let mut shown = ""
+  for v in versions {
+    if shown == "" {
+      shown = "${v.major}.${v.minor}"
+    } else {
+      shown = "${shown} ${v.major}.${v.minor}"
+    }
+  }
+  console.print("${shown} ${versions.contains(Version(major: 3, minor: 0))}")
+  let mut big: SortedSet[Int] = SortedSet.default()
+  let mut n = 8
+  while n > 0 {
+    discard big.add(n)
+    n = Int.wrappingSub(n, 1)
+  }
+  let mut drained = 0
+  while !big.isEmpty() {
+    if !big.remove(big.first() ?? 0) {
+      break
+    }
+    drained = Int.wrappingAdd(drained, 1)
+  }
+  console.print("drained ${big.count()} ${show(big)} ${drained}")
+}

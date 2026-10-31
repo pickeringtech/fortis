@@ -1,0 +1,353 @@
+[
+  {
+    "name": "lr6_7_list_count_int",
+    "input": {
+      "type": "List",
+      "method": "count",
+      "args": [],
+      "mode": "read",
+      "result": "Int",
+      "element": "Int"
+    },
+    "expect": "rt::collections::count(&xs)"
+  },
+  {
+    "name": "lr6_7_list_get_int",
+    "input": {
+      "type": "List",
+      "method": "get",
+      "args": [
+        1
+      ],
+      "mode": "read",
+      "result": "Optional",
+      "element": "Int"
+    },
+    "expect": "rt::collections::list_get_ref(&xs, 1i64).copied()"
+  },
+  {
+    "name": "lr6_7_list_get_string",
+    "input": {
+      "type": "List",
+      "method": "get",
+      "args": [
+        1
+      ],
+      "mode": "read",
+      "result": "Optional",
+      "element": "String"
+    },
+    "expect": "rt::collections::list_get_ref(&xs, 1i64)"
+  },
+  {
+    "name": "lr6_7_array_count_int",
+    "input": {
+      "type": "Array",
+      "method": "count",
+      "args": [],
+      "mode": "read",
+      "result": "Int",
+      "element": "Int"
+    },
+    "expect": "rt::collections::count(&xs)"
+  },
+  {
+    "name": "lr6_7_array_get_int",
+    "input": {
+      "type": "Array",
+      "method": "get",
+      "args": [
+        1
+      ],
+      "mode": "read",
+      "result": "Optional",
+      "element": "Int"
+    },
+    "expect": "rt::collections::list_get_ref(&xs, 1i64).copied()"
+  },
+  {
+    "name": "lr6_7_array_get_string",
+    "input": {
+      "type": "Array",
+      "method": "get",
+      "args": [
+        1
+      ],
+      "mode": "read",
+      "result": "Optional",
+      "element": "String"
+    },
+    "expect": "rt::collections::list_get_ref(&xs, 1i64)"
+  },
+  {
+    "name": "lr6_7_listview_count_int",
+    "input": {
+      "type": "ListView",
+      "method": "count",
+      "args": [],
+      "mode": "read",
+      "result": "Int",
+      "element": "Int"
+    },
+    "expect": "rt::collections::count(&xs)"
+  },
+  {
+    "name": "lr6_7_listview_get_int",
+    "input": {
+      "type": "ListView",
+      "method": "get",
+      "args": [
+        1
+      ],
+      "mode": "read",
+      "result": "Optional",
+      "element": "Int"
+    },
+    "expect": "rt::collections::list_get_ref(&xs, 1i64).copied()"
+  },
+  {
+    "name": "lr6_7_listview_get_string",
+    "input": {
+      "type": "ListView",
+      "method": "get",
+      "args": [
+        1
+      ],
+      "mode": "read",
+      "result": "Optional",
+      "element": "String"
+    },
+    "expect": "rt::collections::list_get_ref(&xs, 1i64)"
+  },
+  {
+    "name": "lr6_7_list_push_int",
+    "input": {
+      "type": "List",
+      "method": "push",
+      "args": [
+        7
+      ],
+      "mode": "editable",
+      "result": "Void",
+      "element": "Int"
+    },
+    "expect": "xs.push(7i64)"
+  },
+  {
+    "name": "lr6_7_list_pop_int",
+    "input": {
+      "type": "List",
+      "method": "pop",
+      "args": [],
+      "mode": "editable",
+      "result": "Optional",
+      "element": "Int"
+    },
+    "expect": "xs.pop()"
+  },
+  {
+    "name": "lr6_7_list_clear_int",
+    "input": {
+      "type": "List",
+      "method": "clear",
+      "args": [],
+      "mode": "editable",
+      "result": "Void",
+      "element": "Int"
+    },
+    "expect": "xs.clear()"
+  },
+  {
+    "name": "lr6_7_list_set_int",
+    "input": {
+      "type": "List",
+      "method": "set",
+      "args": [
+        1,
+        7
+      ],
+      "mode": "editable",
+      "result": "Outcome",
+      "element": "Int"
+    },
+    "expect": "rt::collections::list_set(&mut xs, 1i64, 7i64)"
+  },
+  {
+    "name": "lr6_7_array_set_int",
+    "input": {
+      "type": "Array",
+      "method": "set",
+      "args": [
+        1,
+        7
+      ],
+      "mode": "editable",
+      "result": "Void",
+      "element": "Int"
+    },
+    "expect": "{ let __i = 1i64; xs[__i as usize] = 7i64; }"
+  },
+  {
+    "name": "lr6_7_list_at_int",
+    "input": {
+      "type": "List",
+      "method": "at",
+      "args": [
+        1
+      ],
+      "mode": "read",
+      "result": "Outcome",
+      "element": "Int"
+    },
+    "expect": "rt::collections::list_at(&xs, 1i64)"
+  },
+  {
+    "name": "lr6_7_list_iterate_int",
+    "input": {
+      "type": "List",
+      "method": "iterate",
+      "args": [],
+      "mode": "read",
+      "result": "Cursor",
+      "element": "Int"
+    },
+    "expect": "rt::collections::Cursor::new(&xs)"
+  },
+  {
+    "name": "lr6_7_map_count_int",
+    "input": {
+      "type": "Map",
+      "method": "count",
+      "args": [],
+      "mode": "read",
+      "result": "Int",
+      "element": "Int"
+    },
+    "expect": "xs.count()"
+  },
+  {
+    "name": "lr6_7_map_remove_int",
+    "input": {
+      "type": "Map",
+      "method": "remove",
+      "args": [
+        1
+      ],
+      "mode": "editable",
+      "result": "Optional",
+      "element": "Int"
+    },
+    "expect": "xs.remove(&1i64)"
+  },
+  {
+    "name": "lr6_7_set_count_int",
+    "input": {
+      "type": "Set",
+      "method": "count",
+      "args": [],
+      "mode": "read",
+      "result": "Int",
+      "element": "Int"
+    },
+    "expect": "xs.count()"
+  },
+  {
+    "name": "lr6_7_set_remove_int",
+    "input": {
+      "type": "Set",
+      "method": "remove",
+      "args": [
+        1
+      ],
+      "mode": "editable",
+      "result": "Bool",
+      "element": "Int"
+    },
+    "expect": "xs.remove(&1i64)"
+  },
+  {
+    "name": "lr6_7_map_set_int",
+    "input": {
+      "type": "Map",
+      "method": "set",
+      "args": [
+        1,
+        7
+      ],
+      "mode": "editable",
+      "result": "Void",
+      "element": "Int"
+    },
+    "expect": "xs.set(1i64, 7i64)"
+  },
+  {
+    "name": "lr6_7_map_containskey_int",
+    "input": {
+      "type": "Map",
+      "method": "containsKey",
+      "args": [
+        1
+      ],
+      "mode": "read",
+      "result": "Bool",
+      "element": "Int"
+    },
+    "expect": "xs.contains_key(&1i64)"
+  },
+  {
+    "name": "lr6_7_map_get_int",
+    "input": {
+      "type": "Map",
+      "method": "get",
+      "args": [
+        1
+      ],
+      "mode": "read",
+      "result": "Optional",
+      "element": "Int"
+    },
+    "expect": "xs.get(&1i64).copied()"
+  },
+  {
+    "name": "lr6_7_map_get_string",
+    "input": {
+      "type": "Map",
+      "method": "get",
+      "args": [
+        1
+      ],
+      "mode": "read",
+      "result": "Optional",
+      "element": "String"
+    },
+    "expect": "xs.get(&1i64)"
+  },
+  {
+    "name": "lr6_7_set_add_int",
+    "input": {
+      "type": "Set",
+      "method": "add",
+      "args": [
+        1
+      ],
+      "mode": "editable",
+      "result": "Bool",
+      "element": "Int"
+    },
+    "expect": "xs.add(1i64)"
+  },
+  {
+    "name": "lr6_7_set_contains_int",
+    "input": {
+      "type": "Set",
+      "method": "contains",
+      "args": [
+        1
+      ],
+      "mode": "read",
+      "result": "Bool",
+      "element": "Int"
+    },
+    "expect": "xs.contains(&1i64)"
+  }
+]

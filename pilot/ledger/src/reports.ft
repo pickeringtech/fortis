@@ -58,7 +58,7 @@ pure func holdingLines(label: StringView, width: Int<0..1000>, holdings: Holding
   }
   let mut first = true
   for amount in amounts {
-    let shown = if first { give String.from(label) } else { give String.empty() }
+    let shown = if first { give label as String } else { give String.empty() }
     lines.push("  ${padRight(shown, width)}${amountCell(amount, commodities)}")
     first = false
   }
@@ -120,7 +120,7 @@ export pure try func treeReport(journal: Journal) List[String] {
 pure func treeLabel(name: AccountName) String {
   let depth = name.depth()
   if depth <= 1 {
-    return String.from(classLabel(name.kind()))
+    return classLabel(name.kind()) as String
   }
   let indent = repeat("  ", clampWidth(Int.saturatingSub(depth, 1)))
   return "${indent}${name.leaf()}"
@@ -250,7 +250,7 @@ export pure try func register(journal: Journal, account: AccountName) List[Strin
 pure try func fitted(text: StringView, width: Int<1..1000>) String {
   let n = text.scalarCount()
   if n <= width {
-    return String.from(text)
+    return text as String
   }
   let keep = width - 1
   let head = text.slice(0, keep) or fail

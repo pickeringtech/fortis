@@ -1,0 +1,9 @@
+// accept
+// D-668: run this package from outside the toolchain checkout.
+// covers: LANG-06-14
+import fortis.host { Console }
+type Count = Int<1..9>
+func main(console: Console) {
+  let n = 2 as Count
+  console.print("${n}")
+}

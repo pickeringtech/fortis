@@ -1,0 +1,66 @@
+// reject: E-OWN-001, E-OWN-002, E-OWN-010, E-TYP-090, E-EFF-001, E-TYP-040, E-ERR-001 (at the marked lines)
+// covers: LANG-06-16
+// 6.7 (X-576, X-577): the rules of the double-ended queue and the sorted set. Adding to a queue changes it, so its binding
+// is `let mut`; a loan of an item (`peekFront`) holds the queue still, as does a `for` over it; a `SortedSet` needs a
+// `Comparable` item and `filter` a `Copyable` one; a `noalloc` function cannot add to a queue, which allocates, and a `pure`
+// one cannot call `each`; and the callback of `tryMap` returns an outcome.
+import fortis.collections { Deque, SortedSet }
+
+class Handle {
+  export guard: Mutex[Int]
+  export name: String
+}
+
+func frozen() {
+  let d: Deque[Int] = Deque.default()
+  d.pushBack(1)   // reject: E-OWN-001: the queue is not `let mut`
+}
+
+func loanThenPush() {
+  let mut texts: Deque[String] = Deque.default()
+  texts.pushBack("a")
+  let head = alias texts.peekFront()
+  texts.pushBack("b")   // reject: E-OWN-010: `head` still lends the first item
+  let seen = head ?? "none"
+}
+
+func mutateWhileLooping() {
+  let mut d: Deque[Int] = Deque.default()
+  d.pushBack(1)
+  for x in d {
+    d.pushBack(x)   // reject: E-OWN-010: the loop reads the queue
+  }
+}
+
+func notComparable() {
+  let mut s: SortedSet[Handle] = SortedSet.default()   // reject: E-TYP-090: Handle is not Comparable
+}
+
+func notCopyable(handles: Deque[Handle]) {
+  let kept = handles.filter(fn(h: Handle) Bool => true)   // reject: E-TYP-090: Handle is not Copyable
+}
+
+noalloc func noAlloc(d: editable Deque[Int]) {
+  d.pushBack(1)   // reject: E-EFF-001: pushBack allocates
+}
+
+pure func pureEach(d: Deque[Int]) Int {
+  let mut sum = 0
+  d.each(fn mut[editable sum](n: Int) Void { sum = Int.wrappingAdd(sum, n) })   // reject: E-EFF-001: each is not pure
+  return sum
+}
+
+try func plainCallback(d: Deque[String]) Deque[Int] {
+  return d.tryMap(fn(s) => s.byteCount()) or fail   // reject: E-TYP-040: the callback returns an Int, not the Outcome[U] tryMap needs
+}
+
+func copiesAQueue(d: Deque[Int]) Deque[Int] {
+  return copy d   // reject: E-OWN-002: a generic class is not Copyable in v0.1, so neither is a queue (D-548)
+}
+
+func unhandled(d: Deque[String]) Deque[Int] {
+  return d.tryMap(fn(s) => s as Int) or fail   // reject: E-ERR-001: `or fail` outside a `try` function
+}
+
+func main() {
+}

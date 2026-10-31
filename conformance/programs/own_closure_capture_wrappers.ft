@@ -1,0 +1,27 @@
+// reject: E-OWN-053
+// covers: LANG-07-06, LANG-08-02
+class Box { work: fn() Int }
+enum Wrap { Keep(work: fn() Int) }
+type New = fn() Int
+func box(f: owned fn() Int) Box => Box(work: move f)
+func bad() Box {
+  let s = "hello" as String
+  let f = fn[alias s]() Int => s.byteCount()
+  return box(move f)
+}
+func variant() {
+  let s = "hello" as String
+  let f = fn[alias s]() Int => s.byteCount()
+  let v = Wrap.Keep(move f)
+}
+func wrapped() {
+  let s = "hello" as String
+  let f = fn[alias s]() Int => s.byteCount()
+  let v = New(move f)
+}
+func relay(pair: owned (fn() Int, Int)) (fn() Int, Int) => move pair
+func tuple() (fn() Int, Int) {
+  let s = "hello" as String
+  let f = fn[alias s]() Int => s.byteCount()
+  return relay((move f, 1))
+}

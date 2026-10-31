@@ -1,0 +1,68 @@
+// reject: E-OWN-052 (at the marked lines)
+// covers: LANG-07-04, LANG-12-01
+// D-364, 12.1: a deferred block runs after the loans held by its block's own bindings have ended, so it may not use a
+// binding of its block that holds a loan: one that holds it whole (`let r = alias p`, a `from` result) and one that
+// holds it inside an optional, a tuple or a record (`let t = xs.get(0)`, `let pair = (xs.get(0), 1)`) alike. Both
+// checkers looked only at bindings holding a loan whole. A binding of an enclosing block, and a loan of a trivial
+// value, which holds nothing, are fine (exec_defer_outer_loan.ft).
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func insideOptional(console: Shared[Console]) {
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  {
+    let t = xs.get(0)
+    defer {                                                               // reject: E-OWN-052 — t holds a loan of xs inside the optional
+      console.print("defer ${t?.label ?? "none"}")
+    }
+    console.print("body ${t?.label ?? "none"}")
+  }
+  console.print("end")
+}
+
+func insideTuple(console: Shared[Console]) {
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  {
+    let pair = (xs.get(0), 1)
+    defer {                                                               // reject: E-OWN-052 — pair holds a loan of xs
+      console.print("defer ${pair.1}")
+    }
+    console.print("body ${pair.0?.label ?? "none"}")
+  }
+  console.print("end")
+}
+
+func reassigned(console: Shared[Console]) {
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  {
+    let mut t = xs.get(1)
+    t = xs.get(0)
+    defer {                                                               // reject: E-OWN-052 — t holds a loan when the defer is registered
+      console.print("defer ${t?.label ?? "none"}")
+    }
+    console.print("body")
+  }
+  console.print("end")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  insideOptional(console)
+  insideTuple(console)
+  reassigned(console)
+}

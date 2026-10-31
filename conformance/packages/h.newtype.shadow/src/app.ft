@@ -1,0 +1,6 @@
+// reject: E-NAM-001
+// covers: LANG-06-01
+class List { export func count(self) Int => 1 }
+type Basket = List
+func demo(b: Basket) Int { return b.count() }
+func main() {}

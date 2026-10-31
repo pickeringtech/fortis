@@ -95,6 +95,11 @@ def run_split(cmd, paths, env=None, timeout=7200):
     return "".join(out)
 
 
+def failures(records):
+    """Complete failure records, including origin and disposition (D-711)."""
+    return [r for r in records if r.get("kind") == "runtime-failure"]
+
+
 def main(argv):
     verbose = "-v" in argv
     interp = {r["path"]: r for r in json.load(open(os.path.join(ROOT, "conformance", "execution", "results.json"), encoding="utf-8"))["results"]}
@@ -104,7 +109,7 @@ def main(argv):
     for line in out.splitlines():
         if line.startswith("=== "):
             cur = line[4:]
-            vm[cur] = {"observed": None, "trace": "", "records": []}
+            vm[cur] = {"observed": None, "trace": "", "records": [], "failures": []}
         elif line.startswith("observed: "):
             vm[cur]["observed"] = line[len("observed: "):]
         elif line.startswith("trace: "):
@@ -112,6 +117,8 @@ def main(argv):
         elif line.startswith("record: "):
             rec = dict(kv.split("=", 1) for kv in line[len("record: "):].split("; ") if "=" in kv)
             vm[cur]["records"].append(rec)
+        elif line.startswith("failure-record: "):
+            vm[cur]["failures"].append(json.loads(line[len("failure-record: "):]))
     excluded = g1_subset()
     rows = []
     for p in paths:
@@ -135,6 +142,8 @@ def main(argv):
         vr = [(k, str(c)) for k, c in vr]
         if ir != vr:
             problems.append(f"records: interpreter {ir}, VM {vr}")
+        if "// failure-records: exact" in src and failures(r.get("reports", [])) != v.get("failures", []):
+            problems.append(f"whole failures: interpreter {failures(r.get('reports', []))}, VM {v.get('failures', [])}")
         g1 = not (set(feats) & excluded)
         rows.append({"path": p, "features": feats, "g1": g1, "tests": tests, "agree": not problems, "problems": problems})
     g1rows = [x for x in rows if x["g1"]]

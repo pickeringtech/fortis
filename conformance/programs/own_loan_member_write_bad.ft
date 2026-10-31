@@ -1,0 +1,54 @@
+// reject: E-NAM-002 (at the marked lines)
+// covers: LANG-07-04, LANG-07-07
+// D-356, 7.3, 7.9: a field read through a loan is lent too, so `xs.get(0)?.inner` is `(alias Inner from xs)?`, not an
+// owned `Inner?`, and a `??` over it keeps the loan. A `let mut` binding that holds a read loan may be rebound, never
+// written through: the value belongs to the owner, and a read loan is read-only. Both checkers typed the field as
+// owned, so `g.n = 9` changed the list's own element on the interpreter and the VM, and copied it natively.
+import fortis.host { Console }
+
+class Inner {
+  n: Int
+}
+
+class Item {
+  inner: Inner
+  label: String
+}
+
+func innerOf(it: Item) alias Inner from it => alias it.inner
+
+func throughOptionalChain(console: Console) {
+  let mut xs: List[Item] = List.default()
+  xs.push(Item(inner: Inner(n: 1), label: String.from("a")))
+  let f = xs.get(0)?.inner
+  let mut g = f ?? Inner(n: 0)
+  g.n = 9                                                                 // reject: E-NAM-002 — g holds a read loan of the list's element
+  let n = match xs.get(0) {
+    present(w) => w.inner.n
+    null => 0
+  }
+  console.print("g ${g.n} list ${n}")
+}
+
+func throughWholeLoan(console: Console) {
+  let item = Item(inner: Inner(n: 1), label: String.from("a"))
+  let mut g = innerOf(alias item)
+  g.n = 5                                                                 // reject: E-NAM-002 — g is a read loan of item's field
+  console.print("g ${g.n}")
+}
+
+func throughNarrowedOptional(console: Console) {
+  let mut xs: List[Item] = List.default()
+  xs.push(Item(inner: Inner(n: 1), label: String.from("a")))
+  let mut t = xs.get(0)
+  if t != null {
+    t.inner.n = 2                                                         // reject: E-NAM-002 — t holds a read loan inside the optional
+  }
+  console.print("t ${t?.inner?.n ?? 0}")
+}
+
+func main(console: Console) {
+  throughOptionalChain(console)
+  throughWholeLoan(console)
+  throughNarrowedOptional(console)
+}

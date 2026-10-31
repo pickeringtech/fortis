@@ -1,0 +1,11 @@
+// reject: E-TYP-160
+// D-669: a bare Void callback needs an expected outcome type.
+// covers: LANG-06-11
+import fortis.host { Console }
+func main(console: Console) {
+  let o = ("21" as Int).map(fn(n) => Void)
+  match move o {
+    success(v) => console.print("ok")
+    failure(f) => { report f }
+  }
+}

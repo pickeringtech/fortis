@@ -1,0 +1,30 @@
+// execute: 6 0 3 null 0 null|true false true true true|true true false false true|[café]|[naï]|true true true|true true true|8 0 null
+// requires: runtime
+// covers: LANG-06-06
+// X-479, R19, 6.6: `find` answers the scalar offset of the first occurrence, the unit `slice` and `scalarAt` take, so
+// a multi-byte scalar counts once ("naïve café" holds "café" at 6, though it starts at byte 7), and the offset can
+// be handed straight to `slice`. An empty needle occurs at 0, the empty text holds only the empty needle, and a
+// needle longer than the text is absent. `contains`, `startsWith` and `endsWith` answer the same question as a
+// `Bool`, an empty needle, prefix or suffix always holding.
+import fortis.host { Console }
+
+recovers func main(console: Console) {
+  let text = "naïve café"
+  let first = text.find("café") ?? 99
+  let start = text.find("") ?? 99
+  let inner = text.find("ve") ?? 99
+  console.print("${first} ${start} ${inner} ${text.find("cafe")} ${"".find("") ?? 99} ${"".find("a")}")
+  console.print("${text.contains("ïv")} ${text.contains("zz")} ${text.contains("")} ${"".contains("")} ${text.contains(text)}")
+  console.print("${text.startsWith("naï")} ${text.startsWith("")} ${text.startsWith("aï")} ${text.startsWith("naïve café and more")} ${text.endsWith("fé")}")
+  // the offset is a slice bound
+  let begin = text.find("café") ?? 0
+  let tail = text.slice(begin, text.scalarCount()) or recover ""
+  console.print("[${tail}]")
+  let head = text.slice(0, text.find("ve") ?? 0) or recover ""
+  console.print("[${head}]")
+  console.print("${text.endsWith("")} ${"".endsWith("")} ${"x".endsWith("x")}")
+  // a String receiver
+  let heap = "heap café" as String
+  console.print("${heap.contains("é")} ${heap.startsWith("heap")} ${heap.endsWith("café")}")
+  console.print("${heap.find("é") ?? 99} ${heap.find("h") ?? 99} ${heap.find("H")}")
+}

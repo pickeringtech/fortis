@@ -1,0 +1,8 @@
+// D-721: native List optional-element index assignment needs present injection.
+// execute: 3
+import fortis.host { Console }
+func main(console: Console) {
+  let mut xs: List[Int<0..3>?] = List.of(1)
+  xs[0] = 3
+  console.print("${xs.get(0) ?? 0}")
+}

@@ -1,0 +1,25 @@
+// reject: E-TYP-181 (at the marked lines)
+// covers: LANG-06-14
+// 6.13 (X-475): an identity conversion says nothing and is rejected: a type to itself, two names of one type
+// (Int and Int64, Byte and UInt8), a refinement to its base or to a wider refinement (a subtype already, 6.3).
+func same(n: Int, s: String, b: Byte) Int {
+  let a = n as Int                           // reject: E-TYP-181 — n is already an Int
+  let c = n as Int64                         // reject: E-TYP-181 — Int64 is Int under another name
+  let t = s as String                        // reject: E-TYP-181 — s is already a String
+  let u = b as UInt8                         // reject: E-TYP-181 — UInt8 is Byte under another name
+  discard a
+  discard c
+  discard t
+  discard u
+  return n
+}
+
+func subtypes(p: Int<0..9>, q: Int<0..100>) Int {
+  let base = p as Int                        // reject: E-TYP-181 — a refinement is assignable to its base without an operation
+  let wider = p as Int<0..100>               // reject: E-TYP-181 — and to a refinement whose range contains it
+  let equal = q as Int<0..100>               // reject: E-TYP-181 — the same refinement
+  discard base
+  discard wider
+  discard equal
+  return q
+}

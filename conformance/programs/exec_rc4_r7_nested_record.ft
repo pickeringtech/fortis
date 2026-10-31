@@ -1,0 +1,18 @@
+// execute: 7
+// requires: runtime
+// covers: LANG-08-04
+import fortis.host { Console }
+export error Bad {
+  code: "demo.bad"
+}
+try func bad() Int { fail Bad() }
+try func nested() { inner: Outcome[Int] } {
+  let o: Outcome[Int] = bad()
+  return { inner: move o }
+}
+try recovers func main(console: Console) {
+  let box = nested() or fail
+  let { inner: inner } = move box
+  let n = move inner or recover 7
+  console.print("${n}")
+}

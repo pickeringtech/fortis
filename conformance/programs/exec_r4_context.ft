@@ -1,0 +1,15 @@
+// execute: 1 1 2 4
+// requires: runtime
+// covers: LANG-08-04
+import fortis.host { Console }
+import fortis.text as words
+func size[T](value: T) Int => 1
+func identity(n: Int) Int => n
+class Box[T] { export func size(value: T) Int => 1 }
+func main(console: Console) {
+  let f: fn(Int) Int = size
+  let g: fn(Int) Int = Box.size
+  let h = alias words.graphemes
+  let i = move identity
+  console.print("${f(1)} ${g(1)} ${h("aé")} ${i(4)}")
+}

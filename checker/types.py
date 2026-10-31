@@ -11,7 +11,7 @@ FLOAT_TYPES = {"Float", "Float32"}
 TRIVIAL_BUILTINS = {"Void", "Never", "Bool", "Float32", "Float", "Decimal", "Byte", "Duration", "Instant", "Timestamp", "Scalar", "Ordering"} | set(INT_TYPES)
 COPYABLE_HEAP = {"String", "Bytes", "BigInt"}
 COPYABLE_CONTAINERS = {"List", "Array", "Map", "OrderedMap", "Set", "FixedList", "FixedMap"}
-NOT_COPYABLE = {"Shared", "Weak", "Mutex", "MutexGuard", "AtomicInt", "AtomicBool", "Future", "Task", "Outcome", "Failure", "StringView", "BytesView", "ListView"}
+NOT_COPYABLE = {"Shared", "Weak", "Mutex", "MutexGuard", "AtomicInt", "AtomicBool", "Future", "Task", "Outcome", "Failure", "Must", "StringView", "BytesView", "ListView"}
 LINEAR_BUILTINS = {"Outcome", "Failure", "Future", "Task", "Must"}
 
 
@@ -28,6 +28,10 @@ class Named(Type):
     # Declaring module of a core type whose package identity is empty (`fortis.host`). Empty for prelude
     # types and for names not yet resolved. Not part of equality: identity stays `package` (LANG-04-04).
     origin: str = field(default="", compare=False, hash=False)
+
+    def interface_key(self):
+        """A bound names its declaring module, even when the spelling shadows the prelude."""
+        return self.name + ("@" + self.package if self.package else "")
 
     def show(self):
         a = f"[{', '.join(x.show() for x in self.args)}]" if self.args else ""
@@ -75,11 +79,14 @@ class FnT(Type):
     origin: str = ""           # the region of a loan-holding closure in an owning position (8.3): `fn(...) T from p`
     dynamic: bool = False      # declared `dynamic fn`: a boxed closure, the one heterogeneous position (8.4)
     identity: str = ""         # the lambda literal this closure type is, empty for a declared function type
+    modes: Tuple[str, ...] = ()  # empty entries mean read; preserved through callable inference (8.4)
+    capture_origins: Tuple[Tuple[str, str], ...] = ()  # value provenance, separate from the declared from region
+    def mode(self, i): return self.modes[i] if i < len(self.modes) else ""
     def show(self):
         m = " ".join(self.modifiers) + " " if self.modifiers else ""
         k = self.kind if self.kind == "fn" else self.kind
         d = "dynamic " if self.dynamic else ""
-        return f"{d}{m}{k}({', '.join(p.show() for p in self.params)}) {self.ret.show()}" + (f" from {self.origin}" if self.origin else "")
+        return f"{d}{m}{k}({', '.join((self.mode(i) + ' ' if self.mode(i) else '') + p.show() for i, p in enumerate(self.params))}) {self.ret.show()}" + (f" from {self.origin}" if self.origin else "")
 
 
 @dataclass(frozen=True)
@@ -123,13 +130,50 @@ def base_name(t: Type) -> Optional[str]:
 
 def int_bounds(t: Type) -> Optional[Tuple[Optional[int], Optional[int]]]:
     """The declared interval of an integer type (None for non-integers)."""
-    if isinstance(t, Refined) and t.kind in ("range", "exact") and t.base.name in INT_TYPES:
+    if isinstance(t, Refined) and t.kind in ("range", "exact") and not t.base.package and t.base.name in INT_TYPES:
         lo, hi = INT_TYPES[t.base.name]
         return (lo if t.lo is None else t.lo, hi if t.hi is None else t.hi)
-    if isinstance(t, Named) and t.name in INT_TYPES:
+    if isinstance(t, Named) and not t.package and t.name in INT_TYPES:
         return INT_TYPES[t.name]
     return None
 
 
 def strip_loan(t: Type) -> Type:
     return t.inner if isinstance(t, LoanT) else t
+
+
+def core_name(t: Type) -> Optional[str]:
+    """The name of a built-in type, never a same-spelled program declaration (D-592)."""
+    if isinstance(t, Refined):
+        t = t.base
+    return t.name if isinstance(t, Named) and not t.package else None
+
+
+def diagnostic_types(*types: Type) -> Tuple[str, ...]:
+    """Disambiguate nominal spellings within one diagnostic, leaving ordinary displays alone (D-665)."""
+    from dataclasses import replace
+    names = {}
+    def map_type(t, named):
+        if isinstance(t, Named):
+            return named(replace(t, args=tuple(map_type(a, named) for a in t.args)))
+        if isinstance(t, Refined): return replace(t, base=map_type(t.base, named))
+        if isinstance(t, (OptionalT, LoanT)): return replace(t, inner=map_type(t.inner, named))
+        if isinstance(t, TupleT): return replace(t, items=tuple(map_type(a, named) for a in t.items))
+        if isinstance(t, RecordT): return replace(t, fields=tuple((k, map_type(a, named)) for k, a in t.fields))
+        if isinstance(t, FnT): return replace(t, params=tuple(map_type(a, named) for a in t.params), ret=map_type(t.ret, named))
+        if isinstance(t, DynamicT): return replace(t, iface=map_type(t.iface, named))
+        return t
+    def collect(n):
+        identity = n.package or n.origin or 'fortis.prelude'
+        names.setdefault(n.name, set()).add(identity)
+        return n
+    for t in types: map_type(t, collect)
+    def module(identity): return identity.rsplit('/', 1)[-1].removeprefix('fortis.')
+    def qualify(n):
+        identities = names[n.name]
+        if len(identities) < 2: return n
+        identity = n.package or n.origin or 'fortis.prelude'
+        label = module(identity)
+        if sum(module(i) == label for i in identities) > 1: label = identity
+        return replace(n, name=label + '.' + n.name)
+    return tuple(map_type(t, qualify).show() for t in types)

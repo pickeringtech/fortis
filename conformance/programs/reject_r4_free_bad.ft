@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// covers: LANG-06-01
+func size(value: Int) Int => value
+func main() { let f = size
+  let n = f("bad") }

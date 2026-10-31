@@ -1,0 +1,7 @@
+// reject: E-NAM-004
+import fortis.host { Console }
+import h.newtype.movefor.defs as defs
+func main(console: Console) {
+  let b = defs.make()
+  for n in move b { console.print("${n}") }
+}

@@ -9,7 +9,8 @@ import fortis.host { Console }
 pure func same[T](x: T) T where T implements Copyable => copy x
 
 pure func firstOr[T](items: List[T], fallback: T) T where T implements Copyable {
-  return items.get(0) ?? copy fallback
+  let v = items.get(0) ?? copy fallback
+  return copy v
 }
 
 func main(console: Console) {

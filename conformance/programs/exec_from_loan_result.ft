@@ -32,7 +32,7 @@ class Bag {
 }
 
 func make(console: Shared[Console], label: StringView) Token {
-  return Token(label: String.from(label), console: console.retain())
+  return Token(label: label as String, console: console.retain())
 }
 
 func number(xs: List[Int], d: Int) Int {
@@ -60,7 +60,7 @@ func main(out: Console) {
   console.print("number ${number(ints, 9)}")
   let notes: List[Note] = List.default()
   {
-    let n = note(notes, Note(label: String.from("n1")))
+    let n = note(notes, Note(label: "n1" as String))
     console.print("note ${n.label}")
   }
   console.print("end")

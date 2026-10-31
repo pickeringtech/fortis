@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// covers: LANG-08-04
+func work() Int => 3
+func take(f: async fn() Int) {}
+func main() { take(work) }

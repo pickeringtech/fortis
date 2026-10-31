@@ -1,0 +1,50 @@
+// reject: E-TYP-172 (at the marked lines)
+// covers: LANG-09-07
+// An interface is dynamic-eligible only if it has no generic methods and no method taking or returning `Self` beyond
+// its receiver (9.5): `dynamic` of any other is refused wherever the type is written, a parameter, a field, a lambda's
+// parameter, a `let` annotation, an element type, an owned or lent form alike.
+import fortis.host { Host }
+
+export interface Same {
+  pure func same(self, other: Self) Bool
+}
+
+export interface Doubling {
+  pure func twice(self) Self
+}
+
+export interface Mapping {
+  pure func map[T](self, x: T) T
+}
+
+export interface Plain {
+  pure func size(self) Int
+  func create(name: String) Self
+  const limit: Int
+}
+
+export class Tag implements Same, Doubling, Plain {
+  export n: Int
+  const limit = 3
+  pure func same(self, other: Tag) Bool => self.n == other.n
+  pure func twice(self) Tag => Tag(n: self.n)
+  pure func size(self) Int => self.n
+  func create(name: String) Tag => Tag(n: 1)
+}
+
+export class Holder {                             // reject: E-TYP-172 — the field `items`, reported at its class
+  export items: List[dynamic Doubling]
+}
+
+func check(a: dynamic Same) Bool => true          // reject: E-TYP-172
+
+func lend(a: alias dynamic Mapping) Int => 1     // reject: E-TYP-172
+
+func plain(a: dynamic Plain) Int => a.size()
+
+export func main(args: List[String]) Void {
+  let caps = Host.capabilities()
+  let d: dynamic Doubling = Tag(n: 2)            // reject: E-TYP-172
+  let f = fn(x: dynamic Same) Bool => true      // reject: E-TYP-172
+  caps.console.print("${plain(Tag(n: 4))}")
+}

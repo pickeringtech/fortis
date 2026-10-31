@@ -1,0 +1,6 @@
+// reject: E-EFF-001
+// covers: LANG-11-03
+// D-544: consumeEach has the same callback effect rule as each.
+pure func consume(xs: owned List[Int]) {
+  move xs.consumeEach(fn(n) {})
+}

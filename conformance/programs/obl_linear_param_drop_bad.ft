@@ -1,0 +1,18 @@
+// reject: E-OBL-001 (at the marked lines)
+// covers: LANG-10-01
+// X-521: a body that falls off its end with a linear parameter still held reports it as a `return` path does —
+// one rule for a concrete linear parameter and a `T: linear` one alike, not depending on how the type is named.
+import fortis.host { Console }
+
+func dropit(x: owned Outcome[Int<0..10>]) {     // reject: E-OBL-001 — the concrete parameter drops at the body's end
+}
+
+func sink[T](x: owned T) where T: linear {      // reject: E-OBL-001 — the `T: linear` parameter drops alike
+}
+
+recovers func main(console: Console) {
+  let r = Int<0..10>.validate(3)
+  sink(move r)
+  let s = Int<0..10>.validate(4)
+  dropit(move s)
+}

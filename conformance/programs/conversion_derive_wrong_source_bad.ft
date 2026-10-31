@@ -1,0 +1,15 @@
+// reject: E-TYP-090
+// covers: LANG-06-15
+// D-517: From[Other] is no evidence of a conversion from the field's Int.
+trivial class Other {}
+class Wrapped implements From[Other] {
+  export pure func from(source: Other) Wrapped {
+    return Wrapped()
+  }
+}
+class Source {
+  value: Int
+}
+class Target derive From[Source] {
+  value: Wrapped
+}

@@ -1,0 +1,15 @@
+// accept
+// covers: LANG-14-01
+// Rows whose literals fit every position the body passes them to (14; D-50.3): an integer within the refined parameter,
+// text where a view is taken, a Bool the body expects, and a field the body only compares.
+pure func percent(part: Int<0..100>) Int => part
+pure func long(name: StringView) Bool => name.byteCount() > 3
+
+test "percent" cases {
+  "low":  { part: 0, expected: 0, name: "ab", flag: false }
+  "high": { part: 100, expected: 100, name: "abcd", flag: true }
+} as row {
+  expect percent(row.part) == row.expected
+  expect long(row.name) == row.flag
+  expect row.flag || row.part == 0
+}

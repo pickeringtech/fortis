@@ -1,0 +1,22 @@
+// reject: E-REF-001, E-TYP-040 (at the marked lines)
+// covers: LANG-06-02
+// A refinement inside a type argument is proved like the type itself, and type arguments are invariant in their
+// refinement (6.3, X-514; D-465): a `List[Int]` where a `List[Int<0..5>]` is expected is unproved (E-REF-001), and a
+// `List[Int<0..5>]` where a `List[Int]` is expected is not that type (E-TYP-040), since through the alias a 9 could be
+// stored; the repair validates element by element (exec_nested_refinement_validate.ft).
+func keep(xs: List[Int<0..5>]) Int => xs.count()
+
+func fill(xs: editable List[Int]) {
+  xs.push(9)
+}
+
+func main() {
+  let xs: List[Int] = List.of(1, 2)
+  let v: List[Int<0..5>] = copy xs                   // reject: E-REF-001
+  let n = keep(xs)                                    // reject: E-REF-001
+  let mut small: List[Int<0..5>] = List.of(1)
+  fill(editable small)                                // reject: E-TYP-040
+  let wide: List[Int] = copy small                    // reject: E-TYP-040
+  let m: Map[String, Int<0..5>] = Map.default()
+  let w: Map[String, Int] = copy m                    // reject: E-TYP-040
+}

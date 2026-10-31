@@ -1,0 +1,51 @@
+// execute: show moved|drop moved|after moved|show made|drop made|after made|show direct|drop direct|after direct|end
+// requires: runtime
+// covers: LANG-07-07, LANG-05-07
+// D-375, 7.9: a value of the statement's own lent to a read parameter is a temporary of the statement, destroyed when
+// the statement ends, in reverse creation order: a `??` whose fallback moves a local (`empty.get(0) ?? move d`) or
+// makes a value (`?? make(…)`), and a moved local passed bare (`show(console, move d)`). The interpreter and the VM
+// never destroyed the moved value, so its cleanup was lost; native code was right. The tokens sit in slots without a
+// cleanup of their own, so that no backend announces the temporaries in its trace (D-344); the output shows every
+// cleanup once.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+class Slot {
+  token: Token
+}
+
+func make(console: Shared[Console], label: StringView) Slot {
+  return Slot(token: Token(label: label as String, console: console.retain()))
+}
+
+func show(console: Shared[Console], s: Slot) {
+  console.print("show ${s.token.label}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Slot] = List.default()
+  {
+    let d = make(console, "moved")
+    show(console, empty.get(0) ?? move d)
+    console.print("after moved")
+  }
+  {
+    show(console, empty.get(0) ?? make(console, "made"))
+    console.print("after made")
+  }
+  {
+    let d = make(console, "direct")
+    show(console, move d)
+    console.print("after direct")
+  }
+  console.print("end")
+}

@@ -1,0 +1,7 @@
+// reject: E-FUN-011
+// covers: LANG-08-02, LANG-08-03
+func call(f: fn mut() Int) {}
+func demo() {
+  let n = 1
+  call(fn mut() => n)
+}

@@ -78,6 +78,11 @@ impl<'a> Typer<'a> {
     /// A future that keeps a loan of a temporary argument may not outlive it (12.3): the temporary ends with its
     /// statement (5.7), so a statement that binds, assigns, returns or gives such a future is rejected (D-31).
     pub fn temporaries_escape(&mut self, st: N<'a>) {
+        // A nested statement ends only its own temporaries, not a surrounding match scrutinee's.
+        let ts = st.tokens();
+        if let (Some(first), Some(last)) = (ts.first(), ts.last()) {
+            self.temporary_borrows.retain(|t| !((first.line, first.col) <= (t.line, t.col) && (t.line, t.col) <= (last.line, last.col)));
+        }
         let temps = std::mem::take(&mut self.carried_temps);
         if temps.is_empty() {
             return;
@@ -127,7 +132,7 @@ impl<'a> Typer<'a> {
                 let (yes, no, _) = self.condition_states(cond, env);
                 self.ctx.pop();
                 self.facts = yes;
-                let breaks = self.loop_body(inner, blk, env, &[]);
+                let breaks = self.loop_body(inner, blk, env, &[], true, Some(cond));
                 // D-72: the loop ends when the condition is false or at a `break` that targets it, with the state there
                 let mut exits = vec![no];
                 exits.extend(breaks);
@@ -136,7 +141,7 @@ impl<'a> Typer<'a> {
             "loopStmt" => {
                 let blk = inner.find("block").unwrap();
                 self.widen(blk);
-                self.loop_body(inner, blk, env, &[]);
+                self.loop_body(inner, blk, env, &[], false, None);
             }
             "forStmt" => self.for_stmt(inner, env),
             "deferStmt" => self.defer_stmt(inner, env),
@@ -150,7 +155,14 @@ impl<'a> Typer<'a> {
             }
             "captureStmt" => self.capture_stmt(inner, env),
             "recordStmt" => self.record_stmt(inner, env),
-            "expectStmt" => self.condition(inner.find("expr").unwrap(), env),
+            "expectStmt" => {
+                if !self.in_test_code {
+                    // `expect` is test code (14; D-414): outside a `test` or `property` body it has no meaning
+                    let actual = if self.current_label.is_empty() { "a function body".to_string() } else { self.current_label.clone() };
+                    self.typ("E-TYP-120", "`expect` outside a `test` or `property` body: it is test code, with no meaning in production code (14)".to_string(), &inner.tokens()[0], "a test or property body", &actual, "expect", "LANG-14-04");
+                }
+                self.condition(inner.find("expr").unwrap(), env)
+            }
             "exprStmt" => self.expr_statement(inner, env),
             "block" => self.walk_block(inner, env),
             _ => {
@@ -347,121 +359,32 @@ impl<'a> Typer<'a> {
                 let pe = self.path_of_expr(Some(e));
                 self.consume(pe, ftok(e).line, "returned");
                 if let Some(rt) = &rt_ {
-                    self.expect(&t, rt, ftok(e), "returned value");
+                    self.expect_return(&t, rt, ftok(e), "returned value");
                     self.loan_into_owned(&t, Some(rt), ftok(e), "the returned value");
                     self.owned_into_lent(&t, Some(rt), e, env);
                 }
                 if recording {
                     self.node_types = None;
                 }
-                let rp = self.path_of_expr(Some(e));
-                let mut rt = rt_.clone().unwrap_or_else(|| unknown(""));
-                while let Type::Optional(i) = &rt {
-                    if matches!(**i, Type::Loan { .. } | Type::Optional(_)) {
-                        rt = (**i).clone();
-                    } else {
-                        break;
-                    }
-                }
-                let mut origin: Option<String> = match &rt {
-                    Type::Loan { origin, .. } => Some(origin.clone()),
-                    Type::Fn { origin, .. } if !origin.is_empty() => Some(origin.clone()),
-                    _ => None,
-                };
-                if origin.is_none() {
-                    if let Some(r) = &rt_ {
-                        let mut nested = Vec::new();
-                        Self::nested_origins(r, true, &mut nested);
-                        if nested.len() == 1 {
-                            origin = Some(nested[0].0.clone()); // `((alias T from xs)?, Int)`
-                        }
-                    }
-                }
-                // a loan held inside an optional, a tuple or a record is returned only when the result lends one; an
-                // owned result was reported by loan_into_owned (D-341, D-348)
-                let lends = rt_.as_ref().map_or(false, |r| Self::lent(r).is_some());
-                let mut loan_roots: Vec<String> = Vec::new();
-                if let Some((ppath, mk, _)) = self.pending.take() {
-                    if mk == "move" {
-                        for l in &self.own.loans {
-                            if l.borrow().holder.as_deref() == Some(root_of(&ppath).as_str()) && (lends || !l.borrow().nested) {
-                                loan_roots.push(root_of(&l.borrow().owner));
-                            }
-                        }
-                        self.own.move_(&ppath);
-                    } else if mk == "alias" || mk == "editable" {
-                        loan_roots.push(root_of(&self.own.owner_path(&ppath)));
-                    }
-                } else if rp.is_some() && self.is_bearing(&t) && e.find("markerExpr").is_none() && !t.is_loan() {
-                    let rp = rp.clone().unwrap();
-                    self.own_err(
-                        "E-OWN-001",
-                        format!("`return {rp}`: an existing ownership-bearing place needs `move {rp}`, `copy {rp}` or a `from` signature with `alias {rp}`"),
-                        ftok(e),
-                        &rp,
-                        "marker required",
-                        "LANG-07-01",
-                        "",
-                    );
-                } else if let Some(rp) = &rp {
-                    if self.own.holders.contains(&root_of(rp)) && self.loan_carrying(&t) {
-                        let owner = self.own.holders.get(&root_of(rp)).unwrap().borrow().owner.clone();
-                        loan_roots.push(root_of(&owner));
-                    }
-                }
-                for l in &self.carried {
-                    if lends || !l.borrow().nested {
-                        loan_roots.push(root_of(&l.borrow().owner));
-                    }
-                }
-                self.carried.clear();
-                if origin.is_none() && !loan_roots.is_empty() {
-                    for r in &loan_roots {
-                        let b = env_lookup(env, r);
-                        if b.as_ref().map_or(false, |b| ["param", "editable", "owned"].contains(&b.kind.as_str())) || r == "self" {
-                            self.own_err("E-OWN-053", format!("the returned value keeps a loan of `{r}` but the result type names no origin: write `… from {r}`"), ftok(e), r, "loan-carrying result without an origin", "LANG-07-06", "");
-                        } else {
-                            self.own_err("E-OWN-051", format!("the returned value keeps a loan of `{r}`, a local or temporary that ends with the function"), ftok(e), r, "loan of a local returned", "LANG-07-06", "");
-                        }
-                    }
-                }
-                if let Some(origin) = &origin {
-                    if origin == "static" || origin == "self" || env_lookup(env, origin).is_some() {
-                        for r in &loan_roots {
-                            if r == origin {
-                                continue;
-                            }
-                            let b = env_lookup(env, r);
-                            if b.as_ref().map_or(false, |b| ["param", "editable", "owned"].contains(&b.kind.as_str())) || r == "self" {
-                                self.own_err(
-                                    "E-OWN-050",
-                                    format!("the result is declared `from {origin}` but this return keeps a loan of `{r}`: a result may name one origin"),
-                                    ftok(e),
-                                    r,
-                                    &format!("second origin {r}"),
-                                    "LANG-07-06",
-                                    "",
-                                );
-                            } else {
-                                self.own_err("E-OWN-051", format!("the result keeps a loan of `{r}`, a local or temporary that ends with the function"), ftok(e), r, "loan of a local returned", "LANG-07-06", "");
-                            }
-                        }
-                    }
-                }
+                self.check_returned_loans(e, &t, env, "return");
             } else if let Some(rt) = self.ret_type.clone() {
                 if known(&rt) && rt != void() {
-                    self.typ("E-TYP-040", format!("bare `return` in a function returning {}", rt.show()), &w0, &rt.show(), "Void", "return", "LANG-05-05");
+                    let displays = diagnostic_types(&[&rt, &named("Void")]);
+                    self.typ("E-TYP-040", format!("bare `return` in a function returning {}", displays[0]), &w0, &displays[0], &displays[1], "return", "LANG-05-05");
                 }
             }
             self.journal_exit("return", w0.line);
+            self.linear_loop_exit(0, &w0, "return", false);
             self.report_open(0, "at this return");
             return;
         }
         if word == "give" {
             self.pending = None;
             let t = self.branch_infer(e, env);
+            let handed = self.handed_on(e, &t); // the loans the value carries out of the branch (7.3; D-355)
+            let owned = self.owns_value(e, &t, env) || self.has_owned_part(e);
             self.branch_value(e, &t, "give");
-            if !self.ctx.last().map_or(false, |c| c == "arm" || c == "ifexpr") {
+            if !self.ctx.iter().rev().find(|c| c.as_str() != "loop").map_or(false, |c| c == "arm" || c == "ifexpr") {
                 let extra = if self.ctx.last().map_or(false, |c| c == "catch") { " (a catch block ends with `recover`)" } else { "" };
                 let actual = self.ctx.last().cloned().unwrap_or_else(|| "function body".into());
                 self.typ("E-TYP-120", format!("`give` outside a match arm or if-expression branch{extra}"), &w0, "a match arm or if-expression branch", &actual, "give", "LANG-05-05");
@@ -469,7 +392,15 @@ impl<'a> Typer<'a> {
             }
             let tk = ftok(e.unwrap()).clone();
             self.arm_types.last_mut().unwrap().push((t, tk));
+            if let Some(al) = self.arm_loans.last_mut() {
+                al.extend(handed);
+            }
+            if let Some(ao) = self.arm_owned.last_mut() {
+                *ao = *ao || owned;
+            }
             if let Some(d) = self.exit_frames.last().map(|f| f.0) {
+                self.linear_loop_exit(d, &w0, "give", false);
+                self.report_open(d + 1, "at this give");
                 let s = self.cleanup_state(d); // D-76: the expression's value leaves from here
                 self.exit_frames.last_mut().unwrap().1.push(s);
             }
@@ -478,8 +409,10 @@ impl<'a> Typer<'a> {
         if word == "recover" {
             self.pending = None;
             let t = self.branch_infer(e, env);
+            let handed = self.handed_on(e, &t);
+            let owned = self.owns_value(e, &t, env) || self.has_owned_part(e);
             self.branch_value(e, &t, "recover");
-            if self.ctx.last().map(|c| c.as_str()) != Some("catch") {
+            if self.ctx.iter().rev().find(|c| c.as_str() != "loop").map(|c| c.as_str()) != Some("catch") {
                 let actual = self.ctx.last().cloned().unwrap_or_else(|| "function body".into());
                 self.typ("E-TYP-120", "`recover` outside a catch block".into(), &w0, "a catch block", &actual, "recover", "LANG-05-05");
                 return;
@@ -492,7 +425,16 @@ impl<'a> Typer<'a> {
             }
             let tk = ftok(e.unwrap()).clone();
             self.arm_types.last_mut().unwrap().push((t, tk));
+            if let Some(al) = self.arm_loans.last_mut() {
+                al.extend(handed);
+            }
+            if let Some(ao) = self.arm_owned.last_mut() {
+                *ao = *ao || owned;
+            }
             if let Some(d) = self.exit_frames.last().map(|f| f.0) {
+                self.linear_loop_exit(d, &w0, "recover", false);
+                self.consume(self.catch_bound.last().cloned(), w0.line, "discharged");
+                self.report_open(d + 1, "at this recover");
                 let s = self.cleanup_state(d); // D-76: the catch expression's value leaves from here
                 self.exit_frames.last_mut().unwrap().1.push(s);
             }
@@ -505,13 +447,23 @@ impl<'a> Typer<'a> {
             } else if ts.len() > 1 && !self.loop_labels.iter().any(|l| l.as_deref() == Some(ts[1].text.as_str())) {
                 let labels: Vec<String> = self.loop_labels.iter().flatten().cloned().collect();
                 self.rec("E-NAM-001", format!("no enclosing loop is labelled `{}`", ts[1].text), "LANG-04-05", ts[1], Self::nam(&ts[1].text, labels));
-            } else if word == "break" && !self.break_frames.is_empty() {
+            } else if !self.break_frames.is_empty() {
                 let target = if ts.len() > 1 { Some(ts[1].text.clone()) } else { None };
                 let idx = (0..self.break_frames.len()).rev().find(|&i| target.is_none() || self.break_frames[i].0 == target);
                 if let Some(i) = idx {
                     let d = self.break_frames[i].1;
-                    let s = self.cleanup_state(d); // D-72: the loop is left from here
-                    self.break_frames[i].2.push(s);
+                    self.linear_loop_exit(d + if word == "continue" { 1 } else { 0 }, &w0, &word, false);
+                    self.report_open(d + 1, &format!("at this {word}"));
+                    if word == "break" {
+                        let d = self.break_frames[i].1;
+                        let s = self.cleanup_state(d); // D-72: the loop is left from here
+                        self.break_frames[i].2.push(s);
+                        let o = self.own.copy(); // with these loans live (D-362)
+                        self.break_frames[i].3.push(o);
+                    } else {
+                        let o = self.own.copy(); // the header is reached from here (D-362)
+                        self.break_frames[i].4.push(o);
+                    }
                 }
             }
             return;
@@ -530,8 +482,9 @@ impl<'a> Typer<'a> {
                     self.reported.insert(b);
                 }
             }
-            if known(&t) && !["Failure", "Report"].contains(&base_name(&t).unwrap_or("")) {
-                self.typ("E-TYP-040", format!("`report` takes a Failure, got {}", t.show()), ftok(e.unwrap()), "Failure", &t.show(), "report", "LANG-06-01");
+            if known(&t) && !["Failure", "Report"].contains(&core_name(&t).unwrap_or("")) {
+                let displays = diagnostic_types(&[&t, &named("Failure")]);
+                self.typ("E-TYP-040", format!("`report` takes a {expected}, got {}", displays[0], expected = displays[1]), ftok(e.unwrap()), &displays[1], &displays[0], "report", "LANG-06-01");
             }
             if let Some(i) = ts.iter().position(|t| t.text == "as") {
                 env_set(env, &ts[i + 1].text, named("Report"), false, "let");
@@ -551,10 +504,131 @@ impl<'a> Typer<'a> {
                 let path = self.path_of_expr(e).unwrap_or_else(|| "discarded value".into());
                 self.obl_err("E-OBL-001", format!("`discard` of a linear value ({}): a linear value is consumed, never discarded (5.5)", s.show()), &w0, &format!("{}:{}", w0.line, w0.col), &path, "LANG-05-08");
             }
+            if self.path_of_expr(e).is_none() || e.map_or(false, |e| e.find("markerExpr").is_some()) {
+                self.charge_drop(&t, &w0); // a discarded value of the statement's own is destroyed here (7.9, 11.3; D-393)
+            }
             return;
         }
         if e.is_some() {
             self.infer(e, env, None);
+        }
+    }
+
+    /// The loans the returned value `e` (of type `t`) keeps, against the result's declared origin: a `return`, or an
+    /// expression body, which is the return of its expression (7.6; D-395). A loan of a local or a temporary is
+    /// E-OWN-051, a loan of a second parameter E-OWN-050, a loan-carrying result with no origin E-OWN-053.
+    pub fn check_returned_loans(&mut self, e: N<'a>, t: &Type, env: &Env, how: &str) {
+        if self.borrows_value(t) { self.check_temporary_borrows(); }
+        if *strip(t) == void() {
+            self.pending = None;
+            self.carried.clear(); // Void cannot carry a loan of a call's argument (D-552)
+            return;
+        }
+        let rt_ = self.ret_type.clone();
+        let rp = self.path_of_expr(Some(e));
+        let mut rt = rt_.clone().unwrap_or_else(|| unknown(""));
+        while let Type::Optional(i) = &rt {
+            if matches!(**i, Type::Loan { .. } | Type::Optional(_)) {
+                rt = (**i).clone();
+            } else {
+                break;
+            }
+        }
+        let mut origin: Option<String> = match &rt {
+            Type::Loan { origin, .. } => Some(origin.clone()),
+            Type::Fn { origin, .. } if !origin.is_empty() => Some(origin.clone()),
+            _ => None,
+        };
+        if origin.is_none() {
+            if let Some(r) = &rt_ {
+                let mut nested = Vec::new();
+                Self::nested_origins(r, true, &mut nested);
+                if nested.len() == 1 {
+                    origin = Some(nested[0].0.clone()); // `((alias T from xs)?, Int)`
+                }
+            }
+        }
+        // a loan held inside an optional, a tuple or a record is returned only when the result lends one; an
+        // owned result was reported by loan_into_owned (D-341, D-348)
+        let lends = rt_.as_ref().map_or(false, |r| Self::lent(r).is_some());
+        let mut origins = Vec::new();
+        Self::captured_loans(t, &mut origins);
+        let mut loan_roots: Vec<String> = origins.iter().filter(|(o, _)| o != "static").map(|(o, _)| root_of(o)).collect();
+        if rp.is_none() && !t.is_loan() {
+            self.coalesced_marker(Some(e), t, if how == "return" { "`return`" } else { "`=>`" }); // `return p ?? v` (D-357)
+        }
+        if let Some((ppath, mk, _)) = self.pending.take() {
+            if mk == "move" {
+                for l in &self.own.loans {
+                    let ld = l.borrow();
+                    // a moved closure or lifetime value keeps its loans; a parameter's loan of its own argument is the caller's
+                    if ld.holder.as_deref() == Some(root_of(&ppath).as_str()) && (lends || !ld.nested) && ld.holder.as_deref() != Some(root_of(&ld.owner).as_str()) {
+                        loan_roots.push(root_of(&ld.owner));
+                    }
+                }
+                self.own.move_(&ppath);
+            } else if mk == "alias" || mk == "editable" {
+                loan_roots.push(root_of(&self.own.owner_path(&ppath)));
+            }
+        } else if rp.is_some() && self.is_bearing(t) && e.find("markerExpr").is_none() && !t.is_loan() {
+            let rp = rp.clone().unwrap();
+            let what = if how == "return" { format!("`return {rp}`") } else { format!("`=> {rp}`") };
+            self.own_err(
+                "E-OWN-001",
+                format!("{what}: an existing ownership-bearing place needs `move {rp}`, `copy {rp}` or a `from` signature with `alias {rp}`"),
+                ftok(e),
+                &rp,
+                "marker required",
+                "LANG-07-01",
+                "",
+            );
+        } else if let Some(rp) = &rp {
+            if self.own.holders.contains(&root_of(rp)) && self.loan_carrying(t) {
+                let owner = self.own.holders.get(&root_of(rp)).unwrap().borrow().owner.clone();
+                loan_roots.push(root_of(&owner));
+            }
+        }
+        for l in &self.carried {
+            let ld = l.borrow();
+            // a loan of a binding that owns a part of its value was reported by owned_into_lent, as the function's own
+            if (lends || !ld.nested) && !(lends && self.part_owners.contains(&root_of(&ld.owner))) {
+                loan_roots.push(root_of(&ld.owner));
+            }
+        }
+        self.carried.clear();
+        let where_ = if how == "return" { "this return" } else { "the expression body" };
+        if origin.is_none() && !loan_roots.is_empty() {
+            for r in &loan_roots {
+                let b = env_lookup(env, r);
+                if b.as_ref().map_or(false, |b| ["param", "editable", "owned"].contains(&b.kind.as_str())) || r == "self" {
+                    self.own_err("E-OWN-053", format!("the returned value keeps a loan of `{r}` but the result type names no origin: write `… from {r}`"), ftok(e), r, "loan-carrying result without an origin", "LANG-07-06", "");
+                } else {
+                    self.own_err("E-OWN-051", format!("the returned value keeps a loan of `{r}`, a local or temporary that ends with the function"), ftok(e), r, "loan of a local returned", "LANG-07-06", "");
+                }
+            }
+        }
+        if let Some(origin) = &origin {
+            if origin == "static" || origin == "self" || env_lookup(env, origin).is_some() {
+                for r in &loan_roots {
+                    if r == origin {
+                        continue;
+                    }
+                    let b = env_lookup(env, r);
+                    if b.as_ref().map_or(false, |b| ["param", "editable", "owned"].contains(&b.kind.as_str())) || r == "self" {
+                        self.own_err(
+                            "E-OWN-050",
+                            format!("the result is declared `from {origin}` but {where_} keeps a loan of `{r}`: a result may name one origin"),
+                            ftok(e),
+                            r,
+                            &format!("second origin {r}"),
+                            "LANG-07-06",
+                            "",
+                        );
+                    } else {
+                        self.own_err("E-OWN-051", format!("the result keeps a loan of `{r}`, a local or temporary that ends with the function"), ftok(e), r, "loan of a local returned", "LANG-07-06", "");
+                    }
+                }
+            }
         }
     }
 
@@ -579,9 +653,13 @@ impl<'a> Typer<'a> {
             if let Some(bad) = bad {
                 // a `let` destructures a class, tuple or record: its pattern matches every value (5.1; D-243)
                 let at = ftok(bad);
+                let shown = match bad.kid(0) {
+                    Some(C::N(k0)) if k0.name() == "rangePattern" => bad.tokens().iter().map(|t| t.text.as_str()).collect::<String>(),
+                    _ => at.text.clone(),
+                };
                 self.rec(
                     "E-MAT-004",
-                    format!("a `let` pattern must match every value of {}, but `{}` can fail to match: use `match` to handle the other cases", pt.show(), at.text),
+                    format!("a `let` pattern must match every value of {}, but `{shown}` can fail to match: use `match` to handle the other cases", pt.show()),
                     "LANG-05-01",
                     at,
                     Json::obj([("missing_variants", Json::Arr(vec![])), ("arm_set", Json::str(&pt.show()))]),
@@ -605,6 +683,11 @@ impl<'a> Typer<'a> {
         let t;
         if let Some(ann) = ann {
             let want = self.dc.type_of(Some(ann));
+            self.dc.check_keys(&want, ftok(ann), None, false);
+            self.check_stored_type(&want, ftok(ann), false);
+            for (code, rule, shown, why) in self.dc.dynamic_problems(&want) {
+                self.typ(code, format!("the annotation of `{}`: {why}", nm.text), ftok(ann), "a dynamic-eligible interface whose bounds hold", &shown, &nm.text, rule);
+            }
             have = self.infer(e, env, Some(&want));
             if is_interp(&have) && *strip(&want) == string_view() {
                 self.typ("E-TYP-040", "an interpolated literal is a fresh String; a binding annotated StringView cannot hold it (3.5)".into(), ftok(e.unwrap()), "String", "an interpolated literal", &nm.text, "LANG-03-05");
@@ -629,24 +712,32 @@ impl<'a> Typer<'a> {
             t = tt;
             self.set_fact(Some(&nm.text), &have);
         }
+        if self.borrows_value(&have) { self.check_temporary_borrows_in(e); }
         self.own.reinit(&nm.text);
         self.own.close_obligation(&nm.text, nm.line, "rebound");
         env_set(env, &nm.text, t.clone(), mutable, if mutable { "mut" } else { "let" });
         let d = self.depth;
         env_update(env, &nm.text, |b| b.depth = d);
+        // the binding owns a part of what it holds beside its loans: a `??` fallback, a tuple's own element, a branch's
+        // own value (7.9; D-366, D-369)
+        self.part_owners.remove(&nm.text);
+        if self.has_owned_part(e) && (have.is_loan() || self.holds_loan(&have)) {
+            self.part_owners.insert(nm.text.clone());
+        }
         let cd = if known(strip(&t)) { self.decl_of(strip(&t)) } else { None };
         if let Some(cd) = cd {
             if cd.has_cleanup {
                 crate::journal::cleanup("drop", &format!("{}: {}", nm.text, cd.name), nm.line, vec![]);
-                self.requested.borrow_mut().insert(format!("cleanup {}", cd.name));
-                let s = self.summaries.get(&format!("cleanup {}", cd.name)).cloned().unwrap_or_default();
-                self.eff.imports(&s, Some(&nm), &[]);
             }
+        }
+        if Self::lent(&have).is_none() || self.part_owners.contains(&nm.text) {
+            let charged = if ann.is_some() { t.clone() } else { have.clone() };
+            self.charge_drop(&charged, &nm); // dropping what the binding owns runs its cleanup (11.3; D-393, D-400)
         }
         if strip(&t).is_named("MutexGuard") {
             self.guards.push((nm.text.clone(), self.depth, nm.clone()));
         }
-        let view = matches!(strip(&have), Type::Named(n) if ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str()));
+        let view = matches!(strip(&have), Type::Named(n) if (n.package.is_empty() && ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str())));
         if e.map_or(true, |e| e.find("markerExpr").is_none()) && !have.is_loan() && !view {
             self.fresh.insert(nm.text.clone());
         } else {
@@ -660,7 +751,7 @@ impl<'a> Typer<'a> {
         }
     }
 
-    pub fn bind_initialiser(&mut self, binding: &str, e: Option<N<'a>>, t: &Type, _env: &Env) {
+    pub fn bind_initialiser(&mut self, binding: &str, e: Option<N<'a>>, t: &Type, env: &Env) {
         let path = self.path_of_expr(e);
         if let Some(lc) = self.last_closure.clone() {
             if e.map_or(false, |e| e.find("lambda").is_some()) {
@@ -683,12 +774,15 @@ impl<'a> Typer<'a> {
                 ld.holder = Some(binding.to_string());
                 ld.depth = self.depth;
             }
-            let is_view = matches!(&inner, Type::Named(n) if ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str()));
+            let is_view = matches!(&inner, Type::Named(n) if (n.package.is_empty() && ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str())));
             if !lifetime_value && (t.is_loan() || is_view) {
                 self.own.holders.set_default(binding, l.clone());
             }
         }
         self.carried.clear();
+        if path.is_none() {
+            self.coalesced_marker(e, t, &format!("`let {binding} =`")); // `let x = p ?? v` with `p` an owned place (D-357)
+        }
         if let Some((ppath, mk, mtok)) = self.pending.take() {
             if (mk == "alias" || mk == "editable") && self.use_ok {
                 let d = self.depth;
@@ -699,7 +793,8 @@ impl<'a> Typer<'a> {
             return;
         }
         if let Some(path) = path {
-            if self.is_bearing(t) && e.map_or(true, |e| e.find("markerExpr").is_none()) {
+            let function_name = env_lookup(env, &root_of(&path)).is_none() && self.dc.table.get(&path).map_or(false, |d| d.kind == "func");
+            if !function_name && self.is_bearing(t) && e.map_or(true, |e| e.find("markerExpr").is_none()) {
                 let t0 = ftok(e.unwrap()).clone();
                 let marker = if self.dc.is_copyable(strip(t)) { "copy " } else { "move " };
                 let c = self.insert_before("add the marker", &t0, marker);
@@ -722,7 +817,7 @@ impl<'a> Typer<'a> {
         let ts = pl.direct_tokens();
         let root = ts[0].clone();
         let b = if root.text != "self" { env_lookup(env, &root.text) } else { None };
-        let target_t = self.place_type(pl, env);
+        let target_t = self.place_type_access(pl, env, true);
         let joined: String = ts.iter().map(|t| t.text.clone()).collect();
         if root.text == "self" {
             if self.self_mode != "editable self" && ts.len() > 1 {
@@ -740,11 +835,20 @@ impl<'a> Typer<'a> {
                 }
             } else if !(b.mutable || b.kind == "editable" || matches!(&b.ty, Type::Loan { mode, .. } if mode == "editable")) {
                 self.rec("E-NAM-002", format!("`{}` is not mutable: `{joined}` cannot be assigned", root.text), "LANG-05-01", &root, Self::nam(&root.text, vec!["let mut".into(), "editable".into()]));
+            } else if (b.kind == "let" || b.kind == "mut") && self.writes_through_read_loan(pl, b) {
+                // a `let mut` binding that holds a read loan may be rebound, never written through: what it lends
+                // belongs to the owner, and a read loan is read-only (7.3; D-356)
+                let place = self.path_of_place(pl);
+                self.rec("E-NAM-002", format!("`{}` holds a read loan: `{place}` cannot be assigned through it (7.3); take an `editable` loan, or change the owner", root.text), "LANG-05-01", &root, Self::nam(&root.text, vec!["editable".into()]));
             }
         }
         let path = self.path_of_place(pl);
         self.pending = None;
         let mut rt = self.infer(e, env, Some(&target_t));
+        if self.borrows_value(&rt) { self.check_temporary_borrows_in(e); }
+        if ts.len() == 1 && self.has_owned_part(e) && (rt.is_loan() || self.holds_loan(&rt)) {
+            self.part_owners.insert(root.text.clone()); // it now owns a part beside its loans, on this path at least (7.9; D-369)
+        }
         if op.text != "=" {
             let o = synth(&op.text[..1], op.line, op.col);
             rt = self.arith(&o, &target_t, &rt);
@@ -796,6 +900,26 @@ impl<'a> Typer<'a> {
             let old: Vec<Loan> = self.own.loans.iter().filter(|l| l.borrow().holder.as_deref() == Some(rtext.as_str())).cloned().collect();
             self.own.loans.retain(|l| l.borrow().holder.as_deref() != Some(rtext.as_str())); // the old value's stored loans end with it (7.9)
             self.assign_nested(&root, b.as_ref(), &rt, e, old, env);
+            if Self::cursor_type(&rt) {
+                // a `let mut` cursor binding owns its cursor (7.7): the assignment replaces the value, and the new
+                // cursor's stored loan is held by the binding until the end of the binding's own block (7.3, 7.9; D-401)
+                let depth = match b.as_ref() {
+                    Some(b) if b.kind == "let" || b.kind == "mut" => b.depth,
+                    _ => self.depth,
+                };
+                for l in std::mem::take(&mut self.carried) {
+                    {
+                        let mut ld = l.borrow_mut();
+                        crate::journal::kept(&ld.owner, &ld.mode, ld.line, &rtext, depth);
+                        ld.holder = Some(rtext.clone());
+                        ld.depth = depth;
+                    }
+                    self.own.holders.insert(&rtext, l);
+                }
+            }
+        }
+        if self.path_of_expr(e).is_none() {
+            self.coalesced_marker(e, &rt, &format!("`{path} =`")); // `x = p ?? v` with `p` an owned place (D-357)
         }
         if let Some((ppath, mk, mtok)) = self.pending.take() {
             if mk == "move" {
@@ -811,6 +935,10 @@ impl<'a> Typer<'a> {
         self.own.reinit(&path);
         if self.is_linear(&rt) && !path.contains('.') {
             self.obligate(&path, &root);
+        }
+        if let Some(e) = e {
+            let declared = self.declared_type(pl, env);
+            self.check_static_source(&rt, &declared, ftok(e), "assigned value");
         }
         let decl_t = strip(&self.declared_type(pl, env)).clone();
         if let Type::Refined { kind, .. } = &decl_t {
@@ -883,26 +1011,78 @@ impl<'a> Typer<'a> {
         t
     }
 
-    /// Walk a loop body; return the states at the `break`s that leave this loop (D-72).
-    pub fn loop_body(&mut self, inner: N<'a>, block: N<'a>, env: &Env, fresh: &[String]) -> Vec<Facts> {
+    /// Walk a loop body; return the states at the `break`s that leave this loop (D-72). `exits_at_header`: the loop
+    /// also ends at its header, when a `while` or `for` condition is false, before the body has run or after any
+    /// iteration (a `continue` included); a `loop` ends only at a `break`.
+    pub fn loop_body(&mut self, inner: N<'a>, block: N<'a>, env: &Env, fresh: &[String], exits_at_header: bool, cond: Option<N<'a>>) -> Vec<Facts> {
         let lab = inner.find("label").map(|l| l.tokens()[0].text.clone());
         self.loop_labels.push(lab);
         let own_lab = inner.child_nodes("label").first().map(|l| l.tokens()[0].text.clone()); // the loop's own label
-        self.break_frames.push((own_lab, self.depth, vec![]));
+        self.break_frames.push((own_lab, self.depth, vec![], vec![], vec![]));
         self.ctx.push("loop".into());
         let entry = self.own.copy();
         let header = self.facts.clone();
+        let item = self.linear_loops.iter().rev().find(|(d, _)| *d == self.depth).map(|(_, t)| t.clone());
+        if let Some(item) = &item {
+            self.own.open_obligation(&item.text, item.clone(), self.depth + 1);
+        }
         self.walk_block(block, env);
         self.own = entry.join(&self.own);
         for b in fresh {
             self.own.reinit(b);
         }
         self.facts = header.clone();
+        if let Some(item) = &item {
+            self.own.open_obligation(&item.text, item.clone(), self.depth + 1);
+        }
         self.walk_block(block, env);
         self.facts = header;
         self.ctx.pop();
         self.loop_labels.pop();
-        self.break_frames.pop().map(|f| f.2).unwrap_or_default()
+        let (_, _, breaks, break_owns, continue_owns) = self.break_frames.pop().unwrap();
+        if let Some(cond) = cond {
+            // a `while` condition is evaluated on every iteration (5.3), and the body returns to it: at its normal
+            // end or at a `continue`. A `move` in the condition is a use after the move on the next evaluation
+            // unless every path back re-assigns the place (7.4; D-448).
+            let hits: Vec<(String, Token)> = self
+                .move_markers(cond)
+                .into_iter()
+                .filter(|(path, _)| continue_owns.iter().any(|o| o.is_moved(path)) || self.own.is_moved(path))
+                .collect();
+            for (path, mtok) in hits {
+                self.own_err(
+                    "E-OWN-020",
+                    format!("`move {path}` runs on every iteration of a `while` (5.3), and `{path}` is moved where the body returns to the condition: bind the value before the loop, or re-assign `{path}` in the body"),
+                    &mtok,
+                    &path,
+                    "move in a re-entered condition",
+                    "LANG-07-04",
+                    "",
+                );
+            }
+        }
+        // 7.3: a loan is live at the loop's exit when it is live on any path that leaves it: the header with the condition
+        // false (the body not run, or run to its end or to a `continue`) and every `break`; a body that ends a loan
+        // (`t = null`) ends it on its own path only (D-362). The loans of bindings declared inside the loop are over.
+        let mut paths: Vec<Owners> = Vec::new();
+        if exits_at_header {
+            paths.push(entry);
+            paths.extend(continue_owns);
+        }
+        paths.extend(break_owns);
+        for o in &paths {
+            for l in &o.loans {
+                let ld = l.borrow();
+                if ld.holder.is_some() && ld.depth <= self.depth && !self.own.loans.iter().any(|m| {
+                    let md = m.borrow();
+                    md.owner == ld.owner && md.mode == ld.mode && md.holder == ld.holder
+                }) {
+                    drop(ld);
+                    self.own.loans.push(l.clone());
+                }
+            }
+        }
+        breaks
     }
 
     pub fn for_stmt(&mut self, inner: N<'a>, env: &Env) {
@@ -928,16 +1108,28 @@ impl<'a> Typer<'a> {
         } else {
             let t0 = if src.name() != "place" { self.infer(Some(src), env, None) } else { self.place_type(src, env) };
             let mut st = strip(&t0).clone();
+            if let Some((nd, rep)) = self.collection_representation(&st) {
+                if moving && self.foreign(&nd) {
+                    self.rec("E-NAM-004", format!("consuming iteration of {} is visible only in its declaring module {}", nd.name, nd.module), "LANG-04-05", ftok(src), Self::nam("consume", vec![]));
+                }
+                st = rep;
+            }
             if let Type::Refined { base, .. } = &st {
                 st = Type::Named(base.clone());
             }
             match &st {
-                Type::Named(n) if ["List", "ListView", "Array", "Set", "FixedList"].contains(&n.name.as_str()) && !n.args.is_empty() => elem = n.args[0].clone(),
-                Type::Named(n) if ["Map", "OrderedMap", "FixedMap"].contains(&n.name.as_str()) && n.args.len() >= 2 => elem = Type::Tuple(vec![n.args[0].clone(), n.args[1].clone()]),
+                Type::Named(n) if n.package.is_empty() && ["List", "ListView", "Array", "Set", "FixedList"].contains(&n.name.as_str()) && !n.args.is_empty() => {
+                    elem = n.args[0].clone();
+                    if moving && n.name == "ListView" {
+                        self.typ("E-TYP-040", "a ListView only loans its elements and is not Consumable; iterate it by read loan".into(), &var, "Consumable[T, I]", &st.show(), "for", "LANG-06-01");
+                    }
+                },
+                Type::Named(n) if (n.package.is_empty() && ["Map", "OrderedMap", "FixedMap"].contains(&n.name.as_str())) && n.args.len() >= 2 => elem = Type::Tuple(vec![n.args[0].clone(), n.args[1].clone()]),
                 _ => {
                     if known(&st) {
                         let d = self.decl_of(&st);
-                        let it = d.as_ref().and_then(|d| d.implements.iter().find(|i| i.name == "Iterable" || i.name == "Consumable").cloned());
+                        let protocol = if moving { "Consumable" } else { "Iterable" };
+                        let it = d.as_ref().and_then(|d| d.implements.iter().find(|i| i.interface_key() == protocol).cloned());
                         match (d, it) {
                             (Some(d), Some(it)) => {
                                 elem = if let Some(a0) = it.args.first() {
@@ -946,9 +1138,25 @@ impl<'a> Typer<'a> {
                                 } else {
                                     unknown("")
                                 };
+                                if moving {
+                                    if let Some(consume) = d.methods.get("consume") {
+                                        let summary = self.callee_summary(Some(&d), consume, &self.method_label(&d, "consume"));
+                                        self.import_call(&summary, &var, None, &[], env, false);
+                                        let cursor = self.subst(&consume.ret, &self.recv_subst(&st, &d));
+                                        if self.is_linear(&cursor) {
+                                            self.obl_err("E-OBL-003", format!("the consuming cursor {} is linear, but Consumer.next returning null does not consume the cursor; transfer the contents to a standard collection before looping (5.3)", cursor.show()), &var, &format!("{}:{}", var.line, var.col), "cursor", "LANG-10-02");
+                                        }
+                                        if let Some(cd) = self.decl_of(&cursor) {
+                                            if let Some(advance) = cd.methods.get("next") {
+                                                let summary = self.callee_summary(Some(&cd), advance, &self.method_label(&cd, "next"));
+                                                self.import_call(&summary, &var, None, &[], env, false);
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             _ => {
-                                self.typ("E-TYP-040", format!("`for` over {}, which is not Iterable", st.show()), ftok(src), "Iterable[T, I]", &st.show(), "for", "LANG-06-01");
+                                self.typ("E-TYP-040", format!("`for` over {}, which is not {protocol}", st.show()), ftok(src), &format!("{protocol}[T, I]"), &st.show(), "for", "LANG-06-01");
                             }
                         }
                     }
@@ -959,6 +1167,9 @@ impl<'a> Typer<'a> {
         let e = env_new(Some(env));
         self.widen(inner.find("block").unwrap());
         let src_path = if src.name() == "place" { Some(self.path_of_place(src)) } else { self.path_of_expr(Some(src)) };
+        if !moving && src_path.is_none() && st_opt.as_ref().map_or(false, |st| self.is_linear(st)) {
+            self.obl_err("E-OBL-001", "reading iteration loans a temporary linear collection which is dropped after the loop; bind it and use consuming iteration".into(), ftok(src), &format!("{}:{}", ftok(src).line, ftok(src).col), "temporary iterable", "LANG-10-01");
+        }
         if let Some(sp) = &src_path {
             if src.name() != "rangeExpr" {
                 if moving {
@@ -992,7 +1203,14 @@ impl<'a> Typer<'a> {
             }
         }
         let fresh = if var.text != "_" { vec![var.text.clone()] } else { vec![] };
-        self.loop_body(inner, inner.find("block").unwrap(), &e, &fresh);
+        let linear = moving && self.is_linear(&elem);
+        if linear {
+            self.linear_loops.push((self.depth, var.clone()));
+        }
+        self.loop_body(inner, inner.find("block").unwrap(), &e, &fresh, true, None);
+        if linear {
+            self.linear_loops.pop();
+        }
     }
 
     // ---- function exits (5.4) ------------------------------------------------------------
@@ -1129,11 +1347,15 @@ impl<'a> Typer<'a> {
     /// `give` and `recover` hand their value to the enclosing binding: an existing ownership-bearing place needs a
     /// marker, and `move` moves it on this path (7.1; X-120). An expression match arm is its `give` (9.8; D-159).
     pub fn branch_value(&mut self, e: Option<N<'a>>, t: &Type, word: &str) {
+        if word != "=>" && self.borrows_value(t) { self.check_temporary_borrows_in(e); }
         let e = match e {
             Some(e) => e,
             None => return,
         };
         let rp = self.path_of_expr(Some(e));
+        if rp.is_none() && !t.is_loan() {
+            self.coalesced_marker(Some(e), t, &format!("`{word}`")); // `give p ?? v` hands `p`'s value on (D-357)
+        }
         if let Some((ppath, mk, _)) = self.pending.clone() {
             if mk == "move" {
                 self.pending = None;
@@ -1163,10 +1385,14 @@ impl<'a> Typer<'a> {
         let b = body.kid(0).and_then(|c| c.node()).filter(|n| n.name() == "block");
         if let Some(b) = b {
             self.walk_block(b, env);
-            if known(ret) && *ret != void() && !self.terminates(b) {
-                self.typ("E-TYP-110", format!("{label} returns {} but a path reaches the end of its body without `return`, `fail` or a Never call", ret.show()), head_tok, &ret.show(), "fall-through", label, "LANG-05-05");
-            } else if !self.terminates(b) {
-                self.obs_exit("success", head_tok, "the end of the body");
+            if !self.terminates(b) {
+                // a path reaches the end of the body: what the parameters still hold is dropped there, as at a `return` (6.12)
+                self.report_open(0, "at the end of the body");
+                if known(ret) && *ret != void() {
+                    self.typ("E-TYP-110", format!("{label} returns {} but a path reaches the end of its body without `return`, `fail` or a Never call", ret.show()), head_tok, &ret.show(), "fall-through", label, "LANG-05-05");
+                } else {
+                    self.obs_exit("success", head_tok, "the end of the body");
+                }
             }
             if !self.terminates(b) {
                 self.journal_exit("end of body", b.tokens().last().map_or(head_tok.line, |t| t.line));
@@ -1181,7 +1407,7 @@ impl<'a> Typer<'a> {
             self.temporaries_kept(temps);
             if known(ret) {
                 if let Some(e) = e {
-                    self.expect(&t, ret, ftok(e), &format!("{label} result"));
+                    self.expect_return(&t, ret, ftok(e), &format!("{label} result"));
                     self.loan_into_owned(&t, Some(ret), ftok(e), &format!("the {label} result"));
                     self.owned_into_lent(&t, Some(ret), e, env);
                 }
@@ -1189,24 +1415,11 @@ impl<'a> Typer<'a> {
             if recording {
                 self.node_types = None;
             }
-            // an expression body is the return of its expression: an existing place needs a marker (7.1; X-118)
+            // an expression body is the return of its expression: an existing place needs a marker (7.1; X-118), and the
+            // loans the value keeps are judged against the declared origin as a `return`'s are (7.6; D-395)
             if let Some(e) = e {
-                let rp = self.path_of_expr(Some(e));
-                if let Some(rp) = rp {
-                    if self.is_bearing(&t) && e.find("markerExpr").is_none() && !t.is_loan() {
-                        self.own_err(
-                            "E-OWN-001",
-                            format!("`=> {rp}`: an existing ownership-bearing place needs `move {rp}`, `copy {rp}` or a `from` signature with `alias {rp}`"),
-                            ftok(e),
-                            &rp,
-                            "marker required",
-                            "LANG-07-01",
-                            "",
-                        );
-                    }
-                }
-            }
-            if let Some(e) = e {
+                self.check_returned_loans(e, &t, env, "body");
+                self.report_open(0, "at the expression body"); // the expression body is the return: what the parameters still hold is dropped there (6.12)
                 self.obs_exit("success", ftok(e), "the expression body");
             }
             return Some(t);
@@ -1306,6 +1519,7 @@ impl<'a> Typer<'a> {
         match unit {
             Unit::Decl(name) => {
                 let Some(d) = self.dc.table.decls.values().find(|d| d.module == self.module && d.name == *name).cloned() else { return };
+        self.check_storage_decl(&d);
         match d.kind.as_str() {
             "func" => {
                 if let Some(sig) = d.sig.clone() {
@@ -1316,6 +1530,7 @@ impl<'a> Typer<'a> {
                     self.check_result_origin(&sig, &d.name, &tok);
                     self.check_param_defaults(&sig, &d.name);
                     self.check_ignorable(&sig, &d.name);
+                    self.param_default_tparams(&sig, &sig.type_params.clone());
                     if sig.body.is_some() {
                         self.current_aspects = d.aspects.clone();
                         self.run_body(&sig, None, "self", &tok, &format!("function {}", d.name));
@@ -1350,18 +1565,7 @@ impl<'a> Typer<'a> {
                     if d.exported && *exp {
                         self.check_type_exported(ft, &format!("{}.{fname}", d.name), &tok, false);
                     }
-                    let static_loan = matches!(ft, Type::Loan { origin, .. } if origin == "static");
-                    if self.loan_carrying(ft) && !static_loan {
-                        self.own_err(
-                            "E-OWN-053",
-                            format!("field `{fname}` of {} has the loan-carrying type {}: no field stores a loan (7.7, X-137); own the value, copy it, hold a Shared, or pass it to each call", d.name, ft.show()),
-                            &tok,
-                            &format!("{}.{fname}", d.name),
-                            "stored loan",
-                            "LANG-07-06",
-                            "",
-                        );
-                    }
+
                 }
                 for m in d.node.unwrap().kids().into_iter().filter_map(|c| c.node()) {
                     let fd = if m.name() == "classMember" || m.name() == "enumMember" { m.find("fieldDecl") } else { None };
@@ -1369,22 +1573,49 @@ impl<'a> Typer<'a> {
                         if let Some(ce) = fd.child_node("constExpr") {
                             // outside every body: a default cannot create the capabilities (D-149)
                             self.decl_context(format!("default of {}.{}", d.name, fd.direct_tokens()[0].text));
+                            // a generic class's field default is typed with its type parameters in scope (X-180)
+                            let saved_scope = std::mem::replace(&mut self.tparams_in_scope, d.type_params.iter().cloned().collect());
                             let want = self.dc.type_of(fd.find("type"));
                             let t = self.infer(Some(ce), &env_new(None), Some(&want));
+                            self.tparams_in_scope = saved_scope;
                             let fname = fd.direct_tokens()[0].text.clone();
                             self.expect(&t, &want, ftok(ce), &format!("default of `{fname}`"));
+                            self.const_tparams(Some(ce), &d.type_params.clone());
                         }
                     }
-                    let cd = if m.name() == "classMember" { m.child_node("constDecl") } else { None };
+                    let cd = if m.name() == "classMember" || m.name() == "enumMember" { m.child_node("constDecl") } else { None };
                     if let Some((cd, cce)) = cd.and_then(|cd| cd.child_node("constExpr").map(|c| (cd, c))) {
-                        // a class constant is a constant like a module's (D-149)
-                        let cname = cd.direct_tokens().iter().find(|t| t.kind == Kind::Lower).map(|t| t.text.clone()).unwrap_or_else(|| "?".into());
-                        self.decl_context(format!("const {}.{cname}", d.name));
-                        let want = cd.child_node("type").map(|ty| self.dc.type_of(Some(ty)));
-                        let ct = self.infer(Some(cce), &env_new(None), want.as_ref());
-                        if let Some(want) = want {
-                            self.expect(&ct, &want, ftok(cce), &format!("const `{cname}`"));
+                        if m.name() == "classMember" {
+                            // a class constant is a constant like a module's (D-149)
+                            let cname = cd.direct_tokens().iter().find(|t| t.kind == Kind::Lower).map(|t| t.text.clone()).unwrap_or_else(|| "?".into());
+                            self.decl_context(format!("const {}.{cname}", d.name));
+                            let want = cd.child_node("type").map(|ty| self.dc.type_of(Some(ty)));
+                            let ct = self.infer(Some(cce), &env_new(None), want.as_ref());
+                            if let Some(want) = &want {
+                                self.expect(&ct, want, ftok(cce), &format!("const `{cname}`"));
+                            }
+                            // the constant an interface declares has the interface's type (9.3, 9.5; D-65)
+                            let ctype = want.clone().unwrap_or(ct);
+                            for i in d.implements.clone() {
+                                let Some(idecl) = self.dc.resolve_named(&i, None) else { continue };
+                                if idecl.kind != "interface" {
+                                    continue;
+                                }
+                                let Some(declared) = idecl.constants.get(&cname).cloned() else { continue };
+                                if !known(&declared) {
+                                    continue;
+                                }
+                                let isub: BTreeMap<String, Type> = idecl.type_params.iter().cloned().zip(i.args.iter().cloned()).collect();
+                                let itype = self.dc.subst(&declared, &isub);
+                                if crate::literals::assignable(&ctype, &itype).0 == Some(false) {
+                                    let displays = diagnostic_types(&[&ctype, &itype]);
+                                    let cshown = if crate::literals::is_strlit(&ctype) { "a string literal".to_string() } else { displays[0].clone() };
+                                    self.typ("E-TYP-080", format!("{}.{cname} does not satisfy {}.{cname}: {cshown} is not {} (9.5)", d.name, i.name, displays[1]), ftok(cce), &displays[1], &cshown, &cname, "LANG-09-03");
+                                }
+                            }
                         }
+                        // an associated call on a type parameter in a class or enum constant (E-TYP-170, X-180)
+                        self.const_tparams(Some(cce), &d.type_params.clone());
                     }
                     let cl = if m.name() == "classMember" { m.find("cleanupDecl") } else { None };
                     if let Some(cl) = cl {
@@ -1397,7 +1628,17 @@ impl<'a> Typer<'a> {
                         self.ctx = vec!["function".into()];
                         self.loop_labels.clear();
                         self.journal_begin(&format!("cleanup {}", d.name), cl.tokens()[0].line);
+                        // a generic class's cleanup: its type parameters and `where` bounds are in force, as in its methods
+                        let saved_scope = (std::mem::replace(&mut self.tparams_in_scope, d.type_params.iter().cloned().collect()), std::mem::replace(&mut self.where_in_scope, d.where_.clone()));
+                        let mut bounds: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+                        for (tp, iface) in d.where_.iter() {
+                            bounds.entry(tp.clone()).or_default().insert(iface.interface_key());
+                        }
+                        let saved_bounds = std::mem::replace(&mut self.dc.tparam_bounds, bounds);
                         self.walk_block(cl.find("block").unwrap(), &env_new(None));
+                        self.tparams_in_scope = saved_scope.0;
+                        self.where_in_scope = saved_scope.1;
+                        self.dc.tparam_bounds = saved_bounds;
                         if self.eff.needs_auth && self.receiver_authorities(&self_t).is_empty() {
                             // cleanup is a method: the authority it uses is one its class holds in a field (11.6, X-270; D-173)
                             let at = self.eff.sites.get("io").cloned().unwrap_or_else(|| cl.tokens()[0].clone());
@@ -1426,9 +1667,45 @@ impl<'a> Typer<'a> {
                     self.check_result_origin(sig, &format!("{}.{mname}", d.name), &stok);
                     self.check_param_defaults(sig, &format!("{}.{mname}", d.name));
                     self.check_ignorable(sig, &format!("{}.{mname}", d.name));
+                    let scope: Vec<String> = d.type_params.iter().chain(sig.type_params.iter()).cloned().collect();
+                    self.param_default_tparams(sig, &scope);
                     if sig.body.is_some() {
                         let recv = sig.receiver.clone().unwrap_or_else(|| "self".into());
                         self.run_body(sig, Some(self_t.clone()), &recv, &stok, &format!("method {}.{mname}", d.name));
+                    }
+                }
+                // a `convert` member's body is a method body (6.13, X-551): `convert to T` has the receiver `self`
+                // and returns `T`; `convert from S(s)` binds the source `s` and returns the declaring type
+                for cv in d.converts.iter() {
+                    let sig = &cv.sig;
+                    let stok = cv.node.tokens()[0].clone();
+                    if d.exported && sig.exported {
+                        self.check_exported_sig(sig, &format!("{}.{}", d.name, sig.name), &stok);
+                    }
+                    self.check_result_origin(sig, &format!("{}.{}", d.name, sig.name), &stok);
+                    if sig.body.is_some() {
+                        let self_arg = if cv.direction == "to" { Some(self_t.clone()) } else { None };
+                        let recv = sig.receiver.clone().unwrap_or_else(|| "self".into());
+                        self.run_body(sig, self_arg, &recv, &stok, &format!("method {}.{}", d.name, sig.name));
+                    }
+                }
+                // A mixin's bodies are checked at every application, with the class as self and the mixin's
+                // lexical scope (9.6, X-476). A method the class declares itself takes precedence. An
+                // application that lacks a required method is already E-TYP-080, and its bodies are not typed
+                for mx in d.mixins.clone() {
+                    if !self.check_mixin_applications { break; }
+                    let Some(md) = self.dc.resolve_named(&mx, None).filter(|md| md.kind == "mixin") else { continue };
+                    let iface = self.dc.interface_members(&d);
+                    if md.methods.keys().any(|r| r.strip_prefix("requires:").map_or(false, |n| !d.methods.contains(n) && !iface.contains(n))) {
+                        continue;
+                    }
+                    for (mname, msig) in md.methods.iter() {
+                        if mname.starts_with("requires:") || d.methods.contains(mname) || msig.body.is_none() {
+                            continue;
+                        }
+                        let mtok = msig.node.map(|n| n.tokens()[0].clone()).unwrap_or_else(|| tok_of(&d));
+                        let recv = msig.receiver.clone().unwrap_or_else(|| "self".into());
+                        self.run_mixin_body(&d, &md, mname, msig, self_t.clone(), &recv, &mtok);
                     }
                 }
             }
@@ -1471,6 +1748,8 @@ impl<'a> Typer<'a> {
                         self.check_exported_sig(sig, &format!("{}.{mname}", d.name), &tok_of(&d));
                     }
                     self.check_param_defaults(sig, &format!("{}.{mname}", d.name));
+                    let scope: Vec<String> = d.type_params.iter().chain(sig.type_params.iter()).cloned().collect();
+                    self.param_default_tparams(sig, &scope);
                 }
             }
             _ => {}
@@ -1486,6 +1765,9 @@ impl<'a> Typer<'a> {
                 if let Some(head) = m.find("methodHead") {
                     let sig = self.dc.signature(head, true, m.find("funcBody"));
                     self.check_param_defaults(&sig, &format!("{}.{}", target.name, sig.name));
+                    let owner_params: Vec<String> = self.decl_of(&Type::Named(target.clone())).map(|o| o.type_params.clone()).unwrap_or_default();
+                    let scope: Vec<String> = owner_params.into_iter().chain(sig.type_params.iter().cloned()).collect();
+                    self.param_default_tparams(&sig, &scope);
                     if sig.body.is_some() {
                         let recv = sig.receiver.clone().unwrap_or_else(|| "self".into());
                         self.run_body(&sig, Some(Type::Named(target.clone())), &recv, ftok(head), &format!("method {}.{}", target.name, sig.name));
@@ -1510,8 +1792,12 @@ impl<'a> Typer<'a> {
         let env = env_new(None);
         let ts = node.direct_tokens();
         let words: Vec<&str> = ts.iter().map(|t| t.text.as_str()).collect();
+        let rows: Vec<N<'a>> = node.child_nodes("caseRow");
+        self.row_name = None;
+        self.row_uses.clear();
         if kind == "test" {
             if let Some(i) = words.iter().position(|w| *w == "as") {
+                self.row_name = Some(words[i + 1].to_string());
                 env_set(&env, words[i + 1], unknown("test row"), false, "let");
             }
         }
@@ -1538,11 +1824,18 @@ impl<'a> Typer<'a> {
         let label = self.current_label.clone();
         self.journal_begin(&label, node.tokens()[0].line);
         self.test_body = true; // `or fail` is implied in the body (14, X-345)
+        self.in_test_code = true;
         for init in fortis_names::reading::outcome_lets(blk) {
             self.mark_consumed(Some(init)); // a binding the body consumes as an outcome keeps it (14)
         }
         self.walk_block(blk, &env);
+        if !rows.is_empty() {
+            self.check_rows(&rows); // every row literal against how the body uses the row's fields (14, D-50.3)
+        }
         self.test_body = false;
+        self.in_test_code = false;
+        self.row_name = None;
+        self.row_uses.clear();
         self.summaries.insert(label.clone(), self.eff.clone()); // a test's effects, as a body's (the IR and its validator read it)
         self.journal_end();
         self.self_type = None;
@@ -1550,14 +1843,156 @@ impl<'a> Typer<'a> {
         self.ctx.clear();
     }
 
+    /// Every row literal of a `cases` table is checked against how the body uses the row's fields (14): a field passed
+    /// where a type is expected is checked as that literal would be at the use (E-REF-001 for a refined parameter), and
+    /// a row that lacks a field the body reads is E-TYP-050 (D-50.3).
+    fn check_rows(&mut self, rows: &[N<'a>]) {
+        let env = env_new(None);
+        let uses = self.row_uses.clone();
+        for row in rows {
+            let label = row.direct_tokens()[0].clone();
+            let Some(lit) = row.find("recordLit") else { continue };
+            let kids = lit.kids();
+            let mut ks: Vec<&Token> = kids.iter().filter(|k| k.is("ident")).map(|k| k.node().unwrap().tokens()[0]).collect();
+            if ks.is_empty() {
+                ks = kids.iter().filter_map(|k| k.tok()).filter(|t| matches!(t.kind, Kind::Lower | Kind::Upper | Kind::Kw)).collect();
+            }
+            let es = lit.child_nodes("expr");
+            let present: BTreeSet<String> = ks.iter().map(|k| k.text.clone()).collect();
+            for (k, e) in ks.iter().zip(es.iter()) {
+                let wants = uses.get(&k.text).cloned().unwrap_or_default();
+                if wants.is_empty() {
+                    self.infer(Some(*e), &env, None);
+                    continue;
+                }
+                let t = self.infer(Some(*e), &env, Some(&wants[0]));
+                let first = e.tokens()[0].clone();
+                for want in &wants {
+                    self.expect(&t, want, &first, &format!("row field `{}` of {}", k.text, label.text));
+                }
+            }
+            let missing: Vec<String> = uses.keys().filter(|f| !present.contains(*f)).cloned().collect();
+            if !missing.is_empty() {
+                let s = if missing.len() > 1 { "s" } else { "" };
+                let list = missing.iter().map(|f| format!("`{f}`")).collect::<Vec<_>>().join(", ");
+                self.typ("E-TYP-050", format!("row {} lacks field{s} {list} that the body reads", label.text), &label, &missing.join(", "), "absent", &label.text, "LANG-14-01");
+            }
+        }
+    }
+
+    /// Module aliases are lexical names too: an applied body uses the imports beside its declaration.
+    pub fn body_aliases(dc: &DeclChecker<'a>) -> BTreeMap<String, String> {
+        let Some(lm) = dc.library().modules.get(&dc.module_name) else { return BTreeMap::new() };
+        imports(lm.tree()).into_iter().filter(|i| i.members.is_none()).map(|i| {
+            let alias = i.alias.clone().unwrap_or_else(|| i.path.last().unwrap().clone());
+            (alias, i.path.join("."))
+        }).collect()
+    }
+
+    fn run_mixin_body(&mut self, owner: &DeclRef<'a>, mixin: &DeclRef<'a>, member: &str, sig: &Sig<'a>, self_t: Type, mode: &str, tok: &Token) {
+        let home = self.dc.body_context(mixin);
+        let foreign = mixin.module != self.module;
+        if foreign {
+            let key = (home.lib, mixin.module.clone());
+            if !self.mixin_home_summaries.contains_key(&key) {
+                // A private helper belongs to this lexical module, so its inferred effects are available as
+                // they are to a local application. Seed ordinary bodies twice without checking applications:
+                // an import cycle or another class using this mixin must not recurse into this seed pass.
+                let lm = home.library().modules.get(&mixin.module).expect("an imported mixin has a library module");
+                let mut seed = Typer::new(home.clone());
+                seed.final_pass = false;
+                seed.check_mixin_applications = false;
+                seed.run_once(lm.tree());
+                seed.run_once(lm.tree());
+                self.mixin_home_summaries.insert(key, seed.summaries);
+            }
+        }
+        let aliases = if foreign { Self::body_aliases(&home) } else { self.aliases.clone() };
+        let saved_dc = std::mem::replace(&mut self.dc, home);
+        let saved_module = std::mem::replace(&mut self.module, mixin.module.clone());
+        let saved_package = std::mem::replace(&mut self.package, mixin.package.clone());
+        let saved_aliases = std::mem::replace(&mut self.aliases, aliases);
+        let saved_summaries = if foreign {
+            let old = std::mem::take(&mut self.summaries);
+            // The applying module's summaries remain usable for self's methods, under their foreign labels.
+            // Never let an applying module's same-spelled helper stand for the mixin's lexical helper.
+            for (label, summary) in &old {
+                let qualified = label.split_once(' ').map(|(kind, name)| {
+                    if name.contains("::") { label.clone() } else { format!("{kind} {saved_module}::{name}") }
+                }).unwrap_or_else(|| label.clone());
+                self.summaries.insert(qualified, summary.clone());
+            }
+            if let Some(home) = self.mixin_home_summaries.get(&(self.dc.lib, mixin.module.clone())) {
+                self.summaries.extend(home.clone());
+            }
+            Some(old)
+        } else { None };
+        // Node IDs are shared by every application of a mixin; positions are shared by unrelated module files.
+        // Keep this body's lowering facts separate from the applying module's and the other applications'.
+        let saved_legacy = std::mem::take(&mut self.legacy_conversions);
+        let saved_sources = std::mem::take(&mut self.legacy_conversion_sources);
+        let saved_types = self.node_types.take();
+        if self.record_types && self.final_pass { self.node_types = Some(HashMap::new()); }
+        let saved_closures = std::mem::take(&mut self.closure_info);
+        let saved_copy_refused = std::mem::take(&mut self.copy_refused);
+        let saved_moves = std::mem::take(&mut self.implicit_moves);
+        let saved_checked = std::mem::take(&mut self.checked_ops);
+        let saved_fails = std::mem::take(&mut self.implied_fails);
+        let saved_regions = std::mem::take(&mut self.implied_regions);
+        let saved_markers = self.redundant_markers.clone();
+        let saved_calls = self.call_sigs.clone();
+        let saved_migrations = self.migrations.len();
+        self.mixin_view = Some(mixin.name.clone());
+        let label = format!("method {}.{member}", owner.name);
+        self.run_body(sig, Some(self_t), mode, tok, &label);
+        self.mixin_view = None;
+        let legacy_conversions = std::mem::replace(&mut self.legacy_conversions, saved_legacy);
+        let legacy_conversion_sources = std::mem::replace(&mut self.legacy_conversion_sources, saved_sources);
+        if !foreign { self.legacy_conversions.extend(legacy_conversions.clone()); }
+        let facts = super::MixinBodyFacts {
+            legacy_conversions,
+            legacy_conversion_sources,
+            node_types: self.node_types.take().unwrap_or_default(),
+            closure_info: std::mem::replace(&mut self.closure_info, saved_closures),
+            implicit_moves: std::mem::replace(&mut self.implicit_moves, saved_moves),
+            checked_ops: std::mem::replace(&mut self.checked_ops, saved_checked),
+            implied_fails: std::mem::replace(&mut self.implied_fails, saved_fails),
+            implied_regions: std::mem::replace(&mut self.implied_regions, saved_regions),
+        };
+        self.node_types = saved_types;
+        self.copy_refused = saved_copy_refused;
+        if self.record_types && self.final_pass {
+            self.mixin_body_facts.insert((owner.type_identity(), owner.name.clone(), member.to_string()), facts);
+        }
+        if foreign {
+            // Formatter edits and markers are for the file it is formatting, never a foreign body with the
+            // same line and column. The body's diagnostic corrections already name its own file.
+            self.redundant_markers = saved_markers;
+            self.call_sigs = saved_calls;
+            self.migrations.truncate(saved_migrations);
+        }
+        if let Some(mut old) = saved_summaries {
+            if let Some(summary) = self.summaries.get(&label) { old.insert(label, summary.clone()); }
+            self.summaries = old;
+        }
+        let mut records = std::mem::replace(&mut self.dc, saved_dc).records;
+        for r in &mut records {
+            r.message.push_str(&format!(" (mixin {} applied to {}.{})", mixin.name, owner.module, owner.name));
+        }
+        self.dc.records.extend(records);
+        self.module = saved_module;
+        self.package = saved_package;
+        self.aliases = saved_aliases;
+    }
+
     pub fn run_body(&mut self, sig: &Sig<'a>, self_t: Option<Type>, mode: &str, head_tok: &Token, label: &str) {
         let saved_bounds = std::mem::take(&mut self.dc.tparam_bounds);
         let mut bounds: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         let owner = self_t.as_ref().and_then(|t| self.decl_of(t));
-        let mut wh: Vec<(String, NamedT)> = owner.map(|o| o.where_.clone()).unwrap_or_default();
+        let mut wh: Vec<(String, NamedT)> = owner.as_ref().map(|o| o.where_.clone()).unwrap_or_default();
         wh.extend(sig.where_.iter().cloned());
         for (tp, iface) in wh {
-            bounds.entry(tp).or_default().insert(iface.name.clone());
+            bounds.entry(tp).or_default().insert(iface.interface_key());
         }
         self.dc.tparam_bounds = bounds;
         let owner = self_t.as_ref().and_then(|t| self.decl_of(t));
@@ -1565,11 +2000,22 @@ impl<'a> Typer<'a> {
         scope.extend(sig.type_params.iter().cloned());
         let mut wh: Vec<(String, NamedT)> = owner.as_ref().map(|o| o.where_.clone()).unwrap_or_default();
         wh.extend(sig.where_.iter().cloned());
+        let saved_tp = std::mem::replace(&mut self.dc.type_params, scope.clone()); // an annotation in the body names them (D-52.7)
         let saved_scope = (std::mem::replace(&mut self.tparams_in_scope, scope), std::mem::replace(&mut self.where_in_scope, wh));
+        let mut linear: BTreeSet<String> = owner.as_ref().map(|o| o.linear.iter().cloned().collect()).unwrap_or_default();
+        linear.extend(sig.linear.iter().cloned());
+        let saved_dc_linear = std::mem::replace(&mut self.dc.linear_params, linear.clone());
+        let saved_linear = std::mem::replace(&mut self.linear_in_scope, linear);
+        for t in std::iter::once(&sig.ret).chain(sig.params.iter().map(|p| &p.1)) {
+            self.dc.check_linear_instantiation(t, &self.linear_in_scope, head_tok);
+        }
         self.run_body_inner(sig, self_t, mode, head_tok, label);
         self.dc.tparam_bounds = saved_bounds;
+        self.dc.type_params = saved_tp;
         self.tparams_in_scope = saved_scope.0;
         self.where_in_scope = saved_scope.1;
+        self.linear_in_scope = saved_linear;
+        self.dc.linear_params = saved_dc_linear;
     }
 
     fn seed_params(&mut self, sig: &Sig<'a>, head_tok: &Token) {
@@ -1587,6 +2033,9 @@ impl<'a> Typer<'a> {
         // the journal covers the woven body: the applied aspects' before, after and handler blocks are its facts
         if self.final_pass {
             crate::journal::begin(label, head_tok.line);
+            if let Some(mixin) = &self.mixin_view {
+                crate::journal::source(&self.dc.file, &format!("method {mixin}.{}", sig.name));
+            }
         }
         self.facts = Facts::default();
         self.own = Owners::default();
@@ -1620,7 +2069,28 @@ impl<'a> Typer<'a> {
         self.facts = Facts::default();
         self.own = Owners::default();
         self.depth = 0;
+        self.part_owners.clear();
+        self.temporary_values.clear();
+        self.temporary_borrows.clear();
+        self.owned_parts.clear();
+        self.coalesced_places.clear();
         self.seed_params(sig, head_tok);
+        for (_, pt, pm) in &sig.params {
+            if pm.trim_start_matches('.') == "owned" {
+                self.charge_drop(pt, head_tok); // the function owns the argument and may drop it (7.9, 11.3; D-393)
+            }
+        }
+        if mode == "owned self" {
+            if let Some(st) = self.self_type.clone() {
+                self.charge_drop(&st, head_tok);
+                if let Some(owner) = self.decl_of(&st).filter(|o| o.kind == "class") {
+                    let sub = self.dc.type_substitution(&owner, &st);
+                    for (fname, (ft, _, _)) in owner.fields.iter() {
+                        if self.is_linear(&self.dc.subst(ft, &sub)) { self.obligate(&format!("self.{fname}"), head_tok); }
+                    }
+                } else if self.is_linear(&st) { self.obligate("self", head_tok); }
+            }
+        }
         let env = self.params_env(sig, &env_new(None));
         let ret = sig.ret.clone();
         self.body(sig.body, &env, &ret, head_tok, label);

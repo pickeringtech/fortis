@@ -1,0 +1,45 @@
+// D-452: a `catch ... recover` lent for a call, whose try side succeeds with a loan and whose replacement is a
+// moved local (`show(console, find(alias xs) catch e { recover move d })`, `find` a `try` function whose result
+// is `alias Token from xs`) passes both checkers and runs on the interpreter and the VM
+// (`show a|after|drop held|drop a`), and native code does not build it: rustc E0308, mismatched types, at the
+// lowering of the `catch` whose value side is a loan and whose replacement is an owned value. A loud refusal of
+// a program two backends run; a sibling of D-446, whose fix gave the statement's slot of an `or recover` both
+// its sides and left the `catch`. Found by the v0.1 stream A fix of D-451, in a catch probe.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func show(console: Shared[Console], t: Token) {
+  console.print("show ${t.label}")
+}
+
+export error Missing {
+  code: "demo.missing"
+}
+
+try func find(xs: List[Token]) alias Token from xs {
+  match xs.get(0) {
+    present(t) => { return t }
+    null => { fail Missing() }
+  }
+}
+
+recovers func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "a"))
+  let d = make(console, "held")
+  show(console, find(alias xs) catch e { recover move d })
+  console.print("after")
+}

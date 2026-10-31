@@ -25,7 +25,7 @@ SYNTAX_RESULTS = os.path.join(ROOT, "conformance", "results.json")
 FIXTURES = {
     "a loan returned `from` two parameters": "conformance/programs/own_shape_two_origins.ft",
     "a class that stores a loan (a lifetime parameter, or a field of a loan or loan-carrying type)": ["conformance/programs/own_shape_stored_loan.ft", "conformance/programs/own_lifetime_param.ft"],
-    "a loan stored in `Shared`/`Mutex`": ["conformance/programs/own_shape_loan_in_shared.ft", "conformance/programs/own_shape_loan_in_mutex.ft", "conformance/programs/own_shape_unsupported.ft"],
+    "a loan stored in a collection, `Shared` or `Mutex`": ["conformance/programs/own_shape_loan_in_shared.ft", "conformance/programs/own_shape_loan_in_mutex.ft", "conformance/programs/own_shape_unsupported.ft"],
     "a `fn mut` closure escaping into a `Shared`": "conformance/programs/own_shape_mut_closure_in_shared.ft",
     "a future holding a loan launched on a parallel pool": "conformance/programs/asy_pool_loan_bad.ft",
     "a self-referential class": "conformance/programs/own_shape_self_referential.ft",

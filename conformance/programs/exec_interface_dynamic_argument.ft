@@ -1,0 +1,31 @@
+// execute: 17
+// requires: runtime
+// covers: LANG-09-03, LANG-06-12
+// A parameterized interface instantiated with a `dynamic` type (`Taker[dynamic Measured]`), called through a `where`
+// bound with a lent `dynamic Measured`: natively the interface's parameter, used only as a lent argument, is `?Sized`
+// in its trait and the bound ranges over the loan's lifetime, so `&dyn Measured` passes straight through (D-88 (c)).
+import fortis.host { Console }
+
+export interface Measured {
+  pure func size(self) Int
+}
+
+export class Pair implements Measured {
+  export a: Int
+  pure func size(self) Int => self.a
+}
+
+export interface Taker[A] {
+  pure func take(self, a: A) Int
+}
+
+export class Sizer implements Taker[dynamic Measured] {
+  export base: Int
+  pure func take(self, a: dynamic Measured) Int => Int.wrappingAdd(self.base, a.size())
+}
+
+func viaBound[T](t: T, m: dynamic Measured) Int where T implements Taker[dynamic Measured] => t.take(m)
+
+func main(console: Console) {
+  console.print("${viaBound(Sizer(base: 10), Pair(a: 7))}")
+}

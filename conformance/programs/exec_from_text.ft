@@ -17,7 +17,7 @@ func main(console: Console) {
   let xs: List[Int] = List.of(1)
   console.print("${plain(alias xs)}")
   console.print("${raw(alias xs)}")
-  let name = String.from("via")
+  let name = "via" as String
   console.print("${pass(alias name)}")
   console.print("end")
 }

@@ -1,0 +1,56 @@
+// execute: 42|0|10|refinement.out_of_range|abc|2|7|8|9
+// requires: runtime
+// covers: LANG-06-14
+// A proved conversion is total; an unproved one checks the range. Unwrap preserves the representation's range.
+import fortis.host { Console }
+
+type Pence = Int<0..100>
+type Code = String<scalars: 1..5>
+type Items = List[Int]<length: 1..3>
+type Outer = Pence
+type Tiny = Int8
+class Quote {
+  amount: Int
+  convert from Pence(p) { return Quote(amount: p as Int) }
+}
+
+try func checked(n: Int) Pence {
+  return n as Pence or fail
+}
+
+func clamp(n: Int) Pence {
+  if n < 0 { return 0 as Pence }
+  if n > 100 { return 100 as Pence }
+  return n as Pence
+}
+
+try recovers func main(console: Console) {
+  let p = checked(42) or fail
+  let representation: Int<0..100> = p as Int
+  console.print(representation as String)
+  console.print((clamp(-4) as Int) as String)
+  let refined: Int<0..10> = 10
+  let proved: Pence = refined as Pence
+  console.print((proved as Int<0..100>) as String)
+  let bad = checked(101) catch e {
+    console.print(e.code)
+    recover 0 as Pence
+  }
+  discard bad
+  let code = "abc" as Code
+  let text: String<scalars: 1..5> = move code as String
+  console.print(text)
+  let values = List[Int].of(1, 2)
+  let items = move values as Items or fail
+  let restored: List[Int]<length: 1..3> = move items as List[Int]
+  console.print("${restored.count()}")
+  let inner = 7 as Pence
+  let outer = inner as Outer
+  console.print(((outer as Pence) as Int) as String)
+  let eight: Int8 = 8
+  let tiny = eight as Tiny
+  console.print(((tiny as Int8) as Int) as String)
+  let nine = 9 as Pence
+  let quote = nine as Quote
+  console.print(quote.amount as String)
+}

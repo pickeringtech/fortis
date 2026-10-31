@@ -1,0 +1,10 @@
+// execute: 9
+// requires: runtime
+// covers: LANG-07-01, LANG-07-02
+import fortis.host { Console }
+func poke(s: editable { n: Int }) { s.n = 9 }
+func main(console: Console) {
+  let mut s: { n: Int } = { n: 1 }
+  poke(editable s)
+  console.print("${s.n}")
+}

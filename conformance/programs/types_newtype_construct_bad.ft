@@ -1,0 +1,21 @@
+// reject: E-REF-001, E-TYP-040 (at the marked lines)
+// covers: LANG-06-01, LANG-06-03
+// `Name(x)` is judged (6.9, X-511): a literal outside the representation's refinement and an `Int` nothing has
+// narrowed are E-REF-001; a value of another type, a newtype re-wrapped in itself, and a newtype where its
+// representation or another newtype is expected are E-TYP-040 (D-131, D-63, D-50.1).
+type Small = Int<0..10>
+type UserId = Int<1..>
+type OrderId = Int<1..>
+
+pure func describe(id: UserId) Int => 1
+
+pure func use(n: Int, s: Small) Int {
+  let a = Small(50)                        // reject: E-REF-001
+  let b = Small(n)                         // reject: E-REF-001
+  let c = Small("five")                    // reject: E-TYP-040
+  let i: Int = Small(5)                    // reject: E-TYP-040
+  let d = Small(s)                         // reject: E-TYP-040
+  let order = OrderId(7)
+  let u: UserId = order                    // reject: E-TYP-040
+  return describe(order)                   // reject: E-TYP-040
+}

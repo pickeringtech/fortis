@@ -1,0 +1,8 @@
+// reject: E-OWN-002
+// covers: LANG-07-01, LANG-10-02
+func demo() {
+  let first = Must.create()
+  let second = copy first
+  Must.discharge(move first)
+  Must.discharge(move second)
+}

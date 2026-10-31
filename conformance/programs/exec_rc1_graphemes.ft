@@ -1,0 +1,22 @@
+// execute: 1|2|1|1|1|1|1|1|2|2|1|2|2|2|1
+// requires: runtime
+// covers: LANG-03-05
+import fortis.text { graphemes }
+import fortis.host { Console }
+func main(console: Console) {
+  console.print("${graphemes("\r\n")}")
+  console.print("${graphemes("aé")}")
+  console.print("${graphemes("a҃")}")
+  console.print("${graphemes("بً")}")
+  console.print("${graphemes("कः")}")
+  console.print("${graphemes("a҈")}")
+  console.print("${graphemes("👩‍💻")}")
+  console.print("${graphemes("👩🏽‍💻")}")
+  console.print("${graphemes("a‍💻")}")
+  console.print("${graphemes("a‍␀")}")
+  console.print("${graphemes("©‍©")}")
+  console.print("${graphemes("🇬🇧🇫🇷")}")
+  console.print("${graphemes("🇬🇧🇫")}")
+  console.print("${graphemes("🇬́🇧")}")
+  console.print("${graphemes("क्‍क")}")
+}

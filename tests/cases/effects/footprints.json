@@ -1,0 +1,14 @@
+[
+  {"name":"lr_11_3_write_let_direct","input":{"kind":"let","alias":false},"expect":{"effects":[],"footprint":[]}},
+  {"name":"lr_11_3_write_let_loan_path","input":{"kind":"let","alias":true},"expect":{"effects":[],"footprint":[]}},
+  {"name":"lr_11_3_write_owned_direct","input":{"kind":"owned","alias":false},"expect":{"effects":[],"footprint":[]}},
+  {"name":"lr_11_3_write_owned_loan_path","input":{"kind":"owned","alias":true},"expect":{"effects":[],"footprint":[]}},
+  {"name":"lr_11_3_write_editable_direct","input":{"kind":"editable","alias":false},"expect":{"effects":[],"footprint":["value"]}},
+  {"name":"lr_11_3_write_editable_loan_path","input":{"kind":"editable","alias":true},"expect":{"effects":[],"footprint":["value"]}},
+  {"name":"lr_11_3_write_capture_editable_direct","input":{"kind":"capture-editable","alias":false},"expect":{"effects":["mutate"],"footprint":[]}},
+  {"name":"lr_11_3_write_capture_editable_loan_path","input":{"kind":"capture-editable","alias":true},"expect":{"effects":["mutate"],"footprint":[]}},
+  {"name":"lr_11_3_write_capture_move_direct","input":{"kind":"capture-move","alias":false},"expect":{"effects":[],"footprint":[]}},
+  {"name":"lr_11_3_write_capture_move_loan_path","input":{"kind":"capture-move","alias":true},"expect":{"effects":[],"footprint":[]}},
+  {"name":"lr_11_3_write_param_direct","input":{"kind":"param","alias":false},"expect":{"effects":["mutate"],"footprint":[]}},
+  {"name":"lr_11_3_write_param_loan_path","input":{"kind":"param","alias":true},"expect":{"effects":["mutate"],"footprint":[]}}
+]

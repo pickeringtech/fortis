@@ -1,0 +1,5 @@
+// accept
+// covers: LANG-07-06
+// D-580: only an explicit from static type exempts a stored loan.
+class Static { value: (alias StringView from static)? }
+func use(xs: List[alias StringView from static], ys: List[(alias StringView from static)?], zs: List[(alias StringView from static, Int)]) {}

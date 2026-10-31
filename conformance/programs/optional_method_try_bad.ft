@@ -1,0 +1,4 @@
+// reject: E-TYP-040
+// covers: LANG-06-08
+class Cell { try func read(self) Int => 1 }
+func bad(c: Cell?) { discard c?.read() }

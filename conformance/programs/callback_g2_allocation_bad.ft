@@ -1,0 +1,6 @@
+// reject: E-EFF-001
+// covers: LANG-11-03
+// D-539: the new collection classes charge the allocation permitted by pure fn.
+import fortis.collections { Deque, SortedSet }
+noalloc func deque(xs: Deque[Int]) Bool => xs.any(fn(x) => x > 0)
+noalloc func sorted(xs: SortedSet[Int]) Bool => xs.any(fn(x) => x > 0)

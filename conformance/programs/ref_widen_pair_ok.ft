@@ -6,5 +6,5 @@ pure try func sumTo(n: Int<0..1000>) Int<0..500500> {
   for i in 0..n {
     total = total + i or fail
   }
-  return Int<0..500500>.validate(total) or fail
+  return total as Int<0..500500> or fail
 }

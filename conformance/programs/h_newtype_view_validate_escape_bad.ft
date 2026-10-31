@@ -1,0 +1,8 @@
+// reject: E-OWN-051
+// covers: LANG-06-01, LANG-07-06
+type Borrowed = ListView[Int]
+try func leak(witness: ListView[Int]) Borrowed from witness {
+  let raw = List.of(1, 2)
+  let v: ListView[Int] = alias raw
+  return Borrowed.validate(v) or fail
+}

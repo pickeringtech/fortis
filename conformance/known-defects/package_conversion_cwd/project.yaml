@@ -1,0 +1,7 @@
+schema: fortis.project/v1
+name: mopup.cwd
+version: 0.1.0
+entry: main
+exports: []
+dependencies:
+  fortis: "1.0"

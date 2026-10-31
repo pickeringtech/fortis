@@ -1,0 +1,34 @@
+// reject: E-MAT-001 (at the marked lines)
+// covers: LANG-09-05
+// X-518: interval coverage — unguarded range arms contribute their intervals to exhaustiveness over a refined
+// integer scrutinee, and a gap between them is named `a..b` in the missing record. A guarded arm contributes no
+// interval, and an unrefined integer scrutinee — a local or a parameter — keeps its catch-all requirement, its
+// type being open.
+import fortis.host { Console }
+
+func grade(n: Int, console: Console) {
+  match n {                                     // reject: E-MAT-001 — an unrefined parameter keeps its catch-all
+    0..9 => console.print("low")
+  }
+}
+
+recovers func main(console: Console) {
+  match Int<0..100>.validate(7) {
+    success(n) => {
+      match n {                                 // reject: E-MAT-001 — 30..49 is not covered
+        0..29 => console.print("low")
+        50..100 => console.print("high")
+      }
+      match n {                                 // reject: E-MAT-001 — the guarded arm contributes no interval
+        ..<50 when n < 25 => console.print("a")
+        50..100 => console.print("b")
+      }
+      let u: Int = Int.saturatingAdd(n, 0)
+      match u {                                 // reject: E-MAT-001 — an unrefined local keeps its catch-all
+        0..9 => console.print("low")
+      }
+    }
+    failure(f) => { report f }
+  }
+  grade(3, console)
+}

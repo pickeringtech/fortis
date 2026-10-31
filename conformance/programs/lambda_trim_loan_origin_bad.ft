@@ -1,0 +1,7 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+func bad() {
+  let parts = "3, 4".split(",")
+  let views = parts.map(fn(t) => t.trim())
+  discard views
+}

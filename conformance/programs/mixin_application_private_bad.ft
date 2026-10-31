@@ -1,0 +1,14 @@
+// reject: E-NAM-004
+// covers: LANG-09-04, LANG-09-02
+// Same-module applications also restrict the mixin's view (D-485).
+export mixin Peeks {
+  export pure func peek(self) Int => self.secret // reject: E-NAM-004
+}
+
+export class Vault with Peeks {
+  secret: Int
+}
+
+export class Open with Peeks {
+  export secret: Int
+}

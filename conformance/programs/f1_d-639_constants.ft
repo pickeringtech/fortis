@@ -1,0 +1,6 @@
+// reject: E-TYP-070
+// D-639: LR 9.1 gives fields, methods and constants one member namespace.
+class Item {
+  const value = 1
+  const value = 2
+}

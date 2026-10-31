@@ -1,0 +1,12 @@
+// reject: E-REF-003 (at the marked lines)
+// covers: LANG-06-02
+// D-681: reading through a length refinement never permits mutation.
+func edit(xs: editable List[Int]) {}
+try func mutation(xs: editable List[Int]<length: 3..3>) {
+  xs.push(4) // reject: E-REF-003
+  discard xs.pop() // reject: E-REF-003
+  xs.clear() // reject: E-REF-003
+  xs.set(1, 4) or fail // reject: E-REF-003
+  edit(editable xs) // reject: E-REF-003
+  xs[1] = 4 // reject: E-REF-003
+}

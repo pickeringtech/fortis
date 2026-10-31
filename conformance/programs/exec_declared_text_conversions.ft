@@ -1,0 +1,60 @@
+// execute: 21 22 23|kept kept|4 4 4|failed
+// requires: runtime
+// covers: LANG-06-14, LANG-06-15, LANG-07-01
+// D-421: each text member accepts both text sources, with its written parameter mode.
+import fortis.host { Console }
+class Drink {
+  count: Int
+  export try convert from String(line) {
+    return Drink(count: line as Int or fail)
+  }
+}
+class Text {
+  value: String
+  export convert from String(owned source) {
+    return Text(value: move source)
+  }
+}
+class Length {
+  value: Int
+  export convert from StringView(source) {
+    return Length(value: source.scalarCount())
+  }
+}
+class TakenLength {
+  value: Int
+  export convert from StringView(owned source) {
+    return TakenLength(value: source.scalarCount())
+  }
+}
+try func main(console: Console) {
+  let literal = "21" as Drink or fail
+  let text: String = " 22 "
+  let trimmedText = text.trim()
+  let trimmed = trimmedText as Drink or fail
+  let owner: String = "23"
+  let loan = alias owner as Drink or fail
+  console.print("${literal.count} ${trimmed.count} ${loan.count}")
+  let original: String = "kept"
+  let borrowed = original.trim()
+  let copied = borrowed as Text
+  console.print("${copied.value} ${original}")
+  let fromOwner = original as Length
+  let fromLiteral = "kept" as Length
+  let spent: String = "take"
+  let taken = move spent as TakenLength
+  console.print("${fromOwner.value} ${fromLiteral.value} ${taken.value}")
+  let bad = "no number" as Drink
+  match move bad {
+    success(d) => console.print("unexpected")
+    failure(f) => { report f
+      console.print("failed")
+    }
+  }
+}
+test "text conversions" {
+  let drink = "21" as Drink or fail
+  expect drink.count == 21
+  let text = "tea" as Text
+  expect text.value == "tea"
+}

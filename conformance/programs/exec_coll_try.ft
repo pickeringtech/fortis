@@ -1,0 +1,63 @@
+// execute: parsed 3|failed conversion.parse|parsed 0|save failed after 2|saved 2|total 400|empty 0
+// reports: runtime-failure:conversion.parse|runtime-failure:failure.aggregate
+// failure-records: exact
+// requires: runtime
+// covers: LANG-06-16
+// The `try` forms of the List methods (6.7, X-479): the callback returns an outcome (a lambda whose body is a call of
+// a `try` function, or a fallible `as`, returns it as it is), the method stops at the first failure and returns it,
+// and the call is handled on the line like any outcome. `tryEach` and `tryFold` stop before the later elements.
+import fortis.host { Console }
+
+type Pence = Int<0..>
+
+class Store {
+  export saved: Int
+  export try func save(editable self, row: StringView) Void {
+    if row.byteCount() > 3 {
+      fail Failures.aggregate(List.default())
+    }
+    self.saved = Int.wrappingAdd(self.saved, 1)
+  }
+}
+
+try func addPence(a: Pence, b: Pence) Pence {
+  let sum = Int.add(a as Int, b as Int) or fail
+  return sum as Pence
+}
+
+try func parseAll(lines: List[String]) List[Int] {
+  let numbers = lines.tryMap(fn(line) => line as Int) or fail
+  return move numbers
+}
+
+try func saveAll(rows: List[String], store: editable Store) Void {
+  rows.tryEach(fn mut[editable store](row) => store.save(row)) or fail
+}
+
+try func total(prices: List[Pence]) Pence {
+  let sum = prices.tryFold(0 as Pence, fn(sum, p) => addPence(sum, p)) or fail
+  return sum
+}
+
+recovers func main(console: Console) {
+  let good = parseAll(List.of("1" as String, "22" as String, "333" as String)) or recover List.default()
+  console.print("parsed ${good.count()}")
+  let bad = parseAll(List.of("1" as String, "x" as String, "3" as String)) catch e {
+    console.print("failed ${e.code}")
+    report e
+    recover List.default()
+  }
+  console.print("parsed ${bad.count()}")
+  let mut store = Store(saved: 0)
+  saveAll(List.of("a" as String, "bb" as String, "cccc" as String, "d" as String), editable store) catch e {
+    console.print("save failed after ${store.saved}")
+    report e
+    recover Void
+  }
+  console.print("saved ${store.saved}")
+  let prices = List.of(100 as Pence, 250 as Pence, 50 as Pence)
+  let sum = total(prices) or recover 0 as Pence
+  console.print("total ${sum}")
+  let none = total(List.default()) or recover 7 as Pence
+  console.print("empty ${none}")
+}

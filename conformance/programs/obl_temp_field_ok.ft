@@ -1,7 +1,8 @@
 // accept
-// covers: LANG-10-02, LANG-07-01
-// The other fields are not linear, so projecting the one linear field is allowed. `move idInt(1)` marks a
-// function and calls it; no field of the result is projected, so the marker stays on the function.
+// covers: LANG-10-02
+// The other fields are not linear, so projecting the one linear field is allowed. The call is written plain: a
+// marker on a call of a function marks nothing (5.6, D-382), and `idInt(1)`'s result is fresh, so it needs no
+// marker (7.5); the old spelling `move idInt(1)` is own_marker_on_call_bad.ft's rejection.
 export error Negative {
   code: "rcc.negative"
 }
@@ -47,5 +48,5 @@ func idInt(n: Int) Int {
 }
 
 func movedCall() Int {
-  return move idInt(1)
+  return idInt(1)
 }

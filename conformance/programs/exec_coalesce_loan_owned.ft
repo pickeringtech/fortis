@@ -20,12 +20,12 @@ class Member {
 
 func noisy(console: Console, label: StringView) String {
   console.print("fallback ${label}")
-  return String.from("fb")
+  return "fb" as String
 }
 
 func noisyItem(console: Console) Item {
   console.print("fallback item")
-  return Item(name: String.from("fb"))
+  return Item(name: "fb" as String)
 }
 
 func show(console: Console, label: StringView, s: String) {
@@ -38,14 +38,14 @@ func showItem(console: Console, label: StringView, it: Item) {
 
 func maybe(given: Bool) String? {
   if given {
-    return String.from("oo")
+    return "oo" as String
   }
   return null
 }
 
 func maybeItem(given: Bool) Item? {
   if given {
-    return Item(name: String.from("o"))
+    return Item(name: "o" as String)
   }
   return null
 }
@@ -73,23 +73,23 @@ func lentItem(console: Console, given: Bool, ys: List[Item]) {
 }
 
 func main(console: Console) {
-  let named = Member(nick: String.from("ann"))
+  let named = Member(nick: "ann" as String)
   let plain = Member(nick: null)
   console.print("label ${named.label()}")
   console.print("label ${plain.label()}")
   let mut ys: List[String] = List.default()
-  ys.push(String.from("yo"))
+  ys.push("yo" as String)
   let none: List[String] = List.default()
-  console.print("text ${nestedText(null, ys, String.from("dd"))}")
-  console.print("text ${nestedText(null, none, String.from("dd"))}")
-  console.print("text ${nestedText(String.from("oo"), ys, String.from("dd"))}")
+  console.print("text ${nestedText(null, ys, "dd" as String)}")
+  console.print("text ${nestedText(null, none, "dd" as String)}")
+  console.print("text ${nestedText("oo" as String, ys, "dd" as String)}")
   let mut items: List[Item] = List.default()
-  items.push(Item(name: String.from("b")))
+  items.push(Item(name: "b" as String))
   let noItems: List[Item] = List.default()
-  console.print("item ${nestedItem(items, Item(name: String.from("d"))).name}")
+  console.print("item ${nestedItem(items, Item(name: "d" as String)).name}")
   console.print("item ${nestedItem(noItems, noisyItem(console)).name}")
-  console.print("param ${param(String.from("p"), String.from("dd"))}")
-  console.print("param ${param(null, String.from("dd"))}")
+  console.print("param ${param("p" as String, "dd" as String)}")
+  console.print("param ${param(null, "dd" as String)}")
   lent(console, true, ys)
   lent(console, false, ys)
   lent(console, false, none)

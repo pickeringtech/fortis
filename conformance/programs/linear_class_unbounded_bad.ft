@@ -1,0 +1,25 @@
+// reject: E-OBL-003, E-OBL-001
+// covers: LANG-10-02
+// D-547: explicit and context-inferred class instantiations.
+export class Bin[T] {
+  items: List[T] = List.default()
+  export pure func default() Bin[T] => Bin(items: List.default())
+  export func put(editable self, item: owned T) { self.items.push(move item) }
+}
+func explicit() {
+  let mut b: Bin[Outcome[Int]] = Bin[Outcome[Int]].default()
+  b.put(Outcome.success(1))
+}
+func inferred() {
+  let mut b: Bin[Outcome[Int]] = Bin.default()
+  b.put(Outcome.success(1))
+}
+func make[T](value: owned T) Bin[T] where T: linear => Bin(items: List.of(move value))
+
+func factory[T]() Bin[T] => Bin.default()
+func indirect() {
+  let b: Bin[Outcome[Int]] = factory()
+}
+func fieldInference() {
+  let b = Bin(items: List.of(Outcome.success(1)))
+}

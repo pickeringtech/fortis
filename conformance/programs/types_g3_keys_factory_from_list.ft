@@ -1,0 +1,6 @@
+// reject: E-TYP-090
+// covers: LANG-06-06
+// D-549, X-615: hash-container key requirements.
+class Plain { export n: Int }
+func fromList[K](keys: List[K]) Map[K, Int] where K implements Hashable => Map.default()
+func probe() { let bad = fromList(List.of(Plain(n: 1))) }

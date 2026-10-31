@@ -1,0 +1,32 @@
+// reject: E-TYP-080, E-TYP-090 (at the marked lines)
+// covers: LANG-09-03, LANG-09-07
+// An interface's `where` clause is checked at every implementation and use (9.5; D-69): `Int` does not implement
+// `Tag`, so `C implements Source[Int]` is an incomplete implementation (E-TYP-080) and `dynamic Source[Int]` a type
+// whose bound does not hold (E-TYP-090); `Source[Marker]` is fine, and a bound `T implements Source[Int]` at a call is
+// judged by the call's rule (6.10).
+export interface Tag {
+  pure func tag(self) Int
+}
+
+export interface Source[T] where T implements Tag {
+  func get(self) Int
+}
+
+export class Marker implements Tag {
+  export n: Int
+  pure func tag(self) Int => self.n
+}
+
+export class C implements Source[Int] {           // reject: E-TYP-080
+  export n: Int
+  export func get(self) Int => self.n
+}
+
+export class D implements Source[Marker] {
+  export n: Int
+  export func get(self) Int => self.n
+}
+
+export func use(s: dynamic Source[Int]) Int => s.get()    // reject: E-TYP-090
+
+export func fine(s: dynamic Source[Marker]) Int => s.get()

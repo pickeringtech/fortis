@@ -1,0 +1,12 @@
+// reject: E-TYP-090
+// covers: LANG-06-15
+import fortis.host { Console }
+class Asset {
+  cap: Console
+}
+class Source {
+  value: Asset
+}
+class Target derive convert from Source {
+  value: Asset
+}

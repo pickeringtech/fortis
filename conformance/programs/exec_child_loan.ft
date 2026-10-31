@@ -1,0 +1,13 @@
+// execute: 3|3
+// requires: runtime
+// covers: LANG-07-05
+import fortis.host { Console }
+func main(console: Console) {
+  let mut owner = "abc" as String
+  let parent = editable owner
+  {
+    let child = alias parent
+    console.print("${child.byteCount()}")
+  }
+  console.print("${parent.byteCount()}")
+}

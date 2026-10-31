@@ -1,0 +1,5 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-580, X-605: an owned container cannot retain a non-static loan.
+pure func pack[T](value: owned T) List[T] => List.of(move value)
+pure func size(v: StringView) Int => pack(v).count()

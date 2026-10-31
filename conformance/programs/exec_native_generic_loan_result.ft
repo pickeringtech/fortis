@@ -1,0 +1,31 @@
+// execute: gen x0|gen 7|end|drop x0
+// requires: runtime
+// covers: LANG-06-10
+// A generic function whose result is an optional loan of its type parameter builds natively at a class with a
+// `cleanup` (6.10, X-515; D-387): with no `Copyable` bound the generated signature carries no `Clone`, and the loan is
+// returned as a loan.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: label as String, console: console.retain())
+}
+
+func first[T](xs: List[T]) (alias T from xs)? => xs.get(0)
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "x0"))
+  console.print("gen ${first(alias xs)?.label ?? "none"}")
+  let ns: List[Int] = List.of(7)
+  console.print("gen ${first(alias ns) ?? 0}")
+  console.print("end")
+}

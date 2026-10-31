@@ -1,0 +1,9 @@
+// reject: E-OBL-001
+// covers: LANG-10-01, LANG-10-02
+class Bin[T] where T: linear {
+  items: List[T]
+  export func drop(owned self) {
+    let Bin(items: contents) = move self
+    for item in move contents {}
+  }
+}

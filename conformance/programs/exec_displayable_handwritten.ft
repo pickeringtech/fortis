@@ -51,15 +51,15 @@ export class Counter {
 }
 
 func main(console: Console) {
-  let t = Tag(name: String.from("ada"))
+  let t = Tag(name: "ada" as String)
   console.print("tag ${t}")
   let high = Level.High
   console.print("level ${high}")
   let low: Level = Low(depth: 2)
   console.print("level ${low}")
-  let p = Pair(first: Tag(name: String.from("ada")), level: High)
+  let p = Pair(first: Tag(name: "ada" as String), level: High)
   console.print("pair ${p}")
-  let tags = List.of(Tag(name: String.from("ada")), Tag(name: String.from("bob")))
+  let tags = List.of(Tag(name: "ada" as String), Tag(name: "bob" as String))
   console.print("list ${tags}")
   console.print("plain ${Plain(n: 1)}")
   let counter = Counter(n: 4)

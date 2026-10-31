@@ -11,7 +11,9 @@ use crate::model::*;
 /// the same enum by its bare name (D-142).
 fn adopt_shadow(declared: Type, init: &Expr) -> Type {
     match (&declared, &init.ty) {
-        (Type::Fn { ret: want, params, kind, modifiers, origin, dynamic, identity }, Type::Fn { ret: have, .. }) if nominal_extends(want, have) => Type::Fn {
+        (Type::Fn { capture_origins, param_modes, ret: want, params, kind, modifiers, origin, dynamic, identity }, Type::Fn { ret: have, .. }) if nominal_extends(want, have) => Type::Fn {
+            capture_origins: capture_origins.clone(),
+            param_modes: param_modes.clone(),
             params: params.clone(),
             ret: have.clone(),
             kind: kind.clone(),
@@ -124,6 +126,15 @@ impl<'t, 'a> Builder<'t, 'a> {
                     }
                     "discard" => {
                         let v = self.expr(e.unwrap())?;
+                        // `discard move p` consumes the place itself (7.9): the VM decides at the place whether the
+                        // local owns what it destroys, so the moved place is not held as a temporary of its own
+                        let v = match v.kind {
+                            ExprKind::Temp { local, value } if matches!(value.kind, ExprKind::Place(_, Use::Move)) => {
+                                self.untrack_temp(local);
+                                *value
+                            }
+                            _ => v,
+                        };
                         one(StmtKind::Discard(v))
                     }
                     "break" => one(StmtKind::Break(words.get(1).cloned())),
@@ -363,15 +374,24 @@ impl<'t, 'a> Builder<'t, 'a> {
             (ForSource::Range { lo, hi, inclusive: rk[1].text_is("..") }, int())
         } else {
             let v = if src.name() == "place" { self.place_expr(src, Use::Move)? } else { self.expr(src)? };
-            let st = strip(&v.ty).clone();
+            let st = self.ty.collection_representation(&v.ty).map(|(_, rep)| rep).unwrap_or_else(|| strip(&v.ty).clone());
             let st = match st {
                 Type::Refined { base, .. } => Type::Named(base),
                 t => t,
             };
-            let elem = match &st {
-                Type::Named(nt) if ["List", "ListView", "Array", "Set", "FixedList"].contains(&nt.name.as_str()) && !nt.args.is_empty() => nt.args[0].clone(),
-                Type::Named(nt) if ["Map", "OrderedMap", "FixedMap"].contains(&nt.name.as_str()) && nt.args.len() >= 2 => Type::Tuple(vec![nt.args[0].clone(), nt.args[1].clone()]),
-                _ => unknown("loop item"),
+            let moved = src.name() == "place";
+            let (v, elem) = match &st {
+                Type::Named(nt) if nt.package.is_empty() && ["List", "ListView", "Array", "Set", "FixedList"].contains(&nt.name.as_str()) && !nt.args.is_empty() => (v, nt.args[0].clone()),
+                Type::Named(nt) if nt.package.is_empty() && ["Map", "OrderedMap", "FixedMap"].contains(&nt.name.as_str()) && nt.args.len() >= 2 => (v, Type::Tuple(vec![nt.args[0].clone(), nt.args[1].clone()])),
+                // a class that implements `Iterable[T, I]` (5.3, 7.7): the loop walks the cursor `iterate()` gives (D-545)
+                _ if !moved => match self.iterate_call(v, &st, line) {
+                    Ok((call, elem)) => (call, elem),
+                    Err(v) => (v, unknown("loop item")),
+                },
+                _ => match self.consume_call(v, &st, line) {
+                    Ok((cursor, elem, next)) => return self.consuming_for(n, label, &var, cursor, elem, next),
+                    Err(v) => (v, unknown("loop item")),
+                },
             };
             (ForSource::Items(v), elem)
         };
@@ -382,5 +402,33 @@ impl<'t, 'a> Builder<'t, 'a> {
         let body = body?;
         let _ = tok_line;
         Ok(vec![Stmt { line, temps: vec![], kind: StmtKind::For { label, binding, source, body } }])
+    }
+
+    fn consuming_for(&mut self, n: N<'a>, label: Option<String>, var: &str, cursor: Expr, elem: Type, next: Callee) -> BResult<Vec<Stmt>> {
+        let line = line_of(n);
+        self.fb().push_scope();
+        let cursor_ty = cursor.ty.clone();
+        let local = self.fb().temp(cursor_ty.clone());
+        self.fb().push_scope();
+        let item = self.fb().declare(var, elem.clone(), false, LocalKind::Binding);
+        let body = self.block(n.find("block").unwrap())?;
+        let items = self.fb().pop_scope();
+        let next = Expr::new(ExprKind::Call {
+            callee: next,
+            args: vec![Arg { param: "self".into(), mode: Mode::Editable, value: Expr::new(ExprKind::Place(Place::local(local), Use::Editable), cursor_ty, line) }],
+        }, Type::Optional(Box::new(elem)), line);
+        let step = Stmt::new(line, StmtKind::Match {
+            scrutinee: next,
+            arms: vec![
+                Arm { pattern: Pattern::Present(Box::new(Pattern::Bind(item))), guard: None, locals: items, body: ArmBody::Block(body) },
+                Arm { pattern: Pattern::Null, guard: None, locals: vec![], body: ArmBody::Block(Block { stmts: vec![Stmt::new(line, StmtKind::Break(None))], line, ..Default::default() }) },
+            ],
+        });
+        let locals = self.fb().pop_scope();
+        let block = Block { locals, line, stmts: vec![
+            Stmt::new(line, StmtKind::Let { local, init: cursor }),
+            Stmt::new(line, StmtKind::Loop { label, body: Block { stmts: vec![step], line, ..Default::default() } }),
+        ], ..Default::default() };
+        Ok(vec![Stmt::new(line, StmtKind::Block(block))])
     }
 }

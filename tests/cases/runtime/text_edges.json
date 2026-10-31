@@ -1,0 +1,213 @@
+[
+  {
+    "name": "lr6_6_trimstart_0",
+    "input": {
+      "op": "trimStart",
+      "text": ""
+    },
+    "expect": ""
+  },
+  {
+    "name": "lr6_6_trimstart_1",
+    "input": {
+      "op": "trimStart",
+      "text": " \tfoo \n"
+    },
+    "expect": "foo \n"
+  },
+  {
+    "name": "lr6_6_trimstart_2",
+    "input": {
+      "op": "trimStart",
+      "text": " é　"
+    },
+    "expect": "é　"
+  },
+  {
+    "name": "lr6_6_trimstart_3",
+    "input": {
+      "op": "trimStart",
+      "text": "\u001c x"
+    },
+    "expect": "\u001c x"
+  },
+  {
+    "name": "lr6_6_trimstart_4",
+    "input": {
+      "op": "trimStart",
+      "text": "​ x"
+    },
+    "expect": "​ x"
+  },
+  {
+    "name": "lr6_6_trimend_0",
+    "input": {
+      "op": "trimEnd",
+      "text": ""
+    },
+    "expect": ""
+  },
+  {
+    "name": "lr6_6_trimend_1",
+    "input": {
+      "op": "trimEnd",
+      "text": " \tfoo \n"
+    },
+    "expect": " \tfoo"
+  },
+  {
+    "name": "lr6_6_trimend_2",
+    "input": {
+      "op": "trimEnd",
+      "text": " é　"
+    },
+    "expect": " é"
+  },
+  {
+    "name": "lr6_6_trimend_3",
+    "input": {
+      "op": "trimEnd",
+      "text": "x\u001c"
+    },
+    "expect": "x\u001c"
+  },
+  {
+    "name": "lr6_6_trimend_4",
+    "input": {
+      "op": "trimEnd",
+      "text": "x​"
+    },
+    "expect": "x​"
+  },
+  {
+    "name": "lr6_6_lines_0",
+    "input": {
+      "op": "lines",
+      "text": ""
+    },
+    "expect": []
+  },
+  {
+    "name": "lr6_6_lines_1",
+    "input": {
+      "op": "lines",
+      "text": "x"
+    },
+    "expect": [
+      "x"
+    ]
+  },
+  {
+    "name": "lr6_6_lines_2",
+    "input": {
+      "op": "lines",
+      "text": "\n"
+    },
+    "expect": [
+      ""
+    ]
+  },
+  {
+    "name": "lr6_6_lines_3",
+    "input": {
+      "op": "lines",
+      "text": "\n\n"
+    },
+    "expect": [
+      "",
+      ""
+    ]
+  },
+  {
+    "name": "lr6_6_lines_4",
+    "input": {
+      "op": "lines",
+      "text": "a\r\nb\n"
+    },
+    "expect": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "name": "lr6_6_lines_5",
+    "input": {
+      "op": "lines",
+      "text": "a\r"
+    },
+    "expect": [
+      "a\r"
+    ]
+  },
+  {
+    "name": "lr6_6_lines_6",
+    "input": {
+      "op": "lines",
+      "text": "a\rb\n"
+    },
+    "expect": [
+      "a\rb"
+    ]
+  },
+  {
+    "name": "lr6_6_lines_7",
+    "input": {
+      "op": "lines",
+      "text": "a\r\r\n"
+    },
+    "expect": [
+      "a\r"
+    ]
+  },
+  {
+    "name": "lr6_6_lines_8",
+    "input": {
+      "op": "lines",
+      "text": "é\n🙂"
+    },
+    "expect": [
+      "é",
+      "🙂"
+    ]
+  },
+  {
+    "name": "lr6_6_asciilower_0",
+    "input": {
+      "op": "asciiLower",
+      "text": ""
+    },
+    "expect": ""
+  },
+  {
+    "name": "lr6_6_asciilower_1",
+    "input": {
+      "op": "asciiLower",
+      "text": "ABC xyz"
+    },
+    "expect": "abc xyz"
+  },
+  {
+    "name": "lr6_6_asciilower_2",
+    "input": {
+      "op": "asciiLower",
+      "text": "ÀΣÉ"
+    },
+    "expect": "ÀΣÉ"
+  },
+  {
+    "name": "lr6_6_asciilower_3",
+    "input": {
+      "op": "asciiLower",
+      "text": "İIı"
+    },
+    "expect": "İiı"
+  },
+  {
+    "name": "lr6_6_asciilower_4",
+    "input": {
+      "op": "asciiLower",
+      "text": "A\u0000Z"
+    },
+    "expect": "a\u0000z"
+  }
+]

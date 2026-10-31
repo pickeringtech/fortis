@@ -1,0 +1,85 @@
+[
+  {
+    "name": "try_value",
+    "input": {
+      "source": "import fortis.host { Console }\ntry func parse(s: String) Int => s as Int or fail\ntry func main(console: Console) {\n  let f = parse\n  let v = f(\"3\") or fail\n  let n: Outcome[Int] = f(\"4\")\n  let w = n or fail\n  console.print(\"${v} ${w}\")\n}\n"
+    },
+    "expect": [
+      "3 4"
+    ]
+  },
+  {
+    "name": "try_controls",
+    "input": {
+      "source": "import fortis.host { Console }\ntry func parse(s: String) Int => s as Int or fail\ntry func main(console: Console) {\n  let f: try fn(String) Int = parse\n  let g = try fn(s: String) Int => s as Int or fail\n  let a = f(\"3\") or fail\n  let b = g(\"4\") or fail\n  let c = parse(\"5\") or fail\n  console.print(\"${a} ${b} ${c}\")\n}\n"
+    },
+    "expect": [
+      "3 4 5"
+    ]
+  },
+  {
+    "name": "async_value",
+    "input": {
+      "source": "import fortis.host { Console }\nasync func value() Int => 3\nasync try func parse(s: String) Int => s as Int or fail\nasync try func main(console: Console) {\n  let f = value\n  let pending: Future[Int] = f()\n  let a = await pending\n  let g = parse\n  let pendingTry: Future[Outcome[Int]] = g(\"4\")\n  let b = await pendingTry or fail\n  console.print(\"${a} ${b}\")\n}\n"
+    },
+    "expect": [
+      "3 4"
+    ]
+  },
+  {
+    "name": "array_chain",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc main(console: Console) {\n  let n = Array[Int, 3].filled(1).count()\n  let h = Array[Int, 0x2].filled(1).count()\n  let r = Array[Int<0..9>, 4].filled(1).count()\n  console.print(\"${n} ${h} ${r} ${Array[Int, 3].filled(1).count()}\")\n}\n"
+    },
+    "expect": [
+      "3 2 4 3"
+    ]
+  },
+  {
+    "name": "generic_workaround",
+    "input": {
+      "source": "import fortis.host { Console }\nfunc answer() Int => 7\nfunc main(console: Console) {\n  let f = answer\n  console.print(\"${f()} ${answer()}\")\n}\n"
+    },
+    "expect": [
+      "7 7"
+    ]
+  },
+  {
+    "name": "generic_try",
+    "input": {
+      "source": "import fortis.host { Console }\ntry func value[T](n: T) Int => 7\nclass Box[T] { export try func value(n: T) Int => 8 }\ntry func main(console: Console) {\n  let f: try fn(Int) Int = value\n  let g = Box[Int].value\n  let a = f(1) or fail\n  let b = g(1) or fail\n  console.print(\"${a} ${b}\")\n}\n",
+      "wrapper_returns": {
+        "value.value": [
+          "Outcome[Int]",
+          false
+        ],
+        "Box.value": [
+          "Outcome[Int]",
+          false
+        ]
+      }
+    },
+    "expect": [
+      "7 8"
+    ]
+  },
+  {
+    "name": "generic_async",
+    "input": {
+      "source": "import fortis.host { Console }\nasync func value[T](n: T) Int => 9\nclass Box[T] { export async try func value(n: T) Int => 10 }\nasync try func main(console: Console) {\n  let f: async fn(Int) Int = value\n  let g = Box[Int].value\n  let a: Int = await f(1)\n  let b: Int = await g(1) or fail\n  console.print(\"${a} ${b}\")\n}\n",
+      "wrapper_returns": {
+        "value.value": [
+          "Int",
+          true
+        ],
+        "Box.value": [
+          "Outcome[Int]",
+          true
+        ]
+      }
+    },
+    "expect": [
+      "9 10"
+    ]
+  }
+]

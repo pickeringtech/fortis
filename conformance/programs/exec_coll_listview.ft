@@ -1,0 +1,34 @@
+// execute: total 54 big 12 doubled 4|any true all false at 2 has true|sorted 30 5|<pear><fig><apple>|sizes 3 2 1 2
+// requires: runtime
+// covers: LANG-06-16
+// ListView[T] has the same functional methods as List[T] (6.7, X-479), so a function that takes a list read-only, as
+// a `ListView` parameter, can fold, search and transform it without a `for` loop. A `List` argument is lent as a view.
+import fortis.host { Console }
+
+func total(items: ListView[Int]) Int => items.fold(0, fn(sum, n) => Int.wrappingAdd(sum, n))
+
+func firstBig(items: ListView[Int]) (alias Int from items)? => items.find(fn(n) => n > 10)
+
+func doubled(items: ListView[Int]) List[Int] => items.map(fn(n) => Int.wrappingMul(n, 2))
+
+func describe(items: ListView[String]) String {
+  let mut parts: List[String] = List.default()
+  items.each(fn mut[editable parts](item) Void { parts.push("<${item}>") })
+  let mut out = String.empty()
+  for part in parts {
+    out = "${out}${part}"
+  }
+  return out
+}
+
+func main(console: Console) {
+  let xs = List.of(5, 12, 7, 30)
+  console.print("total ${total(xs)} big ${firstBig(xs) ?? 0} doubled ${doubled(xs).count()}")
+  console.print("any ${xs.any(fn(n) => n > 20)} all ${xs.all(fn(n) => n > 20)} at ${xs.indexWhere(fn(n) => n == 7) ?? -1} has ${xs.contains(30)}")
+  let sorted = xs.sortedBy(fn(n) => Int.wrappingSub(0, n))
+  console.print("sorted ${sorted.get(0) ?? 0} ${sorted.get(3) ?? 0}")
+  let words = List.of("pear" as String, "fig" as String, "apple" as String)
+  console.print(describe(words))
+  let sizes = words.groupBy(fn(w) => w.byteCount())
+  console.print("sizes ${sizes.count()} ${words.take(2).count()} ${words.skip(2).count()} ${words.chunked(2).count()}")
+}

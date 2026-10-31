@@ -1,0 +1,21 @@
+// execute: 2|2|2|2
+// requires: runtime
+// covers: LANG-06-01, LANG-06-14, LANG-07-06
+import fortis.host { Console }
+type Borrowed = ListView[Int]
+type Short = ListView[Int]<length: 1..3>
+func shortCount(xs: Short) Int { return xs.count() }
+func construct(xs: ListView[Int]) Borrowed from xs { return Borrowed(xs) }
+func convert(xs: ListView[Int]) Borrowed from xs { return xs as Borrowed }
+try func validate(xs: ListView[Int]) Borrowed from xs { return Borrowed.validate(xs) or fail }
+try func main(console: Console) {
+  let raw = List.of(1, 2)
+  let a = construct(alias raw)
+  console.print("${a.count()}")
+  let b = convert(alias raw)
+  console.print("${b.count()}")
+  let c = validate(alias raw) or fail
+  console.print("${c.count()}")
+  let back = c as ListView[Int]
+  console.print("${back.count()}")
+}

@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// covers: LANG-06-08
+class Cell { func change(editable self) {} }
+func bad() { let mut c: Cell? = Cell()
+  discard c?.change() }

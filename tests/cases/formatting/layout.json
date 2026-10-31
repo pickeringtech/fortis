@@ -1,0 +1,302 @@
+[
+  {
+    "name": "lr3_2_layout_0",
+    "input": "\n\n     func unit() {\r\n\t\treturn 0   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return 0\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_1",
+    "input": "\n\n     func unit() {\r\n\t\treturn -1   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return -1\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_2",
+    "input": "\n\n     func unit() {\r\n\t\treturn true   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return true\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_3",
+    "input": "\n\n     func unit() {\r\n\t\treturn \"a b\"   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return \"a b\"\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_4",
+    "input": "\n\n     func unit() {\r\n\t\treturn (1, 2)   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return (1, 2)\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_5",
+    "input": "\n\n     func unit() {\r\n\t\treturn { x: 1, y: 2 }   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return { x: 1, y: 2 }\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_6",
+    "input": "\n\n     func unit() {\r\n\t\treturn List.of(1, 2)   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return List.of(1, 2)\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_7",
+    "input": "\n\n     func unit() {\r\n\t\treturn x?.field   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return x?.field\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_8",
+    "input": "\n\n     func unit() {\r\n\t\treturn x ?? 2   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return x ?? 2\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_9",
+    "input": "\n\n     func unit() {\r\n\t\treturn x as Int   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return x as Int\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_10",
+    "input": "\n\n     func unit() {\r\n\t\treturn (x + 1) * 2   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return (x + 1) * 2\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_11",
+    "input": "\n\n     func unit() {\r\n\t\treturn !flag   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return !flag\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_12",
+    "input": "\n\n     func unit() {\r\n\t\treturn checked (x + 1)   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return checked(x + 1)\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_13",
+    "input": "\n\n     func unit() {\r\n\t\treturn f() or fail   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return f() or fail\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_14",
+    "input": "\n\n     func unit() {\r\n\t\treturn f() or recover 3   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return f() or recover 3\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_15",
+    "input": "\n\n     func unit() {\r\n\t\treturn if flag { give 1 } else { give 2 }   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return if flag { give 1 } else { give 2 }\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_16",
+    "input": "func unit() {\nreturn match x {\n1 => 2\notherwise => 3\n}\n}\n",
+    "expect": "func unit() {\n  return match x {\n    1 => 2\n    otherwise => 3\n  }\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_17",
+    "input": "\n\n     func unit() {\r\n\t\tlet x = 1   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  let x = 1\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_18",
+    "input": "\n\n     func unit() {\r\n\t\tlet mut x = 1   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  let mut x = 1\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_19",
+    "input": "\n\n     func unit() {\r\n\t\tx += 2   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  x += 2\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_20",
+    "input": "\n\n     func unit() {\r\n\t\tdiscard f()   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  discard f()\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_21",
+    "input": "\n\n     func unit() {\r\n\t\tif flag { discard 1 }   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  if flag { discard 1 }\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_22",
+    "input": "\n\n     func unit() {\r\n\t\tif flag { discard 1 } else { discard 2 }   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  if flag { discard 1 } else { discard 2 }\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_23",
+    "input": "\n\n     func unit() {\r\n\t\twhile flag { break }   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  while flag { break }\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_24",
+    "input": "\n\n     func unit() {\r\n\t\tloop { continue }   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  loop { continue }\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_25",
+    "input": "\n\n     func unit() {\r\n\t\tfor x in 0..<3 { discard x }   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  for x in 0..<3 { discard x }\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_26",
+    "input": "\n\n     func unit() {\r\n\t\tfor x in 0..3 { discard x }   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  for x in 0..3 { discard x }\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_27",
+    "input": "\n\n     func unit() {\r\n\t\tfor x in xs { discard x }   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  for x in xs { discard x }\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_28",
+    "input": "\n\n     func unit() {\r\n\t\tdefer { discard 1 }   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  defer { discard 1 }\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_29",
+    "input": "\n\n     func unit() {\r\n\t\tlet (a, b) = move pair   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  let (a, b) = move pair\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_30",
+    "input": "\n\n     func unit() {\r\n\t\tlet f = fn(x: Int) Int => x   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  let f = fn(x: Int) Int => x\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_31",
+    "input": "\n\n     func unit() {\r\n\t\tlet f = fn[copy x]() Int => x   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  let f = fn[copy x]() Int => x\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_32",
+    "input": "\n\n     func unit() {\r\n\t\treport problem   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  report problem\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_33",
+    "input": "\n\n     func unit() {\r\n\t\tfail problem   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  fail problem\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_34",
+    "input": "\n\n     func unit() {\r\n\t\trecover 1   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  recover 1\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_35",
+    "input": "\n\n     func unit() {\r\n\t\tgive 1   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  give 1\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_36",
+    "input": "\n\n     func unit() {\r\n\t\tlet xs = List.of()   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  let xs = List.of()\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_37",
+    "input": "\n\n     func unit() {\r\n\t\treturn xs[0]   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return xs[0]\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_38",
+    "input": "\n\n     func unit() {\r\n\t\treturn \"${x}\"   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return \"${x}\"\n}\n"
+  },
+  {
+    "name": "lr3_2_layout_39",
+    "input": "\n\n     func unit() {\r\n\t\treturn present(x)   \r\n       }\r\n\n\n",
+    "expect": "func unit() {\n  return present(x)\n}\n"
+  },
+  {
+    "name": "lr3_2_gap_add",
+    "input": "func\tf( )Int=>1+2\n",
+    "expect": "func f() Int => 1 + 2\n"
+  },
+  {
+    "name": "lr3_2_gap_sub",
+    "input": "func\tf( )Int=>1-2\n",
+    "expect": "func f() Int => 1 - 2\n"
+  },
+  {
+    "name": "lr3_2_gap_mul",
+    "input": "func\tf( )Int=>1*2\n",
+    "expect": "func f() Int => 1 * 2\n"
+  },
+  {
+    "name": "lr3_2_gap_div",
+    "input": "func\tf( )Int=>1/2\n",
+    "expect": "func f() Int => 1 / 2\n"
+  },
+  {
+    "name": "lr3_2_gap_rem",
+    "input": "func\tf( )Int=>1%2\n",
+    "expect": "func f() Int => 1 % 2\n"
+  },
+  {
+    "name": "lr3_2_gap_shl",
+    "input": "func\tf( )Int=>1<<2\n",
+    "expect": "func f() Int => 1 << 2\n"
+  },
+  {
+    "name": "lr3_2_gap_shr",
+    "input": "func\tf( )Int=>1>>2\n",
+    "expect": "func f() Int => 1 >> 2\n"
+  },
+  {
+    "name": "lr3_2_gap_bitand",
+    "input": "func\tf( )Int=>1&2\n",
+    "expect": "func f() Int => 1 & 2\n"
+  },
+  {
+    "name": "lr3_2_gap_bitor",
+    "input": "func\tf( )Int=>1|2\n",
+    "expect": "func f() Int => 1 | 2\n"
+  },
+  {
+    "name": "lr3_2_gap_xor",
+    "input": "func\tf( )Int=>1^2\n",
+    "expect": "func f() Int => 1 ^ 2\n"
+  },
+  {
+    "name": "lr3_2_gap_eq",
+    "input": "func\tf( )Bool=>1==2\n",
+    "expect": "func f() Bool => 1 == 2\n"
+  },
+  {
+    "name": "lr3_2_gap_ne",
+    "input": "func\tf( )Bool=>1!=2\n",
+    "expect": "func f() Bool => 1 != 2\n"
+  },
+  {
+    "name": "lr3_2_gap_lt",
+    "input": "func\tf( )Bool=>1<2\n",
+    "expect": "func f() Bool => 1 < 2\n"
+  },
+  {
+    "name": "lr3_2_gap_le",
+    "input": "func\tf( )Bool=>1<=2\n",
+    "expect": "func f() Bool => 1 <= 2\n"
+  },
+  {
+    "name": "lr3_2_gap_gt",
+    "input": "func\tf( )Bool=>1>2\n",
+    "expect": "func f() Bool => 1 > 2\n"
+  },
+  {
+    "name": "lr3_2_gap_ge",
+    "input": "func\tf( )Bool=>1>=2\n",
+    "expect": "func f() Bool => 1 >= 2\n"
+  },
+  {
+    "name": "lr3_2_gap_neg",
+    "input": "func\tf( )Int=>- 1\n",
+    "expect": "func f() Int => -1\n"
+  },
+  {
+    "name": "lr3_2_gap_not",
+    "input": "func\tf( )Bool=>! true\n",
+    "expect": "func f() Bool => !true\n"
+  },
+  {
+    "name": "lr3_2_gap_and",
+    "input": "func\tf( )Bool=>true&&false\n",
+    "expect": "func f() Bool => true && false\n"
+  },
+  {
+    "name": "lr3_2_gap_or",
+    "input": "func\tf( )Bool=>true||false\n",
+    "expect": "func f() Bool => true || false\n"
+  }
+]

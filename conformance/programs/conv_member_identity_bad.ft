@@ -1,0 +1,20 @@
+// reject: E-TYP-183 (at the marked lines)
+// covers: LANG-06-15
+// 6.13 (X-551): the identity pair is decided by 6.13 itself — an identity conversion converts nothing — so a
+// member that declares it duplicates the rule and is rejected, on a class or on an enum.
+class Celsius {
+  degrees: Int
+
+  export convert to Celsius {                // reject: E-TYP-183 — the pair is the identity: 6.13 already decides it
+    return Celsius(degrees: 0)
+  }
+}
+
+enum Flag {
+  On
+  Off
+
+  export convert from Flag(f) {              // reject: E-TYP-183 — the same identity pair on an enum
+    return Flag.On
+  }
+}

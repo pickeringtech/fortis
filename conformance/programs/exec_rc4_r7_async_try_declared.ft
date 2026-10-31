@@ -1,0 +1,15 @@
+// execute: before|body|3
+// requires: runtime
+// covers: LANG-08-04
+import fortis.host { Console }
+async try func work(console: Console) Int {
+  console.print("body")
+  return 3
+}
+async try func main(console: Console) {
+  let f: async try fn(Console) Int = work
+  let pending = f(console)
+  console.print("before")
+  let n = await pending or fail
+  console.print("${n}")
+}

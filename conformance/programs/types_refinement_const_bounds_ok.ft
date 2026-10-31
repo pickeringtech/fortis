@@ -1,0 +1,27 @@
+// accept
+// covers: LANG-06-02
+// A refinement bound may be a `const` of the base type resolved at compile time (6.3, X-512): a constant whose
+// initialiser is an integer literal, another such constant, or `-`, parentheses and `+ - * / %` over them; an
+// unannotated constant is an `Int`; a class's `const` member is a constant too (`Limits.max`). The folded bound is the
+// one the interval rules use.
+const top: Int = 10
+const low = 2
+const twice: Int = top * 2
+
+class Limits {
+  const max: Int = top - 1
+}
+
+pure func between(n: Int<low..top>) Int => n
+pure func upTo(n: Int<0..twice>) Int => n
+pure func below(n: Int<0..Limits.max>) Int => n
+pure func around(n: Int<-top..(top)>) Int => n
+pure func modulo(n: Int<0..<top * 3 % 7>) Int => n
+
+test "folded bounds admit what they contain" {
+  expect between(5) == 5
+  expect upTo(20) == 20
+  expect below(9) == 9
+  expect around(-10) == -10
+  expect modulo(1) == 1
+}

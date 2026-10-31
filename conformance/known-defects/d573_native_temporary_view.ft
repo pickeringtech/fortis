@@ -1,0 +1,11 @@
+// D-573: `let name = (xs.get(0) ?? "").trim()` checks and runs on the interpreter and the VM, but native code lowers the
+// `??` to a temporary `Cow` and the view `trim` answers borrows it, so rustc refuses with E0716 (a temporary value
+// dropped while borrowed). Binding the `??` first (`let raw = xs.get(0) ?? ""` and then `raw.trim()`) builds and runs
+// on every backend (conformance/programs/exec_text_report.ft).
+import fortis.host { Console }
+
+recovers func main(console: Console) {
+  let fields = "tea, 3".split(",")
+  let name = (fields.get(0) ?? "").trim()
+  console.print("[${name}]")
+}

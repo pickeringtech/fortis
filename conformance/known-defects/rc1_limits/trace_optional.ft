@@ -1,0 +1,9 @@
+// D-344: an optional local now has its native drop event.
+import fortis.host { Console }
+class Token { label: String
+  cleanup(editable self) { log.info("drop ${self.label}") } }
+func main(console: Console) {
+  let mut xs = List.of(Token(label: "a"))
+  let p = xs.pop()
+  console.print("${p?.label ?? "none"}")
+}

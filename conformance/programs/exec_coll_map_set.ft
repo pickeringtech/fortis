@@ -1,0 +1,79 @@
+// execute: has true false false|keys pear,fig,apple|each pear=3,fig=5,apple=7 total 15|removed 5 -1 count 2 keys pear,apple|after pear,apple,kiwi values 3|tags 2 true|tags 20 2 false true|set true true false 2 false|union a,c,d shared 1 only 1 true
+// requires: runtime
+// covers: LANG-06-16
+// Map and Set (6.7, X-479): `containsKey` and `remove` read their key (a `StringView` on a `Map[String, V]`, as `get`
+// does), `remove` hands the removed value to the caller and the entries after it keep their order, `each` visits the
+// entries in first-insertion order, `keys` and `values` copy, and the Set operations `union`, `intersection` and
+// `difference` build new sets in the order of their first operand. A key the type compares by its own `equals` is
+// found and removed by that equality.
+import fortis.host { Console }
+
+class Tag implements Equatable, Hashable {
+  export label: String
+  export weight: Int
+  export pure func equals(self, other: Tag) Bool => self.label == other.label
+  export pure func hash(self, into: editable Hasher) Void {
+  }
+}
+
+func join(xs: ListView[String]) String {
+  let mut out = String.empty()
+  let mut i = 0
+  while i < xs.count() {
+    if i > 0 {
+      out = "${out},"
+    }
+    out = "${out}${xs.get(i) ?? ""}"
+    i = Int.wrappingAdd(i, 1)
+  }
+  return out
+}
+
+func main(console: Console) {
+  let mut stock: Map[String, Int] = Map.default()
+  stock.set("pear", 3)
+  stock.set("fig", 5)
+  stock.set("apple", 7)
+  let wanted: StringView = "fig"
+  console.print("has ${stock.containsKey(wanted)} ${stock.containsKey("kiwi")} ${stock.isEmpty()}")
+  console.print("keys ${join(stock.keys())}")
+  let mut total = 0
+  let mut names: List[String] = List.default()
+  stock.each(fn mut[editable total, editable names](name, count) Void {
+    total = Int.wrappingAdd(total, count)
+    names.push("${name}=${count}")
+  })
+  console.print("each ${join(names)} total ${total}")
+  let taken = stock.remove(wanted) ?? -1
+  let again = stock.remove(wanted) ?? -1
+  console.print("removed ${taken} ${again} count ${stock.count()} keys ${join(stock.keys())}")
+  stock.set("kiwi", 9)
+  stock.set("pear", 4)
+  console.print("after ${join(stock.keys())} values ${stock.values().count()}")
+
+  let mut tags: Map[Tag, Int] = Map.default()
+  tags.set(Tag(label: "red", weight: 1), 10)
+  tags.set(Tag(label: "blue", weight: 2), 20)
+  tags.set(Tag(label: "red", weight: 99), 30)
+  let blue = Tag(label: "blue", weight: 0)
+  console.print("tags ${tags.count()} ${tags.containsKey(blue)}")
+  let gone = tags.remove(blue) ?? -1
+  tags.set(Tag(label: "green", weight: 3), 40)
+  console.print("tags ${gone} ${tags.count()} ${tags.containsKey(blue)} ${tags.containsKey(Tag(label: "green", weight: 0))}")
+
+  let mut left: Set[String] = Set.default()
+  discard left.add("a")
+  discard left.add("b")
+  discard left.add("c")
+  let mut right: Set[String] = Set.default()
+  discard right.add("c")
+  discard right.add("d")
+  let word: StringView = "b"
+  console.print("set ${left.contains(word)} ${left.remove(word)} ${left.remove(word)} ${left.count()} ${left.isEmpty()}")
+  let both = left.union(right)
+  let shared = left.intersection(right)
+  let only = left.difference(right)
+  let mut seen: List[String] = List.default()
+  both.each(fn mut[editable seen](item) Void { seen.push(copy item) })
+  console.print("union ${join(seen)} shared ${shared.count()} only ${only.count()} ${only.contains("a")}")
+}

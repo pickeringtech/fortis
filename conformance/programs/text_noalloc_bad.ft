@@ -1,0 +1,39 @@
+// reject: E-EFF-001 (at the marked lines)
+// covers: LANG-11-04, LANG-06-06
+// X-479, R19, 6.6: the text methods that build a string or a list carry the `alloc` effect (the effect data of
+// `fortis.prelude` lists them), so a `noalloc` function cannot call `split`, `lines`, `replace`, `asciiUpper`,
+// `asciiLower`, `repeat` or `String.join`. The record is at the first statement of the body, as for any allocation.
+import fortis.host { Console }
+
+noalloc func pieces(text: StringView) Int {
+  let parts = text.split(",")                   // reject: E-EFF-001 — split allocates its pieces
+  return parts.count()
+}
+
+noalloc func rows(text: StringView) Int {
+  return text.lines().count()                   // reject: E-EFF-001 — lines allocates its rows
+}
+
+noalloc func swapped(text: StringView) Int {
+  return text.replace("a", "b").byteCount()     // reject: E-EFF-001 — replace allocates a copy
+}
+
+noalloc func shout(text: StringView) Int {
+  return text.asciiUpper().byteCount()          // reject: E-EFF-001 — and so does asciiUpper
+}
+
+noalloc func quiet(text: StringView) Int {
+  return text.asciiLower().byteCount()          // reject: E-EFF-001 — and asciiLower
+}
+
+noalloc func again(text: StringView) Int {
+  return text.repeat(2).byteCount()             // reject: E-EFF-001 — repeat allocates the result
+}
+
+noalloc func glued(parts: ListView[String]) Int {
+  return String.join(parts, ",").byteCount()    // reject: E-EFF-001 — join allocates the result
+}
+
+func main(console: Console) {
+  console.print("never runs")
+}

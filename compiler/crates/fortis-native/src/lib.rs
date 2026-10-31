@@ -8,6 +8,7 @@
 
 pub mod codec;
 pub mod collections;
+pub mod convert;
 pub mod hash;
 pub mod failure;
 pub mod host;

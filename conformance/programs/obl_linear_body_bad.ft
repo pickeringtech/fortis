@@ -1,0 +1,14 @@
+// reject: E-OBL-001 (at the marked line)
+// covers: LANG-10-01, LANG-10-02
+// X-520: inside a body typed under `T: linear`, the declared parameter is a linear type: the binding opens an
+// obligation as a concrete linear binding would, and nothing consumes it before the body ends.
+import fortis.host { Console }
+
+func f[T](x: owned T) where T: linear {
+  let y = move x                                // reject: E-OBL-001 — `y` holds the linear value unconsumed
+}
+
+recovers func main(console: Console) {
+  let r = Int<0..10>.validate(3)
+  f(move r)
+}

@@ -1,0 +1,16 @@
+// execute: 7|9|-1|-1
+// requires: runtime
+// covers: LANG-06-08, LANG-06-10
+import fortis.host { Console }
+class Box {
+  export func echo[T](self, value: T) T where T implements Copyable => copy value
+}
+func main(console: Console) {
+  let box: Box? = Box()
+  let none: Box? = null
+  let value: Int? = 9
+  console.print("${box?.echo(7) ?? -1}")
+  console.print("${box?.echo(value) ?? -1}")
+  console.print("${none?.echo(7) ?? -1}")
+  console.print("${none?.echo(value) ?? -1}")
+}

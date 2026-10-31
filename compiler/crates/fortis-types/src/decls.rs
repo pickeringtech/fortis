@@ -64,7 +64,7 @@ pub fn has_builtin_implements(name: &str) -> bool {
 pub const BUILTIN_IFACES: &[&str] = &[
     "Equatable", "Hashable", "Comparable", "Displayable", "Iterable", "Iterator", "Consumable", "Consumer", "Copyable", "Shareable", "Abandonable", "Default", "Encodable", "Decodable", "Codec", "Authority", "From",
 ];
-pub const DERIVABLE: &[&str] = &["Equatable", "Hashable", "Comparable", "Displayable", "Encodable", "Decodable", "Codec", "Default", "From"];
+pub const DERIVABLE: &[&str] = &["Equatable", "Hashable", "Comparable", "Displayable", "Encodable", "Decodable", "Codec", "Default", "From", "convert"];
 pub fn iface_requires(i: &str) -> &'static [&'static str] {
     match i {
         "Hashable" | "Comparable" => &["Equatable"],
@@ -105,22 +105,40 @@ pub struct Sig<'a> {
     pub body: Option<N<'a>>,
     pub type_params: Vec<String>,
     pub where_: Vec<(String, NamedT)>,
+    /// the type parameters this signature itself declares `X: linear` (6.12, 10.7)
+    pub linear: Vec<String>,
     /// the `@ignorable` application on the declaration, if any (5.5, X-345)
     pub ignorable: Option<&'a Token>,
 }
 
 impl<'a> Sig<'a> {
     pub fn simple(name: &str, params: Vec<(String, Type, String)>, ret: Type, modifiers: Vec<String>) -> Sig<'a> {
-        Sig { name: name.into(), params, ret, receiver: None, modifiers, contracts: vec![], exported: true, node: None, body: None, type_params: vec![], where_: vec![], ignorable: None }
+        Sig { name: name.into(), params, ret, receiver: None, modifiers, contracts: vec![], exported: true, node: None, body: None, type_params: vec![], where_: vec![], linear: vec![], ignorable: None }
     }
     pub fn has_mod(&self, m: &str) -> bool {
         self.modifiers.iter().any(|x| x == m)
     }
     pub fn show(&self) -> String {
-        let recv = self.receiver.as_ref().map_or(String::new(), |r| format!("{r}, "));
-        let ps: Vec<String> = self.params.iter().map(|(n, t, m)| format!("{n}: {}{}", if m.is_empty() { String::new() } else { format!("{m} ") }, t.show())).collect();
-        format!("{} func {}({}{}) {}", self.modifiers.join(" "), self.name, recv, ps.join(", "), self.ret.show()).trim().to_string()
+        let types: Vec<String> = self.params.iter().map(|p| p.1.show()).chain(std::iter::once(self.ret.show())).collect();
+        self.show_types(&types)
     }
+    fn show_types(&self, types: &[String]) -> String {
+        let recv = self.receiver.as_ref().map_or(String::new(), |r| format!("{r}, "));
+        let ps: Vec<String> = self.params.iter().zip(types).map(|((n, _, m), t)| format!("{n}: {}{}", if m.is_empty() { String::new() } else { format!("{m} ") }, t)).collect();
+        format!("{} func {}({}{}) {}", self.modifiers.join(" "), self.name, recv, ps.join(", "), types.last().unwrap()).trim().to_string()
+    }
+}
+
+fn diagnostic_signatures(sigs: &[&Sig<'_>]) -> Vec<String> {
+    let types: Vec<&Type> = sigs.iter().flat_map(|s| s.params.iter().map(|p| &p.1).chain(std::iter::once(&s.ret))).collect();
+    let shown = diagnostic_types(&types);
+    let mut offset = 0;
+    sigs.iter().map(|s| {
+        let end = offset + s.params.len() + 1;
+        let display = s.show_types(&shown[offset..end]);
+        offset = end;
+        display
+    }).collect()
 }
 
 #[derive(Debug, Default)]
@@ -138,6 +156,29 @@ pub struct AspectInfo<'a> {
     pub base_decl: RefCell<Option<Rc<Decl<'a>>>>,
 }
 
+/// A `convert` member of a class or enum body (Language Reference 6.13, X-551): the head is the what, the body the
+/// how. `convert to T` converts a value of the declaring type into a `T`; `convert from S(s)` converts an `S` into a
+/// value of the declaring type. The member is checked as a method (`sig`: a receiver `self` for `to`, one parameter
+/// `s` for `from`, the return type the target or the declaring type), and `x as T` resolves to it by the pair
+/// (source, target), keyed by the whole type as `implement` coherence keys its pairs (9.5).
+#[derive(Clone, Debug)]
+pub struct Convert<'a> {
+    /// "to" | "from"
+    pub direction: String,
+    /// the nominal type the head names (the target, or the source)
+    pub other: Type,
+    /// `try`: the body may fail, and `x as T` is an `Outcome`
+    pub fallible: bool,
+    /// `owned self` / `owned s`: the conversion consumes, `move x as T`
+    pub owned: bool,
+    pub exported: bool,
+    /// the member as a method: its synthetic name (`convert:to:T`) keys the body's summary
+    pub sig: Sig<'a>,
+    pub node: N<'a>,
+    pub derived: bool,
+    pub legacy: bool,
+}
+
 #[derive(Debug, Default)]
 pub struct Decl<'a> {
     pub kind: String,
@@ -149,8 +190,11 @@ pub struct Decl<'a> {
     /// then carry it as origin, so they are one type and a user's class of the same name is not.
     pub core_home: String,
     pub type_params: Vec<String>,
+    pub linear: Vec<String>,
     pub fields: OMap<(Type, bool, bool)>,
     pub methods: OMap<Sig<'a>>,
+    /// the declared conversions of a class or enum (6.13, X-551)
+    pub converts: Vec<Convert<'a>>,
     pub variants: OMap<Vec<(String, Type)>>,
     pub derives: Vec<(String, Vec<Type>)>,
     pub implements: Vec<NamedT>,
@@ -177,10 +221,10 @@ impl<'a> Decl<'a> {
     /// A type's nominal identity (LANG-04-04): its declaring package@version and module, so two modules' types of
     /// one name are different types; empty for the core library's types and a single-file program's.
     pub fn type_identity(&self) -> String {
-        if self.package.is_empty() || is_standard(&self.package) {
+        if is_standard(&self.package) || is_standard(&self.module) {
             String::new()
         } else {
-            format!("{}/{}", self.package, self.module)
+            format!("{}/{}", if self.package.is_empty() { "<single>" } else { &self.package }, self.module)
         }
     }
 
@@ -188,7 +232,7 @@ impl<'a> Decl<'a> {
         Decl { kind: kind.into(), name: name.into(), exported, module: module.into(), package: package.into(), ..Default::default() }
     }
     pub fn implements_named(&self, n: &str) -> bool {
-        self.implements.iter().any(|i| i.name == n)
+        self.implements.iter().any(|i| i.interface_key() == n)
     }
 }
 
@@ -198,6 +242,8 @@ pub type DeclRef<'a> = Rc<Decl<'a>>;
 pub struct Table<'a> {
     pub decls: OMap<DeclRef<'a>>,
     pub implement_blocks: Vec<(NamedT, NamedT, String, N<'a>)>,
+    /// implement blocks whose target is not a named type (`implement I for Int?`): rejected in 1.0 (E-TYP-171)
+    pub other_implement_targets: Vec<(Type, String, N<'a>)>,
 }
 
 impl<'a> Table<'a> {
@@ -268,8 +314,10 @@ pub struct DeclChecker<'a> {
     pub package: String,
     pub records: Vec<Record>,
     pub table: Table<'a>,
+    pub prelude_decls: Table<'a>,
     pub type_params: BTreeSet<String>,
     pub tparam_bounds: BTreeMap<String, BTreeSet<String>>,
+    pub linear_params: BTreeSet<String>,
     /// the module key of the program's entry module (4.6): a single file is its own entry (`main`); a package set's is
     /// its root package's `entry`, and a set without one has none. Only that module's `main` is the entry `main`, the one
     /// function that creates the capabilities (11.6, LANG-11-07)
@@ -347,8 +395,10 @@ impl<'a> DeclChecker<'a> {
             package: package.into(),
             records: vec![],
             table: Table::default(),
+            prelude_decls: Table::default(),
             type_params: BTreeSet::new(),
             tparam_bounds: BTreeMap::new(),
+            linear_params: BTreeSet::new(),
             entry_module: Some("main".into()),
             pending_heads: HashMap::new(),
             loading_module: String::new(),
@@ -358,6 +408,29 @@ impl<'a> DeclChecker<'a> {
 
     pub fn library(&self) -> &'a fortis_names::Library {
         &self.sess.libs.libs[self.lib]
+    }
+
+    /// The lexical scope of a declaration's body. An applied mixin keeps this scope while `self` names the
+    /// applying class (9.6, X-476). Keep the applying module's completed table available by identity, even when
+    /// the mixin's module does not import it; adding its bare names here would shadow the mixin's own names.
+    pub fn body_context(&self, d: &Decl<'a>) -> Self {
+        if d.module == self.module_name {
+            let mut home = self.clone();
+            home.records.clear();
+            return home;
+        }
+        self.sess.loaded.borrow_mut().insert((self.lib, self.module_name.clone()), Rc::new(self.table.clone()));
+        let lm = self.library().modules.get(&d.module).expect("an imported declaration has a library module");
+        let mut home = Self::new(self.sess, lm.library.unwrap_or(self.lib), &fortis_names::resolve::rel(std::path::Path::new(&lm.path)), &d.module, &d.package);
+        home.entry_module = self.entry_module.clone();
+        home.prelude_decls = self.prelude_decls.clone();
+        if lm.library.is_some() {
+            home.table = (*self.loaded(lm, &d.module)).clone();
+        } else {
+            home.load(lm.tree(), true);
+            home.records.clear();
+        }
+        home
     }
 
     pub fn rec(&mut self, code: &str, msg: String, rule: &str, tok: Option<&Token>, fields: Json, status: &'static str) {
@@ -404,6 +477,7 @@ impl<'a> DeclChecker<'a> {
                 let p: &'a LibraryModule = p;
                 self.loading_module = "fortis.prelude".into();
                 self.load_module_tree(p.tree(), "fortis.prelude", "fortis", true, None, None);
+            self.prelude_decls = self.table.clone();
                 self.loading_module.clear();
             }
         }
@@ -528,7 +602,8 @@ impl<'a> DeclChecker<'a> {
                 && !imports(mtree).iter().any(|i| i.path.join(".") != "fortis.prelude" && i.members.as_ref().map_or(false, |m| m.iter().any(|x| x == "ignorable"))));
         for d in &all {
             if ["head", "test", "property", "implement"].contains(&d.kind) {
-                if d.kind == "implement" && !library {
+                if d.kind == "implement" {
+                    // a package module loaded as a library keeps its blocks too, so its importers see them (D-132)
                     self.load_implement(d.node, module);
                 }
                 continue;
@@ -590,13 +665,19 @@ impl<'a> DeclChecker<'a> {
             decl.core_home = self.core_module(&nm);
         }
         decl.node = Some(node);
-        if let Some(tp) = node.find("typeParams") {
+        // the declaration's own type parameters are in its head (a direct child); a generic method's are its own
+        if let Some(tp) = node.child_node("typeParams") {
             let first_is_head = node.kid(0).map_or(false, |c| c.is("funcHead"));
             if !first_is_head {
                 decl.type_params = tp.tokens().iter().filter(|t| t.kind == Kind::Upper).map(|t| t.text.clone()).collect();
             }
         }
         self.type_params = decl.type_params.iter().cloned().collect();
+        if let Some(wc) = node.child_node("whereClause").or_else(|| node.child_node("linearWhereClause")) {
+            decl.where_ = self.where_of(wc);
+            decl.linear = self.linear_of(wc);
+            decl.linear.extend(wc.find_all("linearConstraint").iter().map(|c| c.tokens()[0].text.clone()));
+        }
         if let Some(lp) = node.find("lifetimeParam") {
             decl.lifetime = lp.tokens().get(2).map(|t| t.text.clone());
         }
@@ -729,7 +810,7 @@ impl<'a> DeclChecker<'a> {
                 if let Some(fd) = m.find("fieldDecl") {
                     let ft = fd.direct_tokens();
                     let fname = ft[0].text.clone();
-                    if decl.fields.contains(&fname) || decl.methods.contains(&fname) {
+                    if decl.fields.contains(&fname) || decl.methods.contains(&fname) || decl.constants.contains(&fname) {
                         self.rec("E-TYP-070", format!("member `{fname}` of {nm} is declared twice"), "LANG-09-01", Some(ft[0]), Self::typ_fields("one member", "two", &fname), "violated");
                     }
                     let t = self.type_of(fd.find("type"));
@@ -740,6 +821,10 @@ impl<'a> DeclChecker<'a> {
                 if let Some(cd) = m.find("constDecl") {
                     if m.find("methodHead").is_none() {
                         let ct = cd.direct_tokens();
+                        let cname = &ct[1].text;
+                        if decl.constants.contains(cname) || decl.fields.contains(cname) || decl.methods.contains(cname) {
+                            self.rec("E-TYP-070", format!("member `{cname}` of {nm} is declared twice"), "LANG-09-01", Some(ct[1]), Self::typ_fields("one member", "two", cname), "violated");
+                        }
                         let t = match cd.find("type") {
                             Some(t) => self.type_of(Some(t)),
                             None => unknown("untyped const"),
@@ -752,10 +837,15 @@ impl<'a> DeclChecker<'a> {
                     decl.has_cleanup = true;
                     continue;
                 }
+                if let Some(cd) = m.find("convertDecl") {
+                    let cv = self.convert_of(cd, exp, &decl);
+                    decl.converts.push(cv);
+                    continue;
+                }
                 if let Some(head) = m.find("methodHead") {
                     let mut sig = self.signature(head, exp, m.find("funcBody"));
                     sig.ignorable = ignorable_use(&m.child_nodes("aspectUse"));
-                    if decl.methods.contains(&sig.name) || decl.fields.contains(&sig.name) {
+                    if decl.methods.contains(&sig.name) || decl.fields.contains(&sig.name) || decl.constants.contains(&sig.name) {
                         let t0 = head.tokens()[0];
                         self.rec("E-TYP-070", format!("member `{}` of {nm} is declared twice", sig.name), "LANG-09-01", Some(t0), Self::typ_fields("one member", "two", &sig.name), "violated");
                     }
@@ -801,12 +891,6 @@ impl<'a> DeclChecker<'a> {
                         decl.constants.insert(&sig.name, unknown("required method"));
                         let n = format!("requires:{}", sig.name);
                         decl.methods.insert(&n, sig);
-                    } else if let Some(tl) = m.find("typeList") {
-                        for t in tl.child_nodes("type") {
-                            if let Type::Named(n) = self.type_of(Some(t)) {
-                                decl.requires.push(n);
-                            }
-                        }
                     }
                 } else if let Some(head) = head {
                     let exp = m.kids().iter().any(|c| c.text_is("export"));
@@ -818,7 +902,7 @@ impl<'a> DeclChecker<'a> {
         } else if kind == "type" {
             let alias = self.type_of(node.find("type"));
             if let Type::Refined { base, .. } = &alias {
-                if FLOAT_TYPES.contains(&base.name.as_str()) {
+                if base.package.is_empty() && FLOAT_TYPES.contains(&base.name.as_str()) {
                     self.rec(
                         "E-TYP-020",
                         format!("float refinement in `type {nm}`"),
@@ -846,14 +930,14 @@ impl<'a> DeclChecker<'a> {
             if nm == "main" && self.entry_module.as_deref() == Some(module) {
                 // the entry `main` owns the capabilities the runtime supplies to its parameters (4.6, X-345, Q7)
                 for p in sig.params.iter_mut() {
-                    if p.2.is_empty() && matches!(&p.1, Type::Named(n) if fortis_names::reading::CAPABILITY_TYPES.contains(&n.name.as_str())) {
+                    if p.2.is_empty() && matches!(&p.1, Type::Named(n) if n.package.is_empty() && fortis_names::reading::CAPABILITY_TYPES.contains(&n.name.as_str())) {
                         p.2 = "owned".into();
                     }
                 }
             }
             decl.sig = Some(sig);
         } else if kind == "const" {
-            decl.alias = Some(match node.find("type") {
+            decl.alias = Some(match node.child_node("type") {
                 Some(t) => self.type_of(Some(t)),
                 None => unknown("inferred const"),
             });
@@ -869,8 +953,10 @@ impl<'a> DeclChecker<'a> {
         }
         let iface = self.type_of(Some(ts[0]));
         let target = self.type_of(Some(ts[1]));
-        if let (Type::Named(i), Type::Named(t)) = (iface, target) {
-            self.table.implement_blocks.push((i, t, module.into(), node));
+        match (iface, target) {
+            (Type::Named(i), Type::Named(t)) => self.table.implement_blocks.push((i, t, module.into(), node)),
+            (Type::Named(_), t) if !t.is_unknown() => self.table.other_implement_targets.push((t, module.into(), node)),
+            _ => {}
         }
     }
 
@@ -880,7 +966,12 @@ impl<'a> DeclChecker<'a> {
         let mut i = 0;
         while i < kids.len() {
             if let C::T(k) = kids[i] {
-                if k.kind == Kind::Upper {
+                if k.text == "convert" {
+                    if let Some(C::N(tr)) = kids.get(i + 2) {
+                        out.push(("convert".into(), vec![self.type_of_ref(*tr)]));
+                    }
+                    i += 2;
+                } else if k.kind == Kind::Upper {
                     let mut args = vec![];
                     if let Some(C::N(ta)) = kids.get(i + 1) {
                         if ta.name() == "typeArgs" {
@@ -888,7 +979,9 @@ impl<'a> DeclChecker<'a> {
                             i += 1;
                         }
                     }
-                    out.push((k.text.clone(), args));
+                    let owner = self.pending_heads.get(&k.text).cloned().or_else(|| self.table.get(&k.text).cloned());
+                    let spelling = if let Some(owner) = owner.filter(|_| DERIVABLE.contains(&k.text.as_str())) { if is_standard(&owner.module) { k.text.clone() } else { format!("{} (not prelude)", k.text) } } else { k.text.clone() };
+                    out.push((spelling, args));
                 }
             }
             i += 1;
@@ -923,7 +1016,56 @@ impl<'a> DeclChecker<'a> {
         out
     }
 
+    /// The type parameters a `where` clause declares `X: linear` (6.12, 10.7): a constraint with no interface type.
+    pub fn linear_of(&self, wc: N<'a>) -> Vec<String> {
+        let mut out = Vec::new();
+        for c in wc.find_all("constraint") {
+            if c.find("type").is_none() {
+                out.push(c.direct_tokens()[0].text.clone());
+            }
+        }
+        out
+    }
+
     // ---- signatures and types -------------------------------------------------
+    /// A `convert` member as the method signature its body is checked with (6.13, X-551): `convert to T` has the
+    /// receiver `self` and returns `T`; `convert from S(s)` has the one parameter `s: S` and returns the declaring
+    /// type. The synthetic name (`convert:to:T`) is one no spelled member can hold, since `:` is no identifier.
+    pub fn convert_of(&mut self, node: N<'a>, exported: bool, decl: &Decl<'a>) -> Convert<'a> {
+        let kids = node.kids();
+        let tr_i = kids.iter().position(|c| c.is("typeRef")).unwrap_or(1);
+        let direction = kids.get(tr_i.wrapping_sub(1)).and_then(|c| c.tok()).map_or("to".to_string(), |t| t.text.clone());
+        let fallible = kids[..tr_i].iter().filter_map(|c| c.tok()).any(|t| t.text == "try");
+        let owned = kids[tr_i + 1..].iter().filter_map(|c| c.tok()).any(|t| t.text == "owned");
+        let other = self.type_of_ref(kids[tr_i].node().unwrap());
+        let pname = if direction == "from" {
+            kids[tr_i + 1..].iter().filter_map(|c| c.tok()).find(|t| t.kind == Kind::Lower).map_or("s".to_string(), |t| t.text.clone())
+        } else {
+            "self".to_string()
+        };
+        let body = node.find("funcBody");
+        let modifiers = if fallible { vec!["try".to_string()] } else { vec![] };
+        let qual = match &other {
+            Type::Named(n) => {
+                if n.package.is_empty() {
+                    n.origin.clone()
+                } else {
+                    n.package.clone()
+                }
+            }
+            _ => String::new(),
+        };
+        let suffix = if qual.is_empty() { String::new() } else { format!("@{qual}") };
+        let position = if matches!(&other, Type::Named(n) if !n.args.is_empty()) { let at = node.tokens()[0]; format!(":{}:{}", at.line, at.col) } else { String::new() };
+        let synth = format!("convert:{direction}:{}{suffix}{position}", other.show());
+        let sig = if direction == "to" {
+            Sig { name: synth, params: vec![], ret: other.clone(), receiver: Some(if owned { "owned self".into() } else { "self".into() }), modifiers, contracts: vec![], exported, node: Some(node), body, type_params: vec![], where_: vec![], linear: vec![], ignorable: None }
+        } else {
+            Sig { name: synth, params: vec![(pname, other.clone(), if owned { "owned".into() } else { String::new() })], ret: named_of_decl(decl, vec![]), receiver: None, modifiers, contracts: vec![], exported, node: Some(node), body, type_params: vec![], where_: vec![], linear: vec![], ignorable: None }
+        };
+        Convert { direction, other, fallible, owned, exported, sig, node, derived: false, legacy: false }
+    }
+
     pub fn signature(&mut self, head: N<'a>, exported: bool, body: Option<N<'a>>) -> Sig<'a> {
         let mods = head.find("modifiers");
         let words: Vec<String> = mods.map(|m| m.tokens().iter().map(|t| t.text.clone()).collect()).unwrap_or_default();
@@ -980,7 +1122,11 @@ impl<'a> DeclChecker<'a> {
             Some(wc) => self.where_of(wc),
             None => vec![],
         };
-        Sig { name: fname, params, ret, receiver, modifiers, contracts, exported, node: Some(head), body, type_params: tparams, where_, ignorable: None }
+        let linear = match sig.and_then(|s| s.find("whereClause")) {
+            Some(wc) => self.linear_of(wc),
+            None => vec![],
+        };
+        Sig { name: fname, params, ret, receiver, modifiers, contracts, exported, node: Some(head), body, type_params: tparams, where_, linear, ignorable: None }
     }
 
     pub fn type_arg(&mut self, ta: N<'a>) -> Type {
@@ -1067,6 +1213,10 @@ impl<'a> DeclChecker<'a> {
             None => vec![],
         };
         if self.type_params.contains(&nm) {
+            if tr.child_node("refinement").is_some() {
+                let shown: String = tr.tokens().iter().map(|t| t.text.as_str()).collect();
+                self.rec("E-TYP-020", format!("`{shown}` is not a refinement of {nm}: a type parameter has no refinement"), "LANG-06-02", Some(base_tok), Self::typ_fields("a refinement 6.3 lists", &shown, &shown), "violated");
+            }
             return Type::TypeParam(nm);
         }
         // a type is named by its declaration, however the annotation spells it (`one.Node` is `Node` of its module).
@@ -1077,6 +1227,8 @@ impl<'a> DeclChecker<'a> {
         let table_d = self.table.get(&nm).filter(|d| d.kind != "unknown").cloned();
         let head = self.pending_heads.get(&nm).filter(|d| d.kind != "unknown").cloned();
         let own = head.as_ref().filter(|h| h.module == self.loading_module && table_d.as_ref().map_or(true, |d| d.module != self.loading_module)).cloned();
+        // a program's own type (a newtype, a class) has no refinement (6.3, X-510)
+        let declared = own.as_ref().or(table_d.as_ref()).or(head.as_ref()).map_or(false, |d| d.kind != "unknown" && !d.module.starts_with("fortis"));
         let (canonical, pkg, origin) = if let Some(d) = own.or(table_d).or(head) {
             (d.name.clone(), d.type_identity(), self.origin_of(&d))
         } else {
@@ -1099,35 +1251,103 @@ impl<'a> DeclChecker<'a> {
                     kind = t0.text.clone();
                 }
             }
-            let (lo, hi) = match rb.find("range") {
-                Some(rg) => self.range_of(rg),
-                None => (None, None),
+            let (lo, hi, bound_why) = match rb.find("range") {
+                Some(rg) => self.range_of(rg, &nm),
+                None => (None, None, None),
             };
+            if let Some(why) = Self::refinement_why(&nm, &kind, lo, hi, bound_why, declared) {
+                // not a refinement of this base (6.3, X-510): the type is read as its base, so one record names the form
+                let shown: String = tr.tokens().iter().map(|t| if t.text == ":" || t.text == "," { format!("{} ", t.text) } else { t.text.clone() }).collect();
+                self.rec("E-TYP-020", format!("`{shown}` is not a refinement of {nm}: {why}"), "LANG-06-02", Some(base_tok), Self::typ_fields("a refinement 6.3 lists", &shown, &shown), "violated");
+                return Type::Named(n);
+            }
             return Type::Refined { base: n, lo, hi, kind };
         }
         Type::Named(n)
     }
 
-    pub fn range_of(&mut self, rg: N<'a>) -> (Option<Int>, Option<Int>) {
+    /// Why `nm<kind: lo..hi>` is not a refinement 6.3 lists, or None when it is (X-510): each measure refines the bases
+    /// 6.3 names for it, a bound is an integer literal, the range is not empty and lies within the base's own range (a
+    /// count is never negative).
+    pub fn refinement_why(nm: &str, kind: &str, lo: Option<Int>, hi: Option<Int>, bound_why: Option<String>, declared: bool) -> Option<String> {
+        const SCALARS: &[&str] = &["String", "StringView"];
+        const LENGTH: &[&str] = &["Bytes", "BytesView", "List", "ListView"];
+        let in_base = match kind {
+            "range" => is_int_type(nm),
+            "scalars" => SCALARS.contains(&nm),
+            "length" => LENGTH.contains(&nm),
+            _ => return Some(format!("`{kind}` is not a measure; a refinement is a range of an integer type, `scalars` of text or `length` of bytes or a list")),
+        };
+        if !in_base || declared {
+            if kind == "range" {
+                return Some(if SCALARS.contains(&nm) || LENGTH.contains(&nm) { "only an integer type has a range refinement".to_string() } else { format!("{nm} is not a built-in integer, text, byte or list type") });
+            }
+            return Some(format!("`{kind}` measures {}, not {nm}", if kind == "scalars" { "text" } else { "bytes or a list" }));
+        }
+        if let Some(w) = bound_why {
+            return Some(w);
+        }
+        let full = if kind == "range" { int_types(nm).unwrap() } else { (0, 9_223_372_036_854_775_807) };
+        if let (Some(l), Some(h)) = (lo, hi) {
+            if l > h {
+                return Some("the range is empty".into());
+            }
+        }
+        for b in [lo, hi].into_iter().flatten() {
+            if b < full.0 || b > full.1 {
+                return Some(if kind == "range" { format!("{b} is outside {nm}'s own range [{}, {}]", full.0, full.1) } else { format!("a {kind} count is not {b}") });
+            }
+        }
+        None
+    }
+
+    /// (lo, hi, why): the folded bounds of a refinement of `base` or of a range pattern over `base`, and why a bound
+    /// could not be folded (6.3, 9.8, X-510, X-512, X-517): it is not an integer literal or a `const` of the base type
+    /// resolved at compile time. `hi` is stored inclusive, so `lo..<hi` folds to hi - 1; a leading `..` or `..<` (a
+    /// range pattern's one-sided exclusive form, 9.8) leaves `lo` open.
+    pub fn range_of(&mut self, rg: N<'a>, base: &str) -> (Option<Int>, Option<Int>, Option<String>) {
         let kids = rg.kids();
         let (mut lo, mut hi) = (None, None);
-        let rest: &[C<'a>] = if !kids[0].text_is("..") {
-            lo = Self::const_int(kids[0]);
+        let mut why: Option<String> = None;
+        let rest: &[C<'a>] = if !(kids[0].text_is("..") || kids[0].text_is("..<")) {
+            let (v, w) = self.bound_of(kids[0], base);
+            lo = v;
+            why = w;
             &kids[1..]
         } else {
             &kids[..]
         };
         if rest.len() >= 2 && rest[1].is("constExpr") {
-            hi = Self::const_int(rest[1]);
+            let (v, w) = self.bound_of(rest[1], base);
+            hi = v;
+            if why.is_none() {
+                why = w;
+            }
             if rest[0].text_is("..<") {
                 hi = hi.map(|h| h - 1);
             }
         }
-        (lo, hi)
+        (lo, hi, why)
     }
 
-    /// A literal (possibly negative) constant bound; other constant forms are not folded yet.
-    pub fn const_int(node: C<'a>) -> Option<Int> {
+    /// (value, why): a bound's compile-time value, or why it has none (6.3, X-512).
+    pub fn bound_of(&self, node: C<'a>, base: &str) -> (Option<Int>, Option<String>) {
+        let shown: String = node.tokens().iter().map(|t| t.text.as_str()).collect();
+        let mut bases: BTreeSet<String> = BTreeSet::new();
+        let Some(v) = self.const_int(node, &[], Some(&mut bases)) else {
+            return (None, Some(format!("the bound `{shown}` is not an integer literal or a `const` resolved at compile time")));
+        };
+        if let Some(other) = bases.iter().find(|b| b.as_str() != base) {
+            return (None, Some(format!("the bound `{shown}` has type {other}, not {base}: a `const` bound has the base type")));
+        }
+        (Some(v), None)
+    }
+
+    /// The compile-time value of a constant expression (6.3, X-512): an integer literal; a `const` (possibly
+    /// module-qualified) whose initialiser folds the same way, its declared type's base noted in `bases`; `-x`;
+    /// parentheses; and `+ - * / %` over them, products first, division truncating toward zero and the remainder taking
+    /// the dividend's sign (6.4). Anything else, a divisor of zero and a constant that names itself have no value.
+    pub fn const_int(&self, node: C<'a>, seen: &[String], bases: Option<&mut BTreeSet<String>>) -> Option<Int> {
         let ts = node.tokens();
         if ts.len() == 1 && ts[0].kind == Kind::Int {
             return Some(parse_int(&ts[0].text));
@@ -1135,7 +1355,104 @@ impl<'a> DeclChecker<'a> {
         if ts.len() == 2 && ts[0].text == "-" && ts[1].kind == Kind::Int {
             return Some(-parse_int(&ts[1].text));
         }
+        let Some(n) = node.node() else { return None };
+        let kids = n.kids();
+        let mut bases = bases;
+        if n.name() == "constExpr" {
+            if kids.len() == 1 {
+                return self.const_int(kids[0], seen, bases);
+            }
+            let mut terms: Vec<Int> = Vec::new();
+            let mut ops: Vec<String> = Vec::new();
+            for k in &kids {
+                if let Some(t) = k.tok() {
+                    ops.push(t.text.clone());
+                    continue;
+                }
+                let v = self.const_int(*k, seen, bases.as_deref_mut())?;
+                terms.push(v);
+            }
+            let mut vals: Vec<Int> = vec![terms[0]];
+            let mut sums: Vec<String> = Vec::new();
+            for (op, t) in ops.iter().zip(terms[1..].iter()) {
+                let t = *t;
+                if op == "+" || op == "-" {
+                    sums.push(op.clone());
+                    vals.push(t);
+                    continue;
+                }
+                let a = vals.pop().unwrap();
+                if op == "*" {
+                    vals.push(a.checked_mul(t)?);
+                    continue;
+                }
+                if t == 0 {
+                    return None;
+                }
+                let q = a.checked_div(t)?; // truncates toward zero
+                vals.push(if op == "/" { q } else { a.checked_sub(q.checked_mul(t)?)? });
+            }
+            let mut total = vals[0];
+            for (op, v) in sums.iter().zip(vals[1..].iter()) {
+                total = if op == "+" { total.checked_add(*v)? } else { total.checked_sub(*v)? };
+            }
+            return Some(total);
+        }
+        if n.name() == "constTerm" && !kids.is_empty() {
+            if kids[0].text_is("-") && kids.len() == 2 {
+                return self.const_int(kids[1], seen, bases).map(|v| -v);
+            }
+            if kids[0].text_is("(") && kids.len() >= 2 {
+                return self.const_int(kids[1], seen, bases);
+            }
+            if kids[0].tok().map_or(false, |t| t.kind == Kind::Lower) {
+                let key: String = ts.iter().map(|t| t.text.as_str()).collect();
+                return self.const_value(&key, seen, bases);
+            }
+            if kids[0].is("typeRef") && kids.len() == 3 && kids[2].is("memberName") {
+                // `Type.member`, an associated constant of a class (9.3), folded from its own initialiser
+                let trs = kids[0].node().unwrap().direct_tokens();
+                let tname = if trs[0].kind == Kind::Lower && trs.len() > 2 { format!("{}.{}", trs[0].text, trs[2].text) } else { trs[0].text.clone() };
+                let member = kids[2].node().unwrap().tokens()[0].text.clone();
+                return self.const_value(&format!("{tname}.{member}"), seen, bases);
+            }
+        }
+        if kids.len() == 1 && kids[0].node().is_some() {
+            return self.const_int(kids[0], seen, bases);
+        }
         None
+    }
+
+    /// The value of the `const` named `key` (a declaration of this module, or `alias.name` of an import), folded from
+    /// its initialiser; its declared type's base, or `Int` for an unannotated constant (4.2), is noted.
+    fn const_value(&self, key: &str, seen: &[String], bases: Option<&mut BTreeSet<String>>) -> Option<Int> {
+        if seen.iter().any(|s| s == key) {
+            return None;
+        }
+        let d = self.table.get(key).cloned().or_else(|| self.pending_heads.get(key).cloned());
+        let node: N<'a> = match d {
+            Some(d) if d.kind == "const" => d.node?,
+            Some(_) => return None,
+            None => {
+                // `Type.member`: the `const` member of a class or interface declared here or imported (9.3)
+                let (tname, member) = key.rsplit_once('.')?;
+                let td = self.table.get(tname).cloned().or_else(|| self.pending_heads.get(tname).cloned())?;
+                if td.kind != "class" && td.kind != "interface" {
+                    return None;
+                }
+                td.node?.find_all("constDecl").into_iter().find(|cd| cd.direct_tokens().get(1).map_or(false, |t| t.text == member))?
+            }
+        };
+        let ce = node.child_node("constExpr")?;
+        let mut seen2: Vec<String> = seen.to_vec();
+        seen2.push(key.to_string());
+        let mut bases = bases;
+        let v = self.const_int(C::N(ce), &seen2, bases.as_deref_mut())?;
+        if let Some(b) = bases {
+            let base = node.child_node("type").and_then(|t| t.tokens().into_iter().find(|x| x.kind == Kind::Upper).map(|x| x.text.clone())).unwrap_or_else(|| "Int".to_string());
+            b.insert(base);
+        }
+        Some(v)
     }
 
     pub fn fn_type(&mut self, ft: N<'a>) -> Type {
@@ -1149,6 +1466,7 @@ impl<'a> DeclChecker<'a> {
             "fn"
         };
         let modifiers: Vec<String> = ft.find("modifiers").map(|m| m.tokens().iter().map(|t| t.text.clone()).collect()).unwrap_or_default();
+        let param_modes = kids.iter().filter(|k| k.is("paramType")).map(|k| k.node().unwrap().direct_tokens().into_iter().find(|t| matches!(t.text.as_str(), "editable" | "owned")).map(|t| t.text.clone()).unwrap_or_default()).collect();
         let params: Vec<Type> = kids.iter().filter(|k| k.is("paramType")).map(|k| { let n = k.node().unwrap(); self.type_of(n.find("type")) }).collect();
         let ret_nodes: Vec<N<'a>> = kids.iter().filter(|k| k.is("type")).map(|k| k.node().unwrap()).collect();
         let mut ret = match ret_nodes.last() {
@@ -1165,7 +1483,7 @@ impl<'a> DeclChecker<'a> {
                 ret = (**inner).clone();
             }
         }
-        Type::Fn { params, ret: Box::new(ret), kind: kind.into(), modifiers, origin, dynamic: words.contains(&"dynamic"), identity: String::new() }
+        Type::Fn { capture_origins: Vec::new(), params, ret: Box::new(ret), kind: kind.into(), modifiers, origin, dynamic: words.contains(&"dynamic"), identity: String::new(), param_modes }
     }
 
     fn pick_identity(table: &Table<'a>, name: &str, identity: &str) -> Option<DeclRef<'a>> {
@@ -1299,6 +1617,7 @@ impl<'a> DeclChecker<'a> {
     /// The core declaration `module` exports under `name`. Its package identity is empty, so the bare name in
     /// the module being checked is a different declaration.
     pub fn decl_by_module(&self, name: &str, module: &str, home: Option<&Table<'a>>) -> Option<DeclRef<'a>> {
+        if let Some(d) = Self::pick_module(&self.prelude_decls, name, module) { return Some(d); }
         if let Some(table) = home {
             if let Some(d) = Self::pick_module(table, name, module) {
                 return Some(d);
@@ -1381,9 +1700,8 @@ impl<'a> DeclChecker<'a> {
         self.decl_by_module(&d.name, &module, home).unwrap_or(d)
     }
 
-    /// The declaration of a named type. A set identity is that declaration; an empty identity is a name of `home`
-    /// (the module whose types are being read) or, with no home, of this module. A core type carries its declaring
-    /// module and does not fall back to a same-named declaration here.
+    /// Resolve a declaration by identity. An empty package identity belongs to the core library; its origin
+    /// selects a non-prelude module. Neither can fall back to a same-named program declaration.
     pub fn resolve_named(&self, n: &NamedT, home: Option<&Table<'a>>) -> Option<DeclRef<'a>> {
         if !n.package.is_empty() {
             // the loaded-module search is the same identity (D-54.11), never a same-named local declaration
@@ -1392,9 +1710,10 @@ impl<'a> DeclChecker<'a> {
         if !n.origin.is_empty() {
             return self.decl_by_module(&n.name, &n.origin, home);
         }
+        if let Some(d) = self.prelude_decls.get(&n.name) { return Some(d.clone()); }
         let table = home.unwrap_or(&self.table);
         if let Some(d) = table.get(&n.name) {
-            if d.kind != "unknown" {
+            if d.kind != "unknown" && d.type_identity().is_empty() {
                 return Some(d.clone());
             }
         }
@@ -1476,11 +1795,21 @@ impl<'a> DeclChecker<'a> {
         NextHome::Checker
     }
 
+    /// A direct ListView newtype keeps its representation's loans (LR 6.9, D-555).
+    pub fn view_newtype(&self, t: &Type) -> bool {
+        let t = if let Type::Loan { inner, .. } = t { inner.as_ref() } else { t };
+        let Some(d) = self.resolve_type(t, None) else { return false; };
+        if d.kind != "type" { return false; }
+        let Some(rep) = &d.alias else { return false; };
+        self.resolve_type(rep, None).map_or(false, |rd| is_standard(&rd.module) && rd.name == "ListView")
+    }
+
     fn loan_carrying_inner(&self, t: &Type) -> bool {
+        if self.view_newtype(t) { return true; }
         let s = t.opt_inner().unwrap_or(t);
         match s {
             Type::Named(n) => {
-                if ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str()) {
+                if n.package.is_empty() && ["StringView", "BytesView", "ListView", "ListCursor"].contains(&n.name.as_str()) {
                     return true;
                 }
                 self.resolve_named(n, None).map_or(false, |d| d.kind == "class" && d.lifetime.is_some())
@@ -1507,7 +1836,7 @@ impl<'a> DeclChecker<'a> {
             Type::Record(fs) => fs.iter().all(|(_, x)| self.is_trivial_seen(x, seen, home)),
             Type::Refined { base, .. } => self.is_trivial_seen(&base.as_type(), seen, home),
             Type::Named(n) => {
-                if is_trivial_builtin(&n.name) {
+                if n.package.is_empty() && is_trivial_builtin(&n.name) {
                     return true;
                 }
                 let Some(d) = self.resolve_named(n, home) else { return false };
@@ -1545,20 +1874,20 @@ impl<'a> DeclChecker<'a> {
             Type::Record(fs) => fs.iter().any(|(_, x)| self.has_drop_seen(x, seen)),
             Type::Refined { base, .. } => self.has_drop_seen(&base.as_type(), seen),
             Type::Named(n) => {
-                if ["Future", "Task", "Failure", "Scope", "Weak", "Supervisor", "ListCursor", "Secret"].contains(&n.name.as_str()) {
+                if n.package.is_empty() && ["Future", "Task", "Failure", "Scope", "Weak", "Supervisor", "ListCursor", "Secret"].contains(&n.name.as_str()) {
                     return false;
                 }
                 // `Outcome[T]` owns its success value: discarding one destroys that value (7.9). A failure does not.
-                if ["List", "Array", "Map", "OrderedMap", "Set", "FixedList", "FixedMap", "Shared", "Mutex", "Outcome"].contains(&n.name.as_str()) {
+                if n.package.is_empty() && ["List", "Array", "Map", "OrderedMap", "Set", "FixedList", "FixedMap", "Shared", "Mutex", "Outcome"].contains(&n.name.as_str()) {
                     return n.args.iter().filter(|a| !matches!(a, Type::Named(x) if x.name.starts_with('#'))).any(|a| self.has_drop_seen(a, seen));
                 }
-                if is_trivial_builtin(&n.name) {
+                if n.package.is_empty() && is_trivial_builtin(&n.name) {
                     return false;
                 }
                 // the same nominal type with different arguments is a different instantiation: `Box[Box[Handle]]`
                 // reaches `Box[Handle]`, while `Node[Handle]` whose field is `Node[T]` does not
-                let key = n.show();
-                let d = match self.table.get(&n.name) {
+                let key = format!("{n:?}");
+                let d = match self.resolve_named(n, None) {
                     Some(d) if !seen.contains(&key) => d.clone(),
                     _ => return false,
                 };
@@ -1581,6 +1910,9 @@ impl<'a> DeclChecker<'a> {
         self.is_copyable_seen(t, &mut Vec::new(), None)
     }
     fn is_copyable_seen(&self, t: &Type, seen: &mut Vec<(String, String)>, home: Option<&Table<'a>>) -> bool {
+        if self.is_linear_seen(t, &mut Vec::new(), home, &self.linear_params) {
+            return false;
+        }
         if self.is_trivial_seen(t, seen, Some(home.unwrap_or(&self.table))) {
             return true;
         }
@@ -1591,13 +1923,13 @@ impl<'a> DeclChecker<'a> {
             Type::Refined { base, .. } => self.is_copyable_seen(&base.as_type(), seen, home),
             Type::TypeParam(n) => self.tparam_bounds.get(n).map_or(false, |b| b.contains("Copyable")),
             Type::Named(n) => {
-                if NOT_COPYABLE.contains(&n.name.as_str()) {
+                if n.package.is_empty() && NOT_COPYABLE.contains(&n.name.as_str()) {
                     return false;
                 }
-                if COPYABLE_HEAP.contains(&n.name.as_str()) {
+                if n.package.is_empty() && COPYABLE_HEAP.contains(&n.name.as_str()) {
                     return true;
                 }
-                if COPYABLE_CONTAINERS.contains(&n.name.as_str()) {
+                if n.package.is_empty() && COPYABLE_CONTAINERS.contains(&n.name.as_str()) {
                     return n.args.iter().filter(|a| !matches!(a, Type::Named(x) if x.name.starts_with('#'))).all(|a| self.is_copyable_seen(a, seen, home));
                 }
                 let Some(d) = self.resolve_named(n, home) else { return false };
@@ -1612,7 +1944,7 @@ impl<'a> DeclChecker<'a> {
                     "type" => d.alias.as_ref().map_or(false, |a| self.is_copyable_seen(a, seen, nxt)),
                     "enum" => d.variants.values().all(|v| v.iter().all(|(_, ft)| self.is_copyable_seen(ft, seen, nxt))),
                     "class" => {
-                        if d.name == "Capabilities" || d.implements_named("Authority") {
+                        if (d.type_identity().is_empty() && d.name == "Capabilities") || self.implements_core_authority(&d) {
                             false
                         } else {
                             d.fields.values().all(|(ft, _, _)| self.is_copyable_seen(ft, seen, nxt))
@@ -1628,23 +1960,28 @@ impl<'a> DeclChecker<'a> {
     }
 
     pub fn is_linear(&self, t: &Type) -> bool {
-        self.is_linear_seen(t, &mut Vec::new(), None)
+        self.is_linear_with(t, &BTreeSet::new())
     }
-    fn is_linear_seen(&self, t: &Type, seen: &mut Vec<(String, String)>, home: Option<&Table<'a>>) -> bool {
+    pub fn is_linear_with(&self, t: &Type, linear: &BTreeSet<String>) -> bool {
+        self.is_linear_seen(t, &mut Vec::new(), None, linear)
+    }
+    fn is_linear_seen(&self, t: &Type, seen: &mut Vec<(String, String)>, home: Option<&Table<'a>>, linear: &BTreeSet<String>) -> bool {
         match t {
-            Type::Optional(i) => self.is_linear_seen(i, seen, home),
-            Type::Tuple(items) => items.iter().any(|x| self.is_linear_seen(x, seen, home)),
-            Type::Record(fs) => fs.iter().any(|(_, x)| self.is_linear_seen(x, seen, home)),
-            Type::Refined { .. } => false,
+            Type::TypeParam(p) => linear.contains(p),
+            Type::Optional(i) => self.is_linear_seen(i, seen, home, linear),
+            Type::Tuple(items) => items.iter().any(|x| self.is_linear_seen(x, seen, home, linear)),
+            Type::Record(fs) => fs.iter().any(|(_, x)| self.is_linear_seen(x, seen, home, linear)),
+            Type::Refined { base, .. } => self.is_linear_seen(&base.as_type(), seen, home, linear),
             Type::Fn { kind, .. } => kind == "fn once",
             Type::Named(n) => {
-                if LINEAR_BUILTINS.contains(&n.name.as_str()) {
+                if n.package.is_empty() && LINEAR_BUILTINS.contains(&n.name.as_str()) {
                     return true;
                 }
-                if COPYABLE_CONTAINERS.contains(&n.name.as_str()) {
-                    return n.args.iter().any(|a| self.is_linear_seen(a, seen, home));
+                if n.package.is_empty() && COPYABLE_CONTAINERS.contains(&n.name.as_str()) {
+                    return n.args.iter().any(|a| self.is_linear_seen(a, seen, home, linear));
                 }
                 let Some(d) = self.resolve_named(n, home) else { return false };
+                if d.type_params.iter().zip(&n.args).any(|(tp, arg)| d.linear.contains(tp) && self.is_linear_seen(arg, seen, home, linear)) { return true; }
                 let key = Self::fact_key(n, &d);
                 if seen.contains(&key) {
                     return false;
@@ -1652,10 +1989,11 @@ impl<'a> DeclChecker<'a> {
                 seen.push(key);
                 let next = self.next_home(&d, home);
                 let nxt = next.get();
+                let sub: BTreeMap<String, Type> = d.type_params.iter().cloned().zip(n.args.iter().cloned()).collect();
                 let r = match d.kind.as_str() {
-                    "type" => d.alias.as_ref().map_or(false, |a| self.is_linear_seen(a, seen, nxt)),
-                    "enum" => d.variants.values().any(|v| v.iter().any(|(_, ft)| self.is_linear_seen(ft, seen, nxt))),
-                    "class" => d.fields.values().any(|(ft, _, _)| self.is_linear_seen(ft, seen, nxt)),
+                    "type" => d.alias.as_ref().map_or(false, |a| self.is_linear_seen(&self.subst(a, &sub), seen, nxt, linear)),
+                    "enum" => d.variants.values().any(|v| v.iter().any(|(_, ft)| self.is_linear_seen(&self.subst(ft, &sub), seen, nxt, linear))),
+                    "class" => d.fields.values().any(|(ft, _, _)| self.is_linear_seen(&self.subst(ft, &sub), seen, nxt, linear)),
                     _ => false,
                 };
                 seen.pop();
@@ -1665,7 +2003,48 @@ impl<'a> DeclChecker<'a> {
         }
     }
 
+    pub fn linear_instantiations(&self, t: &Type, linear: &BTreeSet<String>) -> Vec<(String, String, String)> {
+        let mut out = Vec::new();
+        match t {
+            Type::Named(n) => {
+                if let Some(d) = self.resolve_named(n, None) {
+                    let intrinsic = is_standard(&d.module) && (COPYABLE_CONTAINERS.contains(&n.name.as_str()) || NOT_COPYABLE.contains(&n.name.as_str()) || LINEAR_BUILTINS.contains(&n.name.as_str()) || ["Iterator", "Consumer", "ListCursor", "MapCursor", "SetCursor"].contains(&n.name.as_str()));
+                    if matches!(d.kind.as_str(), "class" | "enum" | "type") && !intrinsic {
+                        for (tp, arg) in d.type_params.iter().zip(&n.args) {
+                            if !d.linear.contains(tp) && self.is_linear_with(arg, linear) {
+                                out.push((n.show(), tp.clone(), arg.show()));
+                            }
+                        }
+                    }
+                }
+                for arg in &n.args { out.extend(self.linear_instantiations(arg, linear)); }
+            }
+            Type::Optional(i) | Type::Loan { inner: i, .. } => out.extend(self.linear_instantiations(i, linear)),
+            Type::Refined { base, .. } => out.extend(self.linear_instantiations(&base.as_type(), linear)),
+            Type::Tuple(xs) => for x in xs { out.extend(self.linear_instantiations(x, linear)); },
+            Type::Record(fs) => for (_, x) in fs { out.extend(self.linear_instantiations(x, linear)); },
+            Type::Fn { params, ret, .. } => {
+                for p in params { out.extend(self.linear_instantiations(p, linear)); }
+                out.extend(self.linear_instantiations(ret, linear));
+            }
+            _ => {}
+        }
+        out
+    }
+
+    pub fn check_linear_instantiation(&mut self, t: &Type, linear: &BTreeSet<String>, tok: &Token) {
+        for (instance, tp, arg) in self.linear_instantiations(t, linear) {
+            self.rec("E-OBL-003", format!("{instance} cannot be instantiated with the linear type {arg} for `{tp}` without declaring `{tp}: linear` (6.12)"), "LANG-10-02", Some(tok),
+                Json::obj([("obligation_origin", Json::str(format!("{}:{}", tok.line, tok.col))), ("unconsumed_path", Json::str(tp))]), "violated");
+        }
+    }
+
     // ---- implementation lookups --------------------------------------------------
+    pub fn interface_decl(&self, key: &str) -> Option<DeclRef<'a>> {
+        let (name, package) = key.split_once('@').unwrap_or((key, ""));
+        self.resolve_type(&named_pkg(name, vec![], package), None)
+    }
+
     pub fn implements(&self, t: &Type, iface: &str) -> bool {
         self.implements_seen(t, iface, &mut Vec::new(), None)
     }
@@ -1674,7 +2053,7 @@ impl<'a> DeclChecker<'a> {
     /// type of the same name are different declarations when both package identities are empty.
     fn block_implements(&self, n: &NamedT, iface: &str) -> bool {
         self.table.implement_blocks.iter().any(|(i, tt, _, _)| {
-            i.name == iface && tt.name == n.name && tt.origin == n.origin && if n.package.is_empty() { tt.package.is_empty() } else { tt.package == n.package }
+            i.interface_key() == iface && tt.name == n.name && tt.origin == n.origin && if n.package.is_empty() { tt.package.is_empty() } else { tt.package == n.package }
         })
     }
     fn implements_seen(&self, t: &Type, iface: &str, seen: &mut Vec<(String, String, String)>, home: Option<&Table<'a>>) -> bool {
@@ -1700,16 +2079,16 @@ impl<'a> DeclChecker<'a> {
             Type::Record(fs) => ["Equatable", "Hashable", "Encodable", "Decodable"].contains(&iface) && fs.iter().all(|(_, x)| self.implements_seen(x, iface, seen, home)),
             Type::TypeParam(_) | Type::Unknown(_) => true,
             Type::Named(n) => {
-                if builtin_implements(&n.name, iface) {
+                if n.package.is_empty() && builtin_implements(&n.name, iface) {
                     return true;
                 }
-                if COPYABLE_CONTAINERS.contains(&n.name.as_str()) && ["Equatable", "Hashable", "Encodable", "Decodable", "Displayable", "Default"].contains(&iface) {
+                if n.package.is_empty() && COPYABLE_CONTAINERS.contains(&n.name.as_str()) && ["Equatable", "Hashable", "Encodable", "Decodable", "Displayable", "Default"].contains(&iface) {
                     if iface == "Default" {
                         return true;
                     }
                     return n.args.iter().filter(|a| !matches!(a, Type::Named(x) if x.name.starts_with('#'))).all(|a| self.implements_seen(a, iface, seen, home));
                 }
-                if ["Shared", "Weak", "Mutex"].contains(&n.name.as_str()) && iface == "Shareable" {
+                if n.package.is_empty() && ["Shared", "Weak", "Mutex"].contains(&n.name.as_str()) && iface == "Shareable" {
                     return true;
                 }
                 let Some(d) = self.resolve_named(n, home) else { return false };
@@ -1718,13 +2097,13 @@ impl<'a> DeclChecker<'a> {
                     return false;
                 }
                 seen.push(key);
-                let idecl = self.table.get(iface).cloned();
+                let idecl = self.interface_decl(iface);
                 let next = self.next_home(&d, home);
                 let nxt = next.get();
                 let r = {
                     if d.kind == "type" && ["Encodable", "Decodable", "Codec", "Equatable", "Hashable", "Comparable", "Displayable", "Default"].contains(&iface) {
                         d.alias.as_ref().map_or(false, |a| self.implements_seen(a, iface, seen, nxt))
-                    } else if d.implements.iter().any(|i| i.name == iface) {
+                    } else if d.implements.iter().any(|i| i.interface_key() == iface) {
                         true
                     } else if d.derives.iter().any(|(n2, _)| n2 == iface) {
                         true
@@ -1734,7 +2113,7 @@ impl<'a> DeclChecker<'a> {
                         true
                     } else if let Some(id) = &idecl {
                         if id.kind == "interface" && id.methods.is_empty() && id.constants.is_empty() && !id.requires.is_empty() {
-                            id.requires.iter().all(|r| self.implements_seen(t, &r.name, seen, home))
+                            id.requires.iter().all(|r| self.implements_seen(t, &r.interface_key(), seen, home))
                         } else {
                             false
                         }
@@ -1764,14 +2143,14 @@ impl<'a> DeclChecker<'a> {
             Type::Optional(i) => self.is_shareable_seen(i, seen, home),
             Type::Refined { base, .. } => self.is_shareable_seen(&base.as_type(), seen, home),
             Type::Named(n) => {
-                let nm = n.name.as_str();
+                let nm = if n.package.is_empty() { n.name.as_str() } else { "" };
                 if ["StringView", "BytesView", "ListView", "MutexGuard", "Future", "Task"].contains(&nm) {
                     return false;
                 }
-                if COPYABLE_HEAP.contains(&nm) {
+                if n.package.is_empty() && COPYABLE_HEAP.contains(&nm) {
                     return true;
                 }
-                if COPYABLE_CONTAINERS.contains(&nm) {
+                if n.package.is_empty() && COPYABLE_CONTAINERS.contains(&nm) {
                     return n.args.iter().filter(|a| !matches!(a, Type::Named(x) if x.name.starts_with('#'))).all(|a| self.is_shareable_seen(a, seen, home));
                 }
                 if ["Shared", "Weak", "Mutex"].contains(&nm) {
@@ -1792,7 +2171,7 @@ impl<'a> DeclChecker<'a> {
                     "class" => {
                         if d.lifetime.is_some() {
                             false
-                        } else if d.implements_named("Authority") {
+                        } else if self.implements_core_authority(&d) {
                             true
                         } else {
                             d.fields.values().all(|(ft, _, _)| self.is_shareable_seen(ft, seen, nxt))
@@ -1853,10 +2232,14 @@ impl<'a> DeclChecker<'a> {
 
             }
             self.check_value_types(&d);
+            if d.kind == "contract" {
+                self.check_contract_decl(&d);
+            }
             self.check_trusted(&d);
         }
         self.check_trusted_blocks();
         self.check_coherence();
+        self.check_conversions();
     }
 
     /// A module of a standard package (the published compatibility set: the `fortis` package and its kits).
@@ -2044,14 +2427,8 @@ impl<'a> DeclChecker<'a> {
             match x {
                 Type::Named(n) => {
                     // an interface reached only through a module alias (`data.Connection`; review of D-21)
-                    // by identity: past a same-named local declaration too (D-21)
-                    let d = dc.table.get(&n.name).cloned().filter(|d| n.package.is_empty() || d.type_identity() == n.package).or_else(|| {
-                        dc.table.decls.values().find(|v| v.name == n.name && v.kind == "interface" && (n.package.is_empty() || v.type_identity() == n.package)).cloned()
-                    });
-                    if let Some(d) = d {
-                        if d.kind == "interface" && (n.package.is_empty() || d.type_identity().is_empty() || d.type_identity() == n.package) {
-                            out.push(n.name.clone());
-                        }
+                    if dc.resolve_named(n, None).map_or(false, |d| d.kind == "interface") {
+                        out.push(n.name.clone());
                     }
                     for a in &n.args {
                         walk(dc, a, out);
@@ -2072,11 +2449,213 @@ impl<'a> DeclChecker<'a> {
         out
     }
 
+    /// Does a signature type name `Self` (an interface's own type) anywhere?
+    pub fn mentions_self(t: &Type) -> bool {
+        match t {
+            Type::TypeParam(p) => p == "Self",
+            Type::Named(n) => n.name == "Self" || n.args.iter().any(Self::mentions_self),
+            Type::Optional(i) | Type::Loan { inner: i, .. } => Self::mentions_self(i),
+            Type::Dynamic(n) => n.args.iter().any(Self::mentions_self),
+            Type::Tuple(ts) => ts.iter().any(Self::mentions_self),
+            Type::Record(fs) => fs.iter().any(|(_, x)| Self::mentions_self(x)),
+            Type::Fn { params, ret, .. } => params.iter().any(Self::mentions_self) || Self::mentions_self(ret),
+            _ => false,
+        }
+    }
+
+    /// Why an interface is not dynamic-eligible (9.5), or None: a generic method, or a method whose parameters or
+    /// result name `Self` beyond its receiver (the other value's type could not be known through a `dynamic`). An
+    /// associated function or constant is not reached through a `dynamic` value and does not count.
+    pub fn dynamic_ineligible(&self, idecl: &Decl<'a>) -> Option<String> {
+        for (mname, sig) in idecl.methods.iter() {
+            if sig.receiver.is_none() {
+                continue;
+            }
+            if !sig.type_params.is_empty() {
+                return Some(format!("its method `{mname}` is generic"));
+            }
+            if sig.params.iter().any(|(_, pt, _)| Self::mentions_self(pt)) || Self::mentions_self(&sig.ret) {
+                return Some(format!("its method `{mname}` takes or returns `Self`"));
+            }
+        }
+        None
+    }
+
+    /// Every `dynamic I` written inside `t` that 9.5 refuses: (code, rule, the interface shown, why). `E-TYP-172`
+    /// when `I` is not dynamic-eligible; `E-TYP-090` when `I`'s `where` bound does not hold for the written arguments
+    /// (checked at every use, D-69).
+    /// D-549: hash-container requirements hold for written and inferred types, including nested types.
+    pub fn key_problems(&self, t: &Type, bounds: &BTreeMap<String, BTreeSet<String>>, unfixed: bool) -> Vec<(String, String, String)> {
+        fn grants(dc: &DeclChecker<'_>, have: &str, want: &str, seen: &[String]) -> bool {
+            if have == want { return true; }
+            if seen.iter().any(|s| s == have) { return false; }
+            let mut next = seen.to_vec();
+            next.push(have.into());
+            if let Some(d) = dc.interface_decl(have) {
+                d.requires.iter().any(|r| grants(dc, &r.interface_key(), want, &next))
+            } else {
+                matches!(have, "Hashable" | "Comparable") && want == "Equatable"
+            }
+        }
+        fn holds<'a>(dc: &DeclChecker<'a>, x: &Type, iface: &str, bounds: &BTreeMap<String, BTreeSet<String>>, unfixed: bool, seen: &[String], home: Option<&Table<'a>>) -> bool {
+            match x {
+                Type::Unknown(_) => true,
+                Type::TypeParam(p) => (unfixed && !dc.type_params.contains(p)) || bounds.get(p).map_or(false, |bs| bs.iter().any(|b| grants(dc, b, iface, &[]))),
+                Type::Refined { base, .. } => holds(dc, &base.as_type(), iface, bounds, unfixed, seen, home),
+                Type::Optional(a) => holds(dc, a, iface, bounds, unfixed, seen, home),
+                Type::Tuple(_) | Type::Record(_) => false, // structural conveniences do not satisfy interfaces (6.9)
+                Type::Named(n) => {
+                    let d = dc.resolve_named(n, home);
+                    let core = d.as_ref().map_or(true, |d| d.module == "fortis" || d.module.starts_with("fortis."));
+                    if core && COPYABLE_CONTAINERS.contains(&n.name.as_str()) {
+                        return n.args.iter().filter(|a| !matches!(a, Type::Named(n) if n.name.starts_with('#'))).all(|a| holds(dc, a, iface, bounds, unfixed, seen, home));
+                    }
+                    let key = format!("{}:{}:{iface}", d.as_ref().map_or("", |d| &d.module), x.show());
+                    if seen.contains(&key) { return d.as_ref().map_or(false, |d| d.derives.iter().any(|(i, _)| i == iface)); }
+                    let mut path = seen.to_vec();
+                    path.push(key);
+                    if let Some(d) = d {
+                        let next = dc.next_home(&d, home);
+                        if d.kind == "type" {
+                            return d.alias.as_ref().map_or(false, |a| holds(dc, a, iface, bounds, unfixed, &path, next.get()));
+                        }
+                        if !core {
+                            if !(d.implements.iter().any(|i| i.interface_key() == iface) || d.derives.iter().any(|(i, _)| i == iface) || dc.block_implements(n, iface)) { return false; }
+                            if d.derives.iter().any(|(i, _)| i == iface) {
+                                let sub: BTreeMap<String, Type> = d.type_params.iter().cloned().zip(n.args.iter().cloned()).collect();
+                                return d.fields.values().map(|(f, _, _)| f).chain(d.variants.values().flat_map(|v| v.iter().map(|(_, f)| f)))
+                                    .all(|f| holds(dc, &dc.subst(f, &sub), iface, bounds, unfixed, &path, next.get()));
+                            }
+                            return true;
+                        }
+                    }
+                    dc.implements_seen(x, iface, &mut Vec::new(), home)
+                }
+                _ => false,
+            }
+        }
+        fn walk(dc: &DeclChecker<'_>, x: &Type, bounds: &BTreeMap<String, BTreeSet<String>>, unfixed: bool, out: &mut Vec<(String, String, String)>) {
+            match x {
+                Type::Named(n) => {
+                    if ["Set", "Map"].contains(&n.name.as_str()) && !n.args.is_empty() && dc.resolve_named(n, None).as_ref().map_or(true, |d| d.module == "fortis" || d.module.starts_with("fortis.")) {
+                        let key = &n.args[0];
+                        if !["Hashable", "Equatable"].iter().all(|i| holds(dc, key, i, bounds, unfixed, &[], None)) {
+                            let shown = diagnostic_types(&[x, key, &named("Hashable"), &named("Equatable")]);
+                            let item = (shown[0].clone(), shown[1].clone(), format!("{} and {}", shown[2], shown[3]));
+                            if !out.contains(&item) { out.push(item); }
+                        }
+                    }
+                    n.args.iter().for_each(|a| walk(dc, a, bounds, unfixed, out));
+                }
+                Type::Optional(a) | Type::Loan { inner: a, .. } => walk(dc, a, bounds, unfixed, out),
+                Type::Refined { base, .. } => walk(dc, &base.as_type(), bounds, unfixed, out),
+                Type::Dynamic(n) => n.args.iter().for_each(|a| walk(dc, a, bounds, unfixed, out)),
+                Type::Tuple(items) => items.iter().for_each(|a| walk(dc, a, bounds, unfixed, out)),
+                Type::Record(fs) => fs.iter().for_each(|(_, a)| walk(dc, a, bounds, unfixed, out)),
+                Type::Fn { params, ret, .. } => {
+                    params.iter().for_each(|a| walk(dc, a, bounds, unfixed, out));
+                    walk(dc, ret, bounds, unfixed, out);
+                }
+                _ => {}
+            }
+        }
+        let mut out = Vec::new();
+        walk(self, t, bounds, unfixed, &mut out);
+        out
+    }
+
+    pub fn check_keys(&mut self, t: &Type, tok: &Token, bounds: Option<&BTreeMap<String, BTreeSet<String>>>, unfixed: bool) {
+        for (container, key, required) in self.key_problems(t, bounds.unwrap_or(&self.tparam_bounds), unfixed) {
+            self.rec("E-TYP-090", format!("{container} needs a key that implements {required}; {key} does not (6.7)"), "LANG-06-06", Some(tok), Self::typ_fields(&required, &key, &container), "violated");
+        }
+    }
+
+    pub fn dynamic_problems(&self, t: &Type) -> Vec<(&'static str, &'static str, String, String)> {
+        let mut out = Vec::new();
+        fn walk<'a>(dc: &DeclChecker<'a>, x: &Type, out: &mut Vec<(&'static str, &'static str, String, String)>) {
+            match x {
+                Type::Dynamic(i) => {
+                    let d = dc.resolve_named(i, None);
+                    if let Some(d) = d {
+                        if d.kind == "interface" {
+                            if let Some(why) = dc.dynamic_ineligible(&d) {
+                                out.push(("E-TYP-172", "LANG-09-07", x.show(), format!("`{}` is not dynamic-eligible: {why} (9.5); take the value as a type parameter bounded by {}", i.name, i.name)));
+                            }
+                            let sub: BTreeMap<String, Type> = d.type_params.iter().cloned().zip(i.args.iter().cloned()).collect();
+                            for (tp, bound) in d.where_.iter() {
+                                let Some(arg) = sub.get(tp) else { continue };
+                                if matches!(arg, Type::TypeParam(_) | Type::Unknown(_)) {
+                                    continue;
+                                }
+                                if !dc.implements(arg, &bound.interface_key()) {
+                                    let displays = diagnostic_types(&[x, &Type::Named(bound.clone()), arg]);
+                                    out.push(("E-TYP-090", "LANG-06-10", displays[0].clone(), format!("`{}` needs `{tp}` to implement {}; {} does not (9.5)", displays[0].clone(), displays[1], displays[2])));
+                                }
+                            }
+                        }
+                    }
+                    i.args.iter().for_each(|a| walk(dc, a, out));
+                }
+                Type::Named(n) => n.args.iter().for_each(|a| walk(dc, a, out)),
+                Type::Optional(i) | Type::Loan { inner: i, .. } => walk(dc, i, out),
+                Type::Tuple(items) => items.iter().for_each(|i| walk(dc, i, out)),
+                Type::Record(fs) => fs.iter().for_each(|(_, f)| walk(dc, f, out)),
+                Type::Fn { params, ret, .. } => {
+                    params.iter().for_each(|p| walk(dc, p, out));
+                    walk(dc, ret, out);
+                }
+                _ => {}
+            }
+        }
+        walk(self, t, &mut out);
+        out
+    }
+
+    /// A contract's items must agree (11.5, E-EFF-050): `pure` with `requires capability` (a pure function receives no
+    /// authority), a modifier that permits an effect beside `forbids` of that effect (`async` suspend, `try` fail,
+    /// `recovers` recovers), and one authority both required and excluded. The type a `capability` clause names is an
+    /// Authority type (11.6), or the clause is E-TYP-040: a type in scope by its declaration, a name not in scope by the
+    /// core capabilities' names, as an authority parameter is judged.
+    fn check_contract_decl(&mut self, d: &DeclRef<'a>) {
+        let tok = tok_of(d);
+        for c in crate::effects::contract_contradictions(&[(d.name.clone(), d.items.clone())], false) {
+            let msg = match c.kind {
+                "pure" => format!("contract {} is `pure` and requires capability {}: a pure function receives no authority, so the contract contradicts itself (11.5)", d.name, c.claim),
+                "forbids" => format!("contract {} is `{}`, which permits `{}`, and forbids `{}`: the contract contradicts itself (11.5)", d.name, c.claim, c.effect, c.effect),
+                _ => format!("contract {} both requires and excludes capability {}: the contract contradicts itself (11.5)", d.name, c.claim),
+            };
+            let fields = Json::obj([("required_contract", Json::str(&d.name)), ("violating_effect", Json::str(&c.effect)), ("witness_path", Json::str(&c.claim))]);
+            self.rec("E-EFF-050", msg, "LANG-11-06", Some(&tok), fields, "violated");
+        }
+        let Some(node) = d.node else { return };
+        for it in node.child_nodes("contractItem") {
+            let ts = it.tokens();
+            if !(ts[0].text == "requires" || ts[0].text == "excludes") {
+                continue;
+            }
+            let a = (*ts.last().unwrap()).clone();
+            let ok = match self.table.get(&a.text) {
+                Some(ad) if ad.kind != "unknown" => matches!(ad.kind.as_str(), "class" | "enum" | "type") && self.implements_core_authority(ad),
+                _ => crate::effects::AUTHORITIES.contains(&a.text.as_str()),
+            };
+            if !ok {
+                self.rec("E-TYP-040", format!("contract {} names capability {}, which is not an Authority type (11.5, 11.6)", d.name, a.text), "LANG-11-06", Some(&a), Self::typ_fields("an Authority type", &a.text, &a.text), "violated");
+            }
+        }
+    }
+
     /// A field, variant payload, parameter or result whose type is an interface itself is refused at its declaration
     /// (D-21): an interface is used through `dynamic I`, `Shared[dynamic I]` or a type parameter bounded by it (9.5).
     fn check_value_types(&mut self, d: &DeclRef<'a>) {
         let tok = tok_of(d);
+        let mut bounds: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+        for (tp, b) in &d.where_ { bounds.entry(tp.clone()).or_default().insert(b.interface_key()); }
+        for ct in d.constants.values() { self.check_keys(ct, &tok, Some(&bounds), false); }
+        for (ft, _, _) in d.fields.values() { self.check_keys(ft, &tok, Some(&bounds), false); }
+        for payload in d.variants.values() { for (_, ft) in payload { self.check_keys(ft, &tok, Some(&bounds), false); } }
+        if let Some(a) = &d.alias { self.check_keys(a, &tok, Some(&bounds), false); }
         let mut items: Vec<(Type, String, Token)> = Vec::new();
+        if let Some(alias) = &d.alias { items.push((alias.clone(), format!("type of {}", d.name), tok.clone())); }
         for (fname, (ft, _, _)) in d.fields.iter() {
             items.push((ft.clone(), format!("field `{fname}` of {}", d.name), tok.clone()));
         }
@@ -2091,13 +2670,24 @@ impl<'a> DeclChecker<'a> {
             d.methods.iter().map(|(m, s)| (format!("{}.{m}", d.name), s.clone())).collect()
         };
         for (label, sig) in sigs {
+            let linear: BTreeSet<String> = d.linear.iter().chain(sig.linear.iter()).cloned().collect();
             let at = sig.node.map(|n| n.tokens()[0].clone()).unwrap_or_else(|| tok.clone());
+            let mut sb = bounds.clone();
+            for (tp, b) in &sig.where_ { sb.entry(tp.clone()).or_default().insert(b.interface_key()); }
+            for (_, pt, _) in &sig.params { self.check_keys(pt, &at, Some(&sb), false); }
+            self.check_keys(&sig.ret, &at, Some(&sb), false);
             for (pn, pt, _) in &sig.params {
+                self.check_linear_instantiation(pt, &linear, &at);
                 items.push((pt.clone(), format!("parameter `{pn}` of {label}"), at.clone()));
             }
+            self.check_linear_instantiation(&sig.ret, &linear, &at);
             items.push((sig.ret.clone(), format!("the result of {label}"), at.clone()));
         }
         for (t, what, at) in items {
+            self.check_linear_instantiation(&t, &d.linear.iter().cloned().collect(), &at);
+            for (code, rule, shown, why) in self.dynamic_problems(&t) {
+                self.rec(code, format!("{what}: {why}"), rule, Some(&at), Self::typ_fields("a dynamic-eligible interface whose bounds hold", &shown, &what), "violated");
+            }
             for i in self.bare_interfaces(&t) {
                 self.rec(
                     "E-TYP-040",
@@ -2159,7 +2749,7 @@ impl<'a> DeclChecker<'a> {
                     }
                     if !prelude && (COPYABLE_CONTAINERS.contains(&n.name.as_str()) || builtin_implements(&n.name, "Default")) {
                         // a declaration spelled as a built-in type is judged by what it declares (a user's `class Array`)
-                        return d.implements.iter().any(|i| i.name == "Default") || d.derives.iter().any(|(x, _)| x == "Default") || self.block_implements(n, "Default");
+                        return d.implements.iter().any(|i| i.interface_key() == "Default") || d.derives.iter().any(|(x, _)| x == "Default") || self.block_implements(n, "Default");
                     }
                 }
             }
@@ -2242,9 +2832,15 @@ impl<'a> DeclChecker<'a> {
             for hand in hands {
                 self.rec("E-MIX-001", format!("{} derives {iface} and also declares `{hand}`, which the derivation would generate", d.name), "LANG-09-04", Some(&tok), mixf("one source of the member", "derived and declared", hand), "violated");
             }
-            if iface == "From" {
+            if iface == "From" || iface == "convert" {
                 if args.is_empty() {
                     self.rec("E-TYP-090", "derive From needs a source type".into(), "LANG-06-07", Some(&tok), Self::typ_fields("From[S]", "From", &d.name), "violated");
+                } else if iface == "convert" && d.kind == "enum" {
+                    let names: BTreeSet<String> = d.variants.iter().map(|(n, _)| n.to_ascii_lowercase()).collect();
+                    if args[0] != string() || !self.is_core_type(&args[0]) || !d.type_params.is_empty()
+                        || d.variants.iter().any(|(_, fields)| !fields.is_empty()) || names.len() != d.variants.len() {
+                        self.rec("E-TYP-090", "enum text derivation needs String, a non-generic payload-free enum and names distinct ignoring ASCII case".into(), "LANG-06-07", Some(&tok), Self::typ_fields("a non-generic payload-free enum with distinct ASCII names", &d.name, &d.name), "violated");
+                    }
                 } else {
                     self.check_derive_from(d, &args[0], &tok);
                 }
@@ -2296,13 +2892,15 @@ impl<'a> DeclChecker<'a> {
                         if !exported {
                             self.rec("E-TYP-090", format!("derive {need}: field `{fname}` is not exported"), "LANG-06-07", Some(&tok), Self::typ_fields("every field exported", &format!("private {fname}"), fname), "violated");
                         } else if !self.encodable(ft) {
-                            self.rec("E-TYP-090", format!("derive {need}: field `{fname}: {}` is not {need}", ft.show()), "LANG-06-07", Some(&tok), Self::typ_fields(need, &ft.show(), fname), "violated");
+                            let displays = diagnostic_types(&[&ft, &named(need)]);
+                            self.rec("E-TYP-090", format!("derive {expected}: field `{fname}: {}` is not {expected}", displays[0], expected = displays[1]), "LANG-06-07", Some(&tok), Self::typ_fields(&displays[1], &displays[0], fname), "violated");
                         }
                     }
                     for (vname, payload) in d.variants.iter() {
                         for (fname, ft) in payload {
                             if !self.encodable(ft) {
-                                self.rec("E-TYP-090", format!("derive {need}: payload `{vname}.{fname}: {}` is not {need}", ft.show()), "LANG-06-07", Some(&tok), Self::typ_fields(need, &ft.show(), fname), "violated");
+                                let displays = diagnostic_types(&[&ft, &named(need)]);
+                                self.rec("E-TYP-090", format!("derive {expected}: payload `{vname}.{fname}: {}` is not {expected}", displays[0], expected = displays[1]), "LANG-06-07", Some(&tok), Self::typ_fields(&displays[1], &displays[0], fname), "violated");
                             }
                         }
                     }
@@ -2315,7 +2913,8 @@ impl<'a> DeclChecker<'a> {
                     }
                     for (fname, ft) in all {
                         if !self.implements(&ft, need) {
-                            self.rec("E-TYP-090", format!("derive {need}: field `{fname}: {}` does not implement {need}", ft.show()), "LANG-06-07", Some(&tok), Self::typ_fields(need, &ft.show(), &fname), "violated");
+                            let displays = diagnostic_types(&[&ft, &named(need)]);
+                            self.rec("E-TYP-090", format!("derive {expected}: field `{fname}: {}` does not implement {expected}", displays[0], expected = displays[1]), "LANG-06-07", Some(&tok), Self::typ_fields(&displays[1], &displays[0], &fname), "violated");
                         }
                     }
                     for req in iface_requires(need) {
@@ -2327,24 +2926,42 @@ impl<'a> DeclChecker<'a> {
             }
         }
         for iface in d.implements.clone() {
-            self.check_implements(d, &iface, &d.methods, &tok);
+            // a mixin's method may satisfy an interface member (9.6): the class's own methods first, then its mixins'
+            let mut members: OMap<Sig<'a>> = d.methods.clone();
+            for mx in &d.mixins {
+                if let Some(md) = self.resolve_named(mx, None).filter(|md| md.kind == "mixin") {
+                    for (mname, msig) in md.methods.iter() {
+                        if !mname.starts_with("requires:") && !members.contains(mname) {
+                            members.insert(mname, msig.clone());
+                        }
+                    }
+                }
+            }
+            self.check_implements(d, &iface, &members, &tok);
         }
         let mut provided: BTreeMap<String, String> = BTreeMap::new();
         for mx in &d.mixins {
-            let md = match self.table.get(&mx.name) {
-                Some(md) if md.kind == "mixin" => md.clone(),
+            let md = match self.resolve_named(mx, None) {
+                Some(md) if md.kind == "mixin" => md,
                 _ => {
                     self.rec("E-TYP-080", format!("`{}` is not a mixin", mx.name), "LANG-09-04", Some(&tok), Self::typ_fields("a mixin", &mx.name, &d.name), "violated");
                     continue;
                 }
             };
             for req in &md.requires {
-                if let Some(mname) = req.name.strip_prefix("__method__:") {
-                    if !d.methods.contains(mname) && !self.interface_members(d).contains(mname) {
-                        self.rec("E-TYP-080", format!("mixin {} requires method `{mname}`, which {} lacks", mx.name, d.name), "LANG-09-04", Some(&tok), Self::typ_fields(mname, "absent", &d.name), "violated");
+                let mname = req.name.strip_prefix("__method__:").unwrap_or(&req.name).to_string();
+                let Some(have) = d.methods.get(&mname).cloned() else {
+                    if !self.interface_members(d).contains(&mname) {
+                        self.rec("E-TYP-080", format!("mixin {} requires method `{mname}`, which {} lacks", mx.name, d.name), "LANG-09-04", Some(&tok), Self::typ_fields(&mname, "absent", &d.name), "violated");
                     }
-                } else if !self.implements(&self_t, &req.name) {
-                    self.rec("E-TYP-080", format!("mixin {} requires {}, which {} does not implement", mx.name, req.name, d.name), "LANG-09-04", Some(&tok), Self::typ_fields(&req.name, &d.name, &d.name), "violated");
+                    continue;
+                };
+                // a requirement is a signature, compared as an interface member's is (9.6)
+                if let Some(rsig) = md.methods.get(&format!("requires:{mname}")).cloned() {
+                    for p in self.compatible(&rsig, &have, mx, d) {
+                        let displays = diagnostic_signatures(&[&rsig, &have]);
+                        self.rec("E-TYP-080", format!("{}.{mname} does not satisfy mixin {}'s requirement `{}`: {p}", d.name, mx.name, displays[0]), "LANG-09-04", Some(&tok), Self::typ_fields(&displays[0], &displays[1], &mname), "violated");
+                    }
                 }
             }
             for mname in md.methods.keys() {
@@ -2363,24 +2980,24 @@ impl<'a> DeclChecker<'a> {
         let mut out = BTreeSet::new();
         for (iface, _) in &d.derives {
             out.extend(builtin_members(iface).iter().map(|s| s.to_string()));
-            if let Some(id) = self.table.get(iface) {
+            if let Some(id) = self.interface_decl(iface) {
                 out.extend(id.methods.keys().cloned());
                 out.extend(id.constants.keys().cloned());
             }
         }
         for iface in &d.implements {
-            out.extend(builtin_members(&iface.name).iter().map(|s| s.to_string()));
+            out.extend(builtin_members(&iface.interface_key()).iter().map(|s| s.to_string()));
         }
         out
     }
 
     pub fn encodable(&self, t: &Type) -> bool {
         if let Type::Named(n) = t {
-            if NOT_ENCODABLE.contains(&n.name.as_str()) {
+            if n.package.is_empty() && NOT_ENCODABLE.contains(&n.name.as_str()) {
                 return false;
             }
             if let Some(d) = self.resolve_named(n, None) {
-                if d.kind == "class" && d.implements_named("Authority") {
+                if d.kind == "class" && self.implements_core_authority(&d) {
                     return false;
                 }
             }
@@ -2392,6 +3009,14 @@ impl<'a> DeclChecker<'a> {
     }
 
     fn check_derive_from(&mut self, d: &DeclRef<'a>, source: &Type, tok: &Token) {
+        if *source == string() && self.is_core_type(source) {
+            self.rec("E-TYP-090", "derive convert from String requires a payload-free enum".into(), "LANG-06-07", Some(tok), Self::typ_fields("an enum", &d.kind, &d.name), "violated");
+            return;
+        }
+        if d.kind != "class" {
+            self.rec("E-TYP-090", "derive convert from requires a class target".into(), "LANG-06-07", Some(tok), Self::typ_fields("a class", &d.kind, &d.name), "violated");
+            return;
+        }
         let sd = self.resolve_type(source, None);
         let sd = match sd {
             Some(sd) if sd.kind == "class" => sd,
@@ -2412,21 +3037,27 @@ impl<'a> DeclChecker<'a> {
                     continue;
                 }
             };
+            let st = self.subst(&st, &self.type_substitution(&sd, source));
             if !exp && sd.module != d.module {
                 self.rec("E-TYP-090", format!("derive From[{}]: field `{fname}` of the source is not visible", source.show()), "LANG-06-07", Some(tok), Self::typ_fields("an exported field", fname, fname), "violated");
             }
             let same = st == *ft || st.is_unknown() || ft.is_unknown();
-            if !(same || self.implements(ft, "From")) {
-                self.rec("E-TYP-090", format!("derive From[{}]: field `{fname}` has type {}, needs {}", source.show(), st.show(), ft.show()), "LANG-06-07", Some(tok), Self::typ_fields(&ft.show(), &st.show(), fname), "violated");
+            if !(same || self.total_conversion(&st, ft, &d.module)) {
+                let displays = diagnostic_types(&[source, &st, ft]);
+                self.rec("E-TYP-090", format!("derive From[{}]: field `{fname}` has type {}, needs {}", displays[0], displays[1], displays[2]), "LANG-06-07", Some(tok), Self::typ_fields(&displays[2], &displays[1], fname), "violated");
             }
-            if !self.is_copyable(&st) {
+            let saved_bounds = self.tparam_bounds.clone();
+            self.tparam_bounds = d.type_params.iter().map(|p| (p.clone(), d.where_.iter().filter(|(q, _)| q == p).map(|(_, b)| b.interface_key()).collect())).collect();
+            let copyable = self.is_copyable(&st);
+            self.tparam_bounds = saved_bounds;
+            if !copyable {
                 self.rec("E-TYP-090", format!("derive From[{}]: field `{fname}: {}` is not Copyable", source.show(), st.show()), "LANG-06-07", Some(tok), Self::typ_fields("Copyable", &st.show(), fname), "violated");
             }
         }
     }
 
     pub fn check_implements(&mut self, d: &Decl<'a>, iface: &NamedT, methods: &OMap<Sig<'a>>, tok: &Token) {
-        let idecl = match self.table.get(&iface.name) {
+        let idecl = match self.resolve_named(iface, None) {
             Some(i) => i.clone(),
             None => {
                 if ["Authority", "Copyable", "Shareable", "Default", "Equatable", "Hashable", "Comparable", "Displayable", "Encodable", "Decodable", "Codec", "Abandonable", "From"].contains(&iface.name.as_str()) {
@@ -2450,7 +3081,8 @@ impl<'a> DeclChecker<'a> {
                 }
             };
             for p in self.compatible(isig, &have, iface, d) {
-                self.rec("E-TYP-080", format!("{}.{mname} does not satisfy {}.{mname}: {p}", d.name, iface.name), "LANG-09-03", Some(tok), Self::typ_fields(&isig.show(), &have.show(), mname), "violated");
+                let displays = diagnostic_signatures(&[isig, &have]);
+                self.rec("E-TYP-080", format!("{}.{mname} does not satisfy {}.{mname}: {p}", d.name, iface.name), "LANG-09-03", Some(tok), Self::typ_fields(&displays[0], &displays[1], mname), "violated");
             }
         }
         for cname in idecl.constants.keys() {
@@ -2458,18 +3090,85 @@ impl<'a> DeclChecker<'a> {
                 self.rec("E-TYP-080", format!("{} implements {} but lacks constant `{cname}`", d.name, iface.name), "LANG-09-03", Some(tok), Self::typ_fields(cname, "absent", cname), "violated");
             }
         }
+        let isub: BTreeMap<String, Type> = idecl.type_params.iter().cloned().zip(iface.args.iter().cloned()).collect();
         for req in &idecl.requires {
-            if !self.implements(&self_t, &req.name) {
+            let want = match self.subst(&Type::Named(req.clone()), &isub) {
+                Type::Named(n) => n,
+                _ => req.clone(),
+            };
+            if !self.requirement_met(d, &self_t, &idecl, &want) {
                 self.rec(
                     "E-TYP-080",
-                    format!("{} implements {}, which requires {}; {} does not implement it", d.name, iface.name, req.name, d.name),
+                    format!("{} implements {}, which requires {}; {} does not implement it", d.name, iface.show(), want.show(), d.name),
                     "LANG-09-03",
                     Some(tok),
-                    Self::typ_fields(&req.name, &d.name, &d.name),
+                    Self::typ_fields(&want.show(), &d.name, &d.name),
                     "violated",
                 );
             }
         }
+        // the interface's own `where` holds for the arguments the implementation gives it (9.5; D-69)
+        for (tp, bound) in idecl.where_.iter() {
+            let Some(arg) = isub.get(tp) else { continue };
+            match arg {
+                Type::Unknown(_) => {}
+                Type::TypeParam(p) => {
+                    if !d.where_.iter().any(|(dp, b)| dp == p && b == bound) {
+                        let displays = diagnostic_types(&[&Type::Named(iface.clone()), &Type::Named(bound.clone()), arg]);
+                        self.rec("E-TYP-080", format!("{} implements {}, whose `where` needs `{tp}` to implement {}; {}'s own `where` does not grant it for {}", d.name, displays[0], displays[1], d.name, displays[2]), "LANG-09-03", Some(tok), Self::typ_fields(&displays[1], &displays[2], &d.name), "violated");
+                    }
+                }
+                _ => {
+                    if !self.implements(arg, &bound.interface_key()) {
+                        let displays = diagnostic_types(&[&Type::Named(iface.clone()), &Type::Named(bound.clone()), arg]);
+                        self.rec("E-TYP-080", format!("{} implements {}, whose `where` needs `{tp}` to implement {}; {} does not (9.5)", d.name, displays[0], displays[1], displays[2]), "LANG-09-03", Some(tok), Self::typ_fields(&displays[1], &displays[2], &d.name), "violated");
+                    }
+                }
+            }
+        }
+    }
+
+    /// The declaration `name` reaches in `module`'s own table: this table for this module, the loaded table of a
+    /// package module, and this table for a standard module loaded into it.
+    pub fn decl_in_module(&self, module: &str, name: &str) -> Option<DeclRef<'a>> {
+        let d = if module == self.module_name {
+            self.table.get(name).cloned()
+        } else {
+            let loaded = self.sess.loaded.borrow();
+            let found = loaded.iter().find(|((_, p), _)| p == module).and_then(|(_, t)| t.get(name).cloned());
+            found.or_else(|| self.table.get(name).cloned())
+        };
+        d.filter(|d| d.kind != "unknown")
+    }
+
+    /// Does `d` implement what `idecl` requires (9.5): the declaration the requirement names as the interface's own
+    /// module sees it, with the type arguments the requirement states (D-67; 4.4 makes other modules' and other
+    /// instantiations' interfaces distinct). A core, structural or bundle requirement, or one met by a derivation or an
+    /// `implement` block, is judged by name.
+    fn requirement_met(&self, d: &Decl<'a>, self_t: &Type, _idecl: &Decl<'a>, want: &NamedT) -> bool {
+        if !self.implements(self_t, &want.interface_key()) {
+            return false;
+        }
+        let Some(rd) = self.resolve_named(want, None) else { return true };
+        if rd.kind != "interface" || is_standard(&rd.module) {
+            return true;
+        }
+        let listed: Vec<&NamedT> = d.implements.iter().filter(|i| i.interface_key() == want.interface_key()).collect();
+        if listed.is_empty() {
+            return true;
+        }
+        for i in listed {
+            if let Some(ld) = self.resolve_named(i, None) {
+                if (ld.module.as_str(), ld.name.as_str()) != (rd.module.as_str(), rd.name.as_str()) {
+                    continue;
+                }
+            }
+            if !want.args.is_empty() && i.args != want.args {
+                continue;
+            }
+            return true;
+        }
+        false
     }
 
     /// A signature's claims (11.2, 11.5): its modifiers with those its contracts expand to, the effects it rules out (a
@@ -2537,7 +3236,7 @@ impl<'a> DeclChecker<'a> {
         if isig.receiver.clone().unwrap_or_default() != have.receiver.clone().unwrap_or_default() {
             problems.push(format!("receiver `{}` differs from `{}`", have.receiver.clone().unwrap_or("None".into()), isig.receiver.clone().unwrap_or("None".into())));
         }
-        let imodule = self.table.get(&iface.name).map(|i| i.module.clone());
+        let imodule = self.resolve_named(iface, None).map(|i| i.module.clone());
         let (imods, iforbids, iexcludes) = self.claims(isig, imodule.as_deref());
         let (hmods, hforbids, hexcludes) = self.claims(have, Some(d.module.as_str()));
         let mut explained: BTreeSet<String> = BTreeSet::new();
@@ -2565,7 +3264,7 @@ impl<'a> DeclChecker<'a> {
         }
         let mut subst: BTreeMap<String, Type> = BTreeMap::new();
         subst.insert("Self".into(), named_of_decl(d, d.type_params.iter().map(|p| Type::TypeParam(p.clone())).collect()));
-        if let Some(idecl) = self.table.get(&iface.name) {
+        if let Some(idecl) = self.resolve_named(iface, None) {
             for (p, a) in idecl.type_params.iter().zip(iface.args.iter()) {
                 subst.insert(p.clone(), a.clone());
             }
@@ -2576,12 +3275,14 @@ impl<'a> DeclChecker<'a> {
                 problems.push(format!("parameter `{hn}` mode `{hm}` differs from `{pm}`"));
             }
             if !param_compatible(&pt2, ht) {
-                problems.push(format!("parameter `{hn}` narrows {} to {}", pt2.show(), ht.show()));
+                let displays = diagnostic_types(&[&pt2, ht]);
+                problems.push(format!("parameter `{hn}` narrows {} to {}", displays[0], displays[1]));
             }
         }
         let rt = self.subst(&isig.ret, &subst);
         if !return_compatible(&rt, &have.ret) {
-            problems.push(format!("return {} widens {}", have.ret.show(), rt.show()));
+            let displays = diagnostic_types(&[&have.ret, &rt]);
+            problems.push(format!("return {} widens {}", displays[0], displays[1]));
         }
         problems
     }
@@ -2600,8 +3301,8 @@ impl<'a> DeclChecker<'a> {
             Type::Optional(i) => optional(self.subst(i, m)),
             Type::Loan { inner, mode, origin } => Type::Loan { inner: Box::new(self.subst(inner, m)), mode: mode.clone(), origin: origin.clone() },
             Type::Tuple(items) => Type::Tuple(items.iter().map(|x| self.subst(x, m)).collect()),
-            Type::Fn { params, ret, kind, modifiers, dynamic, identity, .. } => {
-                Type::Fn { params: params.iter().map(|x| self.subst(x, m)).collect(), ret: Box::new(self.subst(ret, m)), kind: kind.clone(), modifiers: modifiers.clone(), origin: String::new(), dynamic: *dynamic, identity: identity.clone() }
+            Type::Fn { params, ret, kind, modifiers, origin, dynamic, identity, capture_origins, param_modes } => {
+                Type::Fn { params: params.iter().map(|x| self.subst(x, m)).collect(), ret: Box::new(self.subst(ret, m)), kind: kind.clone(), modifiers: modifiers.clone(), origin: origin.clone(), dynamic: *dynamic, identity: identity.clone(), capture_origins: capture_origins.clone(), param_modes: param_modes.clone() }
             }
             Type::Record(fs) => Type::Record(fs.iter().map(|(k, x)| (k.clone(), self.subst(x, m))).collect()),
             _ => t.clone(),
@@ -2612,16 +3313,16 @@ impl<'a> DeclChecker<'a> {
         let tok = tok_of(d);
         let mut seen: BTreeSet<String> = BTreeSet::new();
         let path = vec![d.name.clone()];
-        self.visit_requires(d, &d.name.clone(), path, &mut seen, &tok);
+        self.visit_requires(d, &named_of_decl(d, vec![]).named_ref().unwrap().interface_key(), path, &mut seen, &tok);
     }
 
     fn visit_requires(&mut self, d: &DeclRef<'a>, n: &str, path: Vec<String>, seen: &mut BTreeSet<String>, tok: &Token) -> bool {
-        let idecl = match self.table.get(n) {
+        let idecl = match self.interface_decl(n) {
             Some(i) if i.kind == "interface" => i.clone(),
             _ => return false,
         };
         for r in &idecl.requires {
-            if r.name == d.name {
+            if r.interface_key() == named_of_decl(d, vec![]).named_ref().unwrap().interface_key() {
                 let mut p = path.clone();
                 p.push(r.name.clone());
                 self.rec(
@@ -2634,11 +3335,11 @@ impl<'a> DeclChecker<'a> {
                 );
                 return true;
             }
-            if !seen.contains(&r.name) {
-                seen.insert(r.name.clone());
+            if !seen.contains(&r.interface_key()) {
+                seen.insert(r.interface_key());
                 let mut p = path.clone();
                 p.push(r.name.clone());
-                if self.visit_requires(d, &r.name.clone(), p, seen, tok) {
+                if self.visit_requires(d, &r.interface_key(), p, seen, tok) {
                     return true;
                 }
             }
@@ -2646,13 +3347,510 @@ impl<'a> DeclChecker<'a> {
         false
     }
 
+    /// Language 1.0 (X-180): an `implement` block's target is a class or enum the program declares. Core types and
+    /// newtypes have no run-time identity of their own in 1.0's backends, so a block for one could not be honoured by
+    /// `==`, interpolation, the codec or dispatch through a type parameter; a later release lifts this (E-TYP-171).
+    /// The name an `implement` block's target is written with (`money.Currency`, `Tag`), or None for a form that is
+    /// not a plain named type.
+    fn target_spelling(node: N<'a>) -> Option<String> {
+        let ts = node.child_nodes("type");
+        let t = ts.get(1)?;
+        let nt = match t.kids().first() {
+            Some(C::N(n)) if n.name() == "namedType" => *n,
+            _ => return None,
+        };
+        let tr = match nt.kids().first() {
+            Some(C::N(n)) if n.name() == "typeRef" => *n,
+            _ => return None,
+        };
+        let dts = tr.direct_tokens();
+        if dts.first()?.kind == Kind::Lower && dts.len() >= 3 {
+            Some(format!("{}.{}", dts[0].text, dts[2].text))
+        } else {
+            Some(dts[0].text.clone())
+        }
+    }
+
+    /// The declaration an `implement` block's target names, found by the block's own spelling: `money.Currency` through
+    /// a module alias is that module's `Currency`, never a program class that happens to share the name (the canonical
+    /// `Named` carries only the name, and a core type's identity is as empty as a single-file program's).
+    /// The spelling of a block's target when it is a plain name (`Box`, `shapes.Box`): no type arguments, not optional.
+    fn plain_target_spelling(node: N<'a>) -> Option<String> {
+        let ts = node.child_nodes("type");
+        let t = ts.get(1)?;
+        let kids = t.kids();
+        let nt = match kids.as_slice() {
+            [C::N(n)] if n.name() == "namedType" => *n,
+            _ => return None,
+        };
+        let nk = nt.kids();
+        match nk.as_slice() {
+            [C::N(tr)] if tr.name() == "typeRef" && tr.child_node("typeArgs").is_none() => Self::target_spelling(node),
+            _ => None,
+        }
+    }
+
+    fn implement_target_decl(&self, node: N<'a>, target: &Type) -> Option<DeclRef<'a>> {
+        Self::target_decl_in(&self.table, node, target)
+    }
+
+    /// The declaration a block's target names, resolved in a module's own table (its aliases).
+    fn target_decl_in(table: &Table<'a>, node: N<'a>, target: &Type) -> Option<DeclRef<'a>> {
+        if let Some(sp) = Self::target_spelling(node) {
+            if let Some(d) = table.get(&sp) {
+                if d.kind != "unknown" {
+                    return Some(d.clone());
+                }
+            }
+        }
+        match target {
+            Type::Named(n) => table.get(&n.name).cloned(),
+            _ => None,
+        }
+    }
+
+    /// The `implement` blocks of this package's other modules (read from their trees: a module loaded as a library
+    /// keeps no blocks), each with the declaration its plainly named target resolves to in its own module (aliases are
+    /// per module), so a clash between modules that do not import each other is seen.
+    fn sibling_block_entries(&self) -> Vec<(String, N<'a>, Option<DeclRef<'a>>)> {
+        let mut out = Vec::new();
+        if self.package.is_empty() {
+            return out;
+        }
+        let lib = self.library();
+        let mut mods: Vec<(&'a String, &'a LibraryModule)> = lib.modules.iter().map(|(k, v)| (k, &**v)).collect();
+        mods.sort_by(|a, b| b.0.len().cmp(&a.0.len()).then(a.0.cmp(b.0)));
+        let mut seen: BTreeSet<usize> = BTreeSet::new();
+        for (key, lm) in mods {
+            if !seen.insert(lm as *const LibraryModule as usize) {
+                continue;
+            }
+            if lm.library.is_none() || lm.package != self.package || *key == self.module_name {
+                continue;
+            }
+            let sub = self.loaded(lm, key);
+            for dd in declarations(lm.tree()) {
+                if dd.kind != "implement" {
+                    continue;
+                }
+                let d = Self::plain_target_spelling(dd.node).and_then(|sp| sub.get(&sp).cloned()).filter(|d| d.kind != "unknown");
+                out.push((key.clone(), dd.node, d));
+            }
+        }
+        out
+    }
+
+    /// The methods the mixins of a class provide (with bodies), with the providing mixin, as the class's module sees
+    /// them.
+    fn mixin_provided(&self, tdecl: &Decl<'a>) -> Vec<(String, String)> {
+        let mut out = Vec::new();
+        let mut home: Option<Option<Rc<Table<'a>>>> = None;
+        for mx in &tdecl.mixins {
+            let mut md = self.resolve_named(mx, None).filter(|d| d.kind == "mixin");
+            if md.is_none() && tdecl.module != self.module_name {
+                if home.is_none() {
+                    let lib = self.library();
+                    home = Some(match lib.modules.get(&tdecl.module) {
+                        Some(lm) if lm.library.is_some() => {
+                            let lm: &'a LibraryModule = lm;
+                            Some(self.loaded(lm, &tdecl.module))
+                        }
+                        _ => None,
+                    });
+                }
+                md = home.as_ref().unwrap().as_ref().and_then(|t| t.get(&mx.name).cloned()).filter(|d| d.kind == "mixin");
+            }
+            let Some(md) = md else { continue };
+            for (mname, _) in md.methods.iter() {
+                if !mname.starts_with("requires:") {
+                    out.push((mname.clone(), mx.name.clone()));
+                }
+            }
+        }
+        out
+    }
+
+    /// Why a declaration cannot be an `implement` block's target in Language 1.0 (X-180), or None when it can: the
+    /// target is a non-generic class or enum the program declares. The two extensions of the user's option B, a
+    /// newtype and a generic class or enum, stand by the user's decision of 29 Oct 2026; the newtype exclusion may be
+    /// relaxed for a block inside the declaring module if a newtype comes to expose its representation there (Q2), so
+    /// the whole test lives here, in one place.
+    fn implement_target_excluded(tdecl: &Decl<'a>) -> Option<String> {
+        if tdecl.module == "fortis" || tdecl.module.starts_with("fortis.") {
+            return Some("a core library type".to_string());
+        }
+        if tdecl.kind == "class" || tdecl.kind == "enum" {
+            return if tdecl.type_params.is_empty() { None } else { Some(format!("a generic {}", tdecl.kind)) };
+        }
+        Some(if tdecl.kind == "type" { "a newtype".to_string() } else { format!("a declaration of kind `{}`", tdecl.kind) })
+    }
+
+    fn check_implement_targets(&mut self) {
+        let mut blocks: Vec<(Type, String, N<'a>)> = self.table.implement_blocks.iter().map(|(_, t, m, n)| (Type::Named(t.clone()), m.clone(), *n)).collect();
+        blocks.extend(self.table.other_implement_targets.iter().cloned());
+        blocks.retain(|b| b.1 == self.module_name);
+        blocks.sort_by_key(|b| {
+            let t = &b.2.tokens()[0];
+            (t.line, t.col)
+        });
+        let mut found: Vec<(usize, usize, &'static str, String, &'static str, Token, Json)> = Vec::new();
+        let mut targets: Vec<(String, DeclRef<'a>)> = Vec::new();
+        for (target, _, node) in blocks {
+            let ts = node.child_nodes("type");
+            if ts.len() < 2 {
+                continue;
+            }
+            let tok = ts[1].tokens()[0].clone();
+            let iface = ts[0].tokens()[0].text.clone();
+            let mut shown = target.show();
+            if let (Type::Named(n), Some(sp)) = (&target, Self::target_spelling(node)) {
+                if n.args.is_empty() && sp.contains('.') {
+                    shown = sp; // a module alias's type, as the block writes it
+                }
+            }
+            let what = match &target {
+                Type::Named(_) => {
+                    let Some(tdecl) = self.implement_target_decl(node, &target) else { continue };
+                    if tdecl.kind == "unknown" {
+                        continue;
+                    }
+                    match Self::implement_target_excluded(&tdecl) {
+                        Some(what) => what,
+                        None => {
+                            let key = format!("{}.{}", tdecl.module, tdecl.name);
+                            if !targets.iter().any(|(k, _)| *k == key) {
+                                targets.push((key, tdecl.clone()));
+                            }
+                            continue;
+                        }
+                    }
+                }
+                _ => "not a class or enum".to_string(),
+            };
+            found.push((
+                tok.line,
+                tok.col,
+                "E-TYP-171",
+                format!(
+                    "`implement {iface} for {shown}`: in Language 1.0 an `implement` block's target must be a non-generic class or enum the program declares, and `{shown}` is {what} (X-180); implementations for such targets come in a later release. Wrap the value in a class the program declares, or list the interface in its `implements`"
+                ),
+                "LANG-06-13",
+                tok.clone(),
+                Self::typ_fields("a non-generic class or enum the program declares", &shown, &shown),
+            ));
+        }
+        // member clashes, target by target, over every block of the package for it: the target's own members and its
+        // mixins' come first, then blocks in module, line and column order (the later of two clashing blocks is reported)
+        if !targets.is_empty() {
+            let siblings = self.sibling_block_entries();
+            for (key, tdecl) in targets {
+                let mut entries: Vec<(String, usize, usize, N<'a>)> = Vec::new();
+                for (_, target, module, node) in self.table.implement_blocks.iter() {
+                    if *module == self.module_name {
+                        if let Some(d) = self.implement_target_decl(*node, &Type::Named(target.clone())) {
+                            if format!("{}.{}", d.module, d.name) == key {
+                                let t = &node.tokens()[0];
+                                entries.push((module.clone(), t.line, t.col, *node));
+                            }
+                        }
+                    }
+                }
+                for (module, node, d) in &siblings {
+                    if let Some(d) = d {
+                        if format!("{}.{}", d.module, d.name) == key {
+                            let t = &node.tokens()[0];
+                            entries.push((module.clone(), t.line, t.col, *node));
+                        }
+                    }
+                }
+                entries.sort_by(|a, b| (&a.0, a.1, a.2).cmp(&(&b.0, b.1, b.2)));
+                let mut have: BTreeMap<String, (&'static str, String, String)> = BTreeMap::new();
+                for m in tdecl.fields.keys().chain(tdecl.methods.keys()) {
+                    have.entry(m.clone()).or_insert(("own", String::new(), String::new()));
+                }
+                for (m, mx) in self.mixin_provided(&tdecl) {
+                    have.entry(m).or_insert(("mixin", mx, String::new()));
+                }
+                for (module, _, _, node) in entries {
+                    let ts = node.child_nodes("type");
+                    let iface = ts.first().map(|t| t.tokens()[0].text.clone()).unwrap_or_default();
+                    let at = node.tokens()[0];
+                    let bound = self.table.implement_blocks.iter().find(|(_, _, m, n)| *m == module && {
+                        let other = n.tokens()[0]; (other.line, other.col) == (at.line, at.col)
+                    }).map(|(i, _, _, _)| i);
+                    if bound.map_or(false, |i| tdecl.implements.contains(i) || tdecl.derives.iter().any(|(n, _)| *n == i.interface_key())) {
+                        continue; // the whole block overlaps an implementation: E-TYP-100 alone
+                    }
+                    let shown = match Self::target_spelling(node) {
+                        Some(sp) if sp.contains('.') => sp,
+                        _ => tdecl.name.clone(),
+                    };
+                    for mm in node.child_nodes("implementMember") {
+                        let Some(head) = mm.find("methodHead") else { continue };
+                        let Some(mn) = head.find("memberName") else { continue };
+                        let mtok = mn.tokens()[0].clone();
+                        let src = have.get(&mtok.text).cloned();
+                        if let Some(src) = &src {
+                            if module == self.module_name {
+                                let how = match src.0 {
+                                    "own" => format!("a member {shown} already has"),
+                                    "mixin" => format!("a member {shown}'s mixin {} provides", src.1),
+                                    _ => format!("a member that `implement {} for {shown}` also adds", src.1) + &(if src.2 != self.module_name { format!(" (module {})", src.2) } else { String::new() }),
+                                };
+                                found.push((
+                                    mtok.line,
+                                    mtok.col,
+                                    "E-TYP-070",
+                                    format!("member `{}` of {shown} is declared twice: `implement {iface} for {shown}` adds {how} (an `implement` block is its target listing the interface, X-180)", mtok.text),
+                                    "LANG-09-01",
+                                    mtok.clone(),
+                                    Self::typ_fields("one member", "two", &mtok.text),
+                                ));
+                            }
+                        }
+                        if src.is_none() {
+                            have.insert(mtok.text.clone(), ("block", iface.clone(), module.clone()));
+                        }
+                    }
+                }
+            }
+        }
+        found.sort_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
+        for (_, _, code, msg, rule, tok, fields) in found {
+            self.rec(code, msg, rule, Some(&tok), fields, "violated");
+        }
+    }
+
+    /// A named type's identity for a pairing rule: the declaration it names (module and name) with its type
+    /// arguments as written, so `Box[Int]` and `Box[String]` are two types and two modules' `Box` are two types. The
+    /// coherence of `implement` blocks keys its (interface, target) pairs by it (9.5), as a conversion pair may.
+    pub fn whole_type_key(tdecl: Option<&DeclRef<'a>>, t: &NamedT) -> String {
+        let base = tdecl.map_or_else(|| format!("{}.{}", if t.package.is_empty() { &t.origin } else { &t.package }, t.name), |d| {
+            let identity = d.type_identity();
+            format!("{}.{}", if !identity.is_empty() { &identity } else if !d.core_home.is_empty() { &d.core_home } else { &d.module }, d.name)
+        });
+        format!("{base}{:?}", t.args)
+    }
+
+    /// Whether a base name is a core built-in type here: no declaration of it is visible but a standard one, so a
+    /// user's class of the name (`class Int`) is itself and the built-in conversion rows do not reach it (6.13; the
+    /// rows are keyed by the built-in types, not by their spellings, D-516).
+    pub fn is_core_type(&self, t: &Type) -> bool {
+        match strip(t) {
+            Type::Named(n) | Type::Refined { base: n, .. } => n.package.is_empty(),
+            _ => false,
+        }
+    }
+
+    /// The declaration a nominal type names, through its origin stamp where it carries one (X-136).
+    pub fn named_decl(&self, t: &Type) -> Option<DeclRef<'a>> {
+        if matches!(t, Type::Named(_)) { self.resolve_type(t, None) } else { None }
+    }
+
+    /// One side of a conversion pair as its whole-type key (6.13): the declaration's module and name with the type
+    /// arguments as written; a non-nominal side (rejected, E-TYP-184) keys by its spelling.
+    fn side_key(&self, t: &Type) -> String {
+        match t {
+            Type::Named(n) => Self::whole_type_key(self.named_decl(t).as_ref(), n),
+            _ => t.show(),
+        }
+    }
+
+    /// The declared conversions of every visible class and enum (6.13, X-551): the forms a member may take, and one
+    /// conversion per pair. A pair is keyed by the whole type, as `implement` coherence keys its pairs (9.5); a
+    /// member of an imported module counts for the overlap and is reported by its own module (as D-132).
+    /// Explicit members and legacy From implementations resolve to the same declared pair (6.13, X-552).
+    pub fn all_conversions(&self, d: &DeclRef<'a>) -> Vec<Convert<'a>> {
+        let mut out = d.converts.clone();
+        for c in &d.converts {
+            if c.direction == "from" && self.is_core_type(&c.other) && (c.other == string() || c.other == string_view()) {
+                let mut alternate = c.clone();
+                alternate.other = if c.other == string() { string_view() } else { string() };
+                out.push(alternate);
+            }
+        }
+        for (iface, args) in &d.derives {
+            if (iface == "From" || iface == "convert") && args.len() == 1 {
+                if iface == "convert" && d.kind == "enum" && args[0] == string() && self.is_core_type(&args[0]) {
+                    for source in [string(), string_view()] {
+                        let mut sig = Sig::simple(&format!("derive:from:{}", source.show()), vec![("source".into(), source.clone(), String::new())], named_of_decl(d, vec![]), vec!["try".into()]);
+                        sig.node = d.node;
+                        sig.exported = d.exported;
+                        out.push(Convert { direction: "from".into(), other: source, fallible: true, owned: false, exported: d.exported, sig, node: d.node.unwrap(), derived: true, legacy: true });
+                    }
+                    continue;
+                }
+                let source = args[0].clone();
+                let qual = match &source { Type::Named(n) => if n.package.is_empty() { &n.origin } else { &n.package }, _ => "" };
+                let suffix = if qual.is_empty() { String::new() } else { format!("@{qual}") };
+                let mut sig = Sig::simple(&format!("derive:from:{}{suffix}", source.show()), vec![("source".into(), source.clone(), String::new())], named_of_decl(d, d.type_params.iter().map(|p| Type::TypeParam(p.clone())).collect()), vec![]);
+                sig.node = d.node;
+                sig.exported = d.exported;
+                out.push(Convert { direction: "from".into(), other: source, fallible: false, owned: false, exported: d.exported, sig, node: d.node.unwrap(), derived: true, legacy: true });
+            }
+        }
+        for iface in &d.implements {
+            if iface.name == "From" && iface.args.len() == 1 && self.resolve_named(iface, None).map_or(false, |i| is_standard(&i.module)) {
+                if let Some(sig) = d.methods.get("from") {
+                    out.push(Convert { direction: "from".into(), other: iface.args[0].clone(), fallible: false, owned: false, exported: sig.exported, sig: sig.clone(), node: sig.node.unwrap(), derived: false, legacy: true });
+                }
+            }
+        }
+        for (iface, target, _, node) in &self.table.implement_blocks {
+            if iface.name != "From" || iface.args.len() != 1 || !self.resolve_named(iface, None).map_or(false, |i| is_standard(&i.module)) || !self.named_decl(&target.as_type()).map_or(false, |t| Rc::ptr_eq(&t, d)) {
+                continue;
+            }
+            for member in node.child_nodes("implementMember") {
+                if let Some(head) = member.find("methodHead") {
+                    if head.find("memberName").map_or(false, |n| n.tokens()[0].text == "from") {
+                        let pname = head.find("paramList").and_then(|p| p.child_nodes("param").first().copied()).and_then(|p| p.direct_tokens().first().copied()).map_or("source".into(), |t| t.text.clone());
+                        let modifiers = head.direct_tokens().iter().take_while(|t| t.text != "func").map(|t| t.text.clone()).collect();
+                        let mut sig = Sig::simple("from", vec![(pname, iface.args[0].clone(), String::new())], named_of_decl(d, vec![]), modifiers);
+                        sig.node = Some(head);
+                        sig.body = member.find("funcBody");
+                        out.push(Convert { direction: "from".into(), other: iface.args[0].clone(), fallible: false, owned: false, exported: true, sig, node: head, derived: false, legacy: true });
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    pub fn type_substitution(&self, d: &DeclRef<'a>, t: &Type) -> BTreeMap<String, Type> {
+        match t { Type::Named(n) => d.type_params.iter().cloned().zip(n.args.iter().cloned()).collect(), _ => BTreeMap::new() }
+    }
+
+    /// Legacy generic implementations retain ordinary written type arguments (X-555).
+    pub fn instantiated_conversions(&self, d: &DeclRef<'a>, t: &Type) -> Vec<Convert<'a>> {
+        let subst = self.type_substitution(d, t);
+        self.all_conversions(d).into_iter().map(|mut c| {
+            c.other = self.subst(&c.other, &subst);
+            c.sig.params = c.sig.params.into_iter().map(|(n, pt, mode)| (n, self.subst(&pt, &subst), mode)).collect();
+            c.sig.ret = self.subst(&c.sig.ret, &subst);
+            c
+        }).collect()
+    }
+
+    /// The one representation step (6.9, 6.13, X-552): declaration, representation, wrapping, proved.
+    /// Match the base by identity before considering its range. Never search through another newtype or a
+    /// numeric conversion. The proof is the construction judgement of X-511.
+    pub fn newtype_conversion(&self, src: &Type, dst: &Type) -> Option<(DeclRef<'a>, Type, bool, bool)> {
+        let s = match strip(src) { Type::Loan { inner, .. } => strip(inner), t => t };
+        let d = strip(dst);
+        let base = |t: &Type| match t { Type::Refined { base, .. } => base.as_type(), t => t.clone() };
+        if let Some(sd) = self.resolve_type(s, None) {
+            if sd.kind == "type" {
+                if let Some(rep) = &sd.alias {
+                    let rep = strip(rep).clone();
+                    if *d == rep || *d == base(&rep) {
+                        return Some((sd, rep, false, true));
+                    }
+                }
+            }
+        }
+        if let Some(dd) = self.resolve_type(d, None) {
+            if dd.kind == "type" {
+                if let Some(rep) = &dd.alias {
+                    let rep = strip(rep).clone();
+                    let rb = base(&rep);
+                    let literal = crate::literals::is_strlit(s) && (rb == string() || rb == string_view());
+                    if base(s) == rb || literal {
+                        let mut proved = crate::literals::assignable(s, &rep).0 == Some(true);
+                        if let (Type::Refined { base: sb, lo: sl, hi: sh, kind: sk }, Type::Refined { base: rb, lo: rl, hi: rh, kind: rk }) = (s, &rep) {
+                            if sb == rb && sk == rk {
+                                proved = rl.map_or(true, |l| sl.map_or(false, |x| x >= l)) && rh.map_or(true, |h| sh.map_or(false, |x| x <= h));
+                            }
+                        }
+                        return Some((dd, rep, true, proved));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn total_conversion(&self, source: &Type, target: &Type, module: &str) -> bool {
+        if let Some((decl, rep, wrapping, proved)) = self.newtype_conversion(source, target) {
+            return self.is_trivial(&rep) && proved && (wrapping || decl.module == module);
+        }
+        if let (Some(s), Some(t)) = (crate::conversions::base_of(source), crate::conversions::base_of(target)) {
+            if self.is_core_type(source) && self.is_core_type(target) {
+                if let Some(row) = crate::conversions::resolve(s, t) {
+                    return !row.fallible && !matches!(target, Type::Refined { .. });
+                }
+            }
+        }
+        let source = if let Type::Refined { base, .. } = source { base.as_type() } else { source.clone() };
+        let mut found = Vec::new();
+        for (t, direction, other) in [(&source, "to", target), (target, "from", &source)] {
+            if let Some(d) = self.resolve_type(t, None) {
+                if d.kind == "class" || d.kind == "enum" {
+                    found.extend(self.instantiated_conversions(&d, t).into_iter().filter(|c| c.direction == direction && c.other == *other && (c.exported || d.module == module)));
+                }
+            }
+        }
+        found.len() == 1 && !found[0].fallible && !found[0].owned
+    }
+
+    fn check_conversions(&mut self) {
+        let mut seen: BTreeMap<(String, String), (String, String)> = BTreeMap::new();
+        let mut visited: BTreeSet<usize> = BTreeSet::new();
+        let decls: Vec<DeclRef<'a>> = self.table.decls.values().cloned().collect();
+        for d in &decls {
+            if d.kind != "class" && d.kind != "enum" {
+                continue;
+            }
+            if !visited.insert(Rc::as_ptr(d) as usize) {
+                continue;
+            }
+            for cv in self.all_conversions(&d) {
+                let toks = cv.node.tokens();
+                let tok = toks.first().copied();
+                let local = d.module == self.module_name;
+                let src = if cv.direction == "from" { cv.other.clone() } else { named_of_decl(d, vec![]) };
+                let dst = if cv.direction == "from" { named_of_decl(d, vec![]) } else { cv.other.clone() };
+                let key = (self.side_key(&src), self.side_key(&dst));
+                if local {
+                    if !d.type_params.is_empty() && !cv.legacy {
+                        self.rec("E-TYP-184", format!("`convert` member of a generic {}: {} has type parameters, and a conversion is a pair of whole types (6.13, X-551)", d.kind, d.name), "LANG-06-15", tok, Self::typ_fields("a non-generic class or enum", &format!("a generic {}", d.kind), &d.name), "violated");
+                    }
+                    if !matches!(cv.other, Type::Named(_)) && !cv.legacy {
+                        self.rec("E-TYP-184", format!("`convert {} {}`: the other type of a conversion is a nominal type, never {} (a refinement target stays the built-in `validate` row, 6.13)", cv.direction, cv.other.show(), cv.other.show()), "LANG-06-15", tok, Self::typ_fields("a nominal type", &cv.other.show(), &cv.other.show()), "violated");
+                    } else if self.named_decl(&cv.other).map_or(false, |o| Rc::ptr_eq(&o, d)) || key.0 == key.1 {
+                        self.rec("E-TYP-183", format!("`convert {} {}` of {}: the pair is the identity, which 6.13 already decides: a conversion converts nothing here", cv.direction, cv.other.show(), d.name), "LANG-06-15", tok, Self::typ_fields("a different type", &d.name, &cv.other.show()), "violated");
+                    } else if self.newtype_conversion(&src, &dst).is_some() {
+                        self.rec("E-TYP-183", format!("`convert {} {}` of {}: the pair ({}, {}) is a built-in newtype representation conversion (6.13)", cv.direction, cv.other.show(), d.name, src.show(), dst.show()), "LANG-06-15", tok, Self::typ_fields("a pair the table does not decide", &format!("{} to {}", src.show(), dst.show()), &cv.other.show()), "violated");
+                    } else if let (Type::Named(s), Type::Named(t2)) = (&src, &dst) {
+                        if s.args.is_empty() && t2.args.is_empty() && self.is_core_type(&src) && self.is_core_type(&dst)
+                            && (crate::conversions::same_builtin(&s.name, &t2.name) || crate::conversions::resolve(&s.name, &t2.name).is_some()) {
+                            self.rec("E-TYP-183", format!("`convert {} {}` of {}: the pair ({}, {}) is a row of the built-in table, which needs no declaration (6.13)", cv.direction, cv.other.show(), d.name, src.show(), dst.show()), "LANG-06-15", tok, Self::typ_fields("a pair the table does not decide", &format!("{} to {}", src.show(), dst.show()), &cv.other.show()), "violated");
+                        }
+                    }
+                    if let Some(first) = seen.get(&key) {
+                        self.rec("E-TYP-182", format!("two conversions are declared for the pair ({}, {}): this one, and one {} declares (module {}): one conversion per pair (6.13)", src.show(), dst.show(), first.0, first.1), "LANG-06-15", tok, Self::typ_fields("one conversion", "two", &cv.other.show()), "violated");
+                    }
+                }
+                seen.entry(key).or_insert_with(|| (d.name.clone(), d.module.clone()));
+            }
+        }
+    }
+
     fn check_coherence(&mut self) {
+        self.check_implement_targets();
         let mut seen: BTreeSet<(String, String)> = BTreeSet::new();
         let blocks = self.table.implement_blocks.clone();
         for (iface, target, module, node) in blocks {
             let tok = node.tokens()[0].clone();
-            let idecl = self.table.get(&iface.name).cloned();
-            let tdecl = self.table.get(&target.name).cloned();
+            let idecl = self.resolve_named(&iface, None);
+            let tdecl = self.implement_target_decl(node, &Type::Named(target.clone()));
+            // one implementation per (interface, target type): the target's declaration with its type arguments, so
+            // `Box[Int]` and `Box[String]` are distinct targets (9.5)
+            let key = (Self::whole_type_key(idecl.as_ref(), &iface), Self::whole_type_key(tdecl.as_ref(), &target));
+            if module != self.module_name {
+                // an imported module's block (D-132): it counts for overlap; that module reports its own records
+                seen.insert(key);
+                continue;
+            }
             let local_iface = idecl.as_ref().map_or(false, |i| i.package == self.package && i.module.split('.').next() != Some("fortis") && !i.module.starts_with("fortis."));
             let local_type = tdecl.as_ref().map_or(false, |t| t.package == self.package && !t.module.starts_with("fortis."));
             if !(local_iface || local_type) {
@@ -2665,13 +3863,11 @@ impl<'a> DeclChecker<'a> {
                     "violated",
                 );
             }
-            let key = (iface.name.clone(), target.name.clone());
-            let dup = seen.contains(&key) || tdecl.as_ref().map_or(false, |t| t.implements_named(&iface.name) || t.derives.iter().any(|(n, _)| *n == iface.name));
+            let dup = seen.contains(&key) || tdecl.as_ref().map_or(false, |t| t.implements.iter().any(|i| i == &iface) || t.derives.iter().any(|(n, _)| *n == iface.interface_key()));
             if dup {
                 self.rec("E-TYP-100", format!("two implementations of {} for {}", iface.name, target.name), "LANG-06-10", Some(&tok), Self::typ_fields("one implementation", "two", &target.name), "violated");
             }
             seen.insert(key);
-            let _ = module;
             if let (Some(idecl), Some(tdecl)) = (idecl, tdecl) {
                 if idecl.kind == "interface" {
                     let mut methods: OMap<Sig<'a>> = OMap::new();
@@ -2690,6 +3886,7 @@ impl<'a> DeclChecker<'a> {
 }
 
 pub fn param_compatible(iface_t: &Type, impl_t: &Type) -> bool {
+    if !crate::literals::origin_clash(iface_t, impl_t).is_empty() { return false; }
     if iface_t.is_unknown() || impl_t.is_unknown() {
         return true;
     }
@@ -2706,6 +3903,7 @@ pub fn param_compatible(iface_t: &Type, impl_t: &Type) -> bool {
 }
 
 pub fn return_compatible(iface_t: &Type, impl_t: &Type) -> bool {
+    if !crate::literals::origin_clash(iface_t, impl_t).is_empty() { return false; }
     if iface_t.is_unknown() || impl_t.is_unknown() {
         return true;
     }

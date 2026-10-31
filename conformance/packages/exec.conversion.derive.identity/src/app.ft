@@ -1,0 +1,21 @@
+import fortis.host { Console }
+import exec.conversion.derive.identity.one as one
+import exec.conversion.derive.identity.two as two
+
+class Legacy derive From[one.Source], From[two.Source] {
+  value: Int
+}
+
+class Modern derive convert from one.Source, convert from two.Source {
+  value: Int
+}
+
+func main(console: Console) {
+  let first = one.Source(value: 1)
+  let second = two.Source(value: 2)
+  let a = Legacy.from(first)
+  let b = Legacy.from(second)
+  let c = first as Modern
+  let d = second as Modern
+  console.print("${a.value}/${b.value}/${c.value}/${d.value}")
+}

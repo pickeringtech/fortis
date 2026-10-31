@@ -1,0 +1,111 @@
+// execute: each 1 2 3|map [2,4,6] [] [6,9]|filter [2,3] []|fold 6 0 123|any true false|all true true false|find 2 -1 index 1 -1|contains true false|list 2 [1,4]|parsed [1,22,333]|failed conversion.parse|parsed 0|save failed after 2|saved 2|total 6 0|failed conversion.parse|total 0
+// reports: runtime-failure:conversion.parse|runtime-failure:failure.aggregate|runtime-failure:conversion.parse
+// requires: runtime
+// covers: LANG-06-16
+// The functional methods of `Deque` (6.7, X-576), in the order of the queue from the front to the back: `each`, `map`,
+// `filter`, `fold`, `any`, `all`, `find`, `indexWhere`, `contains`, `toList`, and the failing `tryMap`, `tryEach` and
+// `tryFold`, which stop at the first failure and return it. Each runs on a deque, an empty one and one that has turned
+// over its halves.
+import fortis.collections { Deque }
+import fortis.host { Console }
+
+class Store {
+  export saved: Int
+  export try func save(editable self, row: StringView) {
+    if row.byteCount() > 3 {
+      fail Failures.aggregate(List.default())
+    }
+    self.saved = Int.wrappingAdd(self.saved, 1)
+  }
+}
+
+func show(d: Deque[Int]) String {
+  let mut out = "["
+  let mut first = true
+  for x in d {
+    if !first {
+      out = "${out},"
+    }
+    first = false
+    out = "${out}${x}"
+  }
+  return "${out}]"
+}
+
+func three() Deque[Int] {
+  let mut d: Deque[Int] = Deque.default()
+  d.pushBack(2)
+  d.pushBack(3)
+  d.pushFront(1)
+  return d
+}
+
+try func parseAll(lines: Deque[String]) Deque[Int] {
+  let numbers = lines.tryMap(fn(line) => line as Int) or fail
+  return numbers
+}
+
+try func saveAll(rows: Deque[String], store: editable Store) {
+  rows.tryEach(fn mut[editable store](row) => store.save(row)) or fail
+}
+
+try func addParsed(sum: Int, part: StringView) Int {
+  let n = part as Int or fail
+  return sum + n or fail
+}
+
+try func total(parts: Deque[String]) Int {
+  let sum = parts.tryFold(0, fn(sum, part) => addParsed(sum, part)) or fail
+  return sum
+}
+
+recovers func main(console: Console) {
+  let d = three()
+  let none: Deque[Int] = Deque.default()
+  let mut order = "each"
+  d.each(fn mut[editable order](n: Int) Void {
+    order = "${order} ${n}"
+  })
+  console.print(order)
+  console.print("map ${show(d.map(fn(n: Int) Int => Int.wrappingMul(n, 2)))} ${show(none.map(fn(n: Int) Int => n))} ${show(d.filter(fn(n: Int) Bool => n > 1).map(fn(n: Int) Int => Int.wrappingMul(n, 3)))}")
+  console.print("filter ${show(d.filter(fn(n: Int) Bool => n > 1))} ${show(d.filter(fn(n: Int) Bool => n > 9))}")
+  console.print("fold ${d.fold(0, fn(sum, n) => Int.wrappingAdd(sum, n))} ${none.fold(0, fn(sum, n) => Int.wrappingAdd(sum, n))} ${d.fold(0, fn(acc, n) => Int.wrappingAdd(Int.wrappingMul(acc, 10), n))}")
+  console.print("any ${d.any(fn(n: Int) Bool => n > 2)} ${none.any(fn(n: Int) Bool => true)}")
+  console.print("all ${d.all(fn(n: Int) Bool => n > 0)} ${none.all(fn(n: Int) Bool => false)} ${d.all(fn(n: Int) Bool => n > 1)}")
+  console.print("find ${d.find(fn(n: Int) Bool => n > 1) ?? -1} ${d.find(fn(n: Int) Bool => n > 9) ?? -1} index ${d.indexWhere(fn(n: Int) Bool => n > 1) ?? -1} ${d.indexWhere(fn(n: Int) Bool => n > 9) ?? -1}")
+  console.print("contains ${d.contains(3)} ${d.contains(5)}")
+  let mut turned: Deque[Int] = Deque.default()
+  turned.pushFront(4)
+  turned.pushFront(2)
+  turned.pushFront(1)
+  turned.pushFront(0)
+  discard turned.popBack()
+  discard turned.popBack()
+  turned.pushBack(4)
+  discard turned.popFront()
+  console.print("list ${turned.toList().count()} ${show(turned)}")
+  let good = parseAll(Deque.fromList(List.of("1" as String, "22" as String, "333" as String))) or recover Deque.default()
+  console.print("parsed ${show(good)}")
+  let bad = parseAll(Deque.fromList(List.of("1" as String, "x" as String, "3" as String))) catch e {
+    console.print("failed ${e.code}")
+    report e
+    recover Deque.default()
+  }
+  console.print("parsed ${bad.count()}")
+  let mut store = Store(saved: 0)
+  saveAll(Deque.fromList(List.of("a" as String, "bb" as String, "cccc" as String, "d" as String)), editable store) catch e {
+    console.print("save failed after ${store.saved}")
+    report e
+    recover Void
+  }
+  console.print("saved ${store.saved}")
+  let sum = total(Deque.fromList(List.of("1" as String, "2" as String, "3" as String))) or recover 0
+  let empty = total(Deque.default()) or recover 7
+  console.print("total ${sum} ${empty}")
+  let broken = total(Deque.fromList(List.of("1" as String, "two" as String))) catch e {
+    console.print("failed ${e.code}")
+    report e
+    recover 0
+  }
+  console.print("total ${broken}")
+}

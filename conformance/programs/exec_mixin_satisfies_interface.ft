@@ -1,0 +1,40 @@
+// execute: Invoice 7|invoice|7
+// requires: runtime
+// covers: LANG-09-04, LANG-09-03
+// A mixin's method satisfies an interface member (9.6): `Invoice` lists `Titled` and `Kinded`, and the `title` and
+// `kind` they require come from the mixins `Named` and `Kinds`; a call through a bound and through a `dynamic`
+// reaches them on every backend.
+import fortis.host { Console }
+
+export interface Titled {
+  pure func title(self) String
+}
+
+export interface Kinded {
+  pure func kind(self) String
+}
+
+export mixin Named {
+  requires pure func id(self) Int
+  export pure func title(self) String => "Invoice ${self.id()}"
+}
+
+export mixin Kinds {
+  export pure func kind(self) String => "invoice"
+}
+
+export class Invoice implements Titled, Kinded with Named, Kinds {
+  export number: Int
+  export pure func id(self) Int => self.number
+}
+
+func titleOf[T](x: T) String where T implements Titled => x.title()
+
+func kindOf(x: dynamic Kinded) String => x.kind()
+
+func main(console: Console) {
+  let i = Invoice(number: 7)
+  console.print(titleOf(i))
+  console.print(kindOf(i))
+  console.print("${i.id()}")
+}

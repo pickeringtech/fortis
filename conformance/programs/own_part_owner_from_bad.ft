@@ -1,0 +1,72 @@
+// reject: E-OWN-051 (at the marked lines)
+// covers: LANG-07-06, LANG-07-07
+// D-388, D-389, 7.6, 7.9: a binding that owns a part of what it holds beside a loan (a `??` whose fallback is the
+// function's own, a tuple built around one, an `if` or `match` one of whose branches gives one) is the function's own
+// on that path, so it cannot be the result declared `from` a parameter, returned bare, moved, inside `present`, or
+// given out of an arm: E-OWN-051, as `return move d` is (D-373). Both checkers judged the returned expression alone
+// and read a loan-typed binding as lending; the interpreter ran the fallback's cleanup at the call and the caller
+// read the destroyed value, the VM lost the cleanup, and native code refused the program.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+    self.label = String.from("dead")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: String.from(label), console: console.retain())
+}
+
+func bare(empty: List[Token], d: owned Token) alias Token from empty {
+  let t = empty.get(0) ?? move d
+  return t                                                                // reject: E-OWN-051 — t owns the fallback on one path
+}
+
+func moved(empty: List[Token], d: owned Token) alias Token from empty {
+  let t = empty.get(0) ?? move d
+  return move t                                                           // reject: E-OWN-051 — moving it changes nothing
+}
+
+func wrapped(empty: List[Token], d: owned Token) (alias (Token, Int) from empty)? {
+  let t = (empty.get(0) ?? move d, 1)
+  return present(t)                                                       // reject: E-OWN-051 — the tuple owns the fallback
+}
+
+func tupleBare(empty: List[Token], d: owned Token) alias (Token, Int) from empty {
+  let t = (empty.get(0) ?? move d, 1)
+  return t                                                                // reject: E-OWN-051 — returned bare
+}
+
+func pick(empty: List[Token], d: owned Token, flag: Bool, console: Shared[Console]) (alias Token from empty)? {
+  return match empty.get(0) {                                             // reject: E-OWN-051 — the arm gives v, which owns the `if`'s moved value
+    present(x) => {
+      let v = if flag { give x } else { give move d }
+      give v
+    }
+    null => {
+      give null
+    }
+  }
+}
+
+func reassigned(empty: List[Token], d: owned Token) (alias Token from empty)? {
+  let mut t = empty.get(0)
+  t = present(empty.get(1) ?? move d)
+  return t                                                                // reject: E-OWN-051 — t came to own the fallback
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let empty: List[Token] = List.default()
+  console.print(bare(alias empty, make(console, "a")).label)
+  console.print(moved(alias empty, make(console, "b")).label)
+  discard wrapped(alias empty, make(console, "c"))
+  console.print("${tupleBare(alias empty, make(console, "d")).1}")
+  console.print(pick(alias empty, make(console, "e"), true, console)?.label ?? "none")
+  console.print(reassigned(alias empty, make(console, "f"))?.label ?? "none")
+}

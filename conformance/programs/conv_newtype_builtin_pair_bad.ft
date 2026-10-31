@@ -1,0 +1,8 @@
+// reject: E-TYP-183
+// covers: LANG-06-15
+// A class cannot override its built-in representation conversion to a newtype.
+class Raw {
+  n: Int
+  convert to Wrapped { return Wrapped(copy self) } // reject: E-TYP-183
+}
+type Wrapped = Raw

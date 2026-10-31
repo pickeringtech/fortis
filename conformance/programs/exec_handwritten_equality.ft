@@ -1,0 +1,44 @@
+// execute: true|true|false|one|1|true|false
+// requires: runtime
+// covers: LANG-06-10, LANG-06-06
+// 6.10, 6.7 (X-516): a type's own `equals`, `compare` and `hash` are what `==`, `!=`, the ordering operators and the
+// hash containers call, on an enum and a class, on every backend. A `Hashable` type that writes its own `equals`
+// hashes nothing (`Hasher` has no members in Language 1.0), so equal values hash alike and the containers decide by
+// `equals`: a `Map` finds a key its hand-written `equals` makes equal, and a `Set` reports it (D-84).
+import fortis.host { Console }
+
+export enum Mood implements Equatable {
+  Happy
+  Sad
+  pure func equals(self, other: Mood) Bool => true
+}
+
+export class Rank implements Equatable, Comparable {
+  export n: Int
+  pure func equals(self, other: Rank) Bool => self.n == other.n
+  pure func compare(self, other: Rank) Ordering {
+    if self.n < other.n {
+      return Less
+    }
+    if self.n > other.n {
+      return Greater
+    }
+    return Equal
+  }
+}
+
+class Key derive Hashable implements Equatable {
+  export n: Int
+  export ignore: Int
+  pure func equals(self, other: Key) Bool => self.n == other.n
+}
+
+func main(console: Console) {
+  console.print("${Mood.Happy == Sad}|${Rank(n: 1) < Rank(n: 2)}|${Rank(n: 3) != Rank(n: 3)}")
+  let mut m: Map[Key, String] = Map.default()
+  m.set(Key(n: 1, ignore: 100), "one")
+  console.print("${m.get(Key(n: 1, ignore: 999)) ?? "none"}|${m.count()}")
+  let mut s: Set[Key] = Set.default()
+  discard s.add(Key(n: 2, ignore: 1))
+  console.print("${s.contains(Key(n: 2, ignore: 55))}|${s.contains(Key(n: 3, ignore: 1))}")
+}

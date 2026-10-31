@@ -1,0 +1,9 @@
+// reject: E-OWN-051
+// covers: LANG-07-06, LANG-07-07
+// D-562: the owned fallback dies before part is used.
+import fortis.host { Console }
+func main(console: Console) {
+  let empty: List[String] = List.default()
+  let part = (empty.get(0) ?? (" temp " as String)).trim() // reject: E-OWN-051
+  console.print(part)
+}

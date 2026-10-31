@@ -1,0 +1,4 @@
+// accept
+// covers: LANG-06-02
+// D-706: the declared index element type, including a generic or optional element.
+func f[T](xs: editable List[T], v: owned T) { xs[0] = move v }

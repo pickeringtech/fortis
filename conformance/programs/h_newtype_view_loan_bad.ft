@@ -1,0 +1,9 @@
+// reject: E-OWN-010
+// covers: LANG-06-01, LANG-07-05
+type Borrowed = ListView[Int]
+func demo() {
+  let mut raw = List.of(1, 2)
+  let xs = Borrowed(alias raw)
+  raw.push(3)
+  let n = xs.count()
+}

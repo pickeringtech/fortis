@@ -1,0 +1,41 @@
+// reject: E-TYP-080 (at the marked lines)
+// covers: LANG-09-03, LANG-04-04
+// A requirement is matched by identity and type arguments (9.5; D-67): `Svc` requires `Tagged[String]`, and `Job`
+// implements `Tagged[Int]`, a different instantiation (4.4), so `Job` lacks the requirement; `Task` implements the
+// right one. A requirement stated in the interface's own parameters (`Keyed[K] requires Tagged[K]`) is matched with
+// the arguments the implementation gives.
+export interface Tagged[T] {
+  pure func tag(self) T
+}
+
+export interface Svc requires Tagged[String] {
+  func run(self) Int
+}
+
+export interface Keyed[K] requires Tagged[K] {
+  func key(self) K
+}
+
+export class Job implements Svc, Tagged[Int] {          // reject: E-TYP-080
+  export n: Int
+  pure func tag(self) Int => self.n
+  export func run(self) Int => self.n
+}
+
+export class Task implements Svc, Tagged[String] {
+  export n: Int
+  pure func tag(self) String => "t"
+  export func run(self) Int => self.n
+}
+
+export class Row implements Keyed[Int], Tagged[Int] {
+  export n: Int
+  pure func tag(self) Int => self.n
+  func key(self) Int => self.n
+}
+
+export class Bad implements Keyed[Int], Tagged[String] {   // reject: E-TYP-080
+  export n: Int
+  pure func tag(self) String => "b"
+  func key(self) Int => self.n
+}

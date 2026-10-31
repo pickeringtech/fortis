@@ -22,7 +22,7 @@ func show(console: Shared[Console], t: Token) {
 }
 
 func taken(console: Shared[Console], xs: List[Token]) {
-  let d = Token(label: String.from("unused"), console: console.retain())
+  let d = Token(label: "unused" as String, console: console.retain())
   let t = xs.get(0) ?? move d
   console.print("present ${t.label}")
   console.print("after present")
@@ -38,9 +38,9 @@ func lent(console: Shared[Console], xs: List[Token], spare: Token) {
 func main(out: Console) {
   let console = Shared.create(move out)
   let mut toks: List[Token] = List.default()
-  toks.push(Token(label: String.from("item"), console: console.retain()))
+  toks.push(Token(label: "item" as String, console: console.retain()))
   let empty: List[Token] = List.default()
-  let spare = Token(label: String.from("spare"), console: console.retain())
+  let spare = Token(label: "spare" as String, console: console.retain())
   taken(console, toks)
   lent(console, toks, spare)
   lent(console, empty, spare)

@@ -1,0 +1,7 @@
+// reject: E-TYP-040
+// covers: LANG-08-02, LANG-08-04
+func call(f: fn() Void) {}
+func demo() {
+  let mut n = 0
+  call(fn() { n = 1 })
+}

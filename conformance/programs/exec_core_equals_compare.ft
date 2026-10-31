@@ -1,0 +1,34 @@
+// execute: true|less|true|false|less|true|less
+// requires: runtime
+// covers: LANG-06-10
+// 6.10 (X-516): a core type that implements `Equatable` or `Comparable` provides `equals` and `compare` as ordinary
+// methods, callable directly on a value and through a `where` bound, on the interpreter, the VM and native (D-85).
+import fortis.host { Console }
+
+func same[T](a: T, b: T) Bool where T implements Equatable {
+  return a.equals(b)
+}
+
+func order[T](a: T, b: T) String where T implements Comparable {
+  return match a.compare(b) {
+    Less => "less"
+    Equal => "equal"
+    Greater => "greater"
+  }
+}
+
+func word(o: Ordering) String {
+  return match o {
+    Less => "less"
+    Equal => "equal"
+    Greater => "greater"
+  }
+}
+
+func main(console: Console) {
+  console.print("${same(1, 1)}|${order(1, 2)}")
+  let x = 1
+  let s = "a"
+  console.print("${x.equals(1)}|${x.equals(2)}|${word(x.compare(2))}")
+  console.print("${s.equals("a")}|${word(s.compare("b"))}")
+}

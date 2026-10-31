@@ -1,0 +1,9 @@
+// execute: 2 3
+// requires: runtime
+// covers: LANG-06-11
+import fortis.host { Console }
+func main(console: Console) {
+  let seed = Array[Int, 2].filled(0)
+  let arr: Array[Int, 3] = Array.filled(7)
+  console.print("${seed.count()} ${arr.count()}")
+}

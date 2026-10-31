@@ -1,0 +1,15 @@
+// reject: E-OWN-051
+// covers: LANG-07-06, LANG-07-07
+// D-562: inner statements must not lose the scrutinee's temporary loan.
+import fortis.host { Console }
+func main(console: Console) {
+  let kept = match present((" temp " as String).trim()) { // reject: E-OWN-051
+    present(text) => {
+      let n = text.scalarCount()
+      console.print("${n}")
+      give text
+    }
+    null => ""
+  }
+  console.print(kept)
+}

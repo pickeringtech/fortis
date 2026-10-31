@@ -1,0 +1,13 @@
+// reject: E-OWN-053
+// covers: LANG-07-06
+// D-580: a generic owner's associated function value retains its storage requirement.
+class Factory[T] {
+  export pure func store(value: owned T) Int {
+    let xs = List.of(move value)
+    return xs.count()
+  }
+}
+pure func use(text: StringView) Int {
+  let f: pure fn(owned StringView) Int = Factory.store
+  return f(text)
+}

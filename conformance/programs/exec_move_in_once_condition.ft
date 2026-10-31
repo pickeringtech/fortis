@@ -1,0 +1,98 @@
+// execute: drop if|equal|end if|drop rel|big|end rel|drop and|drop and2|both|end and|drop tern|tern 1|drop guard|one|end guard|drop coalesce|coalesced|end coalesce|drop first|iter 1|drop next|end while|end
+// requires: runtime
+// covers: LANG-07-04, LANG-05-03
+// D-448, 5.2, 7.4: a `move` in a condition that is evaluated once moves the place once: an `if` condition (an
+// equality, a relational, a conjunction of two moves), an if-expression, a `when` guard and a `??` fallback inside
+// the condition check and run as the `let` before the test does. Both checkers typed the condition twice, once for
+// its effects and once for the narrowing, and the second typing reported the move as a use after it (E-OWN-020);
+// the narrowing now re-types its operands with their diagnostics truncated, as the fall-through narrowing always
+// did, since the condition was typed already. A `while` condition is evaluated on every iteration (5.3) and keeps
+// its rejection (own_move_in_while_condition_bad.ft); the `while` here re-assigns the place on the body's path
+// back, so the next iteration moves a fresh value and every backend runs it alike. The tokens sit in slots without
+// a cleanup of their own, so that no backend announces the temporaries in its trace (D-344); the output shows
+// every cleanup once.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+class Slot {
+  token: Token
+}
+
+func make(console: Shared[Console], label: StringView) Slot {
+  return Slot(token: Token(label: label as String, console: console.retain()))
+}
+
+func label(s: owned Slot) Int {
+  return s.token.label.byteCount()
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  {
+    let d = make(console, "if")
+    if label(move d) == 2 {
+      console.print("equal")
+    } else {
+      console.print("other")
+    }
+    console.print("end if")
+  }
+  {
+    let d = make(console, "rel")
+    if label(move d) > 1 {
+      console.print("big")
+    }
+    console.print("end rel")
+  }
+  {
+    let d = make(console, "and")
+    let e = make(console, "and2")
+    if label(move d) == 3 && label(move e) == 4 {
+      console.print("both")
+    } else {
+      console.print("not both")
+    }
+    console.print("end and")
+  }
+  {
+    let d = make(console, "tern")
+    let n = if label(move d) == 4 { give 1 } else { give 2 }
+    console.print("tern ${n}")
+  }
+  {
+    let d = make(console, "guard")
+    let x = 1
+    match x {
+      1 when label(move d) == 5 => console.print("one")
+      _ => console.print("other")
+    }
+    console.print("end guard")
+  }
+  {
+    let empty: List[Slot] = List.default()
+    let d = make(console, "coalesce")
+    if (empty.get(0) ?? move d).token.label == "coalesce" as String {
+      console.print("coalesced")
+    }
+    console.print("end coalesce")
+  }
+  {
+    let mut d = make(console, "first")
+    let mut i = 0
+    while label(move d) == 5 && i < 2 {
+      i = i + 1
+      d = make(console, "next")
+      console.print("iter ${i}")
+    }
+    console.print("end while")
+  }
+  console.print("end")
+}

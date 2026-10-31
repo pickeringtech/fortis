@@ -1,0 +1,58 @@
+// execute: temp|named|static|named|named|named|static|temp|temp|temp|4|owned|named|static|4
+// requires: runtime
+// covers: LANG-07-06, LANG-07-07
+// D-562: bind the owner first; static and named branches lend without making an owner.
+import fortis.host { Console }
+pure func constant(text: StringView) StringView from static => "static"
+pure func fresh() String => " temp " as String
+export error Missing {
+  code: "demo.missing"
+}
+try func first(xs: List[String]) alias String from xs => xs.get(0) ?? fail Missing()
+recovers func main(console: Console) {
+  let empty: List[String] = List.default()
+  let fallback = " temp " as String
+  let part = (empty.get(0) ?? alias fallback).trim()
+  console.print(part)
+  let named = " named " as String
+  let direct = named.trim()
+  console.print(direct)
+  let staticText = (empty.get(0) ?? " static ").trim()
+  console.print(staticText)
+  let chosen = (if empty.isEmpty() {
+    give alias named
+  } else {
+    give alias fallback
+  }).trim()
+  console.print(chosen)
+  let matched = (match empty.get(0) {
+    present(value) => value
+    null => alias named
+  }).trim()
+  console.print(matched)
+  let recovered = (first(alias empty) or recover alias named).trim()
+  console.print(recovered)
+  let caught = (first(alias empty) catch e {
+    recover " static "
+  }).trim()
+  console.print(caught)
+  console.print((empty.get(0) ?? fresh()).trim())
+  console.print((first(alias empty) or recover fresh()).trim())
+  console.print((" temp " as String).trim())
+  let count = fresh().trim().scalarCount()
+  console.print("${count}")
+  let text = " owned ".trim() as String
+  console.print(text)
+  let bare = (empty.get(0) ?? named).trim()
+  console.print(bare)
+  let unrelated = constant(fresh().trim())
+  console.print(unrelated)
+  let matchedCount = match present((" temp " as String).trim()) {
+    present(piece) => {
+      let n = piece.scalarCount()
+      give n
+    }
+    null => 0
+  }
+  console.print("${matchedCount}")
+}

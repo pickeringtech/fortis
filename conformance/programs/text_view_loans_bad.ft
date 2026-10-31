@@ -1,0 +1,28 @@
+// reject: E-OWN-051, E-OWN-011 (at the marked lines)
+// covers: LANG-07-06, LANG-06-06
+// X-479, R19, 6.6: `trim`, `trimStart` and `trimEnd` answer a view of the text they are called on (`StringView from
+// self`), so the view is a loan of its owner. It cannot be returned past a local owner (E-OWN-051), and the owner
+// cannot be moved away while the view is alive (E-OWN-011). Both are the rules `slice` already follows.
+import fortis.host { Console }
+
+func escapes() StringView from static {
+  let local = "  padded " as String
+  return local.trim()                           // reject: E-OWN-051 — the view of a local String outlives it
+}
+
+func escapesStart(text: StringView) StringView from static {
+  let local = text as String
+  return local.trimStart()                      // reject: E-OWN-051 — the same for trimStart
+}
+
+func escapesEnd() StringView from static {
+  let local = "  padded " as String
+  return local.trimEnd()                        // reject: E-OWN-051 — and for trimEnd
+}
+
+func moveAway(console: Console) {
+  let text = "  moved " as String
+  let trimmed = text.trim()
+  let taken = move text                         // reject: E-OWN-011 — text is moved while trimmed still borrows it
+  console.print("${trimmed}${taken}")
+}

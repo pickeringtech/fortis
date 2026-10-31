@@ -30,11 +30,11 @@ try func main(console: Console) {
     let old = g.replace(42)
     console.print("${Int.wrappingAdd(old, g.get())}")
   }
-  let t = Mutex.create(Tally(hits: 0, names: List.of(String.from("a"))))
+  let t = Mutex.create(Tally(hits: 0, names: List.of("a" as String)))
   {
     let g = t.lockBlocking() or fail
     let mut tally = g.replace(Tally(hits: 0, names: List.default()))
-    tally.names.push(String.from("b"))
+    tally.names.push("b" as String)
     console.print("${tally.names.count()}")
     g.set(move tally)
   }

@@ -1,0 +1,10 @@
+// reject: E-TYP-040
+// covers: LANG-08-04
+// D-541: callable parameter modes must match exactly.
+func use(f: pure fn(editable String) Int) {}
+func exercise() {
+  let count = 0
+  use(fn(s: owned String) Int => s.byteCount())
+  use(fn[count](s: owned String) Int => Int.saturatingAdd(count, s.byteCount()))
+  use(fn(s: owned String) Int => Int.saturatingAdd(count, s.byteCount()))
+}

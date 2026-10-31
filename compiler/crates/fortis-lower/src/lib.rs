@@ -164,6 +164,16 @@ fn reachable(prog: &Program, tests: bool) -> (BTreeSet<String>, BTreeSet<String>
                 note_ty(&l.ty, &mut tys);
             }
             note_ty(&f.ret, &mut tys);
+            // an interface of the program's that a `where` bound names becomes a trait, with those it requires, so
+            // the bound has something to name (D-82)
+            for (_, i, args) in &f.bounds {
+                if is_user_iface(prog, i) {
+                    for x in iface_closure(prog, i) {
+                        tys.insert(x);
+                    }
+                }
+                args.iter().for_each(|a| note_ty(a, &mut tys));
+            }
             // a reachable associated function brings its type, even one never used as a value (`C.make()`)
             for t in prog.types.iter().filter(|t| t.methods.iter().any(|(_, m)| *m == n)) {
                 tys.insert(t.name.clone());
@@ -197,8 +207,21 @@ fn reachable(prog: &Program, tests: bool) -> (BTreeSet<String>, BTreeSet<String>
             match &t.kind {
                 TypeKind::Class { fields } => fields.iter().for_each(|fd| note_ty(&fd.ty, &mut tys)),
                 TypeKind::Enum { variants } => variants.iter().for_each(|v| v.fields.iter().for_each(|(_, ft)| note_ty(ft, &mut tys))),
+                // an interface's trait is written from its declaration: the types its signatures name, and the
+                // interfaces of the program's that it requires (its supertraits)
+                TypeKind::Interface { .. } if is_user_module(&t.module) => {
+                    for s in &t.sigs {
+                        s.params.iter().for_each(|(_, _, pt)| note_ty(pt, &mut tys));
+                        note_ty(&s.ret, &mut tys);
+                    }
+                    for r in t.requires.iter().filter(|r| is_user_iface(prog, r)) {
+                        tys.insert(r.clone());
+                    }
+                    t.iface_args.iter().for_each(|(_, a)| a.iter().for_each(|x| note_ty(x, &mut tys)));
+                }
                 _ => {}
             }
+            t.iface_args.iter().for_each(|(_, a)| a.iter().for_each(|x| note_ty(x, &mut tys)));
         }
         // done when no new function is queued and no new type was noted
         if work.is_empty() && tys.len() == types_before {
@@ -634,12 +657,13 @@ fn type_params_in(t: &Type, out: &mut BTreeSet<String>) {
             params.iter().for_each(|a| type_params_in(a, out));
             type_params_in(ret, out);
         }
+        Type::Dynamic(n) => n.args.iter().for_each(|a| type_params_in(a, out)),
         _ => {}
     }
 }
 
-const BOUND: &str = "Clone + PartialEq + rt::Show";
-
+/// Every type parameter's fixed bound. The standard traits are named by path, so a type or interface a program
+/// declares under the same name (`Clone`) cannot capture it.
 /// A function's Rust signature: generic parameters, parameters by mode, the result (wrapped for `try`).
 fn signature(prog: &Program, f: &Function, rust_name: &str, in_impl: bool, frame: bool) -> String {
     signature_for(prog, f, rust_name, in_impl, frame, false)
@@ -647,11 +671,22 @@ fn signature(prog: &Program, f: &Function, rust_name: &str, in_impl: bool, frame
 
 /// `for_trait`: a trait declaration keeps `&self` for every read receiver (so the trait stays usable as `dyn`).
 fn signature_for(prog: &Program, f: &Function, rust_name: &str, in_impl: bool, frame: bool, for_trait: bool) -> String {
+    signature_with(prog, f, rust_name, in_impl, frame, for_trait, &BTreeSet::new(), false)
+}
+
+/// `exclude`: type parameters the enclosing trait or impl declares; `boxed_async`: an async method of a trait
+/// returns a boxed future whose lifetime covers its loans, so the trait stays usable as `dyn` (12.3).
+fn signature_with(prog: &Program, f: &Function, rust_name: &str, in_impl: bool, frame: bool, for_trait: bool, exclude: &BTreeSet<String>, boxed_async: bool) -> String {
+    let boxed = boxed_async && f.has("async");
     let mut tparams: BTreeSet<String> = BTreeSet::new();
     for p in &f.params {
         type_params_in(&f.locals[p.local as usize].ty, &mut tparams);
     }
     type_params_in(&f.ret, &mut tparams);
+    // a parameter only a bound's arguments name (`where T implements Part[A]`) is the function's too
+    for (_, _, args) in &f.bounds {
+        args.iter().for_each(|a| type_params_in(a, &mut tparams));
+    }
     // an optional loan (`(alias T from xs)?`) names its origin as a loan does (D-338)
     let ret_loan = match &f.ret {
         Type::Optional(i) if matches!(&**i, Type::Loan { .. }) => &**i,
@@ -663,6 +698,9 @@ fn signature_for(prog: &Program, f: &Function, rust_name: &str, in_impl: bool, f
         _ => None,
     };
     let mut gens: Vec<String> = Vec::new();
+    if boxed {
+        gens.push("'__f".into());
+    }
     if let Some(o) = &origin {
         gens.push(format!("'{}", ident(o)));
     }
@@ -672,9 +710,28 @@ fn signature_for(prog: &Program, f: &Function, rust_name: &str, in_impl: bool, f
     } else {
         BTreeSet::new()
     };
-    for t in tparams.iter().filter(|t| !class_params.contains(*t)) {
-        gens.push(format!("{}: {BOUND}", ident(t)));
+    for t in tparams.iter().filter(|t| !class_params.contains(*t) && !exclude.contains(*t) && t.as_str() != "Self") {
+        // a `where T implements I` bound on an interface the program declares is a trait bound, so a method of `I`
+        // called on a `T` resolves statically (D-82); an ordered bound adds `PartialOrd`
+        // a `T` the body boxes into an owned `dynamic I` (`move x` where `dynamic I` is expected) outlives the call,
+        // which `Box<dyn I>` states as `'static` (D-88 (b))
+        let b = param_bounds(prog, &f.bounds, t);
+        let all: Vec<&str> = [b.as_str(), if boxed_tparams(f).contains(t) { "'static" } else { "" }].into_iter().filter(|s| !s.is_empty()).collect();
+        gens.push(if all.is_empty() { ident(t) } else { format!("{}: {}", ident(t), all.join(" + ")) });
     }
+    // a bound on a parameter of the method's class (the class's own `where`, or the method's): a `where` clause on
+    // the method, since the class's impl gives its parameters only the fixed bound
+    let class_where: Vec<String> = class_params
+        .iter()
+        .filter_map(|p| {
+            let b = param_bounds(prog, &f.bounds, p);
+            if b.is_empty() {
+                None
+            } else {
+                Some(format!("{}: {b}", ident(p)))
+            }
+        })
+        .collect();
     let mut ps: Vec<String> = Vec::new();
     for p in &f.params {
         let t = &f.locals[p.local as usize].ty;
@@ -683,7 +740,9 @@ fn signature_for(prog: &Program, f: &Function, rust_name: &str, in_impl: bool, f
             let by_value = !for_trait && trivial(t, prog);
             ps.push(match p.mode {
                 Mode::Read if by_value => "self".into(),
+                Mode::Read if boxed => "&'__f self".into(),
                 Mode::Read => "&self".into(),
+                Mode::Editable if boxed => "&'__f mut self".into(),
                 Mode::Editable => "&mut self".into(),
                 Mode::Owned => "self".into(),
             });
@@ -692,6 +751,17 @@ fn signature_for(prog: &Program, f: &Function, rust_name: &str, in_impl: bool, f
         let mut pt = param_ty(t, p.mode, prog);
         if origin.as_deref() == Some(p.name.as_str()) && pt.starts_with('&') {
             pt = format!("&'{} {}", ident(&p.name), &pt[1..]);
+        } else if origin.as_deref() == Some(p.name.as_str()) && pt.starts_with("Option<&") {
+            pt = pt.replacen("Option<&", &format!("Option<&'{} ", ident(&p.name)), 1);
+        } else if boxed && pt.starts_with('&') {
+            pt = format!("&'__f {}", &pt[1..]);
+        }
+        if p.mode == Mode::Owned {
+            if let Type::Fn { origin: region, .. } = strip(t) {
+                if !region.is_empty() && (region == "static" || origin.as_ref() == Some(region)) {
+                    pt.push_str(&format!(" + '{}", if region == "static" { region.clone() } else { ident(region) }));
+                }
+            }
         }
         let mutable = matches!(p.mode, Mode::Owned) && f.locals[p.local as usize].mutable;
         ps.push(format!("{}{}: {pt}", if mutable { "mut " } else { "" }, ident(&f.locals[p.local as usize].name)));
@@ -708,7 +778,14 @@ fn signature_for(prog: &Program, f: &Function, rust_name: &str, in_impl: bool, f
             None => param_ty(&f.ret, Mode::Owned, prog),
         }
     } else {
-        rust_ty(&f.ret, prog)
+        let r = result_ty(&f.ret, prog);
+        // a loan of the receiver (`(alias T from self)?`) of a method lowered as a free function names the receiver's
+        // lifetime: with another reference parameter, such as a callback, Rust has no single lifetime to elide to
+        // (`List.find`; X-479). A method in an `impl` takes `&self`, whose lifetime elides to the result's.
+        match &origin {
+            Some(o) if o == "self" && !for_trait && !in_impl && (r.starts_with('&') || r.starts_with("Option<&")) => r.replacen('&', "&'self_ ", 1),
+            _ => r,
+        }
     };
     let ret = if f.label.starts_with("test ") {
         "Result<(), TestFailure>".to_string()
@@ -719,11 +796,346 @@ fn signature_for(prog: &Program, f: &Function, rust_name: &str, in_impl: bool, f
     };
     let g = if gens.is_empty() { String::new() } else { format!("<{}>", gens.join(", ")) };
     let short = rust_name.rsplit("::").next().unwrap_or(rust_name);
+    let w = if class_where.is_empty() { String::new() } else { format!(" where {}", class_where.join(", ")) };
+    if boxed {
+        return format!("fn {short}{g}({}) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = rt::task::Async<{ret}>> + '__f>>{w}", ps.join(", "));
+    }
     // an async function is a Rust `async fn` state machine whose `Err` is the cancellation exit (C.1)
     if f.has("async") && !f.label.starts_with("test ") {
-        return format!("async fn {short}{g}({}) -> rt::task::Async<{ret}>", ps.join(", "));
+        return format!("async fn {short}{g}({}) -> rt::task::Async<{ret}>{w}", ps.join(", "));
     }
-    format!("fn {short}{g}({}) -> {ret}", ps.join(", "))
+    format!("fn {short}{g}({}) -> {ret}{w}", ps.join(", "))
+}
+
+/// The type parameters whose values the body converts to an owned `dynamic I` (boxed), which Rust bounds `'static`.
+fn boxed_tparams(f: &Function) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    if let Some(b) = &f.body {
+        visit_block(b, &mut |e| {
+            if let ExprKind::ToDynamic { value, borrowed: false, .. } = &e.kind {
+                if let Type::TypeParam(p) = strip(&value.ty) {
+                    out.insert(p.clone());
+                }
+            }
+        });
+    }
+    out
+}
+
+/// A marker type parameter for an interface's own parameter (or `Self`) in a signature written for its trait or an
+/// impl of it: substituted in the written signature, so the trait and every impl pass it the same way.
+fn marker(i: usize) -> String {
+    // A compiler placeholder cannot share a user spelling, or be a prefix of another placeholder.
+    format!("__ft_signature_{i}_end")
+}
+
+/// An interface method's signature for its trait (`subst` maps each parameter and `Self` to the Rust it stands for)
+/// or for an impl (the implementing type's arguments): the written signature, and each parameter's written type.
+fn iface_method_sig(prog: &Program, iface: &TypeDef, ms: &MethodSig, subst: &BTreeMap<String, String>, boxed: bool, name: &str) -> (String, Vec<String>) {
+    let mut names: Vec<String> = iface.type_params.clone();
+    names.push("Self".into());
+    let marks: BTreeMap<String, Type> = names.iter().enumerate().map(|(i, n)| (n.clone(), Type::TypeParam(marker(i)))).collect();
+    let mark = |t: &Type| subst_tparams(t, &marks);
+    let mut locals = vec![LocalDecl { name: "self".into(), ty: Type::TypeParam(marker(names.len() - 1)), mutable: ms.receiver == Some(Mode::Editable), kind: LocalKind::SelfParam, boxed: false }];
+    let mut params = vec![Param { local: 0, name: "self".into(), mode: ms.receiver.unwrap_or(Mode::Read), default: None }];
+    for (i, (n, m, t)) in ms.params.iter().enumerate() {
+        locals.push(LocalDecl { name: n.clone(), ty: mark(t), mutable: false, kind: LocalKind::Param, boxed: false });
+        params.push(Param { local: (i + 1) as u32, name: n.clone(), mode: *m, default: None });
+    }
+    let f = Function {
+        name: format!("{}::iface {}.{}", iface.module, iface.name, ms.name),
+        label: format!("iface {}.{}", iface.name, ms.name),
+        module: iface.module.clone(),
+        body_module: None,
+        line: 0,
+        params,
+        ret: mark(&ms.ret),
+        modifiers: ms.modifiers.clone(),
+        locals,
+        body: None,
+        effects: Effects::default(),
+        observe: None,
+        closure: None,
+        bounds: ms.bounds.iter().map(|(p, i, a)| (p.clone(), i.clone(), a.iter().map(|x| mark(x)).collect())).collect(),
+    };
+    let exclude: BTreeSet<String> = (0..names.len()).map(marker).collect();
+    let unmark = |text: String| -> String {
+        let mut text = text;
+        for (i, n) in names.iter().enumerate() {
+            let to = subst.get(n).cloned().unwrap_or_else(|| if n == "Self" { "Self".into() } else { ident(n) });
+            text = text.replace(&ident(&marker(i)), &to);
+        }
+        text
+    };
+    // a read `fn` parameter is `&impl Fn` on an inherent method; the trait takes it as `&dyn Fn`, which a `dyn`
+    // value can dispatch (D-88 (e)); the impl passes it on as `&f`, which is itself `Fn`
+    let dyn_fn = |s: String| s.replace("&impl Fn(", "&dyn Fn(");
+    let sig = dyn_fn(unmark(signature_with(prog, &f, name, true, false, true, &exclude, boxed)));
+    let ptys: Vec<String> = ms.params.iter().map(|(_, m, t)| dyn_fn(unmark(param_ty(&mark(t), *m, prog)))).collect();
+    (sig, ptys)
+}
+
+/// A type with the type parameters `m` names replaced (a named type without arguments of that name too).
+fn subst_tparams(t: &Type, m: &BTreeMap<String, Type>) -> Type {
+    match t {
+        Type::TypeParam(p) => m.get(p).cloned().unwrap_or_else(|| t.clone()),
+        Type::Named(n) if n.args.is_empty() && m.contains_key(&n.name) => m[&n.name].clone(),
+        Type::Named(n) => Type::Named(fortis_types::types::NamedT { name: n.name.clone(), args: n.args.iter().map(|a| subst_tparams(a, m)).collect(), package: n.package.clone(), origin: n.origin.clone() }),
+        Type::Optional(i) => Type::Optional(Box::new(subst_tparams(i, m))),
+        Type::Loan { inner, mode, origin } => Type::Loan { inner: Box::new(subst_tparams(inner, m)), mode: mode.clone(), origin: origin.clone() },
+        Type::Tuple(ts) => Type::Tuple(ts.iter().map(|x| subst_tparams(x, m)).collect()),
+        Type::Record(fs) => Type::Record(fs.iter().map(|(k, x)| (k.clone(), subst_tparams(x, m))).collect()),
+        Type::Fn { capture_origins, param_modes, params, ret, kind, modifiers, origin, dynamic, identity } => Type::Fn { capture_origins: capture_origins.clone(),  param_modes: param_modes.clone(), params: params.iter().map(|x| subst_tparams(x, m)).collect(), ret: Box::new(subst_tparams(ret, m)), kind: kind.clone(), modifiers: modifiers.clone(), origin: origin.clone(), dynamic: *dynamic, identity: identity.clone() },
+        Type::Dynamic(n) => Type::Dynamic(fortis_types::types::NamedT { name: n.name.clone(), args: n.args.iter().map(|a| subst_tparams(a, m)).collect(), package: n.package.clone(), origin: n.origin.clone() }),
+        other => other.clone(),
+    }
+}
+
+fn mentions_self(t: &Type) -> bool {
+    match t {
+        Type::TypeParam(p) => p == "Self",
+        Type::Named(n) => n.name == "Self" || n.args.iter().any(mentions_self),
+        Type::Optional(i) | Type::Loan { inner: i, .. } => mentions_self(i),
+        Type::Tuple(ts) => ts.iter().any(mentions_self),
+        Type::Record(fs) => fs.iter().any(|(_, x)| mentions_self(x)),
+        Type::Fn { params, ret, .. } => params.iter().any(mentions_self) || mentions_self(ret),
+        Type::Dynamic(n) => n.args.iter().any(mentions_self),
+        _ => false,
+    }
+}
+
+/// A method a `dyn` value of the trait can dispatch: no `Self` but the receiver, no type parameters of its own, a
+/// borrowed receiver. Any other is `where Self: Sized`, so the trait stays usable as `dyn I`.
+fn dyn_dispatchable(ms: &MethodSig) -> bool {
+    // a read plain `fn` parameter is `&dyn Fn` in the trait (D-88 (e)); `fn mut`, `fn once`, an owned or an async
+    // callback are taken by value or are not `dyn`-compatible
+    let fn_ok = |m: &Mode, t: &Type| match strip(t) {
+        Type::Fn { kind, modifiers, .. } => *m == Mode::Read && kind == "fn" && !modifiers.iter().any(|x| x == "async"),
+        _ => true,
+    };
+    ms.type_params.is_empty()
+        && ms.receiver != Some(Mode::Owned)
+        && !ms.params.iter().any(|(_, m, t)| mentions_self(t) || !fn_ok(m, t))
+        && !mentions_self(&ms.ret)
+}
+
+fn with_where(sig: String, clause: &str) -> String {
+    if sig.contains(" where ") {
+        format!("{sig}, {clause}")
+    } else {
+        format!("{sig} where {clause}")
+    }
+}
+
+/// The type arguments with which `c` implements the interface `iface`: those it lists, or, for an interface it
+/// implements through another's `requires`, those that interface states with `c`'s arguments for it substituted.
+fn implements_args(prog: &Program, c: &TypeDef, iface: &str, depth: usize) -> Option<Vec<Type>> {
+    if depth > 16 {
+        return None;
+    }
+    if c.implements.iter().any(|i| i == iface) {
+        return Some(c.iface_args.iter().find(|(i, _)| i == iface).map(|(_, a)| a.clone()).unwrap_or_default());
+    }
+    for j in &c.implements {
+        let jd = match prog.type_def(j) {
+            Some(d) if matches!(d.kind, TypeKind::Interface { .. }) => d,
+            _ => continue,
+        };
+        if j != iface && iface_closure(prog, j).iter().any(|x| x == iface) {
+            let jargs = implements_args(prog, c, j, depth + 1).unwrap_or_default();
+            let m: BTreeMap<String, Type> = jd.type_params.iter().cloned().zip(jargs).collect();
+            // `iface` as `j` states it (directly, or through an interface `j` requires)
+            let stated = if jd.requires.iter().any(|r| r == iface) {
+                jd.iface_args.iter().find(|(i, _)| i == iface).map(|(_, a)| a.clone()).unwrap_or_default()
+            } else {
+                implements_args(prog, jd, iface, depth + 1).unwrap_or_default()
+            };
+            return Some(stated.iter().map(|a| subst_tparams(a, &m)).collect());
+        }
+    }
+    // an interface's own requirements, for the recursion above
+    if matches!(c.kind, TypeKind::Interface { .. }) && c.requires.iter().any(|r| r == iface) {
+        return Some(c.iface_args.iter().find(|(i, _)| i == iface).map(|(_, a)| a.clone()).unwrap_or_default());
+    }
+    None
+}
+
+/// The trait of an interface the program declares, from its declaration, and an impl of it for each reachable class
+/// or enum that implements it (directly, or through an interface that requires it) delegating to its methods. An
+/// interface without methods of its own (a bundle of requirements) is implemented by every type that meets them.
+fn declared_trait(prog: &Program, t: &TypeDef, tys: &BTreeSet<String>) -> String {
+    let mut out = String::new();
+    let tn = ident(&t.name);
+    // the interface's own parameters carry no bound (an argument may be a function or a `dynamic` value); one its
+    // signatures only lend is `?Sized`, so `dyn M` can instantiate it (D-88 (c))
+    let lent = unsized_params(prog, &t.name);
+    let tgens: Vec<String> = t.type_params.iter().map(|p| ident(p)).collect();
+    let tg = if tgens.is_empty() { String::new() } else { format!("<{}>", tgens.join(", ")) };
+    let tgens_decl: Vec<String> = t.type_params.iter().map(|p| if lent.contains(p) { format!("{}: ?::std::marker::Sized", ident(p)) } else { ident(p) }).collect();
+    let tg_decl = if tgens_decl.is_empty() { String::new() } else { format!("<{}>", tgens_decl.join(", ")) };
+    let own: BTreeMap<String, String> = t.type_params.iter().map(|p| (p.clone(), ident(p))).collect();
+    let mut supers = vec!["rt::Show".to_string()];
+    for r in t.requires.iter().filter(|r| is_user_iface(prog, r) && tys.contains(*r)) {
+        let args = t.iface_args.iter().find(|(i, _)| i == r).map(|(_, a)| a.clone()).unwrap_or_default();
+        supers.push(trait_ref(prog, r, &args));
+    }
+    let methods: Vec<&MethodSig> = t.sigs.iter().filter(|m| m.receiver.is_some()).collect();
+    let mut items = Vec::new();
+    for ms in &methods {
+        let is_async = ms.modifiers.iter().any(|m| m == "async");
+        let (sig, _) = iface_method_sig(prog, t, ms, &own, false, &ident(&ms.name));
+        // an async method: an `async fn` for static dispatch (no allocation), and a boxed-future twin a `dyn` value
+        // dispatches (12.3)
+        if is_async || !dyn_dispatchable(ms) {
+            items.push(format!("{};", with_where(sig, "Self: ::std::marker::Sized")));
+        } else {
+            items.push(format!("{sig};"));
+        }
+        if is_async && dyn_dispatchable(ms) {
+            let (dsig, _) = iface_method_sig(prog, t, ms, &own, true, &format!("{}__dyn", ident(&ms.name)));
+            items.push(format!("{dsig};"));
+        }
+    }
+    out.push_str(&format!("pub trait {tn}{tg_decl}: {} {{\n{}\n}}\n", supers.join(" + "), indent(&items.join("\n"), 1)));
+    if methods.is_empty() {
+        // a bundle: every type that meets its requirements has it (as the checker judges it, structurally)
+        let mut gens: Vec<String> = tgens_decl.clone();
+        gens.push(format!("__X: {} + ?::std::marker::Sized", supers.join(" + ")));
+        out.push_str(&format!("impl<{}> {tn}{tg} for __X {{}}\n\n", gens.join(", ")));
+        return out;
+    }
+    for c in prog.types.iter().filter(|c| tys.contains(&c.name) && matches!(c.kind, TypeKind::Class { .. } | TypeKind::Enum { .. })) {
+        let args = match implements_args(prog, c, &t.name, 0) {
+            Some(a) => a,
+            None => continue,
+        };
+        // a lent `dynamic M` argument is `(dyn M + 'x)`, and the impl ranges over `'x` (D-88 (c))
+        let (targs, lent_dyn) = trait_args_lt(prog, &t.name, &args, Some("'x"));
+        let mut subst: BTreeMap<String, String> = t.type_params.iter().cloned().zip(targs.iter().cloned()).collect();
+        subst.insert("Self".into(), "Self".into());
+        // the bounds the implementing methods need on the type's parameters, those of the interfaces this one
+        // requires included (their impls are this impl's supertraits)
+        let mut class_bounds: Vec<(String, String, Vec<Type>)> = Vec::new();
+        for x in iface_closure(prog, &t.name) {
+            let xd = match prog.type_def(&x) {
+                Some(d) if is_user_iface(prog, &x) => d,
+                _ => continue,
+            };
+            for ms in xd.sigs.iter().filter(|m| m.receiver.is_some()) {
+                if let Some(f) = c.methods.iter().find(|(m, _)| *m == ms.name).and_then(|(_, n)| prog.function(n)) {
+                    for b in f.bounds.iter().filter(|(p, _, _)| c.type_params.contains(p)) {
+                        if !class_bounds.contains(b) {
+                            class_bounds.push(b.clone());
+                        }
+                    }
+                }
+            }
+        }
+        let mut defs = Vec::new();
+        for ms in &methods {
+            let f = match c.methods.iter().find(|(x, _)| *x == ms.name).and_then(|(_, n)| prog.function(n)) {
+                Some(f) => f,
+                None => continue,
+            };
+            let (sig, ptys) = iface_method_sig(prog, t, ms, &subst, false, &ident(&ms.name));
+            let triv_self = trivial(&fortis_types::types::named(&c.name), prog);
+            let mut call_args: Vec<String> = Vec::new();
+            let mut k = 0;
+            for p in &f.params {
+                let l = &f.locals[p.local as usize];
+                if l.kind == LocalKind::SelfParam {
+                    call_args.push(if triv_self && p.mode == Mode::Read { "*self".to_string() } else { "self".to_string() });
+                    continue;
+                }
+                // the trait passes a parameter as the interface writes it; the method may take it otherwise
+                let name = ms.params.get(k).map(|(n, _, _)| ident(n)).unwrap_or_else(|| ident(&l.name));
+                let tr = ptys.get(k).cloned().unwrap_or_default();
+                let inh = param_ty(&l.ty, p.mode, prog);
+                k += 1;
+                let by_ref = |x: &str| x.starts_with('&') && !x.starts_with("&mut");
+                call_args.push(if tr == inh || (tr.starts_with("&(dyn ") && inh.starts_with("&dyn ")) {
+                    // the same type, or the trait's `&(dyn M + 'x)` where the method reads `&dyn M` (a subtype)
+                    name
+                } else if tr.starts_with("&dyn Fn(") && inh.starts_with("&impl Fn(") {
+                    // a function the trait lends as `&dyn Fn` where the method takes `&impl Fn`: `&&dyn Fn` is `Fn` too
+                    format!("&{name}")
+                } else if by_ref(&tr) && inh.starts_with("impl ") {
+                    // a function the trait lends boxed (`&Box<dyn Fn…>`) where the method takes `impl Fn…`
+                    format!("&**{name}")
+                } else if by_ref(&tr) && inh.starts_with("&dyn ") {
+                    // a `dynamic` value the trait lends boxed where the method reads `&dyn I`
+                    format!("::std::borrow::Borrow::<{}>::borrow({name})", &inh[1..])
+                } else if by_ref(&tr) && !by_ref(&inh) && inh != "&str" {
+                    format!("{name}.clone()")
+                } else if !by_ref(&tr) && by_ref(&inh) {
+                    format!("&{name}")
+                } else {
+                    name
+                });
+            }
+            let call = format!("{}::{}({})", ident(&c.name), ident(&ms.name), call_args.join(", "));
+            // the method's result as the interface declares it: an implementation without `async` or `try` is
+            // lifted into the interface's (9.5: an implementation may do less)
+            let (m_async, m_try) = (ms.modifiers.iter().any(|m| m == "async"), ms.modifiers.iter().any(|m| m == "try"));
+            let (f_async, f_try) = (f.has("async"), f.is_try());
+            let lift = |v: String| if m_try && !f_try { format!("Ok({v})") } else { v };
+            let body = if m_async {
+                if f_async {
+                    if m_try && !f_try { format!("{call}.await.map(Ok)") } else { format!("{call}.await") }
+                } else {
+                    format!("Ok({})", lift(call.clone()))
+                }
+            } else if !m_try {
+                // a function type the interface's parameter stands for is boxed in the trait; the method returns it
+                // unboxed
+                let arg_map: BTreeMap<String, Type> = t.type_params.iter().cloned().zip(args.iter().cloned()).collect();
+                let boxed_ret = matches!(strip(&ms.ret), Type::TypeParam(_)) && matches!(strip(&subst_tparams(&ms.ret, &arg_map)), Type::Fn { .. }) && matches!(strip(&f.ret), Type::Fn { .. });
+                if boxed_ret {
+                    format!("::std::boxed::Box::new({call})")
+                } else {
+                    call.clone()
+                }
+            } else {
+                lift(call.clone())
+            };
+            if m_async {
+                // the static `async fn` and its boxed twin
+                let static_sig = sig.replacen("fn ", "async fn ", if sig.starts_with("async fn ") { 0 } else { 1 });
+                defs.push(format!("{static_sig} {{\n    {body}\n}}"));
+                if dyn_dispatchable(ms) {
+                    let (dsig, _) = iface_method_sig(prog, t, ms, &subst, true, &format!("{}__dyn", ident(&ms.name)));
+                    defs.push(format!("{dsig} {{\n    ::std::boxed::Box::pin(async move {{ {body} }})\n}}"));
+                }
+            } else {
+                defs.push(format!("{sig} {{\n    {body}\n}}"));
+            }
+        }
+        // every declared trait requires `rt::Show`, and a generic type shows only when its parameters do, so the impl
+        // asks that of them (as the type's own structural `Show` does) and of nothing else (X-515; D-396)
+        let mut cps: Vec<String> = c
+            .type_params
+            .iter()
+            .map(|p| {
+                let b = param_bounds(prog, &class_bounds, p);
+                if b.split(" + ").any(|x| x == "rt::Show") {
+                    format!("{}: {b}", ident(p))
+                } else if b.is_empty() {
+                    format!("{}: rt::Show", ident(p))
+                } else {
+                    format!("{}: {b} + rt::Show", ident(p))
+                }
+            })
+            .collect();
+        if lent_dyn {
+            cps.insert(0, "'x".into());
+        }
+        let cg = if cps.is_empty() { String::new() } else { format!("<{}>", cps.join(", ")) };
+        let ca = if c.type_params.is_empty() { String::new() } else { format!("<{}>", c.type_params.iter().map(|p| ident(p)).collect::<Vec<_>>().join(", ")) };
+        let tref = if targs.is_empty() { tn.clone() } else { format!("{tn}<{}>", targs.join(", ")) };
+        out.push_str(&format!("impl{cg} {tref} for {}{ca} {{\n{}\n}}\n", ident(&c.name), indent(&defs.join("\n"), 1)));
+    }
+    out.push('\n');
+    out
 }
 
 /// The statement registering the program's observed `async` functions with the runtime, so that a task cancelled
@@ -789,7 +1201,7 @@ pub fn lower(prog: &Program, opts: &Options) -> Result<Lowered, Vec<LowerError>>
     out.push_str("// Generated by the Fortis production lowering (DEL-36) from the validated typed IR. Do not edit.\n");
     out.push_str("#![forbid(unsafe_code)]\n#![allow(dead_code, non_snake_case, non_camel_case_types, unused_imports, unused_variables, unused_mut, unused_parens, unreachable_code, unused_labels, unused_braces, irrefutable_let_patterns, clippy::all)]\n");
     out.push_str("use fortis_native as rt;\nuse rt::Show;\n\n");
-    out.push_str("pub enum TestFailure {\n    Failure(rt::Failure),\n    Expect(String),\n}\nimpl From<rt::Failure> for TestFailure {\n    fn from(f: rt::Failure) -> Self {\n        TestFailure::Failure(f)\n    }\n}\n\n");
+    out.push_str("pub enum TestFailure {\n    Failure(rt::Failure),\n    Expect(::std::string::String),\n}\nimpl ::std::convert::From<rt::Failure> for TestFailure {\n    fn from(f: rt::Failure) -> Self {\n        TestFailure::Failure(f)\n    }\n}\n\n");
     // ---- types
     let codec_set = codec::codec_types(prog);
     let recursive = recursive_functions(prog, &fns);
@@ -798,11 +1210,16 @@ pub fn lower(prog: &Program, opts: &Options) -> Result<Lowered, Vec<LowerError>>
         if !tys.contains(&t.name) || (BUILTIN_TYPES.contains(&t.name.as_str()) && !is_user_module(&t.module)) {
             continue;
         }
+        // The prelude and the standard module expose the same type (for example time.Instant).
+        // Emit its declaring module's definition once, as the checker's core identity does (D-593).
+        if t.module == "fortis.prelude" && prog.types.iter().any(|other| other.name == t.name && other.module != "fortis.prelude" && !is_user_module(&other.module)) {
+            continue;
+        }
         out.push_str(&type_decl(prog, t));
         // the canonical codec for a class or enum the program encodes or decodes (6.10)
         if codec_set.contains(&t.name) {
             let mut lower_default = |e: &Expr| -> String {
-                let dummy = Function { name: "main::field default".into(), label: "field default".into(), module: "main".into(), line: 0, params: vec![], ret: fortis_types::types::void(), modifiers: vec![], locals: vec![], body: None, effects: Effects::default(), observe: None, closure: None };
+                let dummy = Function { name: "main::field default".into(), label: "field default".into(), module: "main".into(), body_module: None, line: 0, params: vec![], ret: fortis_types::types::void(), modifiers: vec![], locals: vec![], body: None, effects: Effects::default(), observe: None, closure: None, bounds: vec![] };
                 let mut audit = Audit::default();
                 let mut g = FnGen::new(prog, &dummy, &mut audit, &names);
                 g.expr(e, gen::Want::Value)
@@ -841,10 +1258,13 @@ pub fn lower(prog: &Program, opts: &Options) -> Result<Lowered, Vec<LowerError>>
         let body = if recursive.contains(n) && !f.has("async") && tail_recursive(f, &recursive) { format!("let __depth = rt::stack::enter();\n{body}") } else { body };
         errors.extend(std::mem::take(&mut g.errors));
         if is_cleanup {
-            let t = f.label.trim_start_matches("cleanup ");
+            // The label is source spelling; its declaring type may have a qualified IR name (D-592).
+            let t = prog.types.iter().find(|d| d.cleanup.as_deref() == Some(f.name.as_str()))
+                .map(|d| d.name.as_str()).unwrap_or_else(|| f.label.trim_start_matches("cleanup "));
             let tparams = prog.type_def(t).map(|d| d.type_params.clone()).unwrap_or_default();
+            let tbounds = prog.type_def(t).map(|d| d.bounds.clone()).unwrap_or_default();
             let lts = prog.type_def(t).map(|d| d.lifetimes.clone()).unwrap_or_default();
-            let gen_list: Vec<String> = lts.iter().map(|l| format!("'{}", ident(l))).chain(tparams.iter().map(|p| format!("{}: {BOUND}", ident(p)))).collect();
+            let gen_list: Vec<String> = lts.iter().map(|l| format!("'{}", ident(l))).chain(tparams.iter().map(|p| generic_param(prog, &tbounds, p))).collect();
             let gens = if gen_list.is_empty() { String::new() } else { format!("<{}>", gen_list.join(", ")) };
             let args: Vec<String> = lts.iter().map(|l| format!("'{}", ident(l))).chain(tparams.iter().map(|p| ident(p))).collect();
             let targs = if args.is_empty() { String::new() } else { format!("<{}>", args.join(", ")) };
@@ -891,11 +1311,15 @@ pub fn lower(prog: &Program, opts: &Options) -> Result<Lowered, Vec<LowerError>>
             // the allocator probe (SP-04-async): the function's future is counted per phase (rt::probe)
             let short = rust.rsplit("::").next().unwrap_or(&rust);
             let inner_sig = sig.replacen(&format!("fn {short}"), &format!("fn __probe_{short}"), 1);
-            let outer = sig.replacen("async fn ", "fn ", 1);
+            let outer_full = sig.replacen("async fn ", "fn ", 1);
+            let (outer, wh) = match outer_full.find(" where ") {
+                Some(i) => (outer_full[..i].to_string(), outer_full[i..].to_string()),
+                None => (outer_full.clone(), String::new()),
+            };
             let (head, ret) = outer.rsplit_once(" -> ").unwrap_or((&outer, "()"));
             let call_args: Vec<String> = f.params.iter().map(|p| ident(&f.locals[p.local as usize].name)).collect();
             format!(
-                "{inner_sig} {{\n{}\n}}\npub {head} -> impl std::future::Future<Output = {ret}> {{\n    rt::probe::construct({:?}, move || __probe_{short}({}))\n}}\n",
+                "{inner_sig} {{\n{}\n}}\npub {head} -> impl std::future::Future<Output = {ret}>{wh} {{\n    rt::probe::construct({:?}, move || __probe_{short}({}))\n}}\n",
                 indent(&body, 1),
                 gen::source_name(f),
                 call_args.join(", ")
@@ -916,17 +1340,24 @@ pub fn lower(prog: &Program, opts: &Options) -> Result<Lowered, Vec<LowerError>>
     for (t, defs) in &impls {
         let td = prog.types.iter().find(|x| ident(&x.name) == *t);
         let tparams = td.map(|d| d.type_params.clone()).unwrap_or_default();
+        let tbounds = td.map(|d| d.bounds.clone()).unwrap_or_default();
         let lts = td.map(|d| d.lifetimes.clone()).unwrap_or_default();
-        let gen_list: Vec<String> = lts.iter().map(|l| format!("'{}", ident(l))).chain(tparams.iter().map(|p| format!("{}: {BOUND}", ident(p)))).collect();
+        let gen_list: Vec<String> = lts.iter().map(|l| format!("'{}", ident(l))).chain(tparams.iter().map(|p| generic_param(prog, &tbounds, p))).collect();
         let gens = if gen_list.is_empty() { String::new() } else { format!("<{}>", gen_list.join(", ")) };
         let args: Vec<String> = lts.iter().map(|l| format!("'{}", ident(l))).chain(tparams.iter().map(|p| ident(p))).collect();
         let targs = if args.is_empty() { String::new() } else { format!("<{}>", args.join(", ")) };
         out.push_str(&format!("impl{gens} {t}{targs} {{\n{}\n}}\n\n", indent(&defs.join("\n"), 1)));
     }
-    // ---- interfaces: traits, and each implementing type's impl delegating to its inherent method
+    // ---- interfaces: traits, and each implementing type's impl delegating to its inherent method. An interface the
+    // program declares is written from its declaration (D-82): its methods whether or not a type implements it, `Self`
+    // as `Self`, its parameters as the trait's, the interfaces it requires as supertraits
     for t in &prog.types {
         if let TypeKind::Interface { methods } = &t.kind {
             if !tys.contains(&t.name) {
+                continue;
+            }
+            if is_user_module(&t.module) && (!t.sigs.is_empty() || methods.is_empty()) {
+                out.push_str(&declared_trait(prog, t, &tys));
                 continue;
             }
             let mut items = Vec::new();
@@ -958,7 +1389,7 @@ pub fn lower(prog: &Program, opts: &Options) -> Result<Lowered, Vec<LowerError>>
     }
     // ---- constants
     for c in &prog.consts {
-        let mut dummy = Function { name: format!("{}::const {}", c.module, c.name), label: format!("const {}", c.name), module: c.module.clone(), line: 0, params: vec![], ret: c.ty.clone(), modifiers: vec![], locals: vec![], body: None, effects: Effects::default(), observe: None, closure: None };
+        let mut dummy = Function { name: format!("{}::const {}", c.module, c.name), label: format!("const {}", c.name), module: c.module.clone(), body_module: None, line: 0, params: vec![], ret: c.ty.clone(), modifiers: vec![], locals: vec![], body: None, effects: Effects::default(), observe: None, closure: None, bounds: vec![] };
         dummy.ret = c.ty.clone();
         let mut g = FnGen::new(prog, &dummy, &mut audit, &names);
         let v = g.expr_as(&c.value, &c.ty);
@@ -1010,12 +1441,17 @@ pub fn lower(prog: &Program, opts: &Options) -> Result<Lowered, Vec<LowerError>>
         let mut derives = Vec::new();
         if can_clone(prog, &Type::Record(fs.clone()), &mut Vec::new()) {
             derives.push("Clone");
+            // a record of trivial fields is trivial (6.11) and copies like a trivial class, so `Copy` makes a read
+            // of a binding a copy, not a move: `return r` past a defer that reads it (D-415)
+            if trivial(&Type::Record(fs.clone()), prog) {
+                derives.push("Copy");
+            }
         }
         if fs.iter().all(|(_, t)| record_can(prog, t, false)) {
             derives.push("PartialEq");
         }
         let derive_attr = if derives.is_empty() { String::new() } else { format!("#[derive({})]\n", derives.join(", ")) };
-        out.push_str(&format!("{derive_attr}pub struct {n} {{ {} }}\nimpl rt::Show for {n} {{\n    fn show(&self) -> String {{\n        format!(\"{{{{{{}}}}}}\", vec![{}].join(\", \"))\n    }}\n}}\n", fields.join(", "), shows.join(", ")));
+        out.push_str(&format!("{derive_attr}pub struct {n} {{ {} }}\nimpl rt::Show for {n} {{\n    fn show(&self) -> ::std::string::String {{\n        format!(\"{{{{{{}}}}}}\", vec![{}].join(\", \"))\n    }}\n}}\n", fields.join(", "), shows.join(", ")));
     }
     // ---- entry
     out.push_str(&entry(prog, opts, &names));
@@ -1114,7 +1550,9 @@ pub(crate) fn subst_type(t: &Type, map: &[(String, Type)]) -> Type {
         Type::Tuple(ts) => Type::Tuple(ts.iter().map(|x| subst_type(x, map)).collect()),
         Type::Record(fs) => Type::Record(fs.iter().map(|(n, x)| (n.clone(), subst_type(x, map))).collect()),
         Type::Loan { inner, mode, origin } => Type::Loan { inner: Box::new(subst_type(inner, map)), mode: mode.clone(), origin: origin.clone() },
-        Type::Fn { params, ret, kind, modifiers, origin, dynamic, identity } => Type::Fn {
+        Type::Fn { capture_origins, param_modes, params, ret, kind, modifiers, origin, dynamic, identity } => Type::Fn {
+            capture_origins: capture_origins.clone(),
+            param_modes: param_modes.clone(),
             params: params.iter().map(|p| subst_type(p, map)).collect(),
             ret: Box::new(subst_type(ret, map)),
             kind: kind.clone(),
@@ -1189,10 +1627,17 @@ pub fn owns_cleanup(prog: &Program, t: &Type, seen: &mut Vec<String>) -> bool {
     if matches!(t, Type::Loan { .. }) {
         return false;
     }
+    // a tuple or record part whose type is a loan may still be a value of the aggregate's own, held as a `MaybeOwned`
+    // (a `??` whose fallback was taken, 7.9; D-366): the aggregate is destroyed explicitly, in its turn, so that the
+    // value it may own goes in reverse initialisation order with the block's other locals (D-370)
+    let part = |x: &Type| match x {
+        Type::Loan { inner, .. } => (**inner).clone(),
+        other => other.clone(),
+    };
     match strip(t) {
         Type::Optional(i) => owns_cleanup(prog, i, seen),
-        Type::Tuple(ts) => ts.iter().any(|x| owns_cleanup(prog, x, seen)),
-        Type::Record(fs) => fs.iter().any(|(_, x)| owns_cleanup(prog, x, seen)),
+        Type::Tuple(ts) => ts.iter().any(|x| owns_cleanup(prog, &part(x), seen)),
+        Type::Record(fs) => fs.iter().any(|(_, x)| owns_cleanup(prog, &part(x), seen)),
         Type::Named(_) | Type::Refined { .. } => {
             let n = match name_of(t) {
                 Some(n) => n.to_string(),
@@ -1223,10 +1668,29 @@ pub fn owns_cleanup(prog: &Program, t: &Type, seen: &mut Vec<String>) -> bool {
     }
 }
 
-/// The local's own class declares `cleanup`. The trace records `drop {Name}` only then, as the interpreter
-/// records a block local and not a field destroyed through it (7.9).
+/// The local's represented class declares `cleanup`. Newtypes are erased at run time, so their representation
+/// supplies the trace name. Fields and containers remain indirect owners, with no second drop event (7.9).
+pub fn cleanup_name<'p>(prog: &'p Program, t: &Type) -> Option<&'p str> {
+    let mut ty = t;
+    let mut seen = Vec::new();
+    loop {
+        let d = prog.type_def(name_of(ty)?)?;
+        if seen.contains(&d.name.as_str()) {
+            return None;
+        }
+        seen.push(d.name.as_str());
+        if d.cleanup.is_some() {
+            return Some(d.name.as_str());
+        }
+        match &d.kind {
+            TypeKind::Newtype { repr } => ty = repr,
+            _ => return None,
+        }
+    }
+}
+
 pub fn declares_cleanup(prog: &Program, t: &Type) -> bool {
-    name_of(t).and_then(|n| prog.type_def(n)).map_or(false, |d| d.cleanup.is_some())
+    cleanup_name(prog, t).is_some()
 }
 
 /// A class that contains itself by value (through optionals, tuples and other classes, not through a heap
@@ -1266,7 +1730,7 @@ fn type_decl(prog: &Program, t: &TypeDef) -> String {
     let tps: Vec<String> = t.type_params.iter().map(|p| ident(p)).collect();
     let all: Vec<String> = lts.iter().cloned().chain(tps.iter().cloned()).collect();
     let gens = if all.is_empty() { String::new() } else { format!("<{}>", all.join(", ")) };
-    let bounded: Vec<String> = lts.iter().cloned().chain(tps.iter().map(|p| format!("{p}: {BOUND}"))).collect();
+    let bounded: Vec<String> = lts.iter().cloned().chain(t.type_params.iter().map(|p| generic_param(prog, &t.bounds, p))).collect();
     let gens_b = if bounded.is_empty() { String::new() } else { format!("<{}>", bounded.join(", ")) };
     // Structural `Show` only displays: `T: rt::Show`. A recursive enum is not `Clone`, and a generic wrapper around
     // it still has to show (D-55). A hand-written `display` lives on the inherent impl, which keeps `BOUND`, so that
@@ -1277,12 +1741,33 @@ fn type_decl(prog: &Program, t: &TypeDef) -> String {
     let has_display = t.methods.iter().any(|(m, f)| m == "display" && prog.function(f).map_or(false, displayable_impl));
     let show_impl_gens = if has_display { &gens_b } else { &show_gens };
     let has_equals = t.methods.iter().any(|(m, _)| m == "equals");
+    // a hand-written `compare` (`Comparable`) orders the type: `<` and a generic body's comparisons call it (D-82)
+    let compare_fn = t.methods.iter().find(|(m, _)| m == "compare").and_then(|(_, f)| prog.function(f));
+    let ordered_by = |eq: bool| -> String {
+        let f = match compare_fn {
+            Some(f) if eq => f,
+            _ => return String::new(),
+        };
+        let ord = rust_ty(&f.ret, prog);
+        let triv = trivial(&fortis_types::types::named(&t.name), prog);
+        let (a, b) = if triv { ("*self", "*o") } else { ("self", "o") };
+        let (less, equal, greater) = (ident("Less"), ident("Equal"), ident("Greater"));
+        format!(
+            "impl{gens_b} ::std::cmp::PartialOrd for {}{gens} {{\n    fn partial_cmp(&self, o: &Self) -> Option<::std::cmp::Ordering> {{\n        Some(match {}::compare({a}, {b}) {{ {ord}::{less} => ::std::cmp::Ordering::Less, {ord}::{equal} => ::std::cmp::Ordering::Equal, {ord}::{greater} => ::std::cmp::Ordering::Greater }})\n    }}\n}}\n",
+            ident(&t.name),
+            ident(&t.name)
+        )
+    };
+    // Core declarations such as time.Instant have built-in Hashable without a written derive (D-593).
+    let derives_hash = t.derives.iter().any(|x| x == "Hashable") || (!is_user_module(&t.module) && fortis_types::decls::builtin_implements(&t.name, "Hashable"));
     let loans = |ty: &Type| matches!(ty, Type::Loan { .. }) || matches!(strip(ty), Type::Fn { .. });
     match &t.kind {
         TypeKind::Class { fields } => {
             let copyable = t.copyable && !fields.iter().any(|f| loans(&f.ty));
+            // Recursive key wrappers need the same field-wise Clone derive as generic keys (D-594).
+            let generic_clone = (!t.type_params.is_empty() || recursive_class(prog, &t.name)) && fields.iter().all(|f| clone_capable(prog, &f.ty, &mut vec![t.name.clone()]));
             let mut derives = vec![];
-            if copyable || t.trivial {
+            if copyable || t.trivial || generic_clone {
                 derives.push("Clone");
             }
             if t.trivial && !fields.iter().any(|f| loans(&f.ty)) {
@@ -1291,6 +1776,21 @@ fn type_decl(prog: &Program, t: &TypeDef) -> String {
             let eq = !has_equals && fields.iter().all(|f| has_eq(prog, &f.ty, &mut Vec::new()));
             if eq {
                 derives.push("PartialEq");
+            }
+            // a derived `Comparable` orders the class by its fields in declaration order (X-516; D-54.1): Rust's
+            // derive matches, when every field orders and no hand-written `compare` lowers instead (`ordered_by`)
+            let der_cmp = t.derives.iter().any(|x| x == "Comparable");
+            if der_cmp && compare_fn.is_none() && fields.iter().all(|f| has_ord(prog, &f.ty, &mut Vec::new())) {
+                derives.push("PartialOrd");
+            }
+            // a derived `Hashable` that writes neither `equals` nor `hash` hashes by its fields; `Eq` marks the
+            // derived equality total, so the type is a `Map` key or `Set` element (X-516)
+            let has_hash_fn = t.methods.iter().any(|(m, _)| m == "hash");
+            let hashable = derives_hash || t.implements.iter().any(|x| x == "Hashable");
+            let derived_hash = derives_hash && !has_equals && !has_hash_fn && eq && fields.iter().all(|f| has_hash(prog, &f.ty, &mut Vec::new()));
+            if derived_hash {
+                derives.push("Eq");
+                derives.push("Hash");
             }
             let mut fs: Vec<String> = fields.iter().map(|f| format!("pub {}: {}", ident(&f.name), rust_ty(&f.ty, prog))).collect();
             if let Some(pt) = phantom_ty(prog, t) {
@@ -1319,12 +1819,22 @@ fn type_decl(prog: &Program, t: &TypeDef) -> String {
                 }
                 s.push_str(&format!("pub struct {}{gens} {{\n{}\n}}\n", ident(&t.name), indent(&fs.join(",\n"), 1)));
             }
-            s.push_str(&format!("impl{show_impl_gens} rt::Show for {}{gens} {{\n    fn show(&self) -> String {{\n        {show}\n    }}\n}}\n", ident(&t.name)));
+            s.push_str(&format!("impl{show_impl_gens} rt::Show for {}{gens} {{\n    fn show(&self) -> ::std::string::String {{\n        {show}\n    }}\n}}\n", ident(&t.name)));
             if has_equals {
                 if let Some((_, f)) = t.methods.iter().find(|(m, _)| m == "equals") {
                     let _ = f;
-                    s.push_str(&format!("impl{gens_b} PartialEq for {}{gens} {{\n    fn eq(&self, o: &Self) -> bool {{\n        {}::equals(self, o)\n    }}\n}}\n", ident(&t.name), ident(&t.name)));
+                    // a trivial class's methods take it by value
+                    let (a, b) = if t.trivial && !fields.iter().any(|f| loans(&f.ty)) { ("*self", "*o") } else { ("self", "o") };
+                    s.push_str(&format!("impl{gens_b} ::std::cmp::PartialEq for {}{gens} {{\n    fn eq(&self, o: &Self) -> bool {{\n        {}::equals({a}, {b})\n    }}\n}}\n", ident(&t.name), ident(&t.name)));
                 }
+            }
+            s.push_str(&ordered_by(has_equals || eq));
+            // a class that is `Hashable` and writes its own `equals` or `hash`: every value hashes alike (`Hasher`
+            // has no members in Language 1.0, so a hand-written `hash` writes nothing) and the containers decide by
+            // `equals` (X-516; D-84). `Eq` needs the `PartialEq` the hand-written `equals` or the derivation gives.
+            if hashable && !derived_hash && (has_equals || has_hash_fn) && (has_equals || eq) {
+                s.push_str(&format!("impl{gens_b} ::std::hash::Hash for {}{gens} {{\n    fn hash<__H: ::std::hash::Hasher>(&self, _state: &mut __H) {{}}\n}}\n", ident(&t.name)));
+                s.push_str(&format!("impl{gens_b} Eq for {}{gens} {{}}\n", ident(&t.name)));
             }
             s.push('\n');
             s
@@ -1365,22 +1875,49 @@ fn type_decl(prog: &Program, t: &TypeDef) -> String {
             }
             let triv = trivial(&fortis_types::types::named(&t.name), prog) && phantom_ty(prog, t).is_none();
             let payload_free = variants.iter().all(|v| v.fields.is_empty());
-            let ord = if payload_free { ", PartialOrd" } else { "" };
+            // a derived `Comparable` orders the enum by variant order, then its payload's fields (X-516; D-54.1):
+            // Rust's derive matches, when every payload orders and no hand-written `compare` lowers instead. A
+            // payload-free enum always orders by its variant order.
+            let der_cmp = t.derives.iter().any(|x| x == "Comparable");
+            let der_ord = der_cmp && compare_fn.is_none() && variants.iter().all(|v| v.fields.iter().all(|(_, ft)| has_ord(prog, ft, &mut vec![t.name.clone()])));
+            let ord = if compare_fn.is_none() && (payload_free || der_ord) { ", PartialOrd" } else { "" };
             // `PartialEq` only when every payload has it (a payload of a class that cannot derive it, a Shared, a
-            // dynamic value), as for classes
-            let eq = variants.iter().all(|v| v.fields.iter().all(|(_, ft)| has_eq(prog, ft, &mut vec![t.name.clone()])));
-            let pe = if eq { format!(", PartialEq{ord}") } else { String::new() };
-            let derives = if triv { format!("Clone, Copy{pe}") } else if t.copyable { format!("Clone{pe}") } else { pe.trim_start_matches(", ").to_string() };
+            // dynamic value), as for classes; a hand-written `equals` is the type's equality instead (D-82)
+            let eq = !has_equals && variants.iter().all(|v| v.fields.iter().all(|(_, ft)| has_eq(prog, ft, &mut vec![t.name.clone()])));
+            // a derived `Hashable` that writes neither `equals` nor `hash` hashes by its payload (X-516)
+            let has_hash_fn = t.methods.iter().any(|(m, _)| m == "hash");
+            let hashable = derives_hash || t.implements.iter().any(|x| x == "Hashable");
+            let derived_hash = derives_hash && !has_equals && !has_hash_fn && eq && variants.iter().all(|v| v.fields.iter().all(|(_, ft)| has_hash(prog, ft, &mut vec![t.name.clone()])));
+            let eh = if derived_hash { ", Eq, Hash" } else { "" };
+            let pe = format!("{}{}{}", if eq { ", PartialEq" } else { "" }, if eq || has_equals { ord } else { "" }, eh);
+            let generic_clone = !t.type_params.is_empty() && variants.iter().all(|v| v.fields.iter().all(|(_, ft)| clone_capable(prog, ft, &mut vec![t.name.clone()])));
+            let derives = if triv { format!("Clone, Copy{pe}") } else if t.copyable || generic_clone { format!("Clone{pe}") } else { pe.trim_start_matches(", ").to_string() };
             let derive_attr = if derives.is_empty() { String::new() } else { format!("#[derive({derives})]\n") };
+            // a hand-written `equals` is the enum's equality (D-82)
+            let equality = if has_equals {
+                let triv = trivial(&fortis_types::types::named(&t.name), prog);
+                let (a, b) = if triv { ("*self", "*o") } else { ("self", "o") };
+                format!("impl{gens_b} ::std::cmp::PartialEq for {}{gens} {{\n    fn eq(&self, o: &Self) -> bool {{\n        {}::equals({a}, {b})\n    }}\n}}\n", ident(&t.name), ident(&t.name))
+            } else {
+                String::new()
+            };
+            // an enum that is `Hashable` and writes its own `equals` or `hash` hashes nothing, so equal values hash
+            // alike and the containers decide by `equals` (X-516; D-84)
+            let hash_impl = if hashable && !derived_hash && (has_equals || has_hash_fn) && (has_equals || eq) {
+                format!("impl{gens_b} ::std::hash::Hash for {}{gens} {{\n    fn hash<__H: ::std::hash::Hasher>(&self, _state: &mut __H) {{}}\n}}\nimpl{gens_b} Eq for {}{gens} {{}}\n", ident(&t.name), ident(&t.name))
+            } else {
+                String::new()
+            };
             let body = match &arms_override {
                 Some(b) => b.clone(),
                 None => format!("match self {{\n{}\n        }}", indent(&arms.join("\n"), 3)),
             };
             format!(
-                "{derive_attr}pub enum {}{gens} {{\n{}\n}}\nimpl{show_impl_gens} rt::Show for {}{gens} {{\n    fn show(&self) -> String {{\n        {body}\n    }}\n}}\n\n",
+                "{derive_attr}pub enum {}{gens} {{\n{}\n}}\nimpl{show_impl_gens} rt::Show for {}{gens} {{\n    fn show(&self) -> ::std::string::String {{\n        {body}\n    }}\n}}\n{equality}{hash_impl}{}\n",
                 ident(&t.name),
                 indent(&vs.join(",\n"), 1),
                 ident(&t.name),
+                ordered_by(has_equals || eq)
             )
         }
         _ => String::new(),
@@ -1410,7 +1947,7 @@ fn entry(prog: &Program, opts: &Options, names: &HashMap<String, String>) -> Str
                 None => continue,
             };
             let f = prog.function(&t.function).unwrap();
-            let run = |call: String| format!("Box::new(move || match {call} {{ Ok(()) => rt::CaseResult::Pass, Err(TestFailure::Expect(ev)) => rt::CaseResult::Fail(ev), Err(TestFailure::Failure(f)) => rt::CaseResult::Fail(format!(\"actual=failure {{}} expected=success\", f.code)) }})");
+            let run = |call: String| format!("::std::boxed::Box::new(move || match {call} {{ Ok(()) => rt::CaseResult::Pass, Err(TestFailure::Expect(ev)) => rt::CaseResult::Fail(ev), Err(TestFailure::Failure(f)) => rt::CaseResult::Fail(format!(\"actual=failure {{}} expected=success\", f.code)) }})");
             if t.kind == "property" {
                 let seed: u128 = t.title.chars().map(|c| c as u128).sum::<u128>() * 7919;
                 let gens: Vec<String> = f.params.iter().map(|p| generator(&f.locals[p.local as usize].ty, prog)).collect();
@@ -1425,7 +1962,7 @@ fn entry(prog: &Program, opts: &Options, names: &HashMap<String, String>) -> Str
             } else {
                 for (ci, (cname, rec)) in t.cases.iter().enumerate() {
                     let mut audit = Audit::default();
-                    let dummy = Function { name: format!("main::test case {ti}.{ci}"), label: "test case".into(), module: "main".into(), line: 0, params: vec![], ret: fortis_types::types::void(), modifiers: vec![], locals: vec![], body: None, effects: Effects::default(), observe: None, closure: None };
+                    let dummy = Function { name: format!("main::test case {ti}.{ci}"), label: "test case".into(), module: "main".into(), body_module: None, line: 0, params: vec![], ret: fortis_types::types::void(), modifiers: vec![], locals: vec![], body: None, effects: Effects::default(), observe: None, closure: None, bounds: vec![] };
                     let mut g = FnGen::new(prog, &dummy, &mut audit, names);
                     let v = g.expr(rec, gen::Want::Value);
                     cases.push(format!("{{ let __row = {v}; __cases.push(({:?}.to_string(), {:?}.to_string(), {})); }}", t.title, cname, run(format!("{rust}(__row)"))));
@@ -1433,11 +1970,11 @@ fn entry(prog: &Program, opts: &Options, names: &HashMap<String, String>) -> Str
             }
         }
         for (title, why) in &prog.unbuilt_tests {
-            cases.push(format!("__cases.push(({title:?}.to_string(), String::new(), Box::new(|| rt::CaseResult::Unbuilt({why:?}.to_string()))));"));
+            cases.push(format!("__cases.push(({title:?}.to_string(), String::new(), ::std::boxed::Box::new(|| rt::CaseResult::Unbuilt({why:?}.to_string()))));"));
         }
         let head = format!("{}{}", decl_files_prelude(opts), observed_table(prog));
         return format!(
-            "fn main() {{\n{}    let mut __cases: Vec<(String, String, Box<dyn FnOnce() -> rt::CaseResult>)> = Vec::new();\n{}\n    std::process::exit(rt::run_tests({:?}, __cases));\n}}\n",
+            "fn main() {{\n{}    let mut __cases: Vec<(String, String, ::std::boxed::Box<dyn FnOnce() -> rt::CaseResult>)> = Vec::new();\n{}\n    std::process::exit(rt::run_tests({:?}, __cases));\n}}\n",
             head,
             indent(&cases.join("\n"), 1),
             opts.file
@@ -1475,7 +2012,7 @@ fn entry(prog: &Program, opts: &Options, names: &HashMap<String, String>) -> Str
     }
     let observed = format!("{}{}", decl_files_prelude(opts), observed_table(prog));
     format!(
-        "fn main() {{\n{observed}{early}    let __args: Vec<String> = std::env::args().skip(1).collect();\n    let code = rt::run_main({:?}, || {body});\n    std::process::exit(code);\n}}\n",
+        "fn main() {{\n{observed}{early}    let __args: ::std::vec::Vec<::std::string::String> = std::env::args().skip(1).collect();\n    let code = rt::run_main({:?}, || {body});\n    std::process::exit(code);\n}}\n",
         opts.file
     )
 }
@@ -1576,7 +2113,7 @@ fn can_clone(prog: &Program, t: &Type, seen: &mut Vec<String>) -> bool {
         Type::Named(_) | Type::Refined { .. } => {
             let n = name_of(t).unwrap_or("");
             // `$strlit` and `$interp…` lower to `String` (types.rs `rust_ty`); a record of one is copied with `.clone()`
-            if is_string(t) || matches!(n, "Bytes" | "BytesView" | "Failure") {
+            if is_string(t, prog) || matches!(n, "Bytes" | "BytesView" | "Failure") {
                 return true;
             }
             if matches!(n, "List" | "ListView" | "Array" | "FixedList" | "Map" | "OrderedMap" | "FixedMap" | "Set") {
@@ -1600,6 +2137,52 @@ fn can_clone(prog: &Program, t: &Type, seen: &mut Vec<String>) -> bool {
             }
         }
         _ => false,
+    }
+}
+
+/// A generic type's field can be cloned once the type's parameters can (`Clone` is in every parameter's fixed
+/// bound): a generic class or enum then derives `Clone`, which Rust bounds on its parameters, so it can instantiate a
+/// generic function (D-82). Loans, closures, `dynamic` values and the runtime's handles cannot.
+fn clone_capable(prog: &Program, ty: &Type, seen: &mut Vec<String>) -> bool {
+    if matches!(ty, Type::Loan { .. }) || matches!(strip(ty), Type::Fn { .. } | Type::Dynamic(_)) {
+        return false;
+    }
+    match strip(ty) {
+        Type::TypeParam(_) => true,
+        Type::Optional(inner) => clone_capable(prog, inner, seen),
+        Type::Tuple(ts) => ts.iter().all(|x| clone_capable(prog, x, seen)),
+        Type::Record(fs) => fs.iter().all(|(_, x)| clone_capable(prog, x, seen)),
+        t => {
+            let n = name_of(t).unwrap_or("");
+            if seen.iter().any(|x| x == n) {
+                return true;
+            }
+            let args_ok = args_of(t).iter().all(|a| clone_capable(prog, a, seen));
+            // the core types whose native forms are `Clone` (the runtime's handles, `Shared` among them, are not)
+            const CLONE_CORE: &[&str] = &[
+                "Int", "Int64", "Int32", "Int16", "Int8", "UInt", "UInt64", "UInt32", "UInt16", "UInt8", "Byte", "Bool", "Float", "Float32", "Decimal", "Duration", "Timestamp", "String", "StringView",
+                "Scalar", "Bytes", "BytesView", "Void", "Never", "List", "ListView", "Array", "FixedList", "Map", "OrderedMap", "FixedMap", "Set", "VariantMap",
+            ];
+            if CLONE_CORE.contains(&n) {
+                return args_ok;
+            }
+            match prog.type_def(n) {
+                Some(d) if !is_user_module(&d.module) => (d.copyable || d.trivial) && args_ok,
+                Some(d) if d.copyable || d.trivial => args_ok,
+                Some(d) if !d.type_params.is_empty() => {
+                    seen.push(n.to_string());
+                    let ok = match &d.kind {
+                        TypeKind::Class { fields } => fields.iter().all(|f| clone_capable(prog, &f.ty, seen)),
+                        TypeKind::Enum { variants } => variants.iter().all(|v| v.fields.iter().all(|(_, ft)| clone_capable(prog, ft, seen))),
+                        _ => false,
+                    };
+                    seen.pop();
+                    ok && args_ok
+                }
+                Some(_) => false,
+                None => false,
+            }
+        }
     }
 }
 
@@ -1634,7 +2217,90 @@ fn has_eq(prog: &Program, ty: &Type, seen: &mut Vec<String>) -> bool {
     }
 }
 
-/// The field of `Capabilities` that holds a capability type (fortis.host).
+/// Whether a type's native form is `PartialOrd`, so a class or enum that derives `Comparable` can derive it too and
+/// order by declaration order (X-516; D-54.1): a core `Comparable` type, or a program type that is `Comparable`.
+fn has_ord(prog: &Program, ty: &Type, seen: &mut Vec<String>) -> bool {
+    if matches!(ty, Type::Loan { .. }) || matches!(strip(ty), Type::Fn { .. } | Type::Dynamic(_)) {
+        return false;
+    }
+    match strip(ty) {
+        Type::Optional(_) => false,
+        t => {
+            let n = name_of(t).unwrap_or("");
+            if seen.iter().any(|x| x == n) {
+                return true;
+            }
+            let args_ok = args_of(t).iter().all(|a| has_ord(prog, a, seen));
+            if fortis_types::decls::builtin_implements(n, "Comparable") {
+                return args_ok;
+            }
+            match prog.type_def(n) {
+                Some(d) => {
+                    let cmp = d.derives.iter().any(|x| x == "Comparable") || d.implements.iter().any(|x| x == "Comparable") || d.methods.iter().any(|(m, _)| m == "compare");
+                    if !cmp {
+                        return false;
+                    }
+                    seen.push(n.to_string());
+                    let ok = match &d.kind {
+                        TypeKind::Class { fields } => fields.iter().all(|f| has_ord(prog, &f.ty, seen)),
+                        TypeKind::Enum { variants } => variants.iter().all(|v| v.fields.iter().all(|(_, ft)| has_ord(prog, ft, seen))),
+                        _ => false,
+                    };
+                    seen.pop();
+                    ok && args_ok
+                }
+                None => false,
+            }
+        }
+    }
+}
+
+/// Whether a type's native form is `Hash`, so a class or enum that derives `Hashable` can derive it too (X-516). A
+/// type that writes its own `hash` hashes nothing, so it is `Hash` whatever its fields are.
+fn has_hash(prog: &Program, ty: &Type, seen: &mut Vec<String>) -> bool {
+    if matches!(ty, Type::Loan { .. }) || matches!(strip(ty), Type::Fn { .. } | Type::Dynamic(_)) {
+        return false;
+    }
+    match strip(ty) {
+        // Rust derive supplies conditional Eq/Hash bounds on the class or enum parameter (D-594).
+        Type::TypeParam(_) => true,
+        Type::Optional(inner) => has_hash(prog, inner, seen),
+        t => {
+            let n = name_of(t).unwrap_or("");
+            if matches!(n, "Shared" | "Weak" | "Mutex" | "Failure" | "Builder" | "Capabilities" | "Console" | "Task") {
+                return false;
+            }
+            if seen.iter().any(|x| x == n) {
+                return true;
+            }
+            let args_ok = args_of(t).iter().all(|a| has_hash(prog, a, seen));
+            if fortis_types::decls::builtin_implements(n, "Hashable") {
+                return args_ok;
+            }
+            match prog.type_def(n) {
+                Some(d) => {
+                    let hand = d.methods.iter().any(|(m, _)| m == "hash" || m == "equals");
+                    let hashable = hand || d.derives.iter().any(|x| x == "Hashable") || d.implements.iter().any(|x| x == "Hashable");
+                    if !hashable {
+                        return false;
+                    }
+                    if hand {
+                        return args_ok;               // a hand-written hash writes nothing: its fields need not hash
+                    }
+                    seen.push(n.to_string());
+                    let ok = match &d.kind {
+                        TypeKind::Class { fields } => fields.iter().all(|f| has_hash(prog, &f.ty, seen)),
+                        TypeKind::Enum { variants } => variants.iter().all(|v| v.fields.iter().all(|(_, ft)| has_hash(prog, ft, seen))),
+                        _ => false,
+                    };
+                    seen.pop();
+                    ok && args_ok
+                }
+                None => false,
+            }
+        }
+    }
+}
 fn capability_field(ty: &str) -> &'static str {
     match ty {
         "FileSystem" => "fileSystem",
@@ -1649,3 +2315,6 @@ fn capability_field(ty: &str) -> &'static str {
         _ => "rawSql",
     }
 }
+
+#[cfg(test)]
+mod closure_tests;

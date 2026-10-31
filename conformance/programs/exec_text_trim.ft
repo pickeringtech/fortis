@@ -1,0 +1,64 @@
+// execute: [a b]|[a b  ]|[  a b]|[]|[]|[x]|[naïve]|[abc]|white space 25 of 25 trimmed|other scalars 10 of 10 kept|start 25 end 25
+// requires: runtime
+// covers: LANG-06-06
+// X-479, R19, 6.6: `trim`, `trimStart` and `trimEnd` drop Unicode White_Space scalars from the ends of a text and
+// answer a view of it; the interior is untouched. The 25 White_Space scalars are U+0009 to U+000D, U+0020, U+0085,
+// U+00A0, U+1680, U+2000 to U+200A, U+2028, U+2029, U+202F, U+205F and U+3000; the other control and format scalars
+// (U+001C to U+001F, U+200B and so on) are not, so they stay. The empty text and an all-white-space text trim to the
+// empty view, and a `String` receiver works as a view does. The scalars are built from their code points (`as
+// Scalar`) because the lexer has no `\u` escape, and the three backends must agree on every one of them.
+import fortis.host { Console }
+import fortis.text { Builder, Scalar }
+
+try func around(code: Int) String {
+  let mark = code as Scalar or fail
+  let mut out = Builder.create()
+  out.appendScalar(mark)
+  out.append("x")
+  out.appendScalar(mark)
+  return out.finish()
+}
+
+recovers func main(console: Console) {
+  let padded = "  a b  "
+  console.print("[${padded.trim()}]")
+  console.print("[${padded.trimStart()}]")
+  console.print("[${padded.trimEnd()}]")
+  let empty = ""
+  console.print("[${empty.trim()}]")
+  let blank = " \t\r\n  "
+  console.print("[${blank.trim()}]")
+  let heap = "\n x \n" as String
+  console.print("[${heap.trim()}]")
+  let accented = "  naïve "
+  console.print("[${accented.trim()}]")
+  let again = "  abc  ".trimStart().trimEnd()
+  console.print("[${again}]")
+  let spaces = List.of(9, 10, 11, 12, 13, 32, 133, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197, 8198, 8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287, 12288)
+  let mut trimmed = 0
+  let mut starts = 0
+  let mut ends = 0
+  for code in spaces {
+    let text = around(code) or recover ""
+    if text.trim().scalarCount() == 1 {
+      trimmed = Int.wrappingAdd(trimmed, 1)
+    }
+    if text.trimStart().scalarCount() == 2 {
+      starts = Int.wrappingAdd(starts, 1)
+    }
+    if text.trimEnd().scalarCount() == 2 {
+      ends = Int.wrappingAdd(ends, 1)
+    }
+  }
+  console.print("white space ${trimmed} of ${spaces.count()} trimmed")
+  let others = List.of(28, 29, 30, 31, 8203, 8204, 8205, 8288, 65279, 6158)
+  let mut kept = 0
+  for code in others {
+    let text = around(code) or recover ""
+    if text.trim().scalarCount() == 3 {
+      kept = Int.wrappingAdd(kept, 1)
+    }
+  }
+  console.print("other scalars ${kept} of ${others.count()} kept")
+  console.print("start ${starts} end ${ends}")
+}

@@ -1,0 +1,13 @@
+// execute: 1
+// requires: runtime
+// covers: LANG-06-02, LANG-06-08
+import fortis.host { Console }
+func widen(s: { n: Int<0..3>? }) { n: Int? } { return s }
+func main(console: Console) {
+  let s: { n: Int<0..3>? } = { n: 1 }
+  let w = widen(s)
+  match w.n {
+    present(n) => console.print("${n}")
+    null => console.print("null")
+  }
+}

@@ -33,7 +33,7 @@ try func stockItems(text: StringView, out: Console) List[Item] {
         recover null
       }
       if e != null {
-        items.push(Item(sku: e.sku, name: String.from(nameField(line) or fail), quantity: e.quantity))
+        items.push(Item(sku: e.sku, name: (nameField(line) or fail) as String, quantity: e.quantity))
       }
     }
   }
@@ -80,7 +80,7 @@ try func run(fs: FileSystem, out: Console) {
     ledger.add(move item)
   }
   out.print("ledger: ${ledger.count()} items, ${ledger.countBelow(10)} below 10")
-  let first = SkuId.validate(1001) or fail
+  let first = 1001 as SkuId
   out.print("sku 1001 is ${ledger.nameOf(first) ?? "unknown"}")
   // fn mut: the visitor accumulates into a captured counter
   let mut units = 0

@@ -1,0 +1,12 @@
+// reject: E-TYP-040
+// covers: LANG-10-02, LANG-08-04
+// consumeEach's callback cannot unwind its traversal by returning a failure.
+error Stop {
+  code: "loop.stop"
+}
+func stop(xs: owned List[Outcome[Int]]) {
+  move xs.consumeEach(try fn(item) Void {
+    discard item or fail
+    fail Stop()
+  })
+}

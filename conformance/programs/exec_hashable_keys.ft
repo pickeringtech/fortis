@@ -1,0 +1,27 @@
+// execute: one|true|true|false
+// requires: runtime
+// covers: LANG-06-06, LANG-06-10
+// 6.7, 6.10 (X-516): a class or an enum deriving `Hashable` is a `Map` key or a `Set` element: a `Map` finds the
+// value a key equal to the stored one names, and a `Set` reports membership, by the derived equality and hash, on the
+// interpreter, the VM and native.
+import fortis.host { Console }
+
+class Key derive Equatable, Hashable {
+  export n: Int
+}
+
+enum Tag derive Equatable, Hashable {
+  A
+  B(v: Int)
+}
+
+func main(console: Console) {
+  let mut m: Map[Key, String] = Map.default()
+  m.set(Key(n: 1), "one")
+  let found = m.get(Key(n: 1))
+  console.print("${found ?? "none"}")
+  let mut s: Set[Tag] = Set.default()
+  discard s.add(A)
+  discard s.add(B(v: 2))
+  console.print("${s.contains(A)}|${s.contains(B(v: 2))}|${s.contains(B(v: 3))}")
+}

@@ -21,6 +21,7 @@ class Loan:
     depth: int                 # block depth at which a held loan ends; temporaries end with the statement
     line: int = 0
     nested: bool = False       # kept by a result that holds it inside an optional, a tuple or a record (D-348)
+    parent: Optional[str] = field(default=None, kw_only=True)  # the loan through which this reborrow was made
     via: Optional[str] = None  # the read path it was drawn through (a cursor, a read loan): its own uses keep it (7.6)
 
 
@@ -103,7 +104,7 @@ class Owners:
         self.reservations = []
 
     def add_loan(self, path: str, mode: str, holder: Optional[str], depth: int, line: int) -> Loan:
-        l = Loan(self.owner_path(path), mode, holder, depth, line)
+        l = Loan(self.owner_path(path), mode, holder, depth, line, parent=root_of(path) if root_of(path) in self.holders else None)
         self.loans.append(l)
         if holder is not None:
             self.holders[holder] = l
@@ -111,7 +112,9 @@ class Owners:
 
     def move(self, path: str):
         self.moved.add(path)
-        self.obligations.pop(path, None)                   # a move transfers the obligation (10.2)
+        for p in list(self.obligations):
+            if p == path or p.startswith(path + "."):
+                self.obligations.pop(p, None)             # moving an owner transfers every field obligation (10.2)
 
     def reinit(self, path: str):
         self.moved = {m for m in self.moved if not (m == path or m.startswith(path + "."))}

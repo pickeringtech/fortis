@@ -30,6 +30,7 @@ pub use fb::Fb;
 pub struct LibIndex {
     /// labels with a body, each with its module: ("method List.map", "fortis.prelude")
     pub bodies: HashMap<String, String>,
+    pub core_types: std::collections::BTreeSet<String>,
     /// how this program's colliding modules and types are named (X-136); empty for most programs
     pub qualify: crate::names::Qualify,
 }
@@ -44,6 +45,7 @@ pub fn is_kit_module(m: &str) -> bool {
 impl LibIndex {
     pub fn load(root: &Path) -> LibIndex {
         let mut bodies = HashMap::new();
+        let mut core_types = std::collections::BTreeSet::new();
         for m in LIBRARY_MODULES {
             let path = root.join("library").join("fortis").join(format!("{m}.ft"));
             let src = match std::fs::read_to_string(&path) {
@@ -58,6 +60,7 @@ impl LibIndex {
             let module = format!("fortis.{m}");
             for d in declarations(root_n) {
                 let name = d.name.clone().unwrap_or_default();
+                if matches!(d.kind, "class" | "enum" | "error" | "interface" | "mixin" | "observation" | "type") { core_types.insert(name.clone()); }
                 match d.kind {
                     "func" => {
                         if d.node.find("funcBody").is_some() {
@@ -79,7 +82,7 @@ impl LibIndex {
                 }
             }
         }
-        LibIndex { bodies, qualify: Default::default() }
+        LibIndex { bodies, core_types, qualify: Default::default() }
     }
 }
 
@@ -111,6 +114,8 @@ pub struct Builder<'t, 'a> {
     pub errors: Vec<BuildError>,
     /// the value under construction is moved into its consumer, so it is not itself a statement temporary (7.9)
     pub consuming: bool,
+    /// The applying method distinguishes generated functions when a mixin's syntax is built more than once.
+    pub mixin_scope: Option<String>,
     /// the classes and newtypes whose derived defaults are being built, as ((module, name), name): one met again is a
     /// cycle, which the checkers reject (E-TYP-090; D-335, D-336), so the build stops with an error, not a stack overflow
     pub defaulting: Vec<((String, String), String)>,
@@ -128,7 +133,7 @@ impl<'t, 'a> Builder<'t, 'a> {
     pub fn new(ty: &'t mut Typer<'a>, module: &str, lib: &'t LibIndex) -> Builder<'t, 'a> {
         let types = ty.node_types.take().unwrap_or_default();
         let ir_module = lib.qualify.module(module, &ty.dc.package);
-        Builder { ty, types, module: module.to_string(), ir_module, lib, prog: Program::default(), fbs: vec![], consts: HashSet::new(), errors: vec![], consuming: false, defaulting: vec![] }
+        Builder { ty, types, module: module.to_string(), ir_module, lib, prog: Program::default(), fbs: vec![], consts: HashSet::new(), errors: vec![], consuming: false, mixin_scope: None, defaulting: vec![] }
     }
 
     /// The type the checker gave a node in its final pass.
@@ -138,6 +143,15 @@ impl<'t, 'a> Builder<'t, 'a> {
 
     pub fn qualified(&self, module: &str, label: &str) -> String {
         format!("{module}::{label}")
+    }
+
+    /// Synthetic functions normally have unique source positions. Applied mixin bodies share those positions,
+    /// but their captures and dispatch can differ, so each application needs its own generated function.
+    pub fn synthetic_label(&self, label: String) -> String {
+        match &self.mixin_scope {
+            Some(scope) => format!("{label}#{scope}"),
+            None => label,
+        }
     }
 
     /// The IR name of the module a declaration belongs to (X-136).
@@ -150,25 +164,9 @@ impl<'t, 'a> Builder<'t, 'a> {
         self.lib.qualify.type_name(name, package)
     }
 
-    /// A standard enum a user type shadows (`enum Currency` beside `money.Currency`) is `Name@module`
-    /// (`Currency@fortis.money`). Native then emits a different Rust enum from the program's. Every other enum
-    /// keeps the name `tname` gives it (D-142).
+    /// Core enums keep their core name; a shadowing program declaration has its own qualified name.
     pub fn enum_ir_name(&self, d: &DeclRef<'a>) -> String {
-        if let Some(n) = self.shadow_enum_name(d) {
-            return n;
-        }
         self.tname(&d.name, &d.type_identity())
-    }
-
-    fn shadow_enum_name(&self, d: &DeclRef<'a>) -> Option<String> {
-        if !fortis_types::decls::is_standard(&d.module) {
-            return None;
-        }
-        let bare = self.ty.dc.table.get(&d.name)?;
-        if bare.module == d.module || fortis_types::decls::is_standard(&bare.module) {
-            return None;
-        }
-        Some(format!("{}@{}", d.name, d.module))
     }
 
     /// The root nominal of `t` spelled as `ir_name`, when that name disambiguates a shadowed standard enum.
@@ -193,7 +191,9 @@ impl<'t, 'a> Builder<'t, 'a> {
     /// `fn(...) T` whose result is a shadowed standard enum, with that result disambiguated.
     pub fn rename_fn_ret(&self, t: &Type, ir_name: &str) -> Type {
         match t {
-            Type::Fn { params, ret, kind, modifiers, origin, dynamic, identity } => Type::Fn {
+            Type::Fn { capture_origins, param_modes, params, ret, kind, modifiers, origin, dynamic, identity } => Type::Fn {
+                capture_origins: capture_origins.clone(),
+                param_modes: param_modes.clone(),
                 params: params.clone(),
                 ret: Box::new(self.rename_shadow(ret, ir_name)),
                 kind: kind.clone(),
@@ -206,9 +206,41 @@ impl<'t, 'a> Builder<'t, 'a> {
         }
     }
 
+    /// The declaration a named type resolves to, by its identity: the table holds a module alias's `m.C` under that
+    /// spelling, and a name alone could select an unrelated declaration of the same name.
+    pub fn decl_of_named(&self, n: &NamedT) -> Option<DeclRef<'a>> {
+        self.ty.dc.resolve_named(n, None)
+    }
+
+    /// The IR form of `where` bounds that name an interface: (type parameter, the interface's IR name, its arguments).
+    pub fn ir_bounds(&self, wh: &[(String, NamedT)]) -> Vec<(String, String, Vec<Type>)> {
+        let mut out: Vec<(String, String, Vec<Type>)> = Vec::new();
+        for (tp, iface) in wh {
+            if let Some(d) = self.decl_of_named(iface) {
+                if d.kind == "interface" {
+                    let b = (tp.clone(), self.tname(&d.name, &d.type_identity()), iface.args.clone());
+                    if !out.contains(&b) {
+                        out.push(b);
+                    }
+                }
+            }
+        }
+        out
+    }
+
     /// The qualified function a declaration's member resolves to, or None when it is an intrinsic.
     pub fn member_function(&self, d: &DeclRef<'a>, member: &str, sig: &Sig<'a>) -> Option<String> {
         let label = format!("method {}.{member}", d.name);
+        if member.starts_with("derive:from:") {
+            return Some(self.qualified(&self.ir_mod(d), &label));
+        }
+        if member == "from" && !d.methods.contains(member) {
+            for (iface, target, module, _) in &self.ty.dc.table.implement_blocks {
+                if iface.interface_key() == "From" && self.ty.dc.named_decl(&target.as_type()).map_or(false, |t| t.type_identity() == d.type_identity() && t.name == d.name) {
+                    return Some(self.qualified(module, &label));
+                }
+            }
+        }
         if d.module == self.module {
             return if sig.body.is_some() { Some(self.qualified(&self.ir_module, &label)) } else { None };
         }
@@ -261,6 +293,43 @@ impl<'t, 'a> Builder<'t, 'a> {
         if let Some(f) = self.prog.functions.iter().find(|f| f.label == "function main" && f.module == self.ir_module) {
             self.prog.entry = Some(f.name.clone());
         }
+        // `implement` blocks of this module (9.5): methods of their target, as if it listed the interface (X-180)
+        let blocks: Vec<_> = self.ty.dc.table.implement_blocks.iter().filter(|b| b.2 == self.module).cloned().collect();
+        for (iface, target, _, node) in blocks {
+            if let Err(e) = self.implement_block(&iface, &target, node) {
+                self.errors.push(e);
+            }
+        }
+        crate::model::fold_impls(&mut self.prog);
+    }
+
+    /// The methods of an `implement I for T` block, built as methods of `T` under the labels the checker typed them
+    /// with (`method T.m`), and the block recorded for folding into `T` (X-180: `T` is a class or enum the program
+    /// declares; the checkers reject any other target).
+    fn implement_block(&mut self, iface: &NamedT, target: &NamedT, node: N<'a>) -> BResult<()> {
+        let d = match self.decl_of_named(target) {
+            Some(d) if d.kind == "class" || d.kind == "enum" => d,
+            _ => return err(line_of(node), format!("an `implement` block for `{}`, which is not a class or enum", target.name)),
+        };
+        let self_t = named_pkg(&d.name, d.type_params.iter().map(|p| Type::TypeParam(p.clone())).collect(), &d.type_identity());
+        let mut methods = Vec::new();
+        for m in node.child_nodes("implementMember") {
+            if let Some(head) = m.find("methodHead") {
+                let sig = self.ty.dc.signature(head, true, m.find("funcBody"));
+                if sig.body.is_none() {
+                    continue;
+                }
+                let label = format!("method {}.{}", d.name, sig.name);
+                self.function(&sig, &label, Some(self_t.clone()), vec![])?;
+                methods.push((sig.name.clone(), self.qualified(&self.ir_module, &label)));
+            }
+        }
+        let iface_name = match self.decl_of_named(iface) {
+            Some(i) => self.tname(&i.name, &i.type_identity()),
+            None => iface.name.clone(),
+        };
+        self.prog.impls.push(ImplDef { iface: iface_name, args: iface.args.clone(), target: self.tname(&d.name, &d.type_identity()), methods });
+        Ok(())
     }
 
     fn declaration(&mut self, d: &DeclRef<'a>) -> BResult<()> {
@@ -280,18 +349,36 @@ impl<'t, 'a> Builder<'t, 'a> {
                     let label = format!("method {}.{mname}", d.name);
                     self.function(sig, &label, Some(self_t.clone()), vec![])?;
                 }
+                // a `convert` member's body becomes a function too (6.13, X-551): `x as T` lowers to its call. The
+                // `from` member has no receiver; its source is its one parameter
+                let mut conversion_bodies = std::collections::BTreeSet::new();
+                for cv in self.ty.dc.all_conversions(d) {
+                    // Both text pairs select one declared member (D-421), hence one body.
+                    if !conversion_bodies.insert(cv.sig.name.clone()) { continue; }
+                    if cv.derived {
+                        if d.kind == "enum" { continue; } // text parsing is one typed intrinsic, with the caller's failure origin
+                        self.derived_conversion(d, &cv)?;
+                        continue;
+                    }
+                    if cv.legacy || cv.sig.body.is_none() {
+                        continue;
+                    }
+                    let label = format!("method {}.{}", d.name, cv.sig.name);
+                    let cv_self = if cv.direction == "to" { Some(self_t.clone()) } else { None };
+                    self.function(&cv.sig, &label, cv_self, vec![])?;
+                }
                 if d.has_cleanup {
                     self.cleanup_fn(d, &self_t)?;
                 }
                 // mixin methods become methods of the class (Appendix C.1: generated inherent methods)
                 for mx in d.mixins.clone() {
-                    if let Some(md) = self.ty.dc.table.get(&mx.name).cloned() {
+                    if let Some(md) = self.decl_of_named(&mx) {
                         for (mname, sig) in md.methods.iter() {
                             if sig.body.is_none() || d.methods.get(mname).map_or(false, |s| s.body.is_some()) {
                                 continue;
                             }
                             let label = format!("method {}.{mname}", d.name);
-                            self.function(sig, &label, Some(self_t.clone()), vec![])?;
+                            self.mixin_function(d, &md, mname, sig, &label, self_t.clone())?;
                         }
                     }
                 }
@@ -301,6 +388,52 @@ impl<'t, 'a> Builder<'t, 'a> {
             _ => {}
         }
         Ok(())
+    }
+
+    /// A contributed method keeps the applying class's IR symbol and receiver, but its body resolves names in
+    /// the module that wrote it. Each application has its own expression types, even though its syntax nodes
+    /// are shared with every other application (9.6, X-476; D-485, D-486).
+    fn mixin_function(&mut self, class: &DeclRef<'a>, mixin: &DeclRef<'a>, member: &str, sig: &Sig<'a>, label: &str, self_t: Type) -> BResult<()> {
+        let key = (class.type_identity(), class.name.clone(), member.to_string());
+        let facts = self.ty.mixin_body_facts.get(&key).cloned().ok_or_else(|| BuildError {
+            line: sig.node.map(line_of).unwrap_or(0),
+            message: format!("mixin method {}.{member} has no checked application for {}", mixin.name, class.name),
+        })?;
+        let home = self.ty.dc.body_context(mixin);
+        let aliases = if mixin.module == self.ty.dc.module_name { self.ty.aliases.clone() } else { Typer::body_aliases(&home) };
+        let old_dc = std::mem::replace(&mut self.ty.dc, home);
+        let old_aliases = std::mem::replace(&mut self.ty.aliases, aliases);
+        let old_legacy = std::mem::replace(&mut self.ty.legacy_conversions, facts.legacy_conversions);
+        let old_sources = std::mem::replace(&mut self.ty.legacy_conversion_sources, facts.legacy_conversion_sources);
+        let old_types = std::mem::replace(&mut self.types, facts.node_types);
+        let old_moves = std::mem::replace(&mut self.ty.implicit_moves, facts.implicit_moves);
+        let old_ops = std::mem::replace(&mut self.ty.checked_ops, facts.checked_ops);
+        let old_fails = std::mem::replace(&mut self.ty.implied_fails, facts.implied_fails);
+        let old_regions = std::mem::replace(&mut self.ty.implied_regions, facts.implied_regions);
+        let old_closures = std::mem::replace(&mut self.ty.closure_info, facts.closure_info);
+        let old_scope = self.mixin_scope.replace(label.to_string());
+        let first_function = self.prog.functions.len();
+        let built = self.function(sig, label, Some(self_t), vec![]);
+        let body_module = self.ir_mod(mixin);
+        // This includes lambdas and other generated functions inside the contributed method: they share its
+        // lexical visibility, even though their symbols belong to the applying class's module.
+        if body_module != self.ir_module {
+            for function in &mut self.prog.functions[first_function..] {
+                function.body_module = Some(body_module.clone());
+            }
+        }
+        self.ty.dc = old_dc;
+        self.ty.aliases = old_aliases;
+        self.ty.legacy_conversions = old_legacy;
+        self.ty.legacy_conversion_sources = old_sources;
+        self.types = old_types;
+        self.ty.implicit_moves = old_moves;
+        self.ty.checked_ops = old_ops;
+        self.ty.implied_fails = old_fails;
+        self.ty.implied_regions = old_regions;
+        self.ty.closure_info = old_closures;
+        self.mixin_scope = old_scope;
+        built
     }
 
     fn const_def(&mut self, d: &DeclRef<'a>) -> BResult<()> {
@@ -335,7 +468,7 @@ impl<'t, 'a> Builder<'t, 'a> {
             }
         }
         for mx in &d.mixins {
-            if let Some(md) = self.ty.dc.table.get(&mx.name) {
+            if let Some(md) = self.decl_of_named(mx) {
                 for (mname, sig) in md.methods.iter() {
                     if sig.body.is_some() && !methods.iter().any(|(m, _)| m == mname) {
                         methods.push((mname.clone(), self.qualified(&self.ir_module, &format!("method {}.{mname}", d.name))));
@@ -397,18 +530,61 @@ impl<'t, 'a> Builder<'t, 'a> {
             _ => return Ok(()),
         };
         let cleanup = if d.has_cleanup { Some(self.qualified(&self.ir_module, &format!("cleanup {}", d.name))) } else { None };
+        let iface_of = |b: &Self, i: &NamedT| -> String {
+            match b.decl_of_named(i) {
+                Some(x) => b.tname(&x.name, &x.type_identity()),
+                None => b.tname(&i.name, &i.package),
+            }
+        };
+        let listed: Vec<&NamedT> = d.implements.iter().chain(d.requires.iter()).collect();
+        let iface_args: Vec<(String, Vec<Type>)> = listed.iter().filter(|i| !i.args.is_empty()).map(|i| (iface_of(self, i), i.args.clone())).collect();
+        let (requires, sigs) = if d.kind == "interface" {
+            // `Self` and the interface's own parameters become type parameters, so a backend can write the
+            // interface's signatures whatever type implements it (D-82)
+            let mut canon: BTreeMap<String, Type> = BTreeMap::new();
+            canon.insert("Self".into(), Type::TypeParam("Self".into()));
+            for p in &d.type_params {
+                canon.insert(p.clone(), Type::TypeParam(p.clone()));
+            }
+            let mode_of = |m: &str| match m.trim_start_matches("...") {
+                "editable" | "editable self" => Mode::Editable,
+                "owned" | "owned self" => Mode::Owned,
+                _ => Mode::Read,
+            };
+            let sigs = d
+                .methods
+                .iter()
+                .map(|(m, s)| MethodSig {
+                    name: m.clone(),
+                    receiver: s.receiver.as_deref().map(mode_of),
+                    params: s.params.iter().map(|(n, t, pm)| (n.clone(), mode_of(pm), self.ty.subst(t, &canon))).collect(),
+                    ret: self.ty.subst(&s.ret, &canon),
+                    modifiers: s.modifiers.clone(),
+                    type_params: s.type_params.clone(),
+                    bounds: self.ir_bounds(&s.where_),
+                })
+                .collect();
+            (d.requires.iter().chain(d.implements.iter()).map(|i| iface_of(self, i)).collect(), sigs)
+        } else {
+            (vec![], vec![])
+        };
         self.prog.types.push(TypeDef {
             name: self.tname(&d.name, &d.type_identity()),
             module: self.ir_module.clone(),
             type_params: d.type_params.clone(),
+            bounds: self.ir_bounds(&d.where_),
             kind,
             trivial: d.trivial,
             copyable: self.ty.dc.is_copyable(&self_t),
             implements: d.implements.iter().map(|i| self.tname(&i.name, &i.package)).collect(),
+            derives: d.derives.iter().map(|(n, _)| n.clone()).collect(),
             mixins: d.mixins.iter().map(|m| self.tname(&m.name, &m.package)).collect(),
             lifetimes: d.lifetime.iter().cloned().collect(),
             cleanup,
             methods,
+            iface_args,
+            requires,
+            sigs,
         });
         Ok(())
     }
@@ -450,6 +626,36 @@ impl<'t, 'a> Builder<'t, 'a> {
         let body = body?;
         let effects = self.effects_of(&label);
         self.prog.functions.push(fb.finish(line_of(cl), Some(body), vec![], effects, None, None));
+        Ok(())
+    }
+
+    fn derived_conversion(&mut self, d: &DeclRef<'a>, cv: &fortis_types::decls::Convert<'a>) -> BResult<()> {
+        let line = line_of(cv.node);
+        let label = format!("method {}.{}", d.name, cv.sig.name);
+        let target = cv.sig.ret.clone();
+        let mut fb = Fb::new(&label, &self.ir_module, target.clone(), false);
+        let local = fb.add_local("source", cv.other.clone(), false, LocalKind::Param);
+        fb.bind("source", local);
+        fb.params.push(Param { local, name: "source".into(), mode: Mode::Read, default: None });
+        fb.stmt_temps.push(vec![]);
+        self.fbs.push(fb);
+        let Some(source) = self.ty.decl_of(&cv.other) else { return err(line, "derived conversion source missing") };
+        let mut fields = Vec::new();
+        for (name, (ft, _, _)) in d.fields.iter() {
+            let Some((st, _, _)) = source.fields.get(name) else { return err(line, "derived conversion field missing") };
+            let st = &self.ty.dc.subst(st, &self.ty.dc.type_substitution(&source, &cv.other));
+            let value = Expr::new(ExprKind::Place(Place::local(local).field(name), if self.ty.dc.is_trivial(st) { Use::Read } else { Use::Copy }), st.clone(), line);
+            let value = if st == ft { value } else { let value = self.hold(value); self.conversion(value, ft, st, line)? };
+            fields.push((name.clone(), value));
+        }
+        let value = Expr::new(ExprKind::Construct { ty: self.tname(&d.name, &d.type_identity()), fields }, target, line);
+        let mut statement = Stmt::new(line, StmtKind::Return(Some(value)));
+        statement.temps = self.fb().stmt_temps.pop().unwrap();
+        let body = Block { stmts: vec![statement], locals: vec![], line, defers: vec![] };
+        let fb = self.fbs.pop().unwrap();
+        let summary = self.ty.callee_summary(Some(d), &cv.sig, &label);
+        let effects = Effects { effects: summary.effects, authorities: summary.authorities.into_iter().collect(), ..Effects::default() };
+        self.prog.functions.push(fb.finish(line, Some(body), vec![], effects, None, None));
         Ok(())
     }
 
@@ -533,6 +739,7 @@ impl<'t, 'a> Builder<'t, 'a> {
         };
         let is_try = sig.has_mod("try");
         let mut fb = Fb::new(label, &self.ir_module, sig.ret.clone(), is_try);
+        fb.bounds = self.where_in_force(sig, self_t.as_ref());
         if let (Some(st), Some(recv)) = (&self_t, &sig.receiver) {
             let mode = match recv.as_str() {
                 "editable self" => Mode::Editable,
@@ -579,8 +786,28 @@ impl<'t, 'a> Builder<'t, 'a> {
         let effects = self.effects_of(label.split('#').next().unwrap_or(label));
         let observe = self.observe_schema(&aspects);
         let line = sig.node.map(line_of).unwrap_or(0);
-        self.prog.functions.push(fb.finish(line, Some(built), sig.modifiers.clone(), effects, observe, None));
+        let mut f = fb.finish(line, Some(built), sig.modifiers.clone(), effects, observe, None);
+        f.bounds = self.bounds_of(sig, self_t.as_ref());
+        self.prog.functions.push(f);
         Ok(())
+    }
+
+    /// The `where` bounds in force in a body: its class's (for a method) and its signature's, as the checker names them.
+    pub fn where_in_force(&self, sig: &Sig<'a>, self_t: Option<&Type>) -> Vec<(String, NamedT)> {
+        let mut out: Vec<(String, NamedT)> = Vec::new();
+        if let Some(Type::Named(n)) = self_t {
+            if let Some(d) = self.decl_of_named(n) {
+                out.extend(d.where_.iter().cloned());
+            }
+        }
+        out.extend(sig.where_.iter().cloned());
+        out
+    }
+
+    /// The `where` bounds in force in a body that name an interface: (type parameter, the interface's IR name, its
+    /// type arguments). A backend that resolves a call through a type parameter statically needs them (D-82).
+    pub fn bounds_of(&self, sig: &Sig<'a>, self_t: Option<&Type>) -> Vec<(String, String, Vec<Type>)> {
+        self.ir_bounds(&self.where_in_force(sig, self_t))
     }
 
     fn param_defaults(&self, sig: &Sig<'a>) -> Vec<(String, N<'a>)> {
@@ -634,9 +861,18 @@ impl<'t, 'a> Builder<'t, 'a> {
 
 /// Build the typed IR of one checked module. The typer must have run with `record_types` set.
 pub fn build_module<'a>(ty: &mut Typer<'a>, root: N<'a>, module: &str, lib: &LibIndex) -> Result<Program, Vec<BuildError>> {
-    let mut b = Builder::new(ty, module, lib);
+    let mut lib = lib.clone();
+    lib.core_types.extend(ty.dc.prelude_decls.decls.values().map(|d| d.name.clone()));
+    lib.core_types.extend(ty.dc.table.decls.values().filter(|d| fortis_types::decls::is_standard(&d.module)).map(|d| d.name.clone()));
+    for d in ty.dc.table.decls.values() {
+        if !d.type_identity().is_empty() && lib.core_types.contains(&d.name) {
+            lib.qualify.types.insert(d.name.clone());
+        }
+    }
+    let mut b = Builder::new(ty, module, &lib);
     b.module(root);
     if b.errors.is_empty() {
+        crate::names::map_types(&mut b.prog, &mut |t| lib.qualify.apply(t));
         Ok(b.prog)
     } else {
         Err(b.errors)

@@ -1,0 +1,43 @@
+// execute: 7|7|3|10
+// requires: runtime
+// covers: LANG-09-03, LANG-06-12
+// A value of a bounded type parameter where a `dynamic I` is expected (9.5): an owned `T` moved into an owned
+// `dynamic I` (boxed, so the function's summary has `alloc`), a read `T` lent as `alias dynamic I`, a `T` returned
+// as `dynamic I` from a generic function, and the result passed on; on every backend (D-88 (b)).
+import fortis.host { Console }
+
+export interface Measured {
+  pure func size(self) Int
+}
+
+export class Pair implements Measured {
+  export a: Int
+  pure func size(self) Int => self.a
+}
+
+export class Single implements Measured {
+  export b: Int
+  pure func size(self) Int => self.b
+}
+
+func wrap[T](x: owned T) dynamic Measured where T implements Measured => move x
+
+func lend[T](x: T) Int where T implements Measured => measureAlias(x)
+
+func measureAlias(m: alias dynamic Measured) Int => m.size()
+
+func measure(m: dynamic Measured) Int => m.size()
+
+func both[T](x: owned T, y: owned T) Int where T implements Measured {
+  let d: dynamic Measured = move x
+  let e = wrap(move y)
+  return Int.wrappingAdd(measure(d), e.size())
+}
+
+func main(console: Console) {
+  let d = wrap(Pair(a: 7))
+  console.print("${d.size()}")
+  console.print("${measure(wrap(Single(b: 7)))}")
+  console.print("${lend(Single(b: 3))}")
+  console.print("${both(Pair(a: 4), Pair(a: 6))}")
+}

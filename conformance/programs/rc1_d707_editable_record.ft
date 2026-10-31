@@ -1,0 +1,10 @@
+// reject: E-TYP-040
+// covers: LANG-06-01, LANG-06-02
+// D-707: widening a writable record would allow 9 into a refined field.
+func poke(s: editable { n: Int }) { s.n = 9 }
+func restricted(n: Int<0..3>) Int => n
+func main() {
+  let mut s: { n: Int<0..3> } = { n: 1 }
+  poke(editable s)
+  let n = restricted(s.n)
+}

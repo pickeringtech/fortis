@@ -1,0 +1,88 @@
+// execute: show moved|drop moved|after moved|show deep|drop deep|after deep|consumed owned|drop owned|after owned|took copy|still copy|via from|after from|drop from|edit edited|after editable|drop edited|end
+// requires: runtime
+// covers: LANG-07-07, LANG-07-01, LANG-07-06
+// D-447, 5.6, 7.5, 7.6: parentheses group an expression and change nothing it means, so a marked argument keeps its
+// marker through them and checks and runs exactly as the unparenthesised spelling: `(move d)` lent to a read
+// parameter is the statement's temporary, destroyed when the statement ends; `(move d)` feeds an `owned` parameter
+// and `(copy d)` copies into one; `(alias xs)` shows the loan a `from` result keeps; `(editable d)` lends
+// exclusively. The production checker alone saw the parentheses and not the marker inside them, charged an implicit
+// read loan beside the written `move` and rejected the program (E-OWN-010, "a alias loan of `d` and a move of `d` at
+// once"); both checkers now see the marker through the parentheses, and every backend runs the forms alike. The
+// tokens sit in slots without a cleanup of their own, so that no backend announces the temporaries in its trace
+// (D-344); the output shows every cleanup once.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+class Slot {
+  token: Token
+}
+
+class Plain {
+  label: String
+}
+
+func make(console: Shared[Console], label: StringView) Slot {
+  return Slot(token: Token(label: label as String, console: console.retain()))
+}
+
+func show(console: Shared[Console], s: Slot) {
+  console.print("show ${s.token.label}")
+}
+
+func consume(console: Shared[Console], s: owned Slot) {
+  console.print("consumed ${s.token.label}")
+}
+
+func take(console: Shared[Console], p: owned Plain) {
+  console.print("took ${p.label}")
+}
+
+func via(xs: List[Slot]) StringView from xs => "via from"
+
+func edit(console: Shared[Console], s: editable Slot, label: StringView) {
+  s.token.label = label as String
+  console.print("edit ${s.token.label}")
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  {
+    let d = make(console, "moved")
+    show(console, (move d))
+    console.print("after moved")
+  }
+  {
+    let d = make(console, "deep")
+    show(console, ((move d)))
+    console.print("after deep")
+  }
+  {
+    let d = make(console, "owned")
+    consume(console, (move d))
+    console.print("after owned")
+  }
+  {
+    let p = Plain(label: "copy" as String)
+    take(console, (copy p))
+    console.print("still ${p.label}")
+  }
+  {
+    let xs: List[Slot] = List.of(make(console, "from"))
+    console.print("${via((alias xs))}")
+    console.print("after from")
+  }
+  {
+    let mut d = make(console, "before")
+    edit(console, (editable d), "edited")
+    console.print("after editable")
+  }
+  console.print("end")
+}

@@ -3,7 +3,7 @@
 <!-- covers: LR 1 -->
 *Human mode. Source of truth: the LR; each note cites the section that states the rule.*
 
-> Preview: newtypes and mixins (LR 6.9, 9.6) arrive in v0.1 and property tests (LR 14) in v0.2; the examples under "Exceptions are outcomes", "Classes without inheritance" and "Tests are part of the language" that use them are checked and run today. The rest of these notes is in v0.0.2.
+> Preview: property tests (LR 14) arrive in v0.2. Newtypes and mixins (LR 6.9, LR 9.6) are in v0.1.
 
 Python checks a program while it runs; Fortis checks it before anything runs. Every binding has a type the checker
 knows, every function states the types it takes and returns, and a program the checker rejects never starts
@@ -115,8 +115,8 @@ pass it on with `or fail`, replace it with `or recover v`, or handle it with `ca
 Forgetting to is a compile error, not a crash in production (LR 10.1).
 
 Converting untrusted input into a constrained type is the everyday case. Where Python would call `int(text)` and
-check a range, Fortis declares the range in the type and converts with `validate`, a pure fallible conversion
-(LR 6.3, LR 6.9) that, by its contract in `fortis.prelude`, fails with `refinement.out_of_range` when the value does
+check a range, Fortis declares the range in the type and converts with `raw as Percent`, a pure conversion that is fallible when the representation is unproved
+(LR 6.3, LR 6.9, LR 6.13) that, by its contract in `fortis.prelude`, fails with `refinement.out_of_range` when the value does
 not fit:
 
 ```fortis
@@ -127,7 +127,7 @@ type Percent = Int<0..100>
 
 func main(console: Console) {
   for raw in List.of(42, 250) {
-    let p = Percent.validate(raw) catch e {
+    let p = raw as Percent catch e {
       console.print("${raw} rejected: ${e.code}")
       report e
       recover Percent(0)
@@ -247,8 +247,9 @@ associated function, conventionally `create`, `of` or `from` (LR 9.2, LR 1.1).
 ## Comprehensions are `map` and `filter`
 
 `[x * 2 for x in xs if x > 0]` becomes calls to `filter` and `map` with lambdas (LR 6.7). Their callbacks must be
-`pure`; a loop that does I/O is a `for` loop (LR 6.7). A lambda lists the variables it captures, with a marker
-for each, and a trivial value such as an `Int` may be listed bare (LR 8.3).
+`pure`; use `each` or a `for` loop for I/O (LR 6.7). A directly loaned callback literal infers its captures
+and kind. A stored or returned lambda lists its captures with their markers; a trivial value such as an
+`Int` may be listed bare (LR 8.2, LR 8.3).
 
 ```fortis
 // accept

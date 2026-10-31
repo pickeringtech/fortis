@@ -1,0 +1,27 @@
+// execute: 7|1|12
+// requires: runtime
+// covers: LANG-04-04, LANG-06-10, LANG-06-14, LANG-06-15
+// D-592, X-640: conversion pairs retain identities inside type arguments; qualified scalars keep core conversions.
+import fortis.host { Console }
+import fortis.prelude
+class Bool { export n: Int }
+class Box[T] { export item: T }
+class Result {
+  export n: Int
+  convert from Box[Bool](v) => Result(n: v.item.n)
+  convert from Box[prelude.Bool](v) {
+    if v.item { return Result(n: 1) }
+    return Result(n: 0)
+  }
+}
+class String { export n: Int }
+func main(console: Console) {
+  let a = Box(item: Bool(n: 7))
+  let b = Box(item: true)
+  let first = a as Result
+  let second = b as Result
+  console.print("${first.n}")
+  console.print("${second.n}")
+  let n: prelude.Int = 12
+  console.print(n as prelude.String)
+}

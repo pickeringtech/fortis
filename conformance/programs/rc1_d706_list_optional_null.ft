@@ -1,0 +1,5 @@
+// accept
+// covers: LANG-06-02
+// D-706: the declared index element type, including a generic or optional element.
+func f() { let mut xs: List[Int<0..3>?] = List.of(1)
+  xs[0] = null }

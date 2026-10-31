@@ -1,0 +1,6 @@
+// accept
+// covers: LANG-06-02
+// D-636: optional values widen with their contents (X-685).
+func widen(value: Int<0..3>?) Int? {
+  return value
+}

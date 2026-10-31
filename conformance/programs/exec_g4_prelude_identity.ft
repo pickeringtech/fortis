@@ -1,0 +1,21 @@
+// execute: 7|true
+// requires: runtime
+// covers: LANG-04-04
+import fortis.host { Console }
+import fortis.prelude
+
+class Bool derive Equatable, Hashable {
+  export n: Int
+}
+
+func keep(xs: owned Map[Bool, Int]) Map[Bool, Int] => move xs
+
+func main(console: Console) {
+  let mut m: Map[Bool, Int] = Map.default()
+  m.set(Bool(n: 7), 1)
+  let kept = keep(move m)
+  let keys = kept.keys()
+  for k in keys { console.print("${k.n}") }
+  let yes: prelude.Bool = true
+  if yes { console.print("true") }
+}

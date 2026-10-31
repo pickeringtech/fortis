@@ -1,0 +1,27 @@
+// execute: 3 2
+// requires: runtime
+// covers: LANG-06-01
+// D-244: native regression, R23.
+import fortis.host { Console }
+
+class Box {
+  v: Int
+}
+
+enum Chain {
+  End(value: Int)
+  Next(tail: Chain)
+}
+
+func depth(c: Chain) Int {
+  return match c {
+    End(value: _) => 1
+    Next(tail: t) => Int.saturatingAdd(depth(t), 1)
+  }
+}
+
+func main(console: Console) {
+  let b = Box(v: 3)
+  let c = Chain.Next(tail: End(value: 1))
+  console.print("${b.v} ${depth(c)}")
+}

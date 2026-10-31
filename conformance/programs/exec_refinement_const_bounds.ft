@@ -1,0 +1,45 @@
+// execute: 7|rejected refinement.out_of_range|3|rejected refinement.out_of_range|10
+// reports: runtime-failure:refinement.out_of_range|runtime-failure:refinement.out_of_range
+// requires: runtime
+// covers: LANG-06-03
+// A `const` bound is the bound every backend validates against (6.3, X-512): an `as` conversion into a refinement
+// and into a newtype whose bounds are constants, and a literal proved against the folded bound.
+import fortis.host { Console }
+
+const top: Int = 10
+const few = 3
+
+type Score = Int<0..top>
+
+recovers func main(console: Console) {
+  match Outcome[Score].success(7 as Score) {
+    success(s) => console.print("${s}")
+    failure(f) => {
+      console.print("rejected ${f.code}")
+      report f
+    }
+  }
+  match 11 as Score {
+    success(s) => console.print("${s}")
+    failure(f) => {
+      console.print("rejected ${f.code}")
+      report f
+    }
+  }
+  match 3 as Int<1..few> {
+    success(n) => console.print("${n}")
+    failure(f) => {
+      console.print("rejected ${f.code}")
+      report f
+    }
+  }
+  match 4 as Int<1..few> {
+    success(n) => console.print("${n}")
+    failure(f) => {
+      console.print("rejected ${f.code}")
+      report f
+    }
+  }
+  let full: Score = Score(10)
+  console.print("${full}")
+}

@@ -38,7 +38,7 @@ pub enum Type {
     Optional(Box<Type>),
     Tuple(Vec<Type>),
     Record(Vec<(String, Type)>),
-    Fn { params: Vec<Type>, ret: Box<Type>, kind: String, modifiers: Vec<String>, origin: String, dynamic: bool, identity: String },
+    Fn { params: Vec<Type>, ret: Box<Type>, kind: String, modifiers: Vec<String>, origin: String, dynamic: bool, identity: String, capture_origins: Vec<(String, String)>, param_modes: Vec<String> },
     Loan { inner: Box<Type>, mode: String, origin: String },
     Dynamic(NamedT),
     TypeParam(String),
@@ -76,6 +76,10 @@ pub fn string_view() -> Type { named("StringView") }
 pub fn null_t() -> Type { optional(never()) }
 
 impl NamedT {
+    /// Identity of an interface bound, independent of its type arguments.
+    pub fn interface_key(&self) -> String {
+        if self.package.is_empty() { self.name.clone() } else { format!("{}@{}", self.name, self.package) }
+    }
     pub fn show(&self) -> String {
         if self.args.is_empty() {
             self.name.clone()
@@ -101,11 +105,11 @@ impl Type {
             Type::Optional(i) => format!("{}?", i.show()),
             Type::Tuple(items) => format!("({})", items.iter().map(|t| t.show()).collect::<Vec<_>>().join(", ")),
             Type::Record(fields) => format!("{{ {} }}", fields.iter().map(|(k, t)| format!("{k}: {}", t.show())).collect::<Vec<_>>().join(", ")),
-            Type::Fn { params, ret, kind, modifiers, origin, dynamic, .. } => {
+            Type::Fn { params, ret, kind, modifiers, origin, dynamic, param_modes, .. } => {
                 let m = if modifiers.is_empty() { String::new() } else { format!("{} ", modifiers.join(" ")) };
                 let o = if origin.is_empty() { String::new() } else { format!(" from {origin}") };
                 let d = if *dynamic { "dynamic " } else { "" };
-                format!("{d}{m}{kind}({}) {}{o}", params.iter().map(|p| p.show()).collect::<Vec<_>>().join(", "), ret.show())
+                format!("{d}{m}{kind}({}) {}{o}", params.iter().enumerate().map(|(i, p)| { let mode = param_modes.get(i).map(String::as_str).unwrap_or(""); if mode.is_empty() { p.show() } else { format!("{mode} {}", p.show()) } }).collect::<Vec<_>>().join(", "), ret.show())
             }
             Type::Loan { inner, mode, origin } => format!("{mode} {} from {origin}", inner.show()),
             Type::Dynamic(i) => format!("dynamic {}", i.show()),
@@ -114,7 +118,7 @@ impl Type {
         }
     }
     pub fn is_named(&self, name: &str) -> bool {
-        matches!(self, Type::Named(n) if n.name == name)
+        matches!(self, Type::Named(n) if n.name == name && n.package.is_empty())
     }
     pub fn named_ref(&self) -> Option<&NamedT> {
         match self {
@@ -168,7 +172,7 @@ pub fn is_trivial_builtin(name: &str) -> bool {
 }
 pub const COPYABLE_HEAP: &[&str] = &["String", "Bytes", "BigInt"];
 pub const COPYABLE_CONTAINERS: &[&str] = &["List", "Array", "Map", "OrderedMap", "Set", "FixedList", "FixedMap"];
-pub const NOT_COPYABLE: &[&str] = &["Shared", "Weak", "Mutex", "MutexGuard", "AtomicInt", "AtomicBool", "Future", "Task", "Outcome", "Failure", "StringView", "BytesView", "ListView"];
+pub const NOT_COPYABLE: &[&str] = &["Shared", "Weak", "Mutex", "MutexGuard", "AtomicInt", "AtomicBool", "Future", "Task", "Outcome", "Failure", "Must", "StringView", "BytesView", "ListView"];
 pub const LINEAR_BUILTINS: &[&str] = &["Outcome", "Failure", "Future", "Task", "Must"];
 
 pub fn base_name(t: &Type) -> Option<&str> {
@@ -179,14 +183,23 @@ pub fn base_name(t: &Type) -> Option<&str> {
     }
 }
 
+/// A built-in representation name; a program declaration of that spelling has no built-in semantics.
+pub fn core_name(t: &Type) -> Option<&str> {
+    match t {
+        Type::Named(n) if n.package.is_empty() => Some(&n.name),
+        Type::Refined { base, .. } if base.package.is_empty() => Some(&base.name),
+        _ => None,
+    }
+}
+
 /// The declared interval of an integer type (None for non-integers).
 pub fn int_bounds(t: &Type) -> Option<(Int, Int)> {
     match t {
-        Type::Refined { base, lo, hi, kind } if (kind == "range" || kind == "exact") && is_int_type(&base.name) => {
+        Type::Refined { base, lo, hi, kind } if (kind == "range" || kind == "exact") && base.package.is_empty() && is_int_type(&base.name) => {
             let (l, h) = int_types(&base.name).unwrap();
             Some((lo.unwrap_or(l), hi.unwrap_or(h)))
         }
-        Type::Named(n) => int_types(&n.name),
+        Type::Named(n) if n.package.is_empty() => int_types(&n.name),
         _ => None,
     }
 }
@@ -197,6 +210,14 @@ pub fn strip(t: &Type) -> &Type {
         _ => t,
     }
 }
+/// Erase only an outer refinement for a nominal capability match; preserve every type argument.
+pub fn unrefined(t: &Type) -> Type {
+    match strip(t) {
+        Type::Refined { base, .. } => base.as_type(),
+        t => t.clone(),
+    }
+}
+
 pub fn strip_owned(t: &Type) -> Type {
     strip(t).clone()
 }
@@ -277,4 +298,44 @@ impl<V> OMap<V> {
         k.sort();
         k
     }
+}
+
+
+/// Qualify only nominal names that denote distinct declarations in this diagnostic (D-665).
+pub fn diagnostic_types(types: &[&Type]) -> Vec<String> {
+    use std::collections::{BTreeMap, BTreeSet};
+    fn map(t: &Type, f: &mut impl FnMut(&mut NamedT)) -> Type {
+        let mut t = t.clone();
+        fn named(n: &mut NamedT, f: &mut impl FnMut(&mut NamedT)) {
+            n.args = n.args.iter().map(|a| map(a, f)).collect();
+            f(n);
+        }
+        match &mut t {
+            Type::Named(n) | Type::Refined { base: n, .. } | Type::Dynamic(n) => named(n, f),
+            Type::Optional(inner) | Type::Loan { inner, .. } => **inner = map(inner, f),
+            Type::Tuple(items) => *items = items.iter().map(|a| map(a, f)).collect(),
+            Type::Record(fields) => for (_, t) in fields { *t = map(t, f); },
+            Type::Fn { params, ret, .. } => {
+                *params = params.iter().map(|a| map(a, f)).collect();
+                **ret = map(ret, f);
+            }
+            _ => {}
+        }
+        t
+    }
+    fn identity(n: &NamedT) -> &str {
+        if !n.package.is_empty() { &n.package } else if !n.origin.is_empty() { &n.origin } else { "fortis.prelude" }
+    }
+    fn module(id: &str) -> &str { id.rsplit('/').next().unwrap_or(id).strip_prefix("fortis.").unwrap_or(id.rsplit('/').next().unwrap_or(id)) }
+    let mut names: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for t in types { map(t, &mut |n| { names.entry(n.name.clone()).or_default().insert(identity(n).into()); }); }
+    types.iter().map(|t| map(t, &mut |n| {
+        let ids = &names[&n.name];
+        if ids.len() > 1 {
+            let id = identity(n);
+            let label = module(id);
+            let label = if ids.iter().filter(|i| module(i) == label).count() > 1 { id } else { label };
+            n.name = format!("{label}.{}", n.name);
+        }
+    }).show()).collect()
 }

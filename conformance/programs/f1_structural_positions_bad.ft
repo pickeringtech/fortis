@@ -1,0 +1,17 @@
+// reject: E-TYP-040
+// covers: LANG-06-01, LANG-06-02, LANG-06-08
+func pair(value: (Bool, Int)) (Int, Bool) { return value }
+func take(value: (Int, Bool)) {}
+func generic[T](value: (T, Bool)) {}
+func recordValue(value: { count: Bool }) { count: Int } { return value }
+func list(xs: List[(Bool, Int)]) {
+  let ys: List[(Int, Bool)] = copy xs
+}
+func main() {
+  let t = (true, 7)
+  let wrong: (Int, Bool) = t
+  take(t)
+  generic(t)
+  match t { (1, _) => {}
+    _ => {} }
+}

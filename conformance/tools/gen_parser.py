@@ -42,13 +42,16 @@ Tup = Tuple[str, ...]
 #     is an assignment when an assignment operator follows the place, else an expression; a `for`
 #     header tries `move place`, then a range, then an expression; `let x = move p` is the plain let;
 #     a parenthesised type is tried before a tuple type; a `.member(` postfix is a method call; a function head
-#     tries a return type before none, so a body `{` is a body unless it parses as a record type (X-345).
+#     tries a return type before none, so a body `{` is a body unless it parses as a record type (X-345);
+#     a lambda likewise tries its written result type before an untyped Void block (X-580);
+#     a match pattern tries the range pattern first, so a parenthesised range bound `(1)..9` is not read
+#     as the tuple pattern `(1)` and a const bound is not read as a binding, a literal or a variant (X-517).
 POLICIES = {
     ("*", "option"): "P2", ("*", "repetition"): "P2",
     ("statement", "alternative"): "P3", ("forStmt", "alternative"): "P3", ("letStmt", "alternative"): "P3",
     ("postfix", "alternative"): "P3", ("primaryExpr", "alternative"): "P3", ("type", "alternative"): "P3",
     ("namedType", "alternative"): "P3", ("matchArm", "alternative"): "P3", ("mixinMember", "alternative"): "P3",
-    ("funcSignature", "alternative"): "P3",
+    ("funcSignature", "alternative"): "P3", ("lambda", "alternative"): "P3", ("pattern", "alternative"): "P3",
 }
 
 

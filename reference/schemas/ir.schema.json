@@ -25,6 +25,15 @@
       "type": "integer",
       "minimum": 1
     },
+    "source_file": {
+      "type": "string",
+      "description": "For a contributed mixin body, the file containing its text and all non-woven fact locations; function still names the applying class's method. Present together with source_function, omitted for ordinary bodies."
+    },
+    "source_function": {
+      "type": "string",
+      "pattern": "^method .+$",
+      "description": "The declaring mixin method's label, used to find the body that supplies this application's control-flow graph. Present together with source_file."
+    },
     "cfg": {
       "description": "null for an expression body",
       "oneOf": [

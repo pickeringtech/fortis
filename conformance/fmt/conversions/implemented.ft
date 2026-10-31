@@ -1,0 +1,30 @@
+// execute: operand|14|16|3
+// covers: LANG-06-15
+// The associated implementation is a conversion; grouping and source evaluation stay intact.
+import fortis.host { Console }
+
+class Source {
+  export n: Int<0..20>
+}
+
+class Target {
+  export n: Int
+}
+
+implement From[Source] for Target {
+  func from(s: Source) Target => Target(n: s.n * 2)
+}
+
+func operand(console: Console) Source {
+  console.print("operand")
+  return Source(n: 7)
+}
+
+recovers func main(console: Console) {
+  let t = Target.from(operand(console))
+  console.print("${t.n}")
+  let n = (Target.from(Source(n: 8))).n
+  console.print("${n}")
+  let grouped = Int<0..10>.validate(1 + 2) or recover 0
+  console.print("${grouped}")
+}

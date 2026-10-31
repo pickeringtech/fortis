@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// covers: LANG-08-04, LANG-11-03
+// A callback without noalloc cannot satisfy a noalloc callable position.
+func use(f: pure noalloc fn(String) Int) {}
+func exercise(f: pure fn(String) Int) { use(f) }

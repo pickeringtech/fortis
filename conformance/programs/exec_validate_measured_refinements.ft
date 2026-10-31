@@ -2,7 +2,7 @@
 // reports: runtime-failure:refinement.out_of_range|runtime-failure:refinement.out_of_range|runtime-failure:refinement.out_of_range|runtime-failure:refinement.out_of_range
 // requires: runtime
 // covers: LANG-06-03
-// `validate` into a refinement that measures its value (6.3): `String<scalars: …>` counts Unicode scalars and
+// An `as` conversion into a refinement that measures its value (6.3): `String<scalars: …>` counts Unicode scalars and
 // `List[T]<length: …>` counts elements; a newtype checks its representation's own refinement, never one of its type
 // arguments' (`List[Int<0..9>]<length: 1..3>` is refined by `length: 1..3`, not by `0..9`), and an integer range
 // refines the value itself (D-53).
@@ -11,14 +11,14 @@ import fortis.host { Console }
 type Digits = List[Int<0..9>]<length: 1..3>
 
 func main(console: Console) {
-  match String<scalars: 1..5>.validate(String.from("héé")) {
+  match "héé" as String as String<scalars: 1..5> {
     success(name) => console.print("${name.scalarCount()}")
     failure(f) => {
       console.print("rejected ${f.code}")
       report f
     }
   }
-  match String<scalars: 1..5>.validate(String.from("abcdef")) {
+  match "abcdef" as String as String<scalars: 1..5> {
     success(name) => console.print("${name.scalarCount()}")
     failure(f) => {
       console.print("rejected ${f.code}")
@@ -28,7 +28,7 @@ func main(console: Console) {
   let mut items: List[Int] = List.default()
   items.push(1)
   items.push(2)
-  match List[Int]<length: 0..3>.validate(copy items) {
+  match copy items as List[Int]<length: 0..3> {
     success(few) => console.print("${few.count()}")
     failure(f) => {
       console.print("rejected ${f.code}")
@@ -37,7 +37,7 @@ func main(console: Console) {
   }
   items.push(3)
   items.push(4)
-  match List[Int]<length: 0..3>.validate(move items) {
+  match move items as List[Int]<length: 0..3> {
     success(many) => console.print("${many.count()}")
     failure(f) => {
       console.print("rejected ${f.code}")
@@ -60,13 +60,13 @@ func main(console: Console) {
       report f
     }
   }
-  match Int<0..10>.validate(7) {
+  match 7 as Int<0..10> {
     success(n) => console.print("${n}")
     failure(f) => {
       report f
     }
   }
-  match Int<0..10>.validate(11) {
+  match 11 as Int<0..10> {
     success(n) => console.print("${n}")
     failure(f) => {
       console.print("rejected ${f.code}")

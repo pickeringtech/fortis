@@ -1,0 +1,13 @@
+import fortis.host { Host }
+import bad.implement.clash.one { Labelled }
+import bad.implement.clash.two { Titled }
+import bad.implement.clash.shapes { Box }
+
+func viaLabel[T](x: T) String where T implements Labelled {
+  return x.label()
+}
+
+export func main(args: List[String]) {
+  let caps = Host.capabilities()
+  caps.console.print(viaLabel(Box(v: 1)))
+}

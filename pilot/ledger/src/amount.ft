@@ -73,7 +73,7 @@ export pure try func parseCommodityCode(text: StringView) CommodityCode {
       fail BadCommodityCode(position: i)
     }
   }
-  return CommodityCode.validate(String.from(text)) or fail
+  return text as String as CommodityCode or fail
 }
 
 // 10 raised to the scale.
@@ -373,7 +373,7 @@ test "commodity codes" cases {
 } as row {
   let parsed = parseCommodityCode(row.text) catch e {
     expect e.code == "ledger.amount.bad_code"
-    recover CommodityCode.validate(String.from("ERR"))
+    recover CommodityCode.validate("ERR" as String)
   }
   let shown: String = "${parsed}"
   expect (shown == row.text) == row.ok

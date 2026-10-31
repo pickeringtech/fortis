@@ -1,0 +1,6 @@
+// reject: E-EFF-001
+// covers: LANG-11-03
+// D-539: pure callbacks still permit allocation; the call is the effect site.
+noalloc func join(xs: List[String]) String => xs.fold(String.empty(), fn(acc, s) => "${acc}${s}")
+noalloc func count(xs: List[Int]) Int => xs.countWhere(fn(n) => n > 0)
+noalloc func any(xs: List[Int]) Bool => xs.any(fn(n) => n > 0)

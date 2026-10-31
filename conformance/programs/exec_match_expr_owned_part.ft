@@ -25,7 +25,7 @@ class Slot {
 }
 
 func make(console: Shared[Console], label: StringView) Slot {
-  return Slot(token: Token(label: String.from(label), console: console.retain()))
+  return Slot(token: Token(label: label as String, console: console.retain()))
 }
 
 func exprMatch(console: Shared[Console], empty: List[Slot]) {

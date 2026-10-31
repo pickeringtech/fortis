@@ -18,12 +18,12 @@ export class Item {
 
 func noisy(console: Console, label: StringView) String {
   console.print("fallback ${label}")
-  return String.from("fb")
+  return "fb" as String
 }
 
 func noisyItem(console: Console) Item {
   console.print("fallback item")
-  return Item(name: String.from("fb"))
+  return Item(name: "fb" as String)
 }
 
 try func boom(console: Console) String {
@@ -46,14 +46,14 @@ func showItem(console: Console, label: StringView, it: Item) {
 
 func maybe(given: Bool) String? {
   if given {
-    return String.from("o")
+    return "o" as String
   }
   return null
 }
 
 func maybeItem(given: Bool) Item? {
   if given {
-    return Item(name: String.from("it"))
+    return Item(name: "it" as String)
   }
   return null
 }
@@ -93,12 +93,12 @@ func ownedItem(console: Console, given: Bool) {
 // a fallback that fails leaves the function only when the left side is null
 try func loanTextFail(console: Console, xs: List[String]) String {
   show(console, "list", xs.get(0) ?? (boom(console) or fail))
-  return String.from("kept")
+  return "kept" as String
 }
 
 try func loanItemFail(console: Console, items: List[Item]) String {
   showItem(console, "item", items.get(0) ?? (boomItem(console) or fail))
-  return String.from("kept")
+  return "kept" as String
 }
 
 try func ownedFail(console: Console, given: Bool) String {
@@ -115,13 +115,13 @@ recovers func settle(console: Console, o: owned Outcome[String]) {
 
 recovers func main(console: Console) {
   let mut texts: List[String] = List.default()
-  texts.push(String.from("hi"))
+  texts.push("hi" as String)
   let noTexts: List[String] = List.default()
   let mut items: List[Item] = List.default()
-  items.push(Item(name: String.from("it")))
+  items.push(Item(name: "it" as String))
   let noItems: List[Item] = List.default()
   let mut m: Map[String, String] = Map.default()
-  m.set(String.from("k"), String.from("mv"))
+  m.set("k" as String, "mv" as String)
   let noMap: Map[String, String] = Map.default()
   loanText(console, texts)
   loanText(console, noTexts)
@@ -129,10 +129,10 @@ recovers func main(console: Console) {
   loanItem(console, noItems)
   loanMap(console, m)
   loanMap(console, noMap)
-  loanParam(console, String.from("p"))
+  loanParam(console, "p" as String)
   loanParam(console, null)
-  loanPlace(console, texts, String.from("dd"))
-  loanPlace(console, noTexts, String.from("dd"))
+  loanPlace(console, texts, "dd" as String)
+  loanPlace(console, noTexts, "dd" as String)
   ownedText(console, true)
   ownedText(console, false)
   ownedItem(console, true)

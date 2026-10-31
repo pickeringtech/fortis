@@ -1,0 +1,25 @@
+// execute: Red|Blue|7|0
+// requires: runtime
+// covers: LANG-04-04, LANG-06-08, LANG-06-14, LANG-06-15
+// D-592, X-640: enum parsing and optional calls retain declaration identity.
+import fortis.host { Console }
+import fortis.prelude
+enum String derive Displayable, convert from prelude.String {
+  Red
+  Blue
+}
+class Bool {
+  export n: Int
+  export func number(self) Int => self.n
+}
+try recovers func main(console: Console) {
+  let literal = "red" as String or fail
+  console.print("${literal}")
+  let text: prelude.String = "bLue"
+  let parsed = text as String or fail
+  console.print("${parsed}")
+  let presentValue: Bool? = Bool(n: 7)
+  console.print("${presentValue?.number() ?? 0}")
+  let absent: Bool? = null
+  console.print("${absent?.number() ?? 0}")
+}

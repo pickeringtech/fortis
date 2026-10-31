@@ -313,3 +313,10 @@ test "remember" {
 - Defaults are pure, non-allocating constant expressions re-evaluated at each call (LR 5.8). No user variadics:
   take `ListView[T]` and pass `List.of(…)` (LR 5.8).
 - Temporaries drop at the end of the full statement in reverse creation order (LR 5.7).
+
+## Linear consuming loops in v0.1
+
+`for item in move items` owns each item. If its type is linear, consume it on every path before body end or
+`continue`. Early exits cannot drop the hidden unvisited remainder, and unwind or cancellation points cannot
+leave it live (LR 5.3). See [Outcomes and failures](10-outcomes.md#consuming-every-loop-item) for the
+`E-OBL-001` and `E-OBL-005` correction pairs. Moving a `ListView` still only lends elements.

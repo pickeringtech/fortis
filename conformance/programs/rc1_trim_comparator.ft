@@ -1,0 +1,7 @@
+// execute: true
+// requires: runtime
+// covers: LANG-06-05
+// D-58.9: trimming a text comparator needs no recovery.
+import fortis.host { Console }
+pure func same(a: String, b: String) Bool => a.trim() == b.trim()
+func main(console: Console) { console.print("${same(" a ", "a")}") }

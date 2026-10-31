@@ -1,0 +1,5 @@
+// reject: E-TYP-040
+// D-635: Both checkers accept different tuple element types at a return (LR 6.9).
+func wrong(value: (Bool, Int)) (Int, Bool) {
+  return value
+}

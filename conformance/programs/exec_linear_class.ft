@@ -1,0 +1,20 @@
+// execute: 7
+// requires: runtime
+// covers: LANG-10-02
+// D-547: a bounded class transfers its contents and the caller handles the outcome.
+import fortis.host { Console }
+class Bin[T] where T: linear {
+  item: T
+  export func take(owned self) T {
+    let Bin(item: value) = move self
+    return move value
+  }
+}
+func main(console: Console) {
+  let b = Bin(item: Outcome.success(7))
+  let r = move b.take()
+  match move r {
+    success(n) => console.print("${n}")
+    failure(f) => { report f }
+  }
+}

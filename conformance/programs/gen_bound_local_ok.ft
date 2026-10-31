@@ -1,0 +1,22 @@
+// accept
+// covers: LANG-06-10
+// A `where` bound holds for values read from a local whose annotation names the type parameter (6.10; D-52.7): an
+// annotation inside a generic body resolves `T` as the body's parameter, so `out.at(0)` is a `T` with its bounds.
+pure try func viaLocal[T](items: List[T]) Bool where T implements Comparable, T implements Copyable {
+  let mut out: List[T] = List.default()
+  for item in items {
+    out.push(copy item)
+  }
+  let a = out.at(0) or fail
+  return a > a
+}
+
+pure try func direct[T](items: List[T]) Bool where T implements Comparable, T implements Copyable {
+  let a = items.at(0) or fail
+  return a > a
+}
+
+test "bound kept" {
+  expect !viaLocal(List.of(1))
+  expect !direct(List.of(1))
+}

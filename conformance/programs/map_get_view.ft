@@ -13,7 +13,7 @@ func main(console: Console) {
   let mut counts: Map[String, Int] = Map.default()
   counts.set("the", 2)
   counts.set("cat", 1)
-  let words: List[StringView] = List.of("the", "cat", "dog")
+  let words: List[String] = List.of("the", "cat", "dog")
   let mut shown: List[String] = List.default()
   for w in words {
     shown.push("${w}: ${count(counts, w)}")
@@ -21,6 +21,6 @@ func main(console: Console) {
   console.print("${shown.get(0) ?? ""}, ${shown.get(1) ?? ""}, ${shown.get(2) ?? ""}")
   let mut ages: Map[String, Int] = Map.default()
   ages.set("ada", 3)
-  let key = String.from("ada")
+  let key = "ada" as String
   console.print("${ages.get(key) ?? 0} ${ages.get(copy key) ?? 0}")
 }

@@ -1,0 +1,4 @@
+// reject: E-OWN-001, E-OWN-053
+// covers: LANG-07-06
+// D-580: a fixed owned element type cannot erase the loan in an insertion argument.
+func add(xs: editable List[String], text: String) { xs.push(alias text) }

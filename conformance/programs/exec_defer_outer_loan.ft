@@ -1,0 +1,37 @@
+// execute: body item 3|defer item 3|end|drop item
+// execute-trace: loans-end|defer
+// requires: runtime
+// covers: LANG-12-01, LANG-07-04
+// D-364, 12.1: a deferred block may read a binding of an enclosing block that holds a loan (its loan outlives the
+// deferred block's own block), and a binding of its own block whose loan is of a trivial value, which holds nothing.
+// The list's element is destroyed with the list, once, on every backend.
+import fortis.host { Console }
+
+class Token {
+  label: String
+  console: Shared[Console]
+
+  cleanup(editable self) {
+    self.console.print("drop ${self.label}")
+  }
+}
+
+func make(console: Shared[Console], label: StringView) Token {
+  return Token(label: label as String, console: console.retain())
+}
+
+func main(out: Console) {
+  let console = Shared.create(move out)
+  let mut xs: List[Token] = List.default()
+  xs.push(make(console, "item"))
+  let counts = List.of(3)
+  let t = xs.get(0)
+  {
+    let n = counts.get(0)
+    defer {
+      console.print("defer ${t?.label ?? "none"} ${n ?? 0}")
+    }
+    console.print("body ${t?.label ?? "none"} ${n ?? 0}")
+  }
+  console.print("end")
+}

@@ -1,0 +1,44 @@
+// execute: 12|42|43|44|fallback|0|50|0|rejected refinement.out_of_range
+// covers: LANG-06-03, LANG-06-14
+// A proved newtype cast is total; the old validate call still constructs an Outcome.
+import fortis.host { Console }
+
+type Pence = Int<0..>
+
+try func checked(raw: Int) Pence {
+  return raw as Pence or fail
+}
+
+func fallback(console: Console) Pence {
+  console.print("fallback")
+  return Pence(0)
+}
+
+recovers func main(console: Console) {
+  let a = checked(12) or recover Pence(0)
+  console.print("${a}")
+  let b = 42 as Pence
+  console.print("${b}")
+  let saved = Outcome[Pence].success(43 as Pence)
+  match move saved {
+    success(p) => console.print("${p}")
+    failure(f) => { report f }
+  }
+  match Outcome[Pence].success(44 as Pence) {
+    success(p) => console.print("${p}")
+    failure(f) => { report f }
+  }
+  let bad = checked(-1) or recover fallback(console)
+  console.print("${bad}")
+  let wide = 50
+  console.print("${wide}")
+  let small = 20 as Int<0..10> or recover 0
+  console.print("${small}")
+  match -2 as Pence {
+    success(p) => console.print("unexpected")
+    failure(f) => {
+      console.print("rejected ${f.code}")
+      report f
+    }
+  }
+}
